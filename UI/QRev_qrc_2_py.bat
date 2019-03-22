@@ -1,0 +1,1 @@
+pyrcc5 dsm.qrc -o dsm_rc.py

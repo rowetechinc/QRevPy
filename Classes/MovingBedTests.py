@@ -476,7 +476,7 @@ class MovingBedTests(object):
                 
             # Check validity of mean moving-bed velocity
             if self.duration_sec > 60:
-                mb_vel_std = np.nanstd(mb_vel[-30:])
+                mb_vel_std = np.nanstd(mb_vel[-30:], ddof=1)
                 cov = mb_vel_std / mb_vel[-1]
                 if cov > 0.25 and mb_vel_std > 0.03:
                     self.messages.append('WARNING - Moving-bed velocity may not be consistent. '

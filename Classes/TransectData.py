@@ -1621,6 +1621,7 @@ class TransectData(object):
         self.depths.sos_corrections(ratio=ratio)
 
 
+
     # def sos_user(self, kargs = None):
     #     """Compute new speed of sound from temperature and salinity
     #
@@ -1712,6 +1713,10 @@ class TransectData(object):
         valid_ens = np.all(np.vstack((valid_nav, valid_wt_ens, valid_depth)), 0)
 
         return valid_ens, valid_wt.T
+
+
+
+
 
 
 # ========================================================================
@@ -1885,3 +1890,5 @@ def adjusted_ensemble_duration(transect, trans_type=None):
         delta_t = transect.date_time.ens_duration_sec
         
     return delta_t
+
+

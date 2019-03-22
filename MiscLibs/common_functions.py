@@ -60,8 +60,10 @@ def iqr(data):
 def azdeg2rad(angle):
     direction = np.deg2rad(90-angle)
     idx = np.where(direction < 0)[0]
-    if len(idx) > 0:
+    if len(idx) > 1:
         direction[idx] = direction[idx] + 2 * np.pi
+    else:
+        direction = direction + 2 * np.pi
         
     return direction
 
@@ -151,3 +153,12 @@ def nans(shape, dtype=float):
     a = np.empty(shape, dtype)
     a.fill(np.nan)
     return a
+
+
+def checked_idx(transects):
+    checked = []
+    for n, transect in enumerate(transects):
+        if transect.checked:
+            checked.append(n)
+
+    return checked

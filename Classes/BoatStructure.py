@@ -379,17 +379,16 @@ class BoatStructure(object):
 
         # Compute incremental track coordinates
         boat_vel_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
-        if boat_vel_selected is not None:
-            track_x = boat_vel_selected.u_processed_mps * transect.date_time.ens_duration_sec
-            track_y = boat_vel_selected.v_processed_mps * transect.date_time.ens_duration_sec
-        else:
+        if boat_vel_selected is None:
             boat_vel_selected = getattr(transect.boat_vel, 'bt_vel')
-            track_x = boat_vel_selected.u_processed_mps * transect.date_time.ens_duration_sec
-            track_y = boat_vel_selected.v_processed_mps * transect.date_time.ens_duration_sec
+        track_x = boat_vel_selected.u_processed_mps[transect.in_transect_idx] * \
+                  transect.date_time.ens_duration_sec[transect.in_transect_idx]
+        track_y = boat_vel_selected.v_processed_mps[transect.in_transect_idx] * \
+                  transect.date_time.ens_duration_sec[transect.in_transect_idx]
 
         # Check for any valid data
         idx = np.where(np.logical_not(np.isnan(track_x)))
-        if len(idx[0]) > 1:
+        if idx[0].size > 1:
             # Compute variables
             boat_track['distance_m'] = np.nancumsum(np.sqrt(track_x ** 2 + track_y ** 2))
             boat_track['track_x_m'] = np.nancumsum(track_x)

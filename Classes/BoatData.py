@@ -1522,8 +1522,8 @@ class BoatData(object):
             else:
                 sample = np.hstack((my_data[n - half_width:n], my_data[n + 1:n + half_width + 1]))
 
-            # Sort and ompute trummed standard deviation
+            # Sort and compute trummed standard deviation
             sample = np.sort(sample)
-            filter_array.append(np.nanstd(sample[1:sample.shape[0] - 1]))
+            filter_array.append(np.nanstd(sample[1:sample.shape[0] - 1], ddof=1))
 
         return np.array(filter_array)

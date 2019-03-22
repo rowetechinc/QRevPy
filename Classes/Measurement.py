@@ -11,6 +11,8 @@ from Classes.ComputeExtrap import ComputeExtrap
 from Classes.ExtrapQSensitivity import ExtrapQSensitivity
 from Classes.Uncertainty import Uncertainty
 from Classes.QAData import QAData
+from MiscLibs.common_functions import cart2pol, pol2cart, rad2azdeg, nans, azdeg2rad
+from Classes.BoatStructure import BoatStructure
 
 
 class Measurement(object):
@@ -1221,6 +1223,48 @@ class Measurement(object):
         self.compute_discharge()
 
     @staticmethod
+    def measurement_duration(self):
+        duration = 0
+        for transect in self.transects:
+            if transect.checked:
+                duration += transect.date_time.transect_duration_sec
+        return duration
+
+    @staticmethod
+    def mean_discharges(self):
+
+        total_q = []
+        top_q = []
+        bot_q = []
+        mid_q = []
+        left_q = []
+        right_q = []
+        int_cells_q = []
+        int_ensembles_q = []
+
+        for n, transect in enumerate(self.transects):
+            if transect.checked:
+                total_q.append(self.discharge[n].total)
+                top_q.append(self.discharge[n].top)
+                mid_q.append(self.discharge[n].middle)
+                bot_q.append(self.discharge[n].bottom)
+                left_q.append(self.discharge[n].left)
+                right_q.append(self.discharge[n].right)
+                int_cells_q.append(self.discharge[n].int_cells)
+                int_ensembles_q.append(self.discharge[n].int_ens)
+
+        discharge = {'total_mean': np.mean(total_q),
+                     'top_mean': np.mean(top_q),
+                     'mid_mean': np.mean(mid_q),
+                     'bot_mean': np.mean(bot_q),
+                     'left_mean': np.mean(left_q),
+                     'right_mean': np.mean(right_q),
+                     'int_cells_mean': np.mean(int_cells_q),
+                     'int_ensembles_mean': np.mean(int_ensembles_q)}
+
+        return discharge
+
+    @staticmethod
     def save_matlab_file(self, file_name):
 
         from Classes.Python2Matlab import Python2Matlab
@@ -1233,6 +1277,178 @@ class Measurement(object):
                     do_compression=False,
                     oned_as='row')
 
+    @staticmethod
+    def compute_measurement_properties(self):
+        """Computes characteristics of the measurement that assist in evaluating the consistency of the transects.
+
+        Returns
+        -------
+        trans_prop: dict
+        Dictionary of transect properties
+            width: float
+                width in m
+            width_cov: float
+                coefficient of variation of width in percent
+            area: float
+                cross sectional area in m**2
+            area_cov: float
+                coefficient of variation of are in percent
+            avg_boat_speed: float
+                average boat speed in mps
+            avg_boat_course: float
+                average boat course in degrees
+            avg_water_speed: float
+                average water speed in mps
+            avg_water_dir: float
+                average water direction in degrees
+            avg_depth: float
+                average depth in m
+            max_depth: float
+                maximum depth in m
+            max_water_speed: float
+                99th percentile of water speed in mps
+        """
+
+        checked_idx = []
+        n_transects = len(self.transects)
+        trans_prop = {'width': np.array([np.nan] * (n_transects + 1)),
+                      'width_cov': np.array([np.nan] * (n_transects + 1)),
+                      'area': np.array([np.nan] * (n_transects + 1)),
+                      'area_cov': np.array([np.nan] * (n_transects + 1)),
+                      'avg_boat_speed': np.array([np.nan] * (n_transects + 1)),
+                      'avg_boat_course': np.array([np.nan] * (n_transects + 1)),
+                      'avg_water_speed': np.array([np.nan] * (n_transects + 1)),
+                      'avg_water_dir': np.array([np.nan] * (n_transects + 1)),
+                      'avg_depth': np.array([np.nan] * (n_transects + 1)),
+                      'max_depth': np.array([np.nan] * (n_transects + 1)),
+                      'max_water_speed': np.array([np.nan] * (n_transects + 1))}
+
+        for n, transect in enumerate(self.transects):
+
+            # Compute boat track properties
+            boat_track = BoatStructure.compute_boat_track(transect)
+
+            # Get boat speeds
+            in_transect_idx=transect.in_transect_idx
+            if getattr(transect.boat_vel,transect.boat_vel.selected) is not None:
+                boat_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
+                u_boat = boat_selected.u_processed_mps[in_transect_idx]
+                v_boat = boat_selected.v_processed_mps[in_transect_idx]
+            else:
+                u_boat=nans(transect.boat_vel.bt_vel.u_processed_mps[in_transect_idx])
+                v_boat=nans(transect.boat_vel.bt_vel.v_processed_mps[in_transect_idx])
+
+            # Compute boat course and mean speed
+            [course_radians, dmg] = cart2pol(boat_track['track_x_m'][-1], boat_track['track_y_m'][-1])
+            trans_prop['avg_boat_course'][n] = rad2azdeg(course_radians)
+            trans_prop['avg_boat_speed'][n] = np.nanmean(np.sqrt(u_boat**2 + v_boat**2))
+
+            # Compute width
+            trans_prop['width'][n] = np.nansum([dmg, transect.edges.left.distance_m, transect.edges.right.distance_m])
+
+            # Project the shiptrack onto a line from the beginning to end of the transect
+            unit_x, unit_y = pol2cart(course_radians, 1)
+            bt = np.array([boat_track['track_x_m'], boat_track['track_y_m']]).T
+            dot_prod = bt @ np.array([unit_x, unit_y])
+            projected_x = dot_prod * unit_x
+            projected_y = dot_prod * unit_y
+            station = np.sqrt(projected_x**2 + projected_y**2)
+
+            # Get selected depth object
+            depth = getattr(transect.depths, transect.depths.selected)
+
+            # Compute area of the moving-boat portion of the cross section using trapezoidal integration.
+            # This method is consistent with AreaComp but is different from QRev in Matlab
+            area_moving_boat = np.abs(np.trapz(depth.depth_processed_m[in_transect_idx], station[in_transect_idx]))
+
+            # Compute area of left edge
+            edge_idx = QComp.edge_ensembles('left', transect)
+            edge_type = transect.edges.left.type
+            coef = 1
+            if edge_type == 'Triangular':
+                coef = 0.5
+            elif edge_type == 'Rectangular':
+                coef = 1.0
+            elif edge_type == 'Custom':
+                coef = 0.5 + (transect.edges.left.cust_coef - 0.3535)
+            elif edge_type == 'User Q':
+                coef = 0.5
+            edge_idx = QComp.edge_ensembles('left', transect)
+            edge_depth = np.nanmean(depth.depth_processed_m[edge_idx])
+            area_left = edge_depth * transect.edges.left.distance_m * coef
+
+            # Compute area of right edge
+            edge_idx = QComp.edge_ensembles('right', transect)
+            edge_type = transect.edges.right.type
+            if edge_type == 'Triangular':
+                coef = 0.5
+            elif edge_type == 'Rectangular':
+                coef = 1.0
+            elif edge_type == 'Custom':
+                coef = 0.5 + (transect.edges.right.cust_coef - 0.3535)
+            elif edge_type == 'User Q':
+                coef = 0.5
+            edge_idx = QComp.edge_ensembles('right', transect)
+            edge_depth = np.nanmean(depth.depth_processed_m[edge_idx])
+            area_right = edge_depth * transect.edges.right.distance_m * coef
+
+            # Compute total cross sectional area
+            trans_prop['area'][n] = np.nansum([area_left, area_moving_boat, area_right])
+
+            # Compute average water speed
+            trans_prop['avg_water_speed'][n] = self.discharge[n].total / trans_prop['area'][n]
+
+            # Compute flow direction using discharge weighting
+            u_water = transect.w_vel.u_processed_mps[:, in_transect_idx]
+            v_water = transect.w_vel.v_processed_mps[:, in_transect_idx]
+            weight = np.abs(self.discharge[n].middle_cells)
+            u = np.nansum(np.nansum(u_water * weight)) / np.nansum(np.nansum(weight))
+            v = np.nansum(np.nansum(v_water * weight)) / np.nansum(np.nansum(weight))
+            trans_prop['avg_water_dir'][n] = np.arctan(u / v) * 180 / np.pi
+            if trans_prop['avg_water_dir'][n] < 0:
+                trans_prop['avg_water_dir'][n] = trans_prop['avg_water_dir'][n] + 360
+
+            # Compute average and max depth
+            # This is a deviation from QRev in Matlab which simply averaged all the depths
+            trans_prop['avg_depth'][n] = self.discharge[n].total / trans_prop['width'][n]
+            trans_prop['max_depth'][n] = np.nanmax(depth.depth_processed_m[in_transect_idx])
+
+            # Compute max water speed using the 99th percentile
+            water_speed = np.sqrt(u_water**2 + v_water**2)
+            trans_prop['max_water_speed'][n] = np.percentile(water_speed, 99)
+            if transect.checked:
+                checked_idx.append(n)
+
+
+        # Only transects used for discharge are included in measurement properties
+        if checked_idx:
+            checked_idx = np.array(checked_idx, dtype=int)
+            n = n_transects
+            trans_prop['width'][n] = np.nanmean(trans_prop['width'][checked_idx])
+            trans_prop['width_cov'][n] = (np.nanstd(trans_prop['width'][checked_idx], ddof=1) /
+                                          trans_prop['width'][n]) * 100
+            trans_prop['area'][n] = np.nanmean(trans_prop['area'][checked_idx])
+            trans_prop['area_cov'][n] = (np.nanstd(trans_prop['area'][checked_idx], ddof=1) /
+                                         trans_prop['area'][n]) * 100
+            trans_prop['avg_boat_speed'][n] = np.nanmean(trans_prop['avg_boat_speed'][checked_idx])
+            trans_prop['avg_water_speed'][n] = np.nanmean(trans_prop['avg_water_speed'][checked_idx])
+            trans_prop['avg_depth'][n] = np.nanmean(trans_prop['avg_depth'][checked_idx])
+            trans_prop['max_depth'][n] = np.nanmax(trans_prop['max_depth'][checked_idx])
+            trans_prop['max_water_speed'][n] = np.nanmax(trans_prop['max_water_speed'][checked_idx])
+
+            # Compute average water direction using vector coordinates to avoid the problem of averaging
+            # fluctuations that cross zero degrees
+            x_coord = []
+            y_coord = []
+            for idx in checked_idx:
+                water_dir_rad = azdeg2rad(trans_prop['avg_water_dir'][idx])
+                x, y = pol2cart(water_dir_rad, 1)
+                x_coord.append(x)
+                y_coord.append(y)
+            avg_water_dir_rad, _ = cart2pol(np.mean(x_coord), np.mean(y_coord))
+            trans_prop['avg_water_dir'][n] = rad2azdeg(avg_water_dir_rad)
+
+        return trans_prop
 
 if __name__ == '__main__':
     pass

@@ -388,9 +388,9 @@ class QAData(object):
                     magvar.append(heading_source_selected.mag_var_deg)
 
                     pitch_mean.append(np.nanmean(pitch_source_selected.data))
-                    pitch_std.append(np.nanstd(pitch_source_selected.data))
+                    pitch_std.append(np.nanstd(pitch_source_selected.data, ddof=1))
                     roll_mean.append(np.nanmean(roll_source_selected.data))
-                    roll_std.append(np.nanstd(roll_source_selected.data))
+                    roll_std.append(np.nanstd(roll_source_selected.data, ddof=1))
 
                     # SonTek G3 compass provides pitch, roll, and magnetic error parameters that can be checked
                     if meas.transects[checked.index(True)].adcp.manufacturer == 'SonTek':

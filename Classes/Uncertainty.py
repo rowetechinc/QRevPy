@@ -192,7 +192,7 @@ class Uncertainty(object):
             data = Uncertainty.get_array_attr(discharges, prop)
 
             # Compute coefficient of variation
-            cov = np.abs(np.nanstd(data) / np.nanmean(data)) * 100
+            cov = np.abs(np.nanstd(data, ddof=1) / np.nanmean(data)) * 100
 
             # Inflate the cov to the 95% value
             if n_max == 2:
@@ -272,7 +272,7 @@ class Uncertainty(object):
         percent_diff = np.sort(q_diff) / q_selected
 
         # Estimate the uncertainty as the average of the 4 smallest differences
-        extrapolation_uncertainty = np.nanmean(percent_diff[1:5])
+        extrapolation_uncertainty = np.nanmean(percent_diff[1:5]) * 100
 
         return extrapolation_uncertainty
 
