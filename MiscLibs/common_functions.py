@@ -162,3 +162,40 @@ def checked_idx(transects):
             checked.append(n)
 
     return checked
+
+def units_conversion(units_id='SI'):
+    """Computes the units conversion from SI units used internally to the
+    desired display units.
+
+    Parameters
+    ----------
+    units: str
+        String variable identifying units (English, SI) SI is the default.
+
+    Returns
+    -------
+    units: dict
+        dictionary of unit conversion and labels
+    """
+
+    if units_id == 'SI':
+        units = {'L': 1,
+                 'Q': 1,
+                 'A': 1,
+                 'V': 1,
+                 'label_L': '(m)',
+                 'label_Q': '(m3/s)',
+                 'label_A': '(m2)',
+                 'label_V': '(m/s)'}
+
+    else:
+        units = {'L': 1.0 / 0.3048,
+                 'Q': (1.0 / 0.3048)**3,
+                 'A': (1.0 / 0.3048)**2,
+                 'V': 1.0 / 0.3048,
+                 'label_L': '(ft)',
+                 'label_Q': '(ft3/s)',
+                 'label_A': '(ft2)',
+                 'label_V': '(ft/s)'}
+
+    return units

@@ -358,7 +358,7 @@ class BoatStructure(object):
 
 
     @staticmethod
-    def compute_boat_track(transect):
+    def compute_boat_track(transect, ref=None):
         """Computes the shiptrack coordinates, along track distance, and distance made
         good for the selected boat reference.
 
@@ -366,6 +366,8 @@ class BoatStructure(object):
         ----------
         transect: TransectData
             Object of TransectData
+        ref: str
+            Setting to determine what navigation reference should be used. In None use selected.
 
         Returns
         -------
@@ -378,7 +380,11 @@ class BoatStructure(object):
         boat_track = {'track_x_m': np.nan, 'track_y_m': np.nan, 'distance_m': np.nan, 'dmg_m': np.nan}
 
         # Compute incremental track coordinates
-        boat_vel_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
+        if ref is None:
+            boat_vel_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
+        else:
+            boat_vel_selected = getattr(transect.boat_vel, ref)
+
         if boat_vel_selected is None:
             boat_vel_selected = getattr(transect.boat_vel, 'bt_vel')
         track_x = boat_vel_selected.u_processed_mps[transect.in_transect_idx] * \

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1041</width>
-    <height>628</height>
+    <width>1000</width>
+    <height>700</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -64,7 +64,7 @@
        </attribute>
        <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="8,2">
         <item>
-         <layout class="QVBoxLayout" name="verticalLayout_left" stretch="40,35,25">
+         <layout class="QVBoxLayout" name="verticalLayout_left" stretch="30,40,30">
           <item>
            <widget class="QTabWidget" name="tab_summary">
             <property name="palette">
@@ -125,8 +125,8 @@
                <rect>
                 <x>10</x>
                 <y>10</y>
-                <width>951</width>
-                <height>181</height>
+                <width>741</width>
+                <height>121</height>
                </rect>
               </property>
              </widget>
@@ -149,48 +149,34 @@
            </widget>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_middle" stretch="8,2">
+           <layout class="QHBoxLayout" name="horizontalLayout_middle" stretch="7,0">
             <item>
              <widget class="QGraphicsView" name="main_contour"/>
             </item>
             <item>
-             <widget class="QGraphicsView" name="main_shiptrack">
-              <property name="palette">
-               <palette>
-                <active>
-                 <colorrole role="WindowText">
-                  <brush brushstyle="SolidPattern">
-                   <color alpha="255">
-                    <red>255</red>
-                    <green>0</green>
-                    <blue>0</blue>
-                   </color>
-                  </brush>
-                 </colorrole>
-                </active>
-                <inactive>
-                 <colorrole role="WindowText">
-                  <brush brushstyle="SolidPattern">
-                   <color alpha="255">
-                    <red>255</red>
-                    <green>0</green>
-                    <blue>0</blue>
-                   </color>
-                  </brush>
-                 </colorrole>
-                </inactive>
-                <disabled>
-                 <colorrole role="WindowText">
-                  <brush brushstyle="SolidPattern">
-                   <color alpha="255">
-                    <red>120</red>
-                    <green>120</green>
-                    <blue>120</blue>
-                   </color>
-                  </brush>
-                 </colorrole>
-                </disabled>
-               </palette>
+             <widget class="QWidget" name="main_shiptrack" native="true">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>200</width>
+                <height>200</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <pointsize>10</pointsize>
+               </font>
               </property>
              </widget>
             </item>

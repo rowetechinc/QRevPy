@@ -11,6 +11,12 @@ from Classes.Measurement import Measurement
 # from Classes.QComp import QComp
 from Classes.Python2Matlab import Python2Matlab
 # from Classes.CommonDataComp import CommonDataComp
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+from UI.MainMiddleMpl import MainMiddleMpl
+from MiscLibs.common_functions import units_conversion
 
 
 class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
@@ -33,21 +39,22 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Create measurement object
             self.meas = Measurement(in_file=self.select.fullName, source='SonTek', proc_type='QRev')
 
-            print('SonTek')
         elif self.select.type == 'TRDI':
             # Show mmt filename in GUI header
 
             # Create measurement object
             self.meas = Measurement(in_file=self.select.fullName[0], source='TRDI', proc_type='QRev', checked=self.select.checked)
-            self.main_summary_table()
-            self.uncertainty_table()
-            self.qa_table()
-            print('TRDI')
 
         elif self.select.type == 'QRev':
             self.meas = Measurement(in_file=self.select.fullName, source='QRev')
         else:
             print('Cancel')
+
+        self.main_summary_table()
+        self.uncertainty_table()
+        self.qa_table()
+        self.shiptrack()
+        print('complete')
 
     def saveMeasurement(self):
         # Create default file name
@@ -353,6 +360,145 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
+
+# class ShipTrack(FigureCanvas):
+#
+#     def __init__(self, meas, parent=None, width=5, height=4, dpi=100):
+#         fig = Figure(figsize=(width, height), dpi=dpi)
+#         self.axes = fig.add_subplot(111)
+#
+#         FigureCanvas._init_(self.fig)
+#         self.setParent(parent)
+#
+#         FigureCanvas.setSizePolicy(self,
+#                                    QSizePolicy.Expanding,
+#                                    QSizePolicy.Expanding)
+#         FigureCanvas.updateGeometry(self)
+#         self.shiptrack(meas)
+#     def shiptrack2(self):
+#
+#         # Get measurement data
+#         meas = self.meas
+#
+#         # Initialize figure
+#         #st_fig, ax1 = plt.subplots()
+#         # ax1 = self.figure.add_subplot(111)
+#         dpi = app.screens()[0].physicalDotsPerInch()
+#         height = self.main_shiptrack.height() * 0.8 / dpi
+#         width = self.main_shiptrack.width() * 0.8 / dpi
+#         st_fig = Figure()
+#         ax1 = st_fig.add_subplot(111)
+#         _ = ax1.axis('equal')
+#         ax1.grid()
+#
+#         units = units_conversion(units_id='SI')
+#
+#         # Plot all available shiptracks
+#         ship_data_bt = meas.transects[0].boat_vel.compute_boat_track(meas.transects[0], ref='bt_vel')
+#         ax1.plot(ship_data_bt['track_x_m'] * units['L'], ship_data_bt['track_y_m'] * units['L'], color='r',
+#                  label='BT')
+#         ship_data = ship_data_bt
+#
+#         if meas.transects[0].boat_vel.vtg_vel is not None:
+#             ship_data_vtg = meas.transects[0].boat_vel.compute_boat_track(meas.transects[0], ref='vtg_vel')
+#             ax1.plot(ship_data_vtg['track_x_m'] * units['L'], ship_data_vtg['track_y_m'] * units['L'], color='g',
+#                      label='VTG')
+#             if meas.transects[0].boat_vel.selected == 'vtg_vel':
+#                 ship_data = ship_data_vtg
+#
+#         if meas.transects[0].boat_vel.gga_vel is not None:
+#             ship_data_gga = meas.transects[0].boat_vel.compute_boat_track(meas.transects[0], ref='gga_vel')
+#             ax1.plot(ship_data_gga['track_x_m'] * units['L'], ship_data_gga['track_y_m'] * units['L'], color='b',
+#                      label='GGA')
+#             if meas.transects[0].boat_vel.selected == 'gga_vel':
+#                 ship_data = ship_data_gga
+#
+#         ax1.set_xlabel('Distance East ')
+#         ax1.set_ylabel('Distance North ')
+#
+#         # Compute mean water velocity for each ensemble
+#         u = meas.transects[0].w_vel.u_processed_mps
+#         v = meas.transects[0].w_vel.v_processed_mps
+#         u_mean = np.nanmean(u, axis=0)
+#         v_mean = np.nanmean(v, axis=0)
+#
+#         quiv_plt = ax1.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
+#                               u_mean * units['V'], v_mean * units['V'], units='dots', width=2, scale=.02)
+#         # qk = ax1.quiverkey(quiv_plt, 0.9, 0.9, 1, r'$1 \frac{m}{s}$', labelpos='E',
+#         #                    coordinates='figure')
+#
+#
+#         ax1.legend(loc='best')
+#
+#         scene = QtWidgets.QGraphicsScene(self)
+#         canvas = FigureCanvas(st_fig)
+#         canvas.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+#         # canvas.setGeometry(0, 0, self.main_shiptrack.height() * 0.8, self.main_shiptrack.width() * 0.8)
+#         canvas.draw()
+#         scene.addWidget(canvas)
+#         self.main_shiptrack.setScene(scene)
+#
+#     def shiptrack3(self):
+#
+#         # Get measurement data
+#         meas = self.meas
+#         ax1 = self.main_shiptrack.canvas.axes
+#         ax1.clear()
+#
+#         _ = ax1.axis('equal')
+#         ax1.grid()
+#
+#         units = units_conversion(units_id='SI')
+#
+#         # Plot all available shiptracks
+#         ship_data_bt = meas.transects[0].boat_vel.compute_boat_track(meas.transects[0], ref='bt_vel')
+#         ax1.plot(ship_data_bt['track_x_m'] * units['L'], ship_data_bt['track_y_m'] * units['L'], color='r',
+#                  label='BT')
+#         ship_data = ship_data_bt
+#
+#         if meas.transects[0].boat_vel.vtg_vel is not None:
+#             ship_data_vtg = meas.transects[0].boat_vel.compute_boat_track(meas.transects[0], ref='vtg_vel')
+#             ax1.plot(ship_data_vtg['track_x_m'] * units['L'], ship_data_vtg['track_y_m'] * units['L'], color='g',
+#                      label='VTG')
+#             if meas.transects[0].boat_vel.selected == 'vtg_vel':
+#                 ship_data = ship_data_vtg
+#
+#         if meas.transects[0].boat_vel.gga_vel is not None:
+#             ship_data_gga = meas.transects[0].boat_vel.compute_boat_track(meas.transects[0], ref='gga_vel')
+#             ax1.plot(ship_data_gga['track_x_m'] * units['L'], ship_data_gga['track_y_m'] * units['L'], color='b',
+#                      label='GGA')
+#             if meas.transects[0].boat_vel.selected == 'gga_vel':
+#                 ship_data = ship_data_gga
+#
+#         ax1.set_xlabel('Distance East ')
+#         ax1.set_ylabel('Distance North ')
+#         ax1.xaxis.label.set_fontsize(8)
+#         ax1.yaxis.label.set_fontsize(8)
+#         for label in (ax1.get_xticklabels() + ax1.get_yticklabels()):
+#             label.set_fontsize(8)
+#
+#         # Compute mean water velocity for each ensemble
+#         u = meas.transects[0].w_vel.u_processed_mps
+#         v = meas.transects[0].w_vel.v_processed_mps
+#         u_mean = np.nanmean(u, axis=0)
+#         v_mean = np.nanmean(v, axis=0)
+#
+#         quiv_plt = ax1.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
+#                               u_mean * units['V'], v_mean * units['V'], units='dots', width=2, scale=.02)
+#         # qk = ax1.quiverkey(quiv_plt, 0.9, 0.9, 1, r'$1 \frac{m}{s}$', labelpos='E',
+#         #                    coordinates='figure')
+#
+#         ax1.legend(loc='best')
+#         self.main_shiptrack.canvas.draw()
+
+    def shiptrack(self):
+        l = QtWidgets.QVBoxLayout(self.main_shiptrack)
+        st = MainMiddleMpl(self.main_shiptrack, width=4, height=4, dpi=60, data=self.meas)
+        # dc = MyDynamicMplCanvas(self.main_widget, width=5, height=4, dpi=100)
+        l.addWidget(st)
+        # l.addWidget(dc)
+
+        self.main_shiptrack.setFocus()
 
 app = QtWidgets.QApplication(sys.argv)
 window = QRev()
