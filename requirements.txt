@@ -11,3 +11,5 @@ statsmodels==0.9.0
 utm==0.4.2
 
 xmltodict==0.11.0
+
+matplotlib==3.0.3

@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from UI.MainMiddleMpl import MainMiddleMpl
+from UI.Qtmpl import Qtmpl
 from MiscLibs.common_functions import units_conversion
 
 
@@ -25,6 +25,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     def __init__(self, parent=None):
         super(QRev, self).__init__(parent)
         self.settingsFile = 'QRev_Settings'
+        self.units = units_conversion(units_id='SI')
         # self.settings = SSet(self.settingsFile)
         self.setupUi(self)
         self.actionOpen.triggered.connect(self.selectMeasurement)
@@ -53,7 +54,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.main_summary_table()
         self.uncertainty_table()
         self.qa_table()
-        self.shiptrack()
+        self.contour_shiptrack()
         print('complete')
 
     def saveMeasurement(self):
@@ -361,144 +362,36 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
-# class ShipTrack(FigureCanvas):
-#
-#     def __init__(self, meas, parent=None, width=5, height=4, dpi=100):
-#         fig = Figure(figsize=(width, height), dpi=dpi)
-#         self.axes = fig.add_subplot(111)
-#
-#         FigureCanvas._init_(self.fig)
-#         self.setParent(parent)
-#
-#         FigureCanvas.setSizePolicy(self,
-#                                    QSizePolicy.Expanding,
-#                                    QSizePolicy.Expanding)
-#         FigureCanvas.updateGeometry(self)
-#         self.shiptrack(meas)
-#     def shiptrack2(self):
-#
-#         # Get measurement data
-#         meas = self.meas
-#
-#         # Initialize figure
-#         #st_fig, ax1 = plt.subplots()
-#         # ax1 = self.figure.add_subplot(111)
-#         dpi = app.screens()[0].physicalDotsPerInch()
-#         height = self.main_shiptrack.height() * 0.8 / dpi
-#         width = self.main_shiptrack.width() * 0.8 / dpi
-#         st_fig = Figure()
-#         ax1 = st_fig.add_subplot(111)
-#         _ = ax1.axis('equal')
-#         ax1.grid()
-#
-#         units = units_conversion(units_id='SI')
-#
-#         # Plot all available shiptracks
-#         ship_data_bt = meas.transects[0].boat_vel.compute_boat_track(meas.transects[0], ref='bt_vel')
-#         ax1.plot(ship_data_bt['track_x_m'] * units['L'], ship_data_bt['track_y_m'] * units['L'], color='r',
-#                  label='BT')
-#         ship_data = ship_data_bt
-#
-#         if meas.transects[0].boat_vel.vtg_vel is not None:
-#             ship_data_vtg = meas.transects[0].boat_vel.compute_boat_track(meas.transects[0], ref='vtg_vel')
-#             ax1.plot(ship_data_vtg['track_x_m'] * units['L'], ship_data_vtg['track_y_m'] * units['L'], color='g',
-#                      label='VTG')
-#             if meas.transects[0].boat_vel.selected == 'vtg_vel':
-#                 ship_data = ship_data_vtg
-#
-#         if meas.transects[0].boat_vel.gga_vel is not None:
-#             ship_data_gga = meas.transects[0].boat_vel.compute_boat_track(meas.transects[0], ref='gga_vel')
-#             ax1.plot(ship_data_gga['track_x_m'] * units['L'], ship_data_gga['track_y_m'] * units['L'], color='b',
-#                      label='GGA')
-#             if meas.transects[0].boat_vel.selected == 'gga_vel':
-#                 ship_data = ship_data_gga
-#
-#         ax1.set_xlabel('Distance East ')
-#         ax1.set_ylabel('Distance North ')
-#
-#         # Compute mean water velocity for each ensemble
-#         u = meas.transects[0].w_vel.u_processed_mps
-#         v = meas.transects[0].w_vel.v_processed_mps
-#         u_mean = np.nanmean(u, axis=0)
-#         v_mean = np.nanmean(v, axis=0)
-#
-#         quiv_plt = ax1.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
-#                               u_mean * units['V'], v_mean * units['V'], units='dots', width=2, scale=.02)
-#         # qk = ax1.quiverkey(quiv_plt, 0.9, 0.9, 1, r'$1 \frac{m}{s}$', labelpos='E',
-#         #                    coordinates='figure')
-#
-#
-#         ax1.legend(loc='best')
-#
-#         scene = QtWidgets.QGraphicsScene(self)
-#         canvas = FigureCanvas(st_fig)
-#         canvas.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-#         # canvas.setGeometry(0, 0, self.main_shiptrack.height() * 0.8, self.main_shiptrack.width() * 0.8)
-#         canvas.draw()
-#         scene.addWidget(canvas)
-#         self.main_shiptrack.setScene(scene)
-#
-#     def shiptrack3(self):
-#
-#         # Get measurement data
-#         meas = self.meas
-#         ax1 = self.main_shiptrack.canvas.axes
-#         ax1.clear()
-#
-#         _ = ax1.axis('equal')
-#         ax1.grid()
-#
-#         units = units_conversion(units_id='SI')
-#
-#         # Plot all available shiptracks
-#         ship_data_bt = meas.transects[0].boat_vel.compute_boat_track(meas.transects[0], ref='bt_vel')
-#         ax1.plot(ship_data_bt['track_x_m'] * units['L'], ship_data_bt['track_y_m'] * units['L'], color='r',
-#                  label='BT')
-#         ship_data = ship_data_bt
-#
-#         if meas.transects[0].boat_vel.vtg_vel is not None:
-#             ship_data_vtg = meas.transects[0].boat_vel.compute_boat_track(meas.transects[0], ref='vtg_vel')
-#             ax1.plot(ship_data_vtg['track_x_m'] * units['L'], ship_data_vtg['track_y_m'] * units['L'], color='g',
-#                      label='VTG')
-#             if meas.transects[0].boat_vel.selected == 'vtg_vel':
-#                 ship_data = ship_data_vtg
-#
-#         if meas.transects[0].boat_vel.gga_vel is not None:
-#             ship_data_gga = meas.transects[0].boat_vel.compute_boat_track(meas.transects[0], ref='gga_vel')
-#             ax1.plot(ship_data_gga['track_x_m'] * units['L'], ship_data_gga['track_y_m'] * units['L'], color='b',
-#                      label='GGA')
-#             if meas.transects[0].boat_vel.selected == 'gga_vel':
-#                 ship_data = ship_data_gga
-#
-#         ax1.set_xlabel('Distance East ')
-#         ax1.set_ylabel('Distance North ')
-#         ax1.xaxis.label.set_fontsize(8)
-#         ax1.yaxis.label.set_fontsize(8)
-#         for label in (ax1.get_xticklabels() + ax1.get_yticklabels()):
-#             label.set_fontsize(8)
-#
-#         # Compute mean water velocity for each ensemble
-#         u = meas.transects[0].w_vel.u_processed_mps
-#         v = meas.transects[0].w_vel.v_processed_mps
-#         u_mean = np.nanmean(u, axis=0)
-#         v_mean = np.nanmean(v, axis=0)
-#
-#         quiv_plt = ax1.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
-#                               u_mean * units['V'], v_mean * units['V'], units='dots', width=2, scale=.02)
-#         # qk = ax1.quiverkey(quiv_plt, 0.9, 0.9, 1, r'$1 \frac{m}{s}$', labelpos='E',
-#         #                    coordinates='figure')
-#
-#         ax1.legend(loc='best')
-#         self.main_shiptrack.canvas.draw()
+    def contour_shiptrack(self, transect_id=0):
+        """Generates the color contour and shiptrack plot for the main tab.
 
-    def shiptrack(self):
-        l = QtWidgets.QVBoxLayout(self.main_shiptrack)
-        st = MainMiddleMpl(self.main_shiptrack, width=4, height=4, dpi=60, data=self.meas)
-        # dc = MyDynamicMplCanvas(self.main_widget, width=5, height=4, dpi=100)
-        l.addWidget(st)
-        # l.addWidget(dc)
+        Parameters
+        ----------
+        transect_id: int
+            Index to check transects to identify the transect to be plotted
+        """
 
-        self.main_shiptrack.setFocus()
+        # Assign layout to widget to allow auto scaling
+        layout = QtWidgets.QVBoxLayout(self.graphics_main_middle)
+        # Adjust margins of layout to maximize graphic area
+        layout.setContentsMargins(1, 1, 1, 1)
+
+        # Get transect data to be plotted
+        transect = self.meas.transects[transect_id]
+        # canvas_size = self.middle_canvas.size()
+        # dpi = app.screens()[0].physicalDotsPerInch()
+
+        # If figure already exists update it. If not, create it.
+        if hasattr(self, 'middle_mpl'):
+            self.middle_mpl.fig.clear()
+            self.middle_mpl.contour_shiptrack(transect=transect, units=self.units)
+        else:
+            self.middle_mpl = Qtmpl(self.graphics_main_middle, width=15, height=1, dpi=100)
+            self.middle_mpl.contour_shiptrack(transect=transect, units=self.units)
+            layout.addWidget(self.middle_mpl)
+
+        # Draw canvas
+        self.middle_mpl.draw()
 
 app = QtWidgets.QApplication(sys.argv)
 window = QRev()
