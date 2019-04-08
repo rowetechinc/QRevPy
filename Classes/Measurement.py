@@ -272,7 +272,7 @@ class Measurement(object):
             elif mmt_sos_method == 2:
                 # Speed of sound set by user
                 speed = mmt.transects[transect_idx].active_config[
-                    'Proc_Fixed_Speed_of_Sound']
+                    'Proc_Fixed_Speed_Of_Sound']
                 transect.change_sos(parameter='sosSrc',
                                     selected='user',
                                     speed=speed)
@@ -1450,7 +1450,13 @@ class Measurement(object):
 
         return trans_prop
 
-
+    @staticmethod
+    def checked_transects(meas):
+        checked_transect_idx = []
+        for n in range(len(meas.transects)):
+            if meas.transects[n].checked:
+                checked_transect_idx.append(n)
+        return checked_transect_idx
 
 if __name__ == '__main__':
     pass

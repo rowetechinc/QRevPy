@@ -30,6 +30,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.setupUi(self)
         self.actionOpen.triggered.connect(self.selectMeasurement)
         self.actionSave.triggered.connect(self.saveMeasurement)
+        self.font_bold = QtGui.QFont()
+        self.font_bold.setBold(True)
+        self.font_normal = QtGui.QFont()
+        self.font_normal.setBold(False)
 
     def selectMeasurement(self):
         self.select = OpenMeasurementDialog(self)
@@ -51,6 +55,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         else:
             print('Cancel')
 
+        self.checked_transects_idx = Measurement.checked_transects(self.meas)
         self.main_summary_table()
         self.uncertainty_table()
         self.qa_table()
@@ -90,19 +95,19 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                self.tr('Duration'), self.tr('Total Q'), self.tr('Top Q'), self.tr('Meas Q'),
                                self.tr('Bottom Q'), self.tr('Left Q'), self.tr('Right Q')]
         ncols = len(main_summary_header)
-        nrows = len(self.meas.transects)
+        nrows = len(self.checked_transects_idx)
         tbl.setRowCount(nrows + 1)
         tbl.setColumnCount(ncols)
-        font_bold = QtGui.QFont()
-        font_bold.setBold(True)
         tbl.setHorizontalHeaderLabels(main_summary_header)
-        tbl.horizontalHeader().setFont(font_bold)
+        tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        tbl.cellClicked.connect(self.select_transect)
 
         # Add transect data
         for row in range(nrows):
             col = 0
+            transect_id = self.checked_transects_idx[row]
             # checked = QtWidgets.QTableWidgetItem()
             # if self.meas.transects[row].checked:
             #     checked.setCheckState(QtCore.Qt.Checked)
@@ -111,40 +116,40 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             #
             # tbl.setItem(row + 1, col, checked)
             # col += 1
-            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(self.meas.transects[row].file_name[:-4]))
+            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(self.meas.transects[transect_id].file_name[:-4]))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
             tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.fromtimestamp(
-                self.meas.transects[row].date_time.start_serial_time), '%H:%M:%S')))
+                self.meas.transects[transect_id].date_time.start_serial_time), '%H:%M:%S')))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
-            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(self.meas.transects[row].start_edge[0]))
+            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(self.meas.transects[transect_id].start_edge[0]))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
             tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.fromtimestamp(
-                self.meas.transects[row].date_time.end_serial_time), '%H:%M:%S')))
+                self.meas.transects[transect_id].date_time.end_serial_time), '%H:%M:%S')))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
             tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem('{:5.1f}'.format(
-                self.meas.transects[row].date_time.transect_duration_sec)))
+                self.meas.transects[transect_id].date_time.transect_duration_sec)))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
-            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem('{:8.2f}'.format(self.meas.discharge[row].total)))
+            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem('{:8.2f}'.format(self.meas.discharge[transect_id].total)))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
-            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(self.meas.discharge[row].top)))
+            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(self.meas.discharge[transect_id].top)))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
-            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(self.meas.discharge[row].middle)))
+            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(self.meas.discharge[transect_id].middle)))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
-            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(self.meas.discharge[row].bottom)))
+            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(self.meas.discharge[transect_id].bottom)))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
-            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(self.meas.discharge[row].left)))
+            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(self.meas.discharge[transect_id].left)))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
-            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(self.meas.discharge[row].right)))
+            tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(self.meas.discharge[transect_id].right)))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
         # Add measurement summaries
@@ -183,7 +188,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setItem(0, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(discharge['right_mean'])))
         tbl.item(0, col).setFlags(QtCore.Qt.ItemIsEnabled)
         for col in range(ncols):
-            tbl.item(0, col).setFont(font_bold)
+            tbl.item(0, col).setFont(self.font_bold)
+
+        tbl.item(1, 0).setFont(self.font_bold)
 
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
@@ -195,10 +202,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         nrows = 7
         tbl.setRowCount(nrows)
         tbl.setColumnCount(ncols)
-        font_bold = QtGui.QFont()
-        font_bold.setBold(True)
         tbl.setHorizontalHeaderLabels(col_header)
-        tbl.horizontalHeader().setFont(font_bold)
+        tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         # tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
 
@@ -251,17 +256,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.setItem(row, 2, QtWidgets.QTableWidgetItem('{:8.1f}'.format(self.meas.uncertainty.systematic_user)))
 
         row = row + 1
-        font_bold = QtGui.QFont()
-        font_bold.setBold(True)
         tbl.setItem(row, 0, QtWidgets.QTableWidgetItem(self.tr('Estimated 95%')))
         tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
-        tbl.item(row, 0).setFont(font_bold)
+        tbl.item(row, 0).setFont(self.font_bold)
         tbl.setItem(row, 1, QtWidgets.QTableWidgetItem('{:8.1f}'.format(self.meas.uncertainty.total_95)))
         tbl.item(row, 1).setFlags(QtCore.Qt.ItemIsEnabled)
-        tbl.item(row, 1).setFont(font_bold)
+        tbl.item(row, 1).setFont(self.font_bold)
         tbl.setItem(row, 2, QtWidgets.QTableWidgetItem('{:8.1f}'.format(self.meas.uncertainty.total_95_user)))
         tbl.item(row, 2).setFlags(QtCore.Qt.ItemIsEnabled)
-        tbl.item(row, 2).setFont(font_bold)
+        tbl.item(row, 2).setFont(self.font_bold)
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
@@ -299,10 +302,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         nrows = 3
         tbl.setRowCount(nrows)
         tbl.setColumnCount(ncols)
-        font_bold = QtGui.QFont()
-        font_bold.setBold(True)
         tbl.setHorizontalHeaderLabels(header)
-        tbl.horizontalHeader().setFont(font_bold)
+        tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
 
@@ -314,14 +315,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Discharge COV
         tbl.setItem(row, 0, QtWidgets.QTableWidgetItem(self.tr('Q:')))
         tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
-        tbl.item(row, 0).setFont(font_bold)
+        tbl.item(row, 0).setFont(self.font_bold)
         tbl.setItem(row, 1, QtWidgets.QTableWidgetItem('{:5.2f}'.format(self.meas.uncertainty.cov)))
         tbl.item(row, 1).setFlags(QtCore.Qt.ItemIsEnabled)
 
         # Left and right edge % Q
         tbl.setItem(row, 2, QtWidgets.QTableWidgetItem(self.tr('L/R Edge:')))
         tbl.item(row, 2).setFlags(QtCore.Qt.ItemIsEnabled)
-        tbl.item(row, 2).setFont(font_bold)
+        tbl.item(row, 2).setFont(self.font_bold)
         left = (discharge['left_mean'] / discharge['total_mean']) * 100
         right = (discharge['right_mean'] / discharge['total_mean']) * 100
         tbl.setItem(row, 3, QtWidgets.QTableWidgetItem('{:5.2f} / {:5.2f}'.format(left, right)))
@@ -331,14 +332,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Width COV
         tbl.setItem(row, 0, QtWidgets.QTableWidgetItem(self.tr('Width:')))
         tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
-        tbl.item(row, 0).setFont(font_bold)
+        tbl.item(row, 0).setFont(self.font_bold)
         tbl.setItem(row, 1, QtWidgets.QTableWidgetItem('{:5.2f}'.format(trans_prop['width_cov'][-1])))
         tbl.item(row, 1).setFlags(QtCore.Qt.ItemIsEnabled)
 
         # Invalid cells
         tbl.setItem(row, 2, QtWidgets.QTableWidgetItem(self.tr('Invalid Cells:')))
         tbl.item(row, 2).setFlags(QtCore.Qt.ItemIsEnabled)
-        tbl.item(row, 2).setFont(font_bold)
+        tbl.item(row, 2).setFont(self.font_bold)
         value = (discharge['int_cells_mean'] / discharge['total_mean']) * 100
         tbl.setItem(row, 3, QtWidgets.QTableWidgetItem('{:5.2f}'.format(value)))
         tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
@@ -347,20 +348,31 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Area COV
         tbl.setItem(row, 0, QtWidgets.QTableWidgetItem(self.tr('Area:')))
         tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
-        tbl.item(row, 0).setFont(font_bold)
+        tbl.item(row, 0).setFont(self.font_bold)
         tbl.setItem(row, 1, QtWidgets.QTableWidgetItem('{:5.2f}'.format(trans_prop['area_cov'][-1])))
         tbl.item(row, 1).setFlags(QtCore.Qt.ItemIsEnabled)
 
         # Invalid ensembles
         tbl.setItem(row, 2, QtWidgets.QTableWidgetItem(self.tr('Invalid Ens:')))
         tbl.item(row, 2).setFlags(QtCore.Qt.ItemIsEnabled)
-        tbl.item(row, 2).setFont(font_bold)
+        tbl.item(row, 2).setFont(self.font_bold)
         value = (discharge['int_ensembles_mean'] / discharge['total_mean']) * 100
         tbl.setItem(row, 3, QtWidgets.QTableWidgetItem('{:5.2f}'.format(value)))
         tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
 
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
+
+    def select_transect(self, row, column):
+
+        if column == 0 and row > 0:
+            nrows = len(self.checked_transects_idx)
+            for nrow in range(1, nrows+1):
+                self.main_table_summary.item(nrow, 0).setFont(self.font_normal)
+
+            self.main_table_summary.item(row, 0).setFont(self.font_bold)
+            transect_id = self.checked_transects_idx[row-1]
+            self.contour_shiptrack(transect_id=transect_id)
 
     def contour_shiptrack(self, transect_id=0):
         """Generates the color contour and shiptrack plot for the main tab.

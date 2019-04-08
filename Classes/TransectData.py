@@ -1519,8 +1519,8 @@ class TransectData(object):
                     self.sensors.speed_of_sound_mps.set_selected(selected_name=selected)
                     self.update_sos()
                 else:
-                    self.sensors.speed_of_sound_mps.set_selected(selected_name=selected)
-                    self.update_sos(speed=speed)
+                    # self.sensors.speed_of_sound_mps.set_selected(selected_name=selected)
+                    self.update_sos(speed=speed, selected='user', source='Manual Input')
 
     def update_sos(self, selected=None, source=None, speed=None):
         """Sets a new specified speed of sound.
@@ -1572,7 +1572,9 @@ class TransectData(object):
         # Manual input for speed of sound
         elif selected == 'user' and source == 'Manual Input':
             self.sensors.speed_of_sound_mps.set_selected(selected_name=selected)
-            self.sensors.speed_of_sound_mps.user.set_source(source_in=source)
+            self.sensors.speed_of_sound_mps.user = SensorData()
+            self.sensors.speed_of_sound_mps.user.populate_data(speed, source)
+
 
         # Determine new speed of sound
         if self.sensors.speed_of_sound_mps.selected == 'internal':
@@ -1618,7 +1620,7 @@ class TransectData(object):
             self.w_vel.sos_correction(transect=self, ratio=ratio)
             self.boat_vel.bt_vel.sos_correction(transect=self, ratio=ratio)
         # Correct depths
-        self.depths.sos_corrections(ratio=ratio)
+        self.depths.sos_correction(ratio=ratio)
 
 
 

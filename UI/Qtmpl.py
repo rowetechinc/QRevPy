@@ -96,12 +96,14 @@ class Qtmpl(FigureCanvas):
 
         # Add color bar and axis labels
         cb = self.fig.colorbar(c, pad=0.02)
-        self.fig.axc.set_title('Water Speed ' + units['label_V'])
+        self.fig.axc.set_title(self.tr('Water Speed ') + units['label_V'])
         self.fig.axc.invert_yaxis()
         self.fig.axc.plot(ensembles, depth * units['L'], color='k')
-        self.fig.axc.set_xlabel('Ensembles')
-        self.fig.axc.set_ylabel('Depth ' + units['label_L'])
+        self.fig.axc.set_xlabel(self.tr('Ensembles'))
+        self.fig.axc.set_ylabel(self.tr('Depth ') + units['label_L'])
         self.fig.axc.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+        if transect.start_edge == 'Right':
+            self.fig.axc.invert_xaxis()
 
     @staticmethod
     def color_contour_data_prep(transect, data_type='Processed'):
@@ -224,8 +226,8 @@ class Qtmpl(FigureCanvas):
             if transect.boat_vel.selected == 'gga_vel':
                 ship_data = ship_data_gga
 
-        self.fig.axst.set_xlabel('Distance East ' + units['label_L'])
-        self.fig.axst.set_ylabel('Distance North ' + units['label_L'])
+        self.fig.axst.set_xlabel(self.tr('Distance East ') + units['label_L'])
+        self.fig.axst.set_ylabel(self.tr('Distance North ') + units['label_L'])
         self.fig.axst.xaxis.label.set_fontsize(10)
         self.fig.axst.yaxis.label.set_fontsize(10)
         self.fig.axst.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
