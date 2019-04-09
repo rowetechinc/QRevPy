@@ -60,6 +60,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.uncertainty_table()
         self.qa_table()
         self.contour_shiptrack()
+        self.extrap_plot(self.meas)
         print('complete')
 
     def saveMeasurement(self):
@@ -398,12 +399,41 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.middle_mpl.fig.clear()
             self.middle_mpl.contour_shiptrack(transect=transect, units=self.units)
         else:
-            self.middle_mpl = Qtmpl(self.graphics_main_middle, width=15, height=1, dpi=100)
+            self.middle_mpl = Qtmpl(self.graphics_main_middle, width=15, height=1, dpi=80)
             self.middle_mpl.contour_shiptrack(transect=transect, units=self.units)
             layout.addWidget(self.middle_mpl)
 
         # Draw canvas
         self.middle_mpl.draw()
+
+    def extrap_plot(self, meas):
+        """Generates the color contour and shiptrack plot for the main tab.
+
+        Parameters
+        ----------
+        transect_id: int
+            Index to check transects to identify the transect to be plotted
+        """
+
+        # Assign layout to widget to allow auto scaling
+        layout = QtWidgets.QVBoxLayout(self.graphics_main_extrap)
+        # Adjust margins of layout to maximize graphic area
+        layout.setContentsMargins(1, 1, 1, 1)
+
+        # canvas_size = self.middle_canvas.size()
+        # dpi = app.screens()[0].physicalDotsPerInch()
+
+        # If figure already exists update it. If not, create it.
+        if hasattr(self, 'extrap_mpl'):
+            self.extrap_mpl.fig.clear()
+            self.extrap_mpl.extrap_plot(meas=meas)
+        else:
+            self.extrap_mpl = Qtmpl(self.graphics_main_extrap, width=1, height=4, dpi=80)
+            self.extrap_mpl.extrap_plot(meas=meas)
+            layout.addWidget(self.extrap_mpl)
+
+        # Draw canvas
+        self.extrap_mpl.draw()
 
 app = QtWidgets.QApplication(sys.argv)
 window = QRev()

@@ -259,7 +259,7 @@
            </layout>
           </item>
           <item>
-           <layout class="QVBoxLayout" name="verticalLayout_right" stretch="2,4,4">
+           <layout class="QVBoxLayout" name="verticalLayout_right" stretch="3,5,6">
             <item>
              <widget class="QTableWidget" name="table_qa"/>
             </item>

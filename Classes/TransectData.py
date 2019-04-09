@@ -864,7 +864,7 @@ class TransectData(object):
         elif rsdata.Setup.Edges_0__Method == 1:
             edge_type = 'Rectangular'
         elif rsdata.Setup.Edges_0__Method == 0:
-            edge_type = 'UserQ'
+            edge_type = 'User Q'
         self.edges.left.populate_data(edge_type=edge_type,
                                       distance=rsdata.Setup.Edges_0__DistanceToBank,
                                       number_ensembles=ensembles_left,
@@ -876,7 +876,7 @@ class TransectData(object):
         elif rsdata.Setup.Edges_1__Method == 1:
             edge_type = 'Rectangular'
         elif rsdata.Setup.Edges_1__Method == 0:
-            edge_type = 'UserQ'
+            edge_type = 'User Q'
         self.edges.right.populate_data(edge_type=edge_type,
                                        distance=rsdata.Setup.Edges_1__DistanceToBank,
                                        number_ensembles=ensembles_right,

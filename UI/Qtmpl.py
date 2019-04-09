@@ -33,8 +33,6 @@ class Qtmpl(FigureCanvas):
 
         # Initialize figure
         self.fig = Figure(figsize=(width, height), dpi=dpi)
-        # Set margins and padding for figure
-        self.fig.subplots_adjust(left=0.05, bottom=0.2, right=0.98, top=0.85, wspace=0.1, hspace=0)
 
         # Configure FigureCanvas
         FigureCanvas.__init__(self, self.fig)
@@ -58,6 +56,9 @@ class Qtmpl(FigureCanvas):
 
         # Setup grid space
         gs = gridspec.GridSpec(1, 4)
+
+        # Set margins and padding for figure
+        self.fig.subplots_adjust(left=0.05, bottom=0.2, right=0.98, top=0.85, wspace=0.1, hspace=0)
 
         # Generate color contour
         self.fig.axc = self.fig.add_subplot(gs[0, 0:3])
@@ -102,6 +103,7 @@ class Qtmpl(FigureCanvas):
         self.fig.axc.set_xlabel(self.tr('Ensembles'))
         self.fig.axc.set_ylabel(self.tr('Depth ') + units['label_L'])
         self.fig.axc.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+        self.fig.axc.set_ylim(top=0, bottom=np.ceil(np.nanmax(depth * units['L'])))
         if transect.start_edge == 'Right':
             self.fig.axc.invert_xaxis()
 
@@ -205,13 +207,24 @@ class Qtmpl(FigureCanvas):
         return x_plt, cell_plt, speed_plt, ensembles, depth
 
     def shiptrack_plot(self, transect, units):
+        """Generates the shiptrack plot using all available references. Water vectors are plotted based on
+        the selected reference.
 
-        # Plot all available shiptracks
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData contain data to be plotted.
+        units: dict
+            Dictionary of unit conversions and labels
+        """
+
+        # Plot shiptrack based on bottom track
         ship_data_bt = transect.boat_vel.compute_boat_track(transect, ref='bt_vel')
         self.fig.axst.plot(ship_data_bt['track_x_m'] * units['L'], ship_data_bt['track_y_m'] * units['L'], color='r',
                            label='BT')
         ship_data = ship_data_bt
 
+        # Plot shiptrack based on vtg if available
         if transect.boat_vel.vtg_vel is not None:
             ship_data_vtg = transect.boat_vel.compute_boat_track(transect, ref='vtg_vel')
             self.fig.axst.plot(ship_data_vtg['track_x_m'] * units['L'], ship_data_vtg['track_y_m'] * units['L'],
@@ -219,6 +232,7 @@ class Qtmpl(FigureCanvas):
             if transect.boat_vel.selected == 'vtg_vel':
                 ship_data = ship_data_vtg
 
+        # Plot shiptrack based on gga if available
         if transect.boat_vel.gga_vel is not None:
             ship_data_gga = transect.boat_vel.compute_boat_track(transect, ref='gga_vel')
             self.fig.axst.plot(ship_data_gga['track_x_m'] * units['L'], ship_data_gga['track_y_m'] * units['L'],
@@ -226,6 +240,7 @@ class Qtmpl(FigureCanvas):
             if transect.boat_vel.selected == 'gga_vel':
                 ship_data = ship_data_gga
 
+        # Customize axes
         self.fig.axst.set_xlabel(self.tr('Distance East ') + units['label_L'])
         self.fig.axst.set_ylabel(self.tr('Distance North ') + units['label_L'])
         self.fig.axst.xaxis.label.set_fontsize(10)
@@ -241,6 +256,7 @@ class Qtmpl(FigureCanvas):
         u_mean = np.nanmean(u, axis=0)
         v_mean = np.nanmean(v, axis=0)
 
+        # Plot water vectors
         quiv_plt = self.fig.axst.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
                                         u_mean * units['V'], v_mean * units['V'], units='dots', width=2, scale=.02)
         # qk = axst.quiverkey(quiv_plt, 0.9, 0.9, 1, r'$1 \frac{m}{s}$', labelpos='E',
@@ -248,4 +264,78 @@ class Qtmpl(FigureCanvas):
 
         self.fig.axst.legend(loc='best')
 
+    def extrap_plot(self, meas):
+        """Generates the extrapolation plot.
 
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
+
+        # Configure axis
+        self.fig.ax = self.fig.add_subplot(111)
+
+        # Set margins and padding for figure
+        self.fig.subplots_adjust(left=0.2, bottom=0.15, right=0.98, top=0.98, wspace=0.1, hspace=0)
+
+        # Plot median values with error bars
+        self.extrap_plot_med(meas.extrap_fit.norm_data[-1])
+
+        # Plot selected and automatic fits
+        self.extrap_plot_fit(meas.extrap_fit.sel_fit[-1])
+
+        # Customize axis
+        self.fig.ax.set_xlabel(self.tr('Normalized Unit Q '))
+        self.fig.ax.set_ylabel(self.tr('Normalized Z '))
+        self.fig.ax.xaxis.label.set_fontsize(10)
+        self.fig.ax.yaxis.label.set_fontsize(10)
+        self.fig.ax.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+        self.fig.ax.grid()
+        for label in (self.fig.ax.get_xticklabels() + self.fig.ax.get_yticklabels()):
+            label.set_fontsize(10)
+    #
+    def extrap_plot_med(self, norm_data):
+        """Plots median values and associated error bars.
+
+        Parameters
+        ----------
+        norm_data: NormData
+            Object of class NormData
+        """
+
+        # Plot all median values in red
+        self.fig.ax.plot(norm_data.unit_normalized_med, norm_data.unit_normalized_z, 'rs', markerfacecolor='red')
+
+        # Plot innerquartile range bars around medians in red
+        for n in range(len(norm_data.unit_normalized_25)):
+            self.fig.ax.plot([norm_data.unit_normalized_25[n], norm_data.unit_normalized_75[n]],
+                             [norm_data.unit_normalized_z[n], norm_data.unit_normalized_z[n]],'r-')
+
+        # Plot valid combined median values in black
+        self.fig.ax.plot(norm_data.unit_normalized_med[norm_data.valid_data],
+                         norm_data.unit_normalized_z[norm_data.valid_data], 'ks', markerfacecolor='black')
+
+        # Plot innerquartile range bars around valid combined median values in black
+        for idx in norm_data.valid_data:
+            self.fig.ax.plot([norm_data.unit_normalized_25[idx], norm_data.unit_normalized_75[idx]],
+                             [norm_data.unit_normalized_z[idx], norm_data.unit_normalized_z[idx]],'k-')
+
+    def extrap_plot_fit(self, sel_fit, auto=True, selected=True):
+        """Plots the automatic and/or selected fit.
+
+        Parameters
+        ----------
+        sel_fit: SelectFit
+            Object of class SelectFit
+        auto: bool
+            Determines if automatic fit is plotted
+        selected: bool
+            Determines if selected fit is plotted
+        """
+
+        if auto:
+            self.fig.ax.plot(sel_fit.u_auto, sel_fit.z_auto, '-g', linewidth=3)
+
+        if selected:
+            self.fig.ax.plot(sel_fit.u, sel_fit.z, '-k', linewidth=2)

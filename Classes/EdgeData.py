@@ -29,11 +29,11 @@ class EdgeData(object):
         Parameters
         ----------
         edge_type: str
-            Type of edge (Triangular, Rectangular, Custom, UserQ)
+            Type of edge (Triangular, Rectangular, Custom, User Q)
         distance: float
             Distance to shore, in m.
         number_ensembles: int
-            Number of edge ensembles for all types but UserQ
+            Number of edge ensembles for all types but User Q
         coefficient: float
             User supplied custom edge coefficient.
         user_discharge: float
