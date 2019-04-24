@@ -4,6 +4,8 @@ from matplotlib.figure import Figure
 import matplotlib.gridspec as gridspec
 import matplotlib.cm as cm
 import numpy as np
+from datetime import datetime
+import matplotlib.dates as mdates
 
 
 class Qtmpl(FigureCanvas):
@@ -339,3 +341,35 @@ class Qtmpl(FigureCanvas):
 
         if selected:
             self.fig.ax.plot(sel_fit.u, sel_fit.z, '-k', linewidth=2)
+
+    def discharge_plot(self, meas, checked, units):
+        """Generates the extrapolation plot.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
+
+        # Configure axis
+        self.fig.axq = self.fig.add_subplot(1, 1, 1)
+
+        # Set margins and padding for figure
+        self.fig.subplots_adjust(left=0.2, bottom=0.15, right=0.98, top=0.98, wspace=0.1, hspace=0)
+
+        for idx in checked:
+            self.fig.axq.plot([datetime.fromtimestamp(meas.transects[idx].date_time.start_serial_time),
+                               datetime.fromtimestamp(meas.transects[idx].date_time.end_serial_time)],
+                              [meas.discharge[idx].total, meas.discharge[idx].total],'k-')
+
+        # Customize axis
+        timeFmt = mdates.DateFormatter('%H:%M:%S')
+        self.fig.axq.xaxis.set_major_formatter(timeFmt)
+        self.fig.axq.set_xlabel(self.tr('Time '))
+        self.fig.axq.set_ylabel(self.tr('Discharge ') + units['label_Q'])
+        self.fig.axq.xaxis.label.set_fontsize(10)
+        self.fig.axq.yaxis.label.set_fontsize(10)
+        self.fig.axq.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+        self.fig.axq.grid()
+        # for label in (self.fig.ax.get_xticklabels() + self.fig.ax.get_yticklabels()):
+        #     label.set_fontsize(10)

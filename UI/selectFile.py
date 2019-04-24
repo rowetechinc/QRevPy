@@ -1,8 +1,9 @@
 import os
 from PyQt5 import QtWidgets
 from Classes.stickysettings import StickySettings as SSet
-import wSelectFile
+from UI import wSelectFile
 import datetime as datetime
+
 
 class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
     """Dialog to allow users to select measurement files for processing.

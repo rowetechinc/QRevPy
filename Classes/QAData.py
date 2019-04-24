@@ -821,7 +821,7 @@ class QAData(object):
             elif np.any(self.depths['q_run_caution']):
                 self.depths['messages'].append(['Depth: Int. Q for consecutive invalid ensembles exceeds '
                                                 + '%2.0f % self.q_run_threshold_caution' + '%;', 2, 10])
-            self.depths['status'] = 'caution'
+                self.depths['status'] = 'caution'
 
             # Check total interpolated discharge criteria
             if np.any(self.depths['q_total_warning']):

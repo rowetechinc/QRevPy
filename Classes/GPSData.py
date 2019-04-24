@@ -631,7 +631,11 @@ class GPSData(object):
             delta_x = re * (lon2 - lon1) * np.cos(lat_avg_rad)
             delta_y = rn * (lat2 - lat1)
             delta_time = t2 - t1
-            u[idx_values[n]] = delta_x / delta_time
-            v[idx_values[n]] = delta_y / delta_time
+            if delta_time > 0.0001:
+                u[idx_values[n]] = delta_x / delta_time
+                v[idx_values[n]] = delta_y / delta_time
+            else:
+                u[idx_values[n]] = np.nan
+                v[idx_values[n]] = np.nan
             
         return u, v
