@@ -94,7 +94,7 @@ class DepthStructure(object):
             # Prepare vector of valid BT averages, which are defined as having at least 2 valid beams
             bt_valid = self.bt_depths.valid_data
             n_ensembles = bt_valid.shape[-1]
-            bt_filtered = self.bt_depths.depth_processed_m
+            bt_filtered = np.copy(self.bt_depths.depth_processed_m)
             bt_filtered[np.logical_not(bt_valid)] = np.nan
             
             # Prepare vertical beam data, using only data prior to interpolation
@@ -118,34 +118,34 @@ class DepthStructure(object):
 
             # Apply composite depths
             if ref == 'bt_depths':
-                comp_depth = bt_filtered
+                comp_depth = np.copy(bt_filtered)
                 comp_source[np.isnan(comp_depth) == False] = 1
                 comp_depth[np.isnan(comp_depth)] = np.squeeze(ds_filtered[np.isnan(comp_depth)])
-                comp_source[(np.isnan(comp_depth) == False) & (np.isnan(comp_source) == True)] = 3
+                comp_source[np.logical_and((np.isnan(comp_depth) == False), (np.isnan(comp_source) == True))] = 3
                 comp_depth[np.isnan(comp_depth)] = vb_filtered[np.isnan(comp_depth)]
-                comp_source[(np.isnan(comp_depth) == False) & (np.isnan(comp_source) == True)] = 2
+                comp_source[np.logical_and((np.isnan(comp_depth) == False), (np.isnan(comp_source) == True))] = 2
                 comp_depth[np.isnan(comp_depth)] = np.squeeze(self.bt_depths.depth_processed_m[np.isnan(comp_depth)])
-                comp_source[(np.isnan(comp_depth) == False) & (np.isnan(comp_source) == True)] = 4
+                comp_source[np.logical_and((np.isnan(comp_depth) == False), (np.isnan(comp_source) == True))] = 4
                 
             elif ref == 'vb_depths':
-                comp_depth = vb_filtered
+                comp_depth = np.copy(vb_filtered)
                 comp_source[np.isnan(comp_depth) == False] = 2
                 comp_depth[np.isnan(comp_depth)] = np.squeeze(ds_filtered[np.isnan(comp_depth)])
-                comp_source[(np.isnan(comp_depth) == False) & (np.isnan(comp_source) == True)] = 3
+                comp_source[np.logical_and((np.isnan(comp_depth) == False), (np.isnan(comp_source) == True))] = 3
                 comp_depth[np.isnan(comp_depth)] = np.squeeze(bt_filtered[np.isnan(comp_depth)])
-                comp_source[(np.isnan(comp_depth) == False) & (np.isnan(comp_source) == True)] = 1
+                comp_source[np.logical_and((np.isnan(comp_depth) == False), (np.isnan(comp_source) == True))] = 1
                 comp_depth[np.isnan(comp_depth)] = np.squeeze(self.vb_depths.depth_processed_m[np.isnan(comp_depth)])
-                comp_source[(np.isnan(comp_depth) == False) & (np.isnan(comp_source) == True)] = 4
+                comp_source[np.logical_and((np.isnan(comp_depth) == False), (np.isnan(comp_source) == True))] = 4
                 
             elif ref == 'ds_depths':
-                comp_depth = ds_filtered
+                comp_depth = np.copy(ds_filtered)
                 comp_source[np.isnan(comp_depth) == False] = 3
                 comp_depth[np.isnan(comp_depth)] = np.squeeze(vb_filtered[np.isnan(comp_depth)])
-                comp_source[(np.isnan(comp_depth) == False) & (np.isnan(comp_source) == True)] = 2
+                comp_source[np.logical_and((np.isnan(comp_depth) == False), (np.isnan(comp_source) == True))] = 2
                 comp_depth[np.isnan(comp_depth)] = np.squeeze(bt_filtered[np.isnan(comp_depth)])
-                comp_source[(np.isnan(comp_depth) == False) & (np.isnan(comp_source) == True)] = 1
+                comp_source[np.logical_and((np.isnan(comp_depth) == False), (np.isnan(comp_source) == True))] = 1
                 comp_depth[np.isnan(comp_depth)] = np.squeeze(self.ds_depths.depth_processed_m[np.isnan(comp_depth)])
-                comp_source[(np.isnan(comp_depth) == False) & (np.isnan(comp_source) == True)] = 4
+                comp_source[np.logical_and((np.isnan(comp_depth) == False), (np.isnan(comp_source) == True))] = 4
                
             # Save composite depth to depth_processed of selected primary reference
             selected_data = getattr(self, ref)

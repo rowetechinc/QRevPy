@@ -19,7 +19,8 @@ from UI.Qtmpl import Qtmpl
 from MiscLibs.common_functions import units_conversion
 from datetime import datetime
 from UI.Comment import Comment
-
+from UI.Transects2Use import Transects2Use
+import copy
 
 
 class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
@@ -34,6 +35,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.actionOpen.triggered.connect(self.selectMeasurement)
         self.actionSave.triggered.connect(self.saveMeasurement)
         self.actionComment.triggered.connect(self.addComment)
+        self.actionCheck.triggered.connect(self.selectTransects)
+        self.actionBT.triggered.connect(self.setRef2BT)
+        self.actionGGA.triggered.connect(self.setRef2GGA)
+        self.actionVTG.triggered.connect(self.setRef2VTG)
+        self.actionOFF.triggered.connect(self.compTracksOff)
+        self.actionON.triggered.connect(self.compTracksOn)
+
         self.font_bold = QtGui.QFont()
         self.font_bold.setBold(True)
         self.font_normal = QtGui.QFont()
@@ -47,6 +55,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         self.icon_good = QtGui.QIcon()
         self.icon_good.addPixmap(QtGui.QPixmap(":/images/24x24/Yes.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+
+        self.icon_allChecked = QtGui.QIcon()
+        self.icon_allChecked.addPixmap(QtGui.QPixmap(":/images/24x24/Apply.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+
+        self.icon_unChecked = QtGui.QIcon()
+        self.icon_unChecked.addPixmap(QtGui.QPixmap(":/images/24x24/Red mark.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+
+
+        self.actionSave.setDisabled(True)
+        self.actionComment.setDisabled(True)
+        self.actionEDI.setDisabled(True)
+        self.actionCheck.setDisabled(True)
 
 
         if QtCore.QSysInfo.windowsVersion() == QtCore.QSysInfo.WV_WINDOWS10:
@@ -92,16 +112,55 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         else:
             print('Cancel')
 
-        self.update_gui()
+        self.actionSave.setEnabled(True)
+        self.actionComment.setEnabled(True)
+        self.update_main()
 
-    def update_gui(self):
+    def update_main(self):
         """Update Gui
         """
+
+        self.actionCheck.setEnabled(True)
         self.checked_transects_idx = Measurement.checked_transects(self.meas)
+        if len(self.checked_transects_idx) == len(self.meas.transects):
+            self.actionCheck.setIcon(self.icon_allChecked)
+        else:
+            self.actionCheck.setIcon(self.icon_unChecked)
+
+        # Set toolbar navigation indicator
+        font_bold = QtGui.QFont()
+        font_bold.setBold(True)
+        font_bold.setPointSize(11)
+
+        font_normal = QtGui.QFont()
+        font_normal.setBold(False)
+        font_normal.setPointSize(11)
+
+        bt_selected = self.meas.transects[self.checked_transects_idx[0]].boat_vel.selected
+        if bt_selected == 'bt_vel':
+            self.actionBT.setFont(font_bold)
+            self.actionGGA.setFont(font_normal)
+            self.actionVTG.setFont(font_normal)
+        elif bt_selected == 'gga_vel':
+            self.actionBT.setFont(font_normal)
+            self.actionGGA.setFont(font_bold)
+            self.actionVTG.setFont(font_normal)
+        elif bt_selected == 'vtg_vel':
+            self.actionBT.setFont(font_normal)
+            self.actionGGA.setFont(font_normal)
+            self.actionVTG.setFont(font_bold)
+
+        if self.meas.transects[self.checked_transects_idx[0]].boat_vel.composite == 'On':
+            self.actionON.setFont(font_bold)
+            self.actionOFF.setFont(font_normal)
+        else:
+            self.actionON.setFont(font_normal)
+            self.actionOFF.setFont(font_bold)
+
         self.main_summary_table()
         self.uncertainty_table()
         self.qa_table()
-        self.contour_shiptrack()
+        self.contour_shiptrack(self.checked_transects_idx[0])
         self.extrap_plot()
         self.discharge_plot()
         self.messages_tab()
@@ -129,27 +188,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.meas.comments.append(self.comment.text_edit_comment.toPlainText())
             self.comments_tab()
 
-    # def openFile(self):
-    #     """"""
-    #     # Get the current folder setting. However, if the folder has not been previously defined create the Folder key
-    #     # and set the value the current folder.
-    #     try:
-    #         folder = self.settings.get('Folder')
-    #     except KeyError:
-    #         self.settings.new('Folder',os.getcwd())
-    #         folder = self.settings.get('Folder')
-    #     # Allow the user to choose the file to open.
-    #     fileName = QtWidgets.QFileDialog.getOpenFileName(self,self.tr('Open File'),folder,self.tr('Any File (*.mat)'))[0]
-    #     # Update the folder setting
-    #     pathName = os.path.split(fileName)[0]
-    #     self.settings.set('Folder',pathName)
-    #     # Read Matlab file
-    #     mat_contents = sio.loadmat(fileName, struct_as_record=False, squeeze_me=True)
-    #     # For QRev File
-    #     meas_struct = mat_contents['meas_struct']
-    #     QRev_version = mat_contents['version']
-    #     print('Hello World')
-    #     mat_struct = mat_contents['meas_struct']
+    def selectTransects(self):
+        self.transects_2_use = Transects2Use(self)
+        transects_selected = self.transects_2_use.exec_()
+        selected_transects = []
+        if transects_selected:
+            for row in range(self.transects_2_use.tableSelect.rowCount()):
+                if self.transects_2_use.tableSelect.item(row, 0).checkState() == QtCore.Qt.Checked:
+                    selected_transects.append(row)
+
+            self.checked_transects_idx = selected_transects
+            Measurement.selected_transects_changed(self.meas, self.checked_transects_idx)
+            self.update_main()
 
     def main_summary_table(self):
         """Create and populate main summary table.
@@ -265,6 +315,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
         # Setup table
         tbl = self.table_uncertainty
+        tbl.clear()
         col_header = [self.tr('Uncertainty'), self.tr('Auto'), self.tr('  User  ')]
         ncols = len(col_header)
         nrows = 7
@@ -273,6 +324,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setHorizontalHeaderLabels(col_header)
         tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
+        tbl.itemChanged.connect(self.recompute_uncertainty)
+        tbl.itemChanged.disconnect()
 
         # Add labels and data
         row = 0
@@ -342,6 +395,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Recomputes the uncertainty based on user input.
         """
         # Get edited value from table
+
         new_value = self.table_uncertainty.selectedItems()[0].text()
         if new_value == '':
             new_value = None
@@ -544,6 +598,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Initialize local variables
         qa = self.meas.qa
         tbl = self.main_message_table
+        tbl.clear()
         main_message_header = [self.tr('Status'), self.tr('Message')]
         qa_check_keys = ['bt_vel', 'compass', 'depths', 'edges', 'extrapolation', 'gga_vel', 'moving_bed', 'system_tst',
                          'temperature', 'transects', 'user', 'vtg_vel', 'w_vel']
@@ -615,10 +670,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tab = 'tab_systest'
         elif key == 'temperature':
             tab = 'tab_tempsal'
-        elif key == 'transects':
+        elif key == 'transects' or 'user':
             tab = 'tab_main'
-        elif key == 'user':
-            tab = 'tab_main'
+            transects_status = self.meas.qa.transects['status']
+            user_status = self.meas.qa.user['status']
+            status = 'good'
+            if transects_status == 'caution' or user_status == 'caution':
+                status = 'caution'
+            if transects_status == 'warning' or user_status == 'warning':
+                status = 'warning'
         elif key == 'w_vel':
             tab = 'tab_wt'
 
@@ -646,6 +706,41 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_comments.moveCursor(QtGui.QTextCursor.End)
                 self.display_comments.textCursor().insertBlock()
 
+    def setRef2BT(self):
+        """Changes the navigation reference to Bottom Track
+        """
+        settings = Measurement.current_settings(self.meas)
+        settings['NavRef'] = 'BT'
+        Measurement.apply_settings(self.meas, settings)
+        self.update_main()
+
+    def setRef2GGA(self):
+        """Changes the navigation reference to GPS GGA
+        """
+        settings = Measurement.current_settings(self.meas)
+        settings['NavRef'] = 'GGA'
+        Measurement.apply_settings(self.meas, settings)
+        self.update_main()
+
+    def setRef2VTG(self):
+        """Changes the navigation reference to GPS VTG
+        """
+        settings = Measurement.current_settings(self.meas)
+        settings['NavRef'] = 'VTG'
+        Measurement.apply_settings(self.meas, settings)
+        self.update_main()
+
+    def compTracksOn(self):
+        settings = Measurement.current_settings(self.meas)
+        settings['CompTracks'] = 'On'
+        Measurement.apply_settings(self.meas, settings)
+        self.update_main()
+
+    def compTracksOff(self):
+        settings = Measurement.current_settings(self.meas)
+        settings['CompTracks'] = 'Off'
+        Measurement.apply_settings(self.meas, settings)
+        self.update_main()
 
 app = QtWidgets.QApplication(sys.argv)
 window = QRev()

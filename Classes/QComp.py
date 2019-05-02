@@ -1,6 +1,7 @@
 from Classes.TransectData import TransectData
 import numpy as np
 from MiscLibs.common_functions import cart2pol, pol2cart
+from Classes.BoatStructure import BoatStructure
 
 
 class QComp(object):
@@ -150,6 +151,8 @@ class QComp(object):
         
         # Compute interpolated cell and ensemble discharge from computed
         # measured discharge
+        self.interpolateNoCells(data_in)
+        self.middle = np.nansum(self.middle_ens)
         self.int_cells, self.int_ens = QComp.discharge_interpolated(self.top_ens, self.middle_cells,
                                                                     self.bottom_ens, data_in)
         
@@ -201,6 +204,7 @@ class QComp(object):
         # except:
         #     pass
 
+
         self.total_uncorrected = self.left + self.right + self.middle + self.bottom + self.top
 
         # Compute final discharge using correction if applicable
@@ -208,6 +212,8 @@ class QComp(object):
             self.total = self.total_uncorrected
         else:
             self.total = self.left + self.right + (self.middle + self.bottom + self.top) * self.correction_factor
+
+
 
     def populate_from_qrev_mat(self, q_in):
         """Populated QComp instance variables with data from QRev Matlab file.
@@ -234,6 +240,92 @@ class QComp(object):
         self.correction_factor = q_in.correctionFactor
         self.int_cells = q_in.intCells
         self.int_ens = q_in.intEns
+
+    def interpolateNoCells(self, transData):
+        """Computes discharge for ensembles where the depth is too
+           shallow for any valid depth cells. The computation is done
+           using interpolation of unit discharge defined as the ensemble
+           discharge divided by the depth of the ensemble and the
+           duration of the ensemble. The independent variable for the
+           interpolation is the track distance. After interpolation the
+           discharge for the interpolated ensembles is computed by
+           multiplying the interpolated value by the depth and duration
+           of those ensembles to achieve discharge for those ensembles.
+
+           Parameters
+           ----------
+           transData: TransectData
+                Object of TransectData
+            % obj: object of clsQComp
+        """
+
+        # Compute the discharge in each ensemble
+        q_ensemble = self.top_ens + self.middle_ens + self.bottom_ens
+
+        idx = np.where(np.isnan(q_ensemble))[0]
+
+        if len(idx) > 0:
+
+            # ID ensembles with valid discharge
+            valid_q = np.isnan(q_ensemble) == False
+
+            # Compute the unit discharge by depth for each ensemble
+            depth_selected = getattr(transData.depths, transData.depths.selected)
+            unit_q_depth = (q_ensemble / depth_selected.depth_processed_m[transData.in_transect_idx]) \
+                           / transData.date_time.ens_duration_sec[transData.in_transect_idx]
+
+            # Compute boat track
+            boat_track = BoatStructure.compute_boat_track(transData, transData.boat_vel.selected)
+
+            # Create strict monotonic vector for 1-D interpolation
+            q_mono = unit_q_depth
+            x_mono = boat_track['distance_m'][transData.in_transect_idx]
+
+            # Identify duplicate values, and replace with an average q
+            dups = self.group_consecutives(x_mono)
+            if len(dups[0]):
+                for dup in dups:
+                    q_avg = np.nanmean(q_mono[np.array(dup)])
+                    q_mono[dup[0]] = q_avg
+                    q_mono[dup[1::]] = np.nan
+                    x_mono[dup[1::]] = np.nan
+
+            valid_q_mono = np.isnan(q_mono) == False
+            valid_x_mono = np.isnan(x_mono) == False
+            valid = np.all(np.vstack([valid_q_mono, valid_x_mono]), 0)
+
+            # Interpolate unit q
+            if np.any(valid):
+                unit_q_int = np.interp(boat_track['distance_m'][transData.in_transect_idx], x_mono[valid],
+                                       q_mono[valid], left=np.nan, right=np.nan)
+            else:
+                unit_q_int = 0
+
+            # Compute the discharge in each ensemble based on interpolated data
+            q_int = unit_q_int * depth_selected.depth_processed_m[transData.in_transect_idx] \
+                * transData.date_time.ens_duration_sec[transData.in_transect_idx]
+            self.middle_ens[idx] = q_int[idx]
+
+
+    @staticmethod
+    def group_consecutives(vals):
+        """Return list of consecutive lists of numbers from vals (number list)."""
+        run = []
+        result = []
+        expect = vals[0]
+        j = 0
+        for n, v in enumerate(vals):
+            if v == expect:
+                j += 1
+                if j > 1:
+                    run.append(n-1)
+                    run.append(n)
+            elif j > 0:
+                result.append(run)
+                run = []
+                j = 0
+            expect = vals[n]
+        return result
 
     @staticmethod
     def cross_product(transect=None, w_vel_x=None, w_vel_y=None, b_vel_x=None, b_vel_y=None, start_edge=None):

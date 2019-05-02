@@ -18,6 +18,7 @@ from datetime import datetime
 from MiscLibs.common_functions import nandiff
 
 
+
 class TransectData(object):
     """Class to hold Transect properties.
 
@@ -303,14 +304,33 @@ class TransectData(object):
             raw_gga_lon = pd0_data.Gps2.lon_deg
 
             # Determine correct sign for latitude
-            idx = np.where(pd0_data.Gps2.lat_ref == 'S')[0]
-            if len(idx) > 0:
-                raw_gga_lat[idx] = raw_gga_lat[idx] * -1
+            for n, lat_ref in enumerate(pd0_data.Gps2.lat_ref):
+                try:
+                    idx = [lat_ref.index('S')]
+                    if len(idx) > 0:
+                        raw_gga_lat[n, idx] = raw_gga_lat[n, idx] * -1
+                except ValueError:
+                    pass
+            # idx = np.where(pd0_data.Gps2.lat_ref == 'S')[0]
+            # if len(idx) > 0:
+            #     raw_gga_lat[idx] = raw_gga_lat[idx] * -1
 
             # Determine correct sign for longitude
-            idx = np.where(pd0_data.Gps2.lon_ref == 'W')
-            if len(idx) > 0:
-                raw_gga_lon[idx] = raw_gga_lon[idx] * -1
+            for n, lon_ref in enumerate(pd0_data.Gps2.lon_ref):
+                try:
+                    idx = [lon_ref.index('W')]
+                    if len(idx) > 0:
+                        raw_gga_lon[n, idx] = raw_gga_lon[n, idx] * -1
+                except ValueError:
+                    pass
+            # for sublist in data:
+            #     if sublist[1] == 'W':
+            #         print
+            #         "Found it!", sublist
+            #         break
+            # idx = np.where(pd0_data.Gps2.lon_ref == 'W')
+            # if len(idx) > 0:
+            #     raw_gga_lon[idx] = raw_gga_lon[idx] * -1
             
             # Assign data to local variables
             raw_gga_alt = pd0_data.Gps2.alt
@@ -371,14 +391,14 @@ class TransectData(object):
                                        vtg_method=vtg_method)
                 
                 # If valid gga data exists create gga boat velocity object
-                if np.sum(np.sum(np.abs(raw_gga_lat))) > 0:
+                if np.nansum(np.nansum(np.abs(raw_gga_lat))) > 0:
                     self.boat_vel.add_boat_object(source='TRDI',
                                                   vel_in=self.gps.gga_velocity_ens_mps,
                                                   coord_sys_in='Earth',
                                                   nav_ref_in='GGA')
 
                 # If valid vtg data exist create vtg boat velocity object
-                if np.sum(np.sum(np.abs(raw_vtg_speed))) > 0:
+                if np.nansum(np.nansum(np.abs(raw_vtg_speed))) > 0:
                     self.boat_vel.add_boat_object(source='TRDI',
                                                   vel_in=self.gps.vtg_velocity_ens_mps,
                                                   coord_sys_in='Earth',

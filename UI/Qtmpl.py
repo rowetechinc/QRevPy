@@ -6,6 +6,7 @@ import matplotlib.cm as cm
 import numpy as np
 from datetime import datetime
 import matplotlib.dates as mdates
+from matplotlib.ticker import MaxNLocator
 
 
 class Qtmpl(FigureCanvas):
@@ -370,6 +371,5 @@ class Qtmpl(FigureCanvas):
         self.fig.axq.xaxis.label.set_fontsize(10)
         self.fig.axq.yaxis.label.set_fontsize(10)
         self.fig.axq.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+        # self.fig.axq.xaxis.set_major_locator(MaxNLocator(4))
         self.fig.axq.grid()
-        # for label in (self.fig.ax.get_xticklabels() + self.fig.ax.get_yticklabels()):
-        #     label.set_fontsize(10)

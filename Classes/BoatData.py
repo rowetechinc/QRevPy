@@ -758,14 +758,14 @@ class BoatData(object):
                 mono_array[2, i] = np.nanmean(mono_array[2, i:i + 2])
                 mono_array = np.delete(mono_array, i+1, 1)
             # Apply linear interpolation
-                # Apply linear interpolation
-                self.u_processed_mps = np.interp(ens_time,
-                                                 mono_array[0, :],
-                                                 mono_array[1, :])
-                # Apply linear interpolation
-                self.v_processed_mps = np.interp(ens_time,
-                                                 mono_array[0, :],
-                                                 mono_array[2, :])
+            # Apply linear interpolation
+            self.u_processed_mps = np.interp(ens_time,
+                                             mono_array[0, :],
+                                             mono_array[1, :])
+            # Apply linear interpolation
+            self.v_processed_mps = np.interp(ens_time,
+                                             mono_array[0, :],
+                                             mono_array[2, :])
 
     def apply_filter(self, transect, beam=None,
                      difference=None, difference_threshold=None,

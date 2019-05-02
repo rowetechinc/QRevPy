@@ -583,7 +583,7 @@ class Pd0TRDI(object):
                             self.Cfg.bm[i_ens] = np.fromfile(f, np.uint8, count=1)[0]
                             self.Cfg.be_mmps[i_ens] = np.fromfile(f, np.uint16, count=1)[0]
 
-                            # Read winriver 10.06 fromat GPS data
+                            # Read winriver 10.06 format GPS data
                             self.Gps.lat_deg[i_ens] = (np.fromfile(f, np.int32, count=1)[0]/2**31) * 180
 
                             # Read the Least Significant Bytes for beam depths

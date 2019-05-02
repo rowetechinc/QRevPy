@@ -908,7 +908,7 @@ class WaterData(object):
             valid = copy.deepcopy(self.cells_above_sl)
             
             # Compare number of valid beams or velocity coordinates to filter value
-            valid[(valid_vel_sum < self.beam_filter) & (valid_vel_sum > 2)] = False
+            valid[np.logical_and((valid_vel_sum < self.beam_filter), (valid_vel_sum > 2))] = False
             
             # Save logical of valid data to object
             self.valid_data[5, :, :] = valid
@@ -1527,7 +1527,7 @@ class WaterData(object):
                     
                     # Determine index of all valid data
                     valid_z = np.isnan(z) == False
-                    valid_combined = valid & valid_z
+                    valid_combined = np.logical_and(valid, valid_z)
 
                     # TODO Need to test, I would have assumed hstack
                     u = interpolate.griddata(np.vstack((z[valid_combined], track_array[valid_combined])).T,
@@ -1584,7 +1584,7 @@ class WaterData(object):
 
                 # Determine index of all valid data
                 valid_z = np.isnan(z) == False
-                valid_combined = valid & valid_z
+                valid_combined = np.logical_and(valid, valid_z)
 
                 # TODO Need to evaluate other methods like natural neighbor, compare against Matlab
                 u = interpolate.griddata(np.array([z[valid_combined].ravel(),

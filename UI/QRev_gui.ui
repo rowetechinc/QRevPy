@@ -391,10 +391,6 @@
        </widget>
       </widget>
       <widget class="QWidget" name="tab_mbt">
-       <attribute name="icon">
-        <iconset resource="dsm.qrc">
-         <normaloff>:/images/24x24/Alert.png</normaloff>:/images/24x24/Alert.png</iconset>
-       </attribute>
        <attribute name="title">
         <string>MovBedTst</string>
        </attribute>
@@ -457,10 +453,6 @@
        </widget>
       </widget>
       <widget class="QWidget" name="tab_gps">
-       <attribute name="icon">
-        <iconset resource="dsm.qrc">
-         <normaloff>:/images/24x24/Warning.png</normaloff>:/images/24x24/Warning.png</iconset>
-       </attribute>
        <attribute name="title">
         <string>GPS</string>
        </attribute>
@@ -662,7 +654,7 @@
    <addaction name="separator"/>
    <addaction name="actionComment"/>
    <addaction name="separator"/>
-   <addaction name="actionUncheckAll"/>
+   <addaction name="actionCheck"/>
    <addaction name="separator"/>
    <addaction name="actionEDI"/>
    <addaction name="separator"/>
@@ -743,7 +735,7 @@
     </font>
    </property>
   </action>
-  <action name="actionUncheckAll">
+  <action name="actionCheck">
    <property name="icon">
     <iconset resource="dsm.qrc">
      <normaloff>:/images/24x24/Red mark.png</normaloff>:/images/24x24/Red mark.png</iconset>

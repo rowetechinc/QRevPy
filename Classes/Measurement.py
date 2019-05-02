@@ -867,8 +867,9 @@ class Measurement(object):
 
         self.compute_discharge()
 
-        # TODO add uncertainty
-        # TODO add quality assurance
+        self.uncertainty = Uncertainty()
+        self.uncertainty.compute_uncertainty(self)
+        self.qa = QAData(self)
 
     def current_settings(self):
         """Saves the current settings for a measurement. Since all settings
@@ -1137,6 +1138,35 @@ class Measurement(object):
 
         return settings
 
+    def selected_transects_changed(self, selected_transects_idx):
+
+        for n in range(len(self.transects)):
+            if n in selected_transects_idx:
+                self.transects[n].checked = True
+            else:
+                self.transects[n].checked = False
+        # Recompute extrapolations
+        # NOTE: Extrapolations should be determined prior to WT
+        # interpolations because the TRDI approach for power/power
+        # using the power curve and exponent to estimate invalid cells.
+
+        if (self.extrap_fit is None) or (self.extrap_fit.fit_method == 'Automatic'):
+            self.extrap_fit = ComputeExtrap()
+            self.extrap_fit.populate_data(transects=self.transects, compute_sensitivity=False)
+            top = self.extrap_fit.sel_fit[-1].top_method
+            bot = self.extrap_fit.sel_fit[-1].bot_method
+            exp = self.extrap_fit.sel_fit[-1].exponent
+            self.change_extrapolation(self.extrap_fit.fit_method, top=top, bot=bot, exp=exp)
+
+        self.extrap_fit.q_sensitivity = ExtrapQSensitivity()
+        self.extrap_fit.q_sensitivity.populate_data(transects=self.transects,
+                                                    extrap_fits=self.extrap_fit.sel_fit)
+
+        self.compute_discharge()
+        self.uncertainty = Uncertainty()
+        self.uncertainty.compute_uncertainty(self)
+        self.qa = QAData(self)
+
     def compute_discharge(self):
         self.discharge = []
         for transect in self.transects:
@@ -1330,7 +1360,7 @@ class Measurement(object):
 
             # Get boat speeds
             in_transect_idx=transect.in_transect_idx
-            if getattr(transect.boat_vel,transect.boat_vel.selected) is not None:
+            if getattr(transect.boat_vel, transect.boat_vel.selected) is not None:
                 boat_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
                 u_boat = boat_selected.u_processed_mps[in_transect_idx]
                 v_boat = boat_selected.v_processed_mps[in_transect_idx]

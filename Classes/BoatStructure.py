@@ -212,18 +212,18 @@ class BoatStructure(object):
                 u_comp = u_bt
                 comp_source[np.isnan(u_comp) == False] = 1
                 
-                # If BT data are not valid try VTG and set composite source
-                u_comp[np.isnan(u_comp)] = u_vtg[np.isnan(comp_source)]
-                comp_source[np.isnan(u_comp) == False & np.isnan(comp_source)] = 3
+                # If BT data are not valid try VTG and set composite source (BUG HERE DSM)
+                u_comp[np.isnan(u_comp)] = u_vtg[np.isnan(u_comp)]
+                comp_source[np.logical_and(np.isnan(u_comp) == False, np.isnan(comp_source))] = 3
                 
                 # If there are still invalid boat velocities, try GGA and set composite source
                 u_comp[np.isnan(u_comp)] = u_gga[np.isnan(u_comp)]
-                comp_source[np.isnan(u_comp) == False & np.isnan(comp_source)] = 2
+                comp_source[np.logical_and(np.isnan(u_comp) == False, np.isnan(comp_source))] = 2
                 
                 # If there are still invalid boat velocities, use interpolated
                 # values if present and set composite source
                 # DSM changed 1/29/2018 u_comp[np.isnan(u_comp)] = self.bt_vel.u_processed_mps[np.isnan(u_comp)]
-                comp_source[np.isnan(u_comp) == False & np.isnan(comp_source)] = 0
+                comp_source[np.logical_and(np.isnan(u_comp) == False, np.isnan(comp_source))] = 0
                 
                 # Set composite source to invalid for all remaining invalid boat velocity data
                 comp_source[np.isnan(comp_source)] = -1
@@ -253,16 +253,16 @@ class BoatStructure(object):
                 
                 # If GGA data are not valid try VTG and set composite source
                 u_comp[np.isnan(u_comp)] = u_vtg[np.isnan(u_comp)]
-                comp_source[np.isnan(u_comp) == False & np.isnan(comp_source)] = 3
+                comp_source[np.logical_and(np.isnan(u_comp) == False, np.isnan(comp_source))] = 3
                 
                 # If there are still invalid boar velocities, try BT and set composite source
                 u_comp[np.isnan(u_comp)] = u_bt[np.isnan(u_comp)]
-                comp_source[np.isnan(u_comp) == False & np.isnan(comp_source)] = 1
+                comp_source[np.logical_and(np.isnan(u_comp) == False, np.isnan(comp_source))] = 1
                 
                 # If there are still invalid boat velocities, use interpolated values,
                 # if present and set composite source
                 # DSM changed 1/29/2018 u_comp[np.isnan(u_comp)] = self.gga_vel.u_processed_mps[np.isnan(u_comp)]
-                comp_source[np.isnan(u_comp) == False & np.isnan(comp_source)] = 0
+                comp_source[np.logical_and(np.isnan(u_comp) == False, np.isnan(comp_source))] = 0
                 
                 # Set composite source to invalid for all remaining invalid boat velocity data
                 comp_source[np.isnan(comp_source)] = -1
@@ -290,18 +290,18 @@ class BoatStructure(object):
                 u_comp = u_vtg
                 comp_source[np.isnan(u_comp) == False] = 2
 
-                # If GGA data are not valid try VTG and set composite source
+                # If VTG data are not valid try GGA and set composite source
                 u_comp[np.isnan(u_comp)] = u_gga[np.isnan(u_comp)]
-                comp_source[np.isnan(u_comp) == False & np.isnan(comp_source)] = 2
+                comp_source[np.logical_and(np.isnan(u_comp) == False, np.isnan(comp_source))] = 2
 
-                # If there are still invalid boar velocities, try BT and set composite source
+                # If there are still invalid boat velocities, try BT and set composite source
                 u_comp[np.isnan(u_comp)] = u_bt[np.isnan(u_comp)]
-                comp_source[np.isnan(u_comp) == False & np.isnan(comp_source)] = 1
+                comp_source[np.logical_and(np.isnan(u_comp) == False, np.isnan(comp_source))] = 1
 
                 # If there are still invalid boat velocities, use interpolated values,
                 # if present and set composite source
                 # DSM changed 1/29/2018 u_comp[np.isnan(u_comp)] = self.gga_vel.u_processed_mps[np.isnan(u_comp)]
-                comp_source[np.isnan(u_comp) == False & np.isnan(comp_source)] = 0
+                comp_source[np.logical_and(np.isnan(u_comp) == False, np.isnan(comp_source))] = 0
 
                 # Set composite source to invalid for all remaining invalid boat velocity data
                 comp_source[np.isnan(comp_source)] = -1
@@ -318,8 +318,8 @@ class BoatStructure(object):
                 # Apply the composite settings to the bottom track Boatdata objects
                 # DSM changed 1/29/2018 self.gga_vel = self.apply_composite(u_comp,v_comp,comp_source)
                 # self.gga_vel = self.interpolate_composite()
-                self.gga_vel.apply_composite(u_comp, v_comp, comp_source)
-                self.gga_vel.interpolate_composite(transect)
+                self.vtg_vel.apply_composite(u_comp, v_comp, comp_source)
+                self.vtg_vel.interpolate_composite(transect)
         else:
             # Composite tracks off
 
@@ -328,7 +328,7 @@ class BoatStructure(object):
                 self.bt_vel.apply_interpolation(transect=transect, interpolation_method='Linear')
                 comp_source = np.tile(np.nan, self.bt_vel.u_processed_mps.shape)
                 comp_source[self.bt_vel.valid_data[0, :]] = 1
-                comp_source[np.isnan(comp_source) & (np.isnan(self.bt_vel.u_processed_mps) == False)] = 0
+                comp_source[np.logical_and(np.isnan(comp_source), (np.isnan(self.bt_vel.u_processed_mps) == False))] = 0
                 comp_source[np.isnan(comp_source)] = -1
                 self.bt_vel.apply_composite(u_composite=self.bt_vel.u_processed_mps,
                                             v_composite=self.bt_vel.v_processed_mps,
@@ -339,7 +339,7 @@ class BoatStructure(object):
                 self.gga_vel.apply_interpolation(transect=transect, interpolation_method='Linear')
                 comp_source = np.tile(np.nan, self.gga_vel.u_processed_mps.shape)
                 comp_source[self.gga_vel.valid_data[0, :]] = 2
-                comp_source[np.isnan(comp_source) & (np.isnan(self.gga_vel.u_processed_mps) == False)] = 0
+                comp_source[np.logical_and(np.isnan(comp_source), (np.isnan(self.gga_vel.u_processed_mps) == False))] = 0
                 comp_source[np.isnan(comp_source)] = -1
                 self.gga_vel.apply_composite(u_composite=self.gga_vel.u_processed_mps,
                                              v_composite=self.gga_vel.v_processed_mps,
@@ -350,7 +350,7 @@ class BoatStructure(object):
                 self.vtg_vel.apply_interpolation(transect=transect, interpolation_method='Linear')
                 comp_source = np.tile(np.nan, self.vtg_vel.u_processed_mps.shape)
                 comp_source[self.vtg_vel.valid_data[0, :]] = 3
-                comp_source[np.isnan(comp_source) & (np.isnan(self.vtg_vel.u_processed_mps) == False)] = 0
+                comp_source[np.logical_and(np.isnan(comp_source), (np.isnan(self.vtg_vel.u_processed_mps) == False))] = 0
                 comp_source[np.isnan(comp_source)] = -1
                 self.vtg_vel.apply_composite(u_composite=self.vtg_vel.u_processed_mps,
                                              v_composite=self.vtg_vel.v_processed_mps,

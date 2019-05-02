@@ -208,7 +208,7 @@ class GPSData(object):
                 + np.floor(np.mod(raw_gga_utc, 10000) / 100) * 60 + np.mod(raw_gga_utc, 100)
         self.raw_gga_lat_deg = raw_gga_lat
         self.raw_gga_lon_deg = raw_gga_lon
-        self.raw_gga_lat_deg[np.where((self.raw_gga_lat_deg == 0) & (self.raw_gga_lon_deg == 0))] = np.nan
+        self.raw_gga_lat_deg[np.where(np.logical_and((self.raw_gga_lat_deg == 0), (self.raw_gga_lon_deg == 0)))] = np.nan
         self.raw_gga_lat_deg[raw_gga_diff < 1] = np.nan
         self.raw_gga_lon_deg[np.isnan(self.raw_gga_lat_deg)] = np.nan
         self.raw_gga_altitude_m = raw_gga_alt
@@ -227,7 +227,7 @@ class GPSData(object):
             self.raw_gga_delta_time = raw_gga_delta_time
         self.raw_vtg_course_deg = raw_vtg_course
         self.raw_vtg_speed_mps = raw_vtg_speed
-        self.raw_vtg_course_deg[np.where((self.raw_vtg_course_deg == 0) & (self.raw_vtg_speed_mps == 0))] = np.nan
+        self.raw_vtg_course_deg[np.where(np.logical_and((self.raw_vtg_course_deg == 0), (self.raw_vtg_speed_mps == 0)))] = np.nan
         self.raw_vtg_speed_mps[np.isnan(self.raw_vtg_course_deg)] = np.nan
         # Delta time is a TRDI only variable
         if raw_vtg_delta_time is None:
@@ -587,7 +587,7 @@ class GPSData(object):
         
         y = np.tile([np.nan], lat_in.shape)
         x = np.tile([np.nan], lon_in.shape)
-        idx = np.where((np.isnan(lat2) == False) & (np.isnan(lon2) == False))
+        idx = np.where(np.logical_and((np.isnan(lat2) == False), (np.isnan(lon2) == False)))
         for ind in idx[0]:
             y[ind], x[ind], _, _ = utm.from_latlon(lat2[ind], lon2[ind])
         x_utm = x.reshape(lon_in.shape)
