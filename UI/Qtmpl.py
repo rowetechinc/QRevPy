@@ -88,7 +88,7 @@ class Qtmpl(FigureCanvas):
         max_limit = 0
         min_limit = 0
         if np.sum(np.logical_not(np.isnan(speed_plt))) > 0:
-            max_limit = np.percentile(speed_plt, 95)
+            max_limit = np.percentile(speed_plt * units['V'], 99)
 
         # Create color map
         cmap = cm.get_cmap('viridis')
@@ -221,11 +221,20 @@ class Qtmpl(FigureCanvas):
             Dictionary of unit conversions and labels
         """
 
+        max_x_vtg = np.nan
+        max_y_vtg = np.nan
+        min_x_vtg = np.nan
+        min_y_vtg = np.nan
+
         # Plot shiptrack based on bottom track
         ship_data_bt = transect.boat_vel.compute_boat_track(transect, ref='bt_vel')
         self.fig.axst.plot(ship_data_bt['track_x_m'] * units['L'], ship_data_bt['track_y_m'] * units['L'], color='r',
                            label='BT')
         ship_data = ship_data_bt
+        max_x_bt = np.nanmax(ship_data_bt['track_x_m'])
+        max_y_bt = np.nanmax(ship_data_bt['track_y_m'])
+        min_x_bt = np.nanmin(ship_data_bt['track_x_m'])
+        min_y_bt = np.nanmin(ship_data_bt['track_y_m'])
 
         # Plot shiptrack based on vtg if available
         if transect.boat_vel.vtg_vel is not None:
@@ -235,6 +244,11 @@ class Qtmpl(FigureCanvas):
             if transect.boat_vel.selected == 'vtg_vel':
                 ship_data = ship_data_vtg
 
+            max_x_vtg = np.nanmax(ship_data_vtg['track_x_m'])
+            max_y_vtg = np.nanmax(ship_data_vtg['track_y_m'])
+            min_x_vtg = np.nanmin(ship_data_vtg['track_x_m'])
+            min_y_vtg = np.nanmin(ship_data_vtg['track_y_m'])
+
         # Plot shiptrack based on gga if available
         if transect.boat_vel.gga_vel is not None:
             ship_data_gga = transect.boat_vel.compute_boat_track(transect, ref='gga_vel')
@@ -243,6 +257,11 @@ class Qtmpl(FigureCanvas):
             if transect.boat_vel.selected == 'gga_vel':
                 ship_data = ship_data_gga
 
+            max_x_gga = np.nanmax(ship_data_gga['track_x_m'])
+            max_y_gga = np.nanmax(ship_data_gga['track_y_m'])
+            min_x_gga = np.nanmin(ship_data_gga['track_x_m'])
+            min_y_gga = np.nanmin(ship_data_gga['track_y_m'])
+
         # Customize axes
         self.fig.axst.set_xlabel(self.tr('Distance East ') + units['label_L'])
         self.fig.axst.set_ylabel(self.tr('Distance North ') + units['label_L'])
@@ -250,8 +269,21 @@ class Qtmpl(FigureCanvas):
         self.fig.axst.yaxis.label.set_fontsize(10)
         self.fig.axst.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
         self.fig.axst.grid()
+        self.fig.axst.axis('equal')
         for label in (self.fig.axst.get_xticklabels() + self.fig.axst.get_yticklabels()):
             label.set_fontsize(10)
+
+        max_x = np.nanmax([max_x_bt, max_x_gga, max_x_vtg])
+        min_x = np.nanmin([min_x_bt, min_x_gga, min_x_vtg])
+        max_x = max_x + (max_x - min_x) * 0.1
+        min_x = min_x - (max_x - min_x) * 0.1
+        max_y = np.nanmax([max_y_bt, max_y_gga, max_y_vtg])
+        min_y = np.nanmin([min_y_bt, min_y_gga, min_y_vtg])
+        max_y = max_y + (max_y - min_y) * 0.1
+        min_y = min_y - (max_y - min_y) * 0.1
+
+        self.fig.axst.set_ylim(top=np.ceil(max_y * units['L']), bottom=np.ceil(min_y * units['L']))
+        self.fig.axst.set_xlim(left=np.ceil(min_x * units['L']), right=np.ceil(max_x * units['L']))
 
         # Compute mean water velocity for each ensemble
         u = transect.w_vel.u_processed_mps
@@ -261,7 +293,7 @@ class Qtmpl(FigureCanvas):
 
         # Plot water vectors
         quiv_plt = self.fig.axst.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
-                                        u_mean * units['V'], v_mean * units['V'], units='dots', width=2, scale=.02)
+                                        u_mean * units['V'], v_mean * units['V'], units='dots', width=1, scale=0.6)
         # qk = axst.quiverkey(quiv_plt, 0.9, 0.9, 1, r'$1 \frac{m}{s}$', labelpos='E',
         #                    coordinates='figure')
 
@@ -361,7 +393,7 @@ class Qtmpl(FigureCanvas):
         for idx in checked:
             self.fig.axq.plot([datetime.fromtimestamp(meas.transects[idx].date_time.start_serial_time),
                                datetime.fromtimestamp(meas.transects[idx].date_time.end_serial_time)],
-                              [meas.discharge[idx].total, meas.discharge[idx].total],'k-')
+                              [meas.discharge[idx].total * units['Q'], meas.discharge[idx].total * units['Q']],'k-')
 
         # Customize axis
         timeFmt = mdates.DateFormatter('%H:%M:%S')

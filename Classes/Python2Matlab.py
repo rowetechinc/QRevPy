@@ -12,7 +12,7 @@ class Python2Matlab(object):
         Dictionary of Matlab structures
     """
 
-    def __init__(self, meas):
+    def __init__(self, meas, checked):
         """Intitialize dictionaries and convert Python data to Matlab structures.
 
         Parameters
@@ -30,6 +30,10 @@ class Python2Matlab(object):
         # Apply conversion of Python data to be compatible with Matlab conventions
         meas_mat = self.data2matlab(meas)
 
+        checked_idx = np.array(checked)
+        checked_idx_meas = np.copy(checked_idx)
+        np.append(checked_idx_meas, len(meas_mat.extrap_fit.sel_fit)-1 )
+
         # Convert Python data structure to Matlab
         self.matlab_dict['stationName'] = meas_mat.station_name
         self.matlab_dict['stationNumber'] = meas_mat.station_number
@@ -39,10 +43,19 @@ class Python2Matlab(object):
         self.matlab_dict['comments'] = self.comment2struct(meas_mat.comments)
         self.matlab_dict['compassCal'] = self.listobj2struct(meas_mat.compass_cal, py_2_mat_dict)
         self.matlab_dict['compassEval'] = self.listobj2struct(meas_mat.compass_eval, py_2_mat_dict)
-        self.matlab_dict['discharge'] = self.listobj2struct(meas_mat.discharge, py_2_mat_dict)
+        discharge = np.copy(meas_mat.discharge)
+        discharge_sel = [discharge[i] for i in checked_idx]
+        self.matlab_dict['discharge'] = self.listobj2struct(discharge_sel, py_2_mat_dict)
         self.matlab_dict['sysTest'] = self.listobj2struct(meas_mat.system_test, py_2_mat_dict)
-        self.matlab_dict['transects'] = self.listobj2struct(meas_mat.transects, py_2_mat_dict)
-        self.matlab_dict['extrapFit'] = self.listobj2struct([meas_mat.extrap_fit], py_2_mat_dict)
+        transects = np.copy(meas_mat.transects)
+        transects_sel = [transects[i] for i in checked_idx]
+        self.matlab_dict['transects'] = self.listobj2struct(transects_sel, py_2_mat_dict)
+        extrap = copy.deepcopy(meas_mat.extrap_fit)
+        sel_fit = [extrap.sel_fit[i] for i in checked_idx_meas]
+        norm_data = [extrap.norm_data[i] for i in checked_idx_meas]
+        extrap.sel_fit = sel_fit
+        extrap.norm_data = norm_data
+        self.matlab_dict['extrapFit'] = self.listobj2struct([extrap], py_2_mat_dict)
         self.matlab_dict['mbTests'] = self.listobj2struct(meas_mat.mb_tests, py_2_mat_dict)
         self.matlab_dict['uncertainty'] = self.listobj2struct([meas_mat.uncertainty], py_2_mat_dict)
         self.matlab_dict['qa'] = self.listobj2struct([meas_mat.qa], py_2_mat_dict)
@@ -492,7 +505,7 @@ class Python2Matlab(object):
         return py_2_mat_dict
 
     @staticmethod
-    def save_matlab_file(meas, file_name):
+    def save_matlab_file(meas, file_name, checked=None):
         """Saves the measurement class and all data into a Matlab file using the variable names and structure
         from the QRev Matlab version.
 
@@ -504,8 +517,11 @@ class Python2Matlab(object):
             File name of saved Matlab file
         """
 
+        if checked is None:
+            checked = list(range(len(meas.transects)))
+
         # Convert Python objects to Matlab structure
-        mat_struct = {'meas_struct': Python2Matlab(meas).matlab_dict, 'version': 'QRevPy - 0'}
+        mat_struct = {'meas_struct': Python2Matlab(meas, checked).matlab_dict, 'version': 'QRevPy - 0'}
         sio.savemat(file_name=file_name,
                     mdict=mat_struct,
                     appendmat=True,
@@ -577,3 +593,4 @@ class Python2Matlab(object):
             fit.z_auto = fit.z_auto.reshape(-1, 1)
 
         return meas_mat
+

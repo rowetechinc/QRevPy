@@ -186,7 +186,8 @@ def units_conversion(units_id='SI'):
                  'label_L': '(m)',
                  'label_Q': '(m3/s)',
                  'label_A': '(m2)',
-                 'label_V': '(m/s)'}
+                 'label_V': '(m/s)',
+                 'ID': 'SI'}
 
     else:
         units = {'L': 1.0 / 0.3048,
@@ -196,6 +197,7 @@ def units_conversion(units_id='SI'):
                  'label_L': '(ft)',
                  'label_Q': '(ft3/s)',
                  'label_A': '(ft2)',
-                 'label_V': '(ft/s)'}
+                 'label_V': '(ft/s)',
+                 'ID': 'English'}
 
     return units
