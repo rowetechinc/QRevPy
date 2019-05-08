@@ -3,8 +3,12 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from datetime import datetime
 import scipy.io as sio
 # from Classes.stickysettings import StickySettings as SSet
+from PyQt5.QtCore import pyqtSignal, QObject
+
 import UI.QRev_gui as QRev_gui
 import sys
+import threading
+import time
 from UI.selectFile import OpenMeasurementDialog, SaveMeasurementDialog
 from Classes.Measurement import Measurement
 # from Classes.ComputeExtrap import ComputeExtrap
@@ -28,7 +32,9 @@ import time
 
 
 class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
-
+    handle_args_trigger = pyqtSignal()
+    gui_initialized = False
+    command_arg = ""
 
     def __init__(self, parent=None):
         super(QRev, self).__init__(parent)
@@ -37,6 +43,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.save_all = True
         # self.settings = SSet(self.settingsFile)
         self.setupUi(self)
+
         self.actionOpen.triggered.connect(self.selectMeasurement)
         self.actionSave.triggered.connect(self.saveMeasurement)
         self.actionComment.triggered.connect(self.addComment)
@@ -96,6 +103,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Select and load measurement, triggered by actionOpen
         """
         # Initialize open measurement dialog
+
+        self.actionOpen.triggered.connect(self.select_measurement)
+        self.actionSave.triggered.connect(self.save_measurement)
+        self.gui_initialized = True
+
+    def select_measurement(self):
         self.select = OpenMeasurementDialog(self)
         self.select.exec_()
 
@@ -182,6 +195,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     def saveMeasurement(self):
         """Save measurement, triggered by actionSave
         """
+    def save_measurement(self):
         # Create default file name
         save_file = SaveMeasurementDialog()
 
@@ -805,7 +819,36 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         finally:
             QtWidgets.QApplication.restoreOverrideCursor()
 
+    def update_meas(self, meas):
+
+        self.meas = meas
+        self.main_summary_table()
+        self.uncertainty_table()
+        self.qa_table()
+        self.contour_shiptrack()
+
+    def set_command_arg(self, param_arg):
+        self.command_arg = param_arg
+
+    def handle_command_line_args(self):
+        command = self.command_arg.split('=')[0].lower()
+        if command == 'trdi' or command == 'trdichecked':
+            file_name = arg.split('=')[1]
+            meas = Measurement(in_file=file_name, source='TRDI', proc_type='QRev', checked=(command == 'trdichecked'))
+            self.update_meas(meas)
+
+    def connect_and_emit_trigger(self):
+        while not self.gui_initialized:
+            time.sleep(0.2)
+        self.handle_args_trigger.connect(window.handle_command_line_args)
+        self.handle_args_trigger.emit()
+
 app = QtWidgets.QApplication(sys.argv)
 window = QRev()
+if len(sys.argv) > 1:
+    arg = sys.argv[1]
+    window.set_command_arg(arg)
+    t = threading.Thread(target=window.connect_and_emit_trigger)
+    t.start()
 window.show()
 app.exec_()
