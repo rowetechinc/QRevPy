@@ -21,6 +21,7 @@ from datetime import datetime
 from UI.Comment import Comment
 from UI.Transects2Use import Transects2Use
 from UI.Options import Options
+from UI.Loading import Loading
 from contextlib import contextmanager
 import time
 
@@ -98,28 +99,34 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.select = OpenMeasurementDialog(self)
         self.select.exec_()
 
+        # Tried this but this didn't work either
+        # self.msg = Loading()
+        # self.select.exec_()
 
-        # Load and process measurement based on measurement type
-        if self.select.type == 'SonTek':
-            # Show folder name in GUI header
+        # This doesn't seem to be working properly
+        with self.wait_cursor():
+            # Load and process measurement based on measurement type
+            if self.select.type == 'SonTek':
+                # Show folder name in GUI header
 
-            # Create measurement object
-            self.meas = Measurement(in_file=self.select.fullName, source='SonTek', proc_type='QRev')
+                # Create measurement object
+                self.meas = Measurement(in_file=self.select.fullName, source='SonTek', proc_type='QRev')
 
-        elif self.select.type == 'TRDI':
-            # Show mmt filename in GUI header
+            elif self.select.type == 'TRDI':
+                # Show mmt filename in GUI header
 
-            # Create measurement object
-            self.meas = Measurement(in_file=self.select.fullName[0], source='TRDI', proc_type='QRev', checked=self.select.checked)
+                # Create measurement object
+                self.meas = Measurement(in_file=self.select.fullName[0], source='TRDI', proc_type='QRev', checked=self.select.checked)
 
-        elif self.select.type == 'QRev':
-            self.meas = Measurement(in_file=self.select.fullName, source='QRev')
-        else:
-            print('Cancel')
+                # self.msg.destroy()
+            elif self.select.type == 'QRev':
+                self.meas = Measurement(in_file=self.select.fullName, source='QRev')
+            else:
+                print('Cancel')
 
-        self.actionSave.setEnabled(True)
-        self.actionComment.setEnabled(True)
-        self.update_main()
+            self.actionSave.setEnabled(True)
+            self.actionComment.setEnabled(True)
+            self.update_main()
 
     def update_main(self):
         """Update Gui
