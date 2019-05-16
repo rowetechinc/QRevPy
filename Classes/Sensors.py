@@ -1,4 +1,5 @@
 from Classes.SensorStructure import SensorStructure
+import numpy as np
 # from Classes.SensorData import SensorData
 
 
@@ -47,3 +48,11 @@ class Sensors(object):
         sos = 1449 + 4.6 * temperature - 0.055 * temperature**2 + 0.00029 * temperature**3 \
             + (1.34 - 0.01 * temperature) * (salinity - 35)
         return sos
+
+    @staticmethod
+    def avg_temperature(transects):
+        temps = np.array([])
+        for transect in transects:
+            if transect.checked:
+                temps = np.append(temps, transect.sensors.temperature_deg_c.internal.data)
+        return np.nanmean(temps)

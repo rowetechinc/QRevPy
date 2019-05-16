@@ -1642,45 +1642,6 @@ class TransectData(object):
         # Correct depths
         self.depths.sos_correction(ratio=ratio)
 
-
-
-    # def sos_user(self, kargs = None):
-    #     """Compute new speed of sound from temperature and salinity
-    #
-    #     Output:
-    #     new_sos: newly computed speed of sound
-    #     old_sos: previously used speed of sound
-    #     """
-    #
-    #     #Assign selected temperature data to local variable
-    #     temp = getattr(self.sensors.temperature_deg_c, self.sensors.temperature_deg_c.selected)
-    #     temperature = temp.data
-    #     #Assign selected salinity to local variable
-    #     sal = getattr(self.sensors.salinity_ppt, self.sensors.salinity_ppt.selected)
-    #     salinity = sal.data
-    #     old = getattr(self.sensors.speed_of_sound_mps, self.sensors.speed_of_sound_mps.selected)
-    #     old_sos = old.data
-    #
-    #     if self.sensors.temperature_deg_c.selected == 'internal':
-    #         new_sos = self.sensors.speed_of_sound_mps.user.data_orig
-    #         self.sensors.speed_of_sound_mps.user.change_data(new_sos)
-    #         self.sensors.speed_of_sound_mps.user.set_source('Internal (ADCP)')
-    #         self.sensors.set_selected('speed_of_sound_mps', 'user')
-    #     else:
-    #         #Compute new speed of sound
-    #         new_sos = Sensors().speed_of_sound(temperature, salinity)
-    #
-    #         #Save new speed of sound to user sensor object with a source as computed
-    #         if self.sensors.speed_of_sound_mps.user is not None:
-    #             self.sensors.set_selected('speed_of_sound_mps', 'user')
-    #             self.sensors.speed_of_sound_mps.user.change_data(new_sos)
-    #             self.sensors.speed_of_sound_mps.user.set_source('Computed')
-    #         else:
-    #             self.sensors.add_sensor_data('speed_of_sound_mps', 'user'. new_sos, 'Computed')
-    #             self.sensors.set_selected('speed_of_sound_mps', 'user')
-    #
-    #     return (old_sos, new_sos)
-
     @staticmethod
     def raw_valid_data(transect):
         """Determines ensembles and cells with no interpolated water or boat data.
@@ -1735,11 +1696,6 @@ class TransectData(object):
         valid_ens = np.all(np.vstack((valid_nav, valid_wt_ens, valid_depth)), 0)
 
         return valid_ens, valid_wt.T
-
-
-
-
-
 
 # ========================================================================
 # Begin multithread function included in module but not TransectData class
