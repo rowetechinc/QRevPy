@@ -1,35 +1,23 @@
-import os
 from PyQt5 import QtWidgets, QtCore, QtGui
-from datetime import datetime
-import scipy.io as sio
 # from Classes.stickysettings import StickySettings as SSet
 from PyQt5.QtCore import pyqtSignal, QObject
 
 import UI.QRev_gui as QRev_gui
 import sys
 import threading
-import time
 from UI.selectFile import OpenMeasurementDialog, SaveMeasurementDialog
 from Classes.Measurement import Measurement
-# from Classes.ComputeExtrap import ComputeExtrap
-# from Classes.QComp import QComp
 from Classes.Python2Matlab import Python2Matlab
 from Classes.Sensors import Sensors
-# from Classes.CommonDataComp import CommonDataComp
-import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
 from UI.Qtmpl import Qtmpl
 from MiscLibs.common_functions import units_conversion
 from datetime import datetime
 from UI.Comment import Comment
 from UI.Transects2Use import Transects2Use
 from UI.Options import Options
-from UI.Loading import Loading
 from contextlib import contextmanager
 import time
-
 
 
 class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
@@ -45,8 +33,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # self.settings = SSet(self.settingsFile)
         self.setupUi(self)
 
-        self.actionOpen.triggered.connect(self.selectMeasurement)
-        self.actionSave.triggered.connect(self.saveMeasurement)
+        # self.actionOpen.triggered.connect(self.selectMeasurement)
+        # self.actionSave.triggered.connect(self.saveMeasurement)
+        self.actionOpen.triggered.connect(self.select_measurement)
+        self.actionSave.triggered.connect(self.save_measurement)
         self.actionComment.triggered.connect(self.addComment)
         self.actionCheck.triggered.connect(self.selectTransects)
         self.actionBT.triggered.connect(self.setRef2BT)
@@ -55,6 +45,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.actionOFF.triggered.connect(self.compTracksOff)
         self.actionON.triggered.connect(self.compTracksOn)
         self.actionOptions.triggered.connect(self.qrev_options)
+        self.tab_all.currentChanged.connect(self.tab_manager)
 
         self.font_bold = QtGui.QFont()
         self.font_bold.setBold(True)
@@ -99,6 +90,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 "border-bottom: 1px solid #D8D8D8;"
                 "background-color: white;"
                 "}")
+
+        self.gui_initialized = True
 
 # Toolbar functions
 # =================
@@ -252,8 +245,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             else:
                 self.save_all = False
 
-# Main funtions
-# =============
+# Main tab
+# ========
     def update_main(self):
         """Update Gui
         """
@@ -1004,7 +997,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setItem(3, 0, QtWidgets.QTableWidgetItem(self.tr('External Temperature (C): ')))
         tbl.item(3, 0).setFlags(QtCore.Qt.ItemIsEnabled)
         tbl.item(3, 0).setFont(self.font_bold)
-        if len(self.meas.ext_temp_chk['user']) < 1:
+        if type(self.meas.ext_temp_chk['user']) != float:
             tbl.setItem(3, 1, QtWidgets.QTableWidgetItem(self.tr('N/A')))
         else:
             tbl.setItem(3, 1, QtWidgets.QTableWidgetItem('{:4.1f}'.format(self.meas.ext_temp_chk['user'])))
@@ -1013,7 +1006,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setItem(3, 2, QtWidgets.QTableWidgetItem(self.tr('ADCP Temperature (C): ')))
         tbl.item(3, 2).setFlags(QtCore.Qt.ItemIsEnabled)
         tbl.item(3, 2).setFont(self.font_bold)
-        if len(self.meas.ext_temp_chk['adcp']) < 1:
+        if type(self.meas.ext_temp_chk['adcp']) != float:
             avg_temp = Sensors.avg_temperature(self.meas.transects)
             tbl.setItem(3, 3, QtWidgets.QTableWidgetItem('{:4.1f}'.format(avg_temp)))
         else:
@@ -1280,6 +1273,116 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setSpan(row, col, row_span, col_span)
         tbl.setWordWrap(True)
 
+    # System test tab
+    # ===============
+    def system_tab(self, idx_systest=0):
+
+        # Setup table
+        tbl = self.table_systest
+
+        nrows = len(self.meas.system_test)
+        tbl.setRowCount(nrows)
+        tbl.setColumnCount(4)
+        header_text = [self.tr('Date/Time'), self.tr('No. Tests'), self.tr('No. Failed'), self.tr('PT3')]
+        tbl.setHorizontalHeaderLabels(header_text)
+        tbl.horizontalHeader().setFont(self.font_bold)
+        tbl.verticalHeader().hide()
+        tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        tbl.cellClicked.connect(self.select_systest)
+
+        # Add system tests
+        if nrows > 0:
+            for row, test in enumerate(self.meas.system_test):
+                col = 0
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(test.time_stamp))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                col += 1
+
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:2.0f}'.format(test.result['n_tests'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                col += 1
+
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:2.0f}'.format(test.result['n_failed'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                col += 1
+
+                if len(self.meas.qa.system_tst['messages']) > 0:
+                    if self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'TRDI':
+                        if any("PT3" in item for item in self.meas.qa.system_test['messages']):
+                            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Failed'))
+                        else:
+                            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Pass'))
+                    else:
+                        tbl.setItem(row, col, QtWidgets.QTableWidgetItem('N/A'))
+                elif self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'TRDI':
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Pass'))
+                else:
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('N/A'))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                tbl.item(idx_systest, 0).setFont(self.font_bold)
+                self.display_systest.textCursor().insertText(self.meas.system_test[idx_systest].data)
+
+                tbl.resizeColumnsToContents()
+                tbl.resizeRowsToContents()
+
+        # Comments
+        self.display_systest_comments.clear()
+        if hasattr(self, 'meas'):
+            self.display_systest_comments.moveCursor(QtGui.QTextCursor.Start)
+            for comment in self.meas.comments:
+                # Display each comment on a new line
+                self.display_systest_comments.textCursor().insertText(comment)
+                self.display_systest_comments.moveCursor(QtGui.QTextCursor.End)
+                self.display_systest_comments.textCursor().insertBlock()
+
+            self.display_systest_comments.moveCursor(QtGui.QTextCursor.Start)
+            for message in self.meas.qa.system_tst['messages']:
+                # Display each comment on a new line
+                self.display_systest_messages.textCursor().insertText(message)
+                self.display_systest_messages.moveCursor(QtGui.QTextCursor.End)
+                self.display_systest_messages.textCursor().insertBlock()
+
+    def select_systest(self, row, column):
+        tbl = self.table_systest
+        if column == 0:
+            with self.wait_cursor():
+                # Set all files to normal font
+                nrows = len(self.meas.system_test)
+                for nrow in range(1, nrows):
+                    self.self.table_systest(nrow, 0).setFont(self.font_normal)
+
+                # Set selected file to bold font
+                self.table_systest.item(row, 0).setFont(self.font_bold)
+
+                # Update contour and shiptrack plot
+                self.system_tab(idx_systest=row)
+
+    # Compass tab
+    # ===========
+    def compass_tab(self):
+        # Setup table
+        tbl = self.table_compass_pr
+        table_header = [self.tr('Plot / Transect'),
+                          self.tr('Magnetic \n Variation'),
+                          self.tr('Heading \n Source'),
+                          self.tr('Pitch \n Mean'),
+                          self.tr('Pitch \n Std. Dev.'),
+                          self.tr('Roll \n Mean'),
+                          self.tr('Roll \n Std. Dev.'),
+                          self.tr('Discharge \n Previous \n' + self.units['label_Q']),
+                          self.tr('Discharge \n Now \n' + self.units['label_Q']),
+                          self.tr('Discharge \n % Change')]
+        ncols = len(table_header)
+        nrows = len(self.checked_transects_idx)
+        tbl.setRowCount(nrows)
+        tbl.setColumnCount(ncols)
+        tbl.setHorizontalHeaderLabels(table_header)
+        tbl.horizontalHeader().setFont(self.font_bold)
+        tbl.verticalHeader().hide()
+        tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+
+
 # Support functions
 # =================
     @contextmanager
@@ -1297,6 +1400,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     #     self.uncertainty_table()
     #     self.qa_table()
     #     self.contour_shiptrack()
+
+    def tab_manager(self, tab_idx):
+        if tab_idx == 0:
+            self.update_main()
+        elif tab_idx == 1:
+            self.system_tab()
+        elif tab_idx == 2:
+            self.compass_tab()
 
 # Command line functions
 # ======================
@@ -1319,6 +1430,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
 # Main
 # ====
+
 app = QtWidgets.QApplication(sys.argv)
 window = QRev()
 if len(sys.argv) > 1:
