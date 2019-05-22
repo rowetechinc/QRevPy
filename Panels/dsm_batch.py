@@ -5,7 +5,7 @@ from PyQt5 import QtWidgets
 from PyQt5 import QtCore
 import Panels.batch as batch
 from Classes.Measurement import Measurement
-import xlsxwriter
+# import xlsxwriter
 import numpy as np
 
 

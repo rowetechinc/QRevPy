@@ -93,6 +93,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         self.gui_initialized = True
 
+
 # Toolbar functions
 # =================
     def selectMeasurement(self):
@@ -1017,8 +1018,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setItem(4, 0, QtWidgets.QTableWidgetItem(self.tr('Magnetic Variation: ')))
         tbl.item(4, 0).setFlags(QtCore.Qt.ItemIsEnabled)
         tbl.item(4, 0).setFont(self.font_bold)
+        magvar = []
         for transect in self.meas.transects:
-            magvar = []
             if transect.checked:
                 magvar.append(transect.sensors.heading_deg.internal.mag_var_deg)
         if len(np.unique(magvar)) > 1:
@@ -1029,10 +1030,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setItem(4, 2, QtWidgets.QTableWidgetItem(self.tr('Heading Offset: ')))
         tbl.item(4, 2).setFlags(QtCore.Qt.ItemIsEnabled)
         tbl.item(4, 2).setFont(self.font_bold)
+        hoffset = []
         for transect in self.meas.transects:
             if transect.sensors.heading_deg.external is None:
                 tbl.setItem(4, 3, QtWidgets.QTableWidgetItem(self.tr('N/A')))
-            hoffset = []
             if transect.checked:
                 hoffset.append(transect.sensors.heading_deg.internal.align_correction_deg)
         if len(np.unique(hoffset)) > 1:
@@ -1382,6 +1383,44 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
 
+# Split fuctions
+# ==============
+    def split_initialization(self, pairings, data):
+        # Setting to allow processing to split measurement into multiple measurements
+        if pairings is not None:
+            self.save_all = False
+            self.actionSave.triggered.connect(self.split_save)
+            self.actionOpen.setEnabled(False)
+            self.actionCheck.setEnabled(False)
+            self.meas = data
+            self.pairings = pairings
+            self.pair_idx = 0
+            self.split_processing(pairings[self.pair_idx])
+
+    def split_processing(self, group):
+
+        Measurement.selected_transects_changed(self.meas, group)
+        self.update_main()
+
+    def split_save(self):
+        # Create default file name
+        save_file = SaveMeasurementDialog()
+
+        # Save data in Matlab format
+        if self.save_all:
+            Python2Matlab.save_matlab_file(self.meas, save_file.full_Name)
+        else:
+            Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, checked=self.pairings[self.pair_idx])
+
+        q = {'group': self.pairings[self.pair_idx],
+             'start_serial_time': self.meas.transects[self.pairings[self.pair_idx][0]].date_time.start_serial_time,
+             'end_serial_time': self.meas.transects[self.pairings[self.pair_idx][-1]].date_time.end_serial_time,
+             'processed_discharge': self.meas.discharge[-1].total}
+        self.processed_data.append(q)
+        self.pair_idx += 1
+
+        if self.pair_idx > len(self.pairings) - 1:
+            self.accept()
 
 # Support functions
 # =================
@@ -1430,13 +1469,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
 # Main
 # ====
-
-app = QtWidgets.QApplication(sys.argv)
-window = QRev()
-if len(sys.argv) > 1:
-    arg = sys.argv[1]
-    window.set_command_arg(arg)
-    t = threading.Thread(target=window.connect_and_emit_trigger)
-    t.start()
-window.show()
-app.exec_()
+if __name__ == "__main__":
+    app = QtWidgets.QApplication(sys.argv)
+    window = QRev()
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+        window.set_command_arg(arg)
+        t = threading.Thread(target=window.connect_and_emit_trigger)
+        t.start()
+    window.show()
+    app.exec_()
+elif __name__ == 'UI.MeasSplitter':
+    app = QtWidgets.QApplication(sys.argv)
+    window = QRev()
+    window.show()
+    app.exec_()
