@@ -1150,7 +1150,7 @@ class TransectData(object):
         if update:
             self.update_water()
             
-    def change_mag_var(self, mag_var):
+    def change_mag_var(self, magvar):
         """Change magnetic variation.
         
         Parameters
@@ -1161,17 +1161,17 @@ class TransectData(object):
         
         # Update object
         if self.sensors.heading_deg.external is not None:
-            self.sensors.heading_deg.set_mag_var(mag_var, 'external')
+            self.sensors.heading_deg.external.set_mag_var(magvar, 'external')
         
         if self.sensors.heading_deg.selected == 'internal':
-            old = getattr(self.sensors.heading_deg, self.sensors.heading_deg.selected)
-            old_mag_var = old.mag_var
-            mag_var_change = mag_var - old_mag_var
-            self.sensors.heading_deg.set_mag_var(mag_var, 'internal')
-            self.boat_vel.chang_mag_var(mag_var_change)
-            self.w_vel.change_mag_var(self.boat_vel, mag_var_change)
-        
-        self.sensors.heading_deg.set_mag_var(mag_var, 'internal')
+            heading_selected = getattr(self.sensors.heading_deg, self.sensors.heading_deg.selected)
+            old_magvar = heading_selected.mag_var_deg
+            magvar_change = magvar - old_magvar
+            heading_selected.set_mag_var(magvar, 'internal')
+            self.boat_vel.bt_vel.change_heading(magvar_change)
+            self.w_vel.change_heading(self.boat_vel, magvar_change)
+        else:
+            self.sensors.heading_deg.internal.set_mag_var(magvar, 'internal')
         
         self.update_water()
         
@@ -1183,16 +1183,17 @@ class TransectData(object):
         h_offset: float
             Heading offset in degrees
         """
-        self.sensors.heading_deg.set_align_correction(h_offset, 'internal')
+        self.sensors.heading_deg.internal.set_align_correction(h_offset, 'internal')
         
         if self.sensors.heading_deg.selected == 'external':
             old = getattr(self.sensors.heading_deg, self.sensors.heading_deg.selected)
             old_offset = old.align_correction
             offset_change = h_offset - old_offset
-            self.boat_vel.bt_vel.change_offset(offset_change)
-            self.w_vel.change_offset(self.boat_vel, offset_change)
-        
-        self.sensors.heading_deg.set_align_correction(h_offset, 'external')
+            self.boat_vel.bt_vel.change_heading(offset_change)
+            self.w_vel.change_heading(self.boat_vel, offset_change)
+
+        if self.sensors.heading_deg.external is not None:
+            self.sensors.heading_deg.external.set_align_correction(h_offset, 'external')
         
         self.update_water()
         
@@ -1205,11 +1206,11 @@ class TransectData(object):
             Heading source (internal or external)
         """
 
-        source = getattr(self.sensors.heading_deg, h_source)
+        new_heading_selection = getattr(self.sensors.heading_deg, h_source)
         if source is not None:
-            old = getattr(self.sensors.heading_deg, self.sensors.heading_deg.selected)
-            old_heading = old.data
-            new_heading = source.data
+            old_heading_selection = getattr(self.sensors.heading_deg, self.sensors.heading_deg.selected)
+            old_heading = old_heading_selection.data
+            new_heading = new_heading_selection.data
             heading_change = new_heading - old_heading
             self.sensors.heading_deg.set_selected(h_source)
             self.boat_vel.bt_vel.change_heading_source(heading_change)

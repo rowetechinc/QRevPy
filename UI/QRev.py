@@ -16,6 +16,9 @@ from datetime import datetime
 from UI.Comment import Comment
 from UI.Transects2Use import Transects2Use
 from UI.Options import Options
+from UI.MagVar import MagVar
+from UI.HOffset import HOffset
+from UI.HSource import HSource
 from contextlib import contextmanager
 import time
 
@@ -134,6 +137,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             else:
                 print('Cancel')
 
+            self.checked_transects_idx = Measurement.checked_transects(self.meas)
+            self.h_external_valid = Measurement.h_external_valid(self.meas)
             self.actionSave.setEnabled(True)
             self.actionComment.setEnabled(True)
             self.update_main()
@@ -253,7 +258,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
 
         self.actionCheck.setEnabled(True)
-        self.checked_transects_idx = Measurement.checked_transects(self.meas)
+
         if len(self.checked_transects_idx) == len(self.meas.transects):
             self.actionCheck.setIcon(self.icon_allChecked)
         else:
@@ -826,8 +831,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     def main_details_table(self):
         # Setup table
         tbl = self.main_table_details
-        summary_header = [self.tr('Transect'), self.tr('Width'), self.tr('Area'), self.tr('Avg Boat Speed'),
-                          self.tr('Course Made Good'), self.tr('Q/A'), self.tr('Avg Water Direction')]
+        summary_header = [self.tr('Transect'),
+                          self.tr('Width' + ' ' + self.units['label_L']),
+                          self.tr('Area' + ' ' + self.units['label_A']),
+                          self.tr('Avg Boat Speed' + ' ' + self.units['label_V']),
+                          self.tr('Course Made Good' + ' (deg)'),
+                          self.tr('Q/A' + ' ' + self.units['label_V']),
+                          self.tr('Avg Water Direction' + ' (deg)')]
         ncols = len(summary_header)
         nrows = len(self.checked_transects_idx)
         tbl.setRowCount(nrows + 1)
@@ -848,27 +858,27 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(self.meas.transects[transect_id].file_name[:-4]))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
-            item = '{:10.2f}'.format(trans_prop['width'][transect_id]) + ' ' + self.units['label_L']
+            item = '{:10.2f}'.format(trans_prop['width'][transect_id])
             tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(item))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
-            item = '{:10.2f}'.format(trans_prop['area'][transect_id]) + ' ' + self.units['label_A']
+            item = '{:10.2f}'.format(trans_prop['area'][transect_id])
             tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(item))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
-            item = '{:6.2f}'.format(trans_prop['avg_boat_speed'][transect_id]) + ' ' + self.units['label_V']
+            item = '{:6.2f}'.format(trans_prop['avg_boat_speed'][transect_id])
             tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(item))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
-            item = '{:6.2f}'.format(trans_prop['avg_boat_course'][transect_id]) + ' (deg)'
+            item = '{:6.2f}'.format(trans_prop['avg_boat_course'][transect_id])
             tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(item))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
-            item = '{:6.2f}'.format(trans_prop['avg_water_speed'][transect_id]) + ' ' + self.units['label_V']
+            item = '{:6.2f}'.format(trans_prop['avg_water_speed'][transect_id])
             tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(item))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
-            item = '{:6.2f}'.format(trans_prop['avg_water_dir'][transect_id]) + ' (deg)'
+            item = '{:6.2f}'.format(trans_prop['avg_water_dir'][transect_id])
             tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(item))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -880,25 +890,25 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.item(0, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
         col += 1
-        item = '{:10.2f}'.format(trans_prop['width'][n_transects]) + ' ' + self.units['label_L']
+        item = '{:10.2f}'.format(trans_prop['width'][n_transects])
         tbl.setItem(0, col, QtWidgets.QTableWidgetItem(item))
         tbl.item(0, col).setFlags(QtCore.Qt.ItemIsEnabled)
         col += 1
-        item = '{:10.2f}'.format(trans_prop['area'][n_transects]) + ' ' + self.units['label_A']
+        item = '{:10.2f}'.format(trans_prop['area'][n_transects])
         tbl.setItem(0, col, QtWidgets.QTableWidgetItem(item))
         tbl.item(0, col).setFlags(QtCore.Qt.ItemIsEnabled)
         col += 1
-        item = '{:6.2f}'.format(trans_prop['avg_boat_speed'][n_transects]) + ' ' + self.units['label_V']
+        item = '{:6.2f}'.format(trans_prop['avg_boat_speed'][n_transects])
         tbl.setItem(0, col, QtWidgets.QTableWidgetItem(item))
         tbl.item(0, col).setFlags(QtCore.Qt.ItemIsEnabled)
         col += 1
 
         col += 1
-        item = '{:6.2f}'.format(trans_prop['avg_water_speed'][n_transects]) + ' ' + self.units['label_V']
+        item = '{:6.2f}'.format(trans_prop['avg_water_speed'][n_transects])
         tbl.setItem(0, col, QtWidgets.QTableWidgetItem(item))
         tbl.item(0, col).setFlags(QtCore.Qt.ItemIsEnabled)
         col += 1
-        item = '{:6.2f}'.format(trans_prop['avg_water_dir'][n_transects]) + ' (deg)'
+        item = '{:6.2f}'.format(trans_prop['avg_water_dir'][n_transects])
         tbl.setItem(0, col, QtWidgets.QTableWidgetItem(item))
         tbl.item(0, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -1362,15 +1372,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     # Compass tab
     # ===========
     def compass_tab(self):
+
+
         # Setup table
         tbl = self.table_compass_pr
         table_header = [self.tr('Plot / Transect'),
-                          self.tr('Magnetic \n Variation'),
+                          self.tr('Magnetic \n Variation (deg)'),
+                          self.tr('Heading \n Offset (deg)'),
                           self.tr('Heading \n Source'),
-                          self.tr('Pitch \n Mean'),
-                          self.tr('Pitch \n Std. Dev.'),
-                          self.tr('Roll \n Mean'),
-                          self.tr('Roll \n Std. Dev.'),
+                          self.tr('Pitch \n Mean (deg)'),
+                          self.tr('Pitch \n Std. Dev. (deg)'),
+                          self.tr('Roll \n Mean (deg)'),
+                          self.tr('Roll \n Std. Dev. (deg)'),
                           self.tr('Discharge \n Previous \n' + self.units['label_Q']),
                           self.tr('Discharge \n Now \n' + self.units['label_Q']),
                           self.tr('Discharge \n % Change')]
@@ -1382,6 +1395,128 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        tbl.cellClicked.connect(self.compass_table_clicked)
+        self.update_compass_tab(tbl=tbl, old_discharge=self.meas.discharge,
+                                new_discharge=self.meas.discharge)
+
+    def update_compass_tab(self, tbl, old_discharge, new_discharge):
+
+        for row in range(tbl.rowCount()):
+            transect_id = self.checked_transects_idx[row]
+
+            col = 0
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(self.meas.transects[transect_id].file_name[:-4]))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
+                self.meas.transects[transect_id].sensors.heading_deg.internal.mag_var_deg)))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
+                self.meas.transects[transect_id].sensors.heading_deg.internal.align_correction_deg)))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                self.meas.transects[transect_id].sensors.heading_deg.selected))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            pitch = getattr(self.meas.transects[transect_id].sensors.pitch_deg,
+                            self.meas.transects[transect_id].sensors.pitch_deg.selected)
+            item = np.nanmean(pitch.data)
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(item)))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            item = np.nanstd(pitch.data, ddof=1)
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(item)))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            roll = getattr(self.meas.transects[transect_id].sensors.roll_deg,
+                           self.meas.transects[transect_id].sensors.roll_deg.selected)
+            item = np.nanmean(roll.data)
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(item)))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            item = np.nanstd(roll.data, ddof=1)
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(item)))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:8.1f}'.format(old_discharge[transect_id].total)))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:8.1f}'.format(new_discharge[transect_id].total)))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            per_change = ((new_discharge[transect_id].total - old_discharge[transect_id].total)
+                          / old_discharge[transect_id].total) * 100
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(per_change)))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            tbl.resizeColumnsToContents()
+            tbl.resizeRowsToContents()
+
+    def compass_table_clicked(self, row, column):
+        tbl = self.table_compass_pr
+        with self.wait_cursor():
+            # Magnetic variation
+            if column == 1:
+                # Intialize dialog
+                magvar_dialog = MagVar(self)
+                magvar_entered = magvar_dialog.exec_()
+                # Data entered.
+                if magvar_entered:
+                    old_discharge = self.meas.discharge
+                    magvar = float(magvar_dialog.ed_magvar.text())
+                    if magvar_dialog.rb_all.isChecked():
+                        self.meas.change_magvar(magvar=magvar)
+                    else:
+                        self.meas.change_magvar( magvar=magvar, transect_idx=self.transects_2_use[row])
+                    self.update_compass_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
+
+            # Heading Offset
+            elif column == 2:
+                if self.h_external_valid:
+                    # Intialize dialog
+                    h_offset_dialog = HOffset(self)
+                    h_offset_entered = h_offset_dialog.exec_()
+                    # If data entered.
+                    if h_offset_entered:
+                        old_discharge = self.meas.discharge
+                        h_offset = float(h_offset_dialog.ed_hoffset.text())
+                        if h_offset_dialog.rb_all.isChecked():
+                            self.meas.change_h_offset(h_offset=h_offset)
+                        else:
+                            self.meas.change_h_offset(h_offset=h_offset, transect_idx=self.transects_2_use[row])
+
+                        self.update_compass_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
+            # Heading Source
+            elif column == 3:
+                if self.h_external_valid:
+                    # Intialize dialog
+                    h_source_dialog = HSource(self)
+                    h_source_entered = h_source_dialog.exec_()
+                    # If data entered.
+                    if h_source_entered:
+                        old_discharge = self.meas.discharge
+                        if h_source_dialog.rb_internal:
+                            h_source = 'internal'
+                        else:
+                            h_source = 'external'
+                        if h_source_dialog.rb_all.isChecked():
+                            self.meas.change_h_source(h_source=h_source)
+                        else:
+                            self.meas.change_h_source(h_source=h_source, transect_idx=self.transects_2_use[row])
+
+                        self.update_compass_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
 
 # Split fuctions
 # ==============

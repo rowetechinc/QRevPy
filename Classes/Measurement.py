@@ -698,7 +698,67 @@ class Measurement(object):
                                                     speed=speed)
         # Reapply settings to newly adjusted data
         self.apply_settings(s)
-        
+
+    def change_magvar(self, magvar, transect_idx=None):
+        s = self.current_settings()
+        n_transects = len(self.transects)
+        recompute = False
+        n = 0
+        while n <= n_transects and recompute == False:
+            if self.transects[n].sensors.heading_deg.selected == 'internal':
+                recompute = True
+            n += 1
+
+        if transect_idx is None:
+            # Apply change to all transects
+            for transect in self.transects:
+                transect.change_mag_var(magvar)
+        else:
+            self.transects[transect_idx].change_mag_var(magvar)
+
+        if recompute:
+            self.apply_settings(s)
+
+    def change_h_offset(self, h_offset, transect_idx=None):
+        s = self.current_settings()
+        n_transects = len(self.transects)
+        recompute = False
+        n = 0
+        while n <= n_transects and recompute == False:
+            if self.transects[n].sensors.heading_deg.selected == 'internal':
+                recompute = True
+            n += 1
+
+        if transect_idx is None:
+            # Apply change to all transects
+            for transect in self.transects:
+                transect.change_offset(h_offset)
+        else:
+            self.transects[transect_idx].change_offset(h_offset)
+
+        if recompute:
+            self.apply_settings(s)
+
+    def change_h_source(self, h_source, transect_idx=None):
+        s = self.current_settings()
+        if transect_idx is None:
+            # Apply change to all transects
+            for transect in self.transects:
+                transect.change_h_source(h_source)
+        else:
+            self.transects[transect_idx].change_h_source(h_source)
+
+        self.apply_settings(s)
+
+    @staticmethod
+    def h_external_valid(meas):
+        external = False
+        for transect in meas.transects:
+            if transect.sensors.heading_deg.external is not None:
+                external = True
+                break
+        return external
+
     def apply_settings(self, settings):
         """Applies reference, filter, and interpolation settings.
         
