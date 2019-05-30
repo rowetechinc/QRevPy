@@ -256,7 +256,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     def update_main(self):
         """Update Gui
         """
-
+        self.checked_transects_idx = Measurement.checked_transects(self.meas)
         self.actionCheck.setEnabled(True)
 
         if len(self.checked_transects_idx) == len(self.meas.transects):
