@@ -115,12 +115,13 @@ class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
                     self.tr('SonTek Matlab File (*.mat)'))[0]
 
         # Initialize parameters
-        self.type = 'SonTek'
+        self.type = ''
         self.checked = False
 
         # Process fullName if selection was made
         if self.fullName:
             self.processNames()
+            self.type = 'SonTek'
         self.close()
 
 
@@ -144,11 +145,12 @@ class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
                     self.tr('TRDI mmt File (*.mmt)'))[0]
 
         # Initialize parameters
-        self.type = 'TRDI'
+        self.type = ''
         self.checked = self.cbTRDI.isChecked()
 
         # Process fullName if selection was made
         if self.fullName:
+            self.type = 'TRDI'
             self.processNames()
         self.close()
 
@@ -169,17 +171,19 @@ class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
             self.tr('QRev File (*_QRev.mat)'))[0]
 
         # Initialize parameters
-        self.type = 'QRev'
+        self.type = ''
         self.checked = False
 
         # Process fullName if selection was made
         if self.fullName:
+            self.type = 'QRev'
             self.processNames()
         self.close()
 
     def cancel(self):
         """Close dialog.
         """
+        self.type = ''
         self.close()
 
 

@@ -2,11 +2,12 @@
 
 # Form implementation generated from reading ui file 'QRev_gui.ui'
 #
-# Created by: PyQt5 UI code generator 5.10.1
+# Created by: PyQt5 UI code generator 5.12.2
 #
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -16,12 +17,21 @@ class Ui_MainWindow(object):
         brush = QtGui.QBrush(QtGui.QColor(0, 0, 255))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Text, brush)
+        brush = QtGui.QBrush(QtGui.QColor(0, 0, 255, 128))
+        brush.setStyle(QtCore.Qt.NoBrush)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.PlaceholderText, brush)
         brush = QtGui.QBrush(QtGui.QColor(0, 0, 255))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Text, brush)
+        brush = QtGui.QBrush(QtGui.QColor(0, 0, 255, 128))
+        brush.setStyle(QtCore.Qt.NoBrush)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.PlaceholderText, brush)
         brush = QtGui.QBrush(QtGui.QColor(120, 120, 120))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Text, brush)
+        brush = QtGui.QBrush(QtGui.QColor(0, 0, 255, 128))
+        brush.setStyle(QtCore.Qt.NoBrush)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.PlaceholderText, brush)
         MainWindow.setPalette(palette)
         MainWindow.setLayoutDirection(QtCore.Qt.LeftToRight)
         MainWindow.setDockOptions(QtWidgets.QMainWindow.AllowTabbedDocks|QtWidgets.QMainWindow.AnimatedDocks|QtWidgets.QMainWindow.VerticalTabs)
@@ -45,12 +55,21 @@ class Ui_MainWindow(object):
         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Text, brush)
+        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 128))
+        brush.setStyle(QtCore.Qt.NoBrush)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.PlaceholderText, brush)
         brush = QtGui.QBrush(QtGui.QColor(0, 0, 0))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Text, brush)
+        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 128))
+        brush.setStyle(QtCore.Qt.NoBrush)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.PlaceholderText, brush)
         brush = QtGui.QBrush(QtGui.QColor(120, 120, 120))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Text, brush)
+        brush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 128))
+        brush.setStyle(QtCore.Qt.NoBrush)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.PlaceholderText, brush)
         self.tab_all.setPalette(palette)
         font = QtGui.QFont()
         font.setPointSize(12)
@@ -331,6 +350,10 @@ class Ui_MainWindow(object):
         self.horizontalLayout_7 = QtWidgets.QHBoxLayout(self.box_systest_messages)
         self.horizontalLayout_7.setObjectName("horizontalLayout_7")
         self.display_systest_messages = QtWidgets.QPlainTextEdit(self.box_systest_messages)
+        font = QtGui.QFont()
+        font.setBold(False)
+        font.setWeight(50)
+        self.display_systest_messages.setFont(font)
         self.display_systest_messages.setObjectName("display_systest_messages")
         self.horizontalLayout_7.addWidget(self.display_systest_messages)
         self.verticalLayout_3.addWidget(self.box_systest_messages)
@@ -343,6 +366,10 @@ class Ui_MainWindow(object):
         self.horizontalLayout_8 = QtWidgets.QHBoxLayout(self.box_systest_comments)
         self.horizontalLayout_8.setObjectName("horizontalLayout_8")
         self.display_systest_comments = QtWidgets.QPlainTextEdit(self.box_systest_comments)
+        font = QtGui.QFont()
+        font.setBold(False)
+        font.setWeight(50)
+        self.display_systest_comments.setFont(font)
         self.display_systest_comments.setObjectName("display_systest_comments")
         self.horizontalLayout_8.addWidget(self.display_systest_comments)
         self.verticalLayout_3.addWidget(self.box_systest_comments)
@@ -382,19 +409,29 @@ class Ui_MainWindow(object):
         brush = QtGui.QBrush(QtGui.QColor(0, 0, 255))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.Text, brush)
+        brush = QtGui.QBrush(QtGui.QColor(0, 0, 255, 128))
+        brush.setStyle(QtCore.Qt.NoBrush)
+        palette.setBrush(QtGui.QPalette.Active, QtGui.QPalette.PlaceholderText, brush)
         brush = QtGui.QBrush(QtGui.QColor(255, 0, 0))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.WindowText, brush)
         brush = QtGui.QBrush(QtGui.QColor(0, 0, 255))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.Text, brush)
+        brush = QtGui.QBrush(QtGui.QColor(0, 0, 255, 128))
+        brush.setStyle(QtCore.Qt.NoBrush)
+        palette.setBrush(QtGui.QPalette.Inactive, QtGui.QPalette.PlaceholderText, brush)
         brush = QtGui.QBrush(QtGui.QColor(120, 120, 120))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.WindowText, brush)
         brush = QtGui.QBrush(QtGui.QColor(120, 120, 120))
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.Text, brush)
+        brush = QtGui.QBrush(QtGui.QColor(0, 0, 255, 128))
+        brush.setStyle(QtCore.Qt.NoBrush)
+        palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.PlaceholderText, brush)
         self.cb_adcp_compass.setPalette(palette)
+        self.cb_adcp_compass.setChecked(True)
         self.cb_adcp_compass.setObjectName("cb_adcp_compass")
         self.verticalLayout_4.addWidget(self.cb_adcp_compass)
         self.cb_ext_compass = QtWidgets.QCheckBox(self.tab_compass_2_data)
@@ -439,6 +476,7 @@ class Ui_MainWindow(object):
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.WindowText, brush)
         self.cb_pitch.setPalette(palette)
+        self.cb_pitch.setChecked(True)
         self.cb_pitch.setObjectName("cb_pitch")
         self.verticalLayout_5.addWidget(self.cb_pitch)
         self.cb_roll = QtWidgets.QCheckBox(self.tab_compass_2_data)
@@ -453,6 +491,7 @@ class Ui_MainWindow(object):
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.WindowText, brush)
         self.cb_roll.setPalette(palette)
+        self.cb_roll.setChecked(True)
         self.cb_roll.setObjectName("cb_roll")
         self.verticalLayout_5.addWidget(self.cb_roll)
         self.verticalLayout_5.setStretch(0, 9)
@@ -517,6 +556,10 @@ class Ui_MainWindow(object):
         self.horizontalLayout_12 = QtWidgets.QHBoxLayout(self.box_compass_messages)
         self.horizontalLayout_12.setObjectName("horizontalLayout_12")
         self.display_compass_messages = QtWidgets.QPlainTextEdit(self.box_compass_messages)
+        font = QtGui.QFont()
+        font.setBold(False)
+        font.setWeight(50)
+        self.display_compass_messages.setFont(font)
         self.display_compass_messages.setObjectName("display_compass_messages")
         self.horizontalLayout_12.addWidget(self.display_compass_messages)
         self.verticalLayout_8.addWidget(self.box_compass_messages)
@@ -529,6 +572,10 @@ class Ui_MainWindow(object):
         self.horizontalLayout_13 = QtWidgets.QHBoxLayout(self.box_compass_comments)
         self.horizontalLayout_13.setObjectName("horizontalLayout_13")
         self.display_compass_comments = QtWidgets.QPlainTextEdit(self.box_compass_comments)
+        font = QtGui.QFont()
+        font.setBold(False)
+        font.setWeight(50)
+        self.display_compass_comments.setFont(font)
         self.display_compass_comments.setObjectName("display_compass_comments")
         self.horizontalLayout_13.addWidget(self.display_compass_comments)
         self.verticalLayout_8.addWidget(self.box_compass_comments)
@@ -765,7 +812,7 @@ class Ui_MainWindow(object):
         self.tab_summary.setCurrentIndex(0)
         self.tab_mc.setCurrentIndex(0)
         self.tab_systest_2.setCurrentIndex(1)
-        self.tab_compass_2.setCurrentIndex(0)
+        self.tab_compass_2.setCurrentIndex(2)
         self.tab_tempsal_2.setCurrentIndex(0)
         self.tab_mtb_2.setCurrentIndex(1)
         self.tab_bt_2.setCurrentIndex(0)
@@ -853,7 +900,9 @@ class Ui_MainWindow(object):
         self.actionON.setText(_translate("MainWindow", "ON"))
         self.actionOFF.setText(_translate("MainWindow", "OFF"))
 
+
 import dsm_rc
+
 
 if __name__ == "__main__":
     import sys
@@ -863,4 +912,3 @@ if __name__ == "__main__":
     ui.setupUi(MainWindow)
     MainWindow.show()
     sys.exit(app.exec_())
-

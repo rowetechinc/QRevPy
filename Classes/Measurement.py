@@ -443,16 +443,16 @@ class Measurement(object):
 
                 # G3 compasses
                 if file.endswith('.ccal'):
-                    compass_cal_files.append(file)
+                    # compass_cal_files.append(file)
                     time_stamp = file.split('_')
                     time_stamp = time_stamp[0] + '_' + time_stamp[1]
 
                 # G2 compasses
                 elif file.endswith('.txt'):
-                    compass_cal_files.append(file)
+                    # compass_cal_files.append(file)
                     time_stamp = file.split('l')[1].split('.')[0]
 
-            for file in compass_cal_files:
+            # for file in compass_cal_files:
                 with open(os.path.join(compass_cal_folder, file)) as f:
                     cal_data = f.read()
                     cal = PreMeasurement()

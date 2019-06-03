@@ -1,4 +1,4 @@
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtCore
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.gridspec as gridspec
@@ -376,7 +376,7 @@ class Qtmpl(FigureCanvas):
             self.fig.ax.plot(sel_fit.u, sel_fit.z, '-k', linewidth=2)
 
     def discharge_plot(self, meas, checked, units):
-        """Generates the extrapolation plot.
+        """Generates the discharge plot.
 
         Parameters
         ----------
@@ -405,3 +405,90 @@ class Qtmpl(FigureCanvas):
         self.fig.axq.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
         # self.fig.axq.xaxis.set_major_locator(MaxNLocator(4))
         self.fig.axq.grid()
+
+    def heading_plot(self, qrev):
+        """Generates the heading plot.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
+
+
+        # Configure axis
+        self.fig.axh = self.fig.add_subplot(1, 1, 1)
+
+        # Set margins and padding for figure
+        self.fig.subplots_adjust(left=0.1, bottom=0.15, right=0.98, top=0.98, wspace=0.1, hspace=0)
+        self.fig.axh.set_xlabel(self.tr('Ensembles (left to right) '))
+        self.fig.axh.set_ylabel(self.tr('Heading (deg)'))
+        self.fig.axh.xaxis.label.set_fontsize(10)
+        self.fig.axh.yaxis.label.set_fontsize(10)
+        self.fig.axh.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+        checked = qrev.checked_transects_idx
+        meas = qrev.meas
+        for row in range(len(checked)):
+            if qrev.table_compass_pr.item(row, 0).checkState() == QtCore.Qt.Checked:
+                if qrev.cb_adcp_compass.isChecked():
+                    # Plot ADCP heading
+                    heading = np.copy(meas.transects[checked[row]].sensors.heading_deg.internal.data)
+                    if meas.transects[checked[row]].start_edge == 'Right':
+                        np.flip(heading)
+                    self.fig.axh.plot(heading, 'r-')
+
+                if qrev.cb_ext_compass.isChecked():
+                    # Plot External Heading
+                    heading = np.copy(meas.transects[checked[row]].sensors.heading_deg.external.data)
+                    if meas.transects[checked[row]].start_edge == 'Right':
+                        np.flip(heading)
+                    self.fig.axh.plot(heading, 'b-')
+
+                if qrev.cb_mag_field.isChecked():
+                    # Plot magnetic field change
+                    self.fig.axm = self.fig.axh.twinx()
+                    self.fig.axm.set_ylabel(self.tr('Magnetic Change (%)'))
+                    self.fig.axm.yaxis.label.set_fontsize(10)
+                    self.fig.axm.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+                    mag_chng = np.copy(meas.transects[checked[row]].sensors.heading_deg.internal.mag_error)
+                    if meas.transects[checked[row]].start_edge == 'Right':
+                        np.flip(mag_chng)
+                    self.fig.axm.plot(mag_chng, 'k-')
+
+    def pr_plot(self, qrev):
+        """Generates the pitch and roll plot.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
+
+
+        # Configure axis
+        self.fig.axh = self.fig.add_subplot(1, 1, 1)
+
+        # Set margins and padding for figure
+        self.fig.subplots_adjust(left=0.1, bottom=0.15, right=0.98, top=0.98, wspace=0.1, hspace=0)
+        self.fig.axh.set_xlabel(self.tr('Ensembles (left to right) '))
+        self.fig.axh.set_ylabel(self.tr('Pitch or Roll (deg)'))
+        self.fig.axh.xaxis.label.set_fontsize(10)
+        self.fig.axh.yaxis.label.set_fontsize(10)
+        self.fig.axh.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+        checked = qrev.checked_transects_idx
+        meas = qrev.meas
+        for row in range(len(checked)):
+            if qrev.table_compass_pr.item(row, 0).checkState() == QtCore.Qt.Checked:
+                if qrev.cb_pitch.isChecked():
+                    # Plot pitch
+                    pitch = np.copy(meas.transects[checked[row]].sensors.pitch_deg.internal.data)
+                    if meas.transects[checked[row]].start_edge == 'Right':
+                        np.flip(pitch)
+                    self.fig.axh.plot(pitch, 'r-')
+
+                if qrev.cb_roll.isChecked():
+                    # Plot roll
+                    roll = np.copy(meas.transects[checked[row]].sensors.roll_deg.internal.data)
+                    if meas.transects[checked[row]].start_edge == 'Right':
+                        np.flip(roll)
+                    self.fig.axh.plot(roll, 'b-')

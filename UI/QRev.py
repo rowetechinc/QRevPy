@@ -116,32 +116,33 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # self.msg = Loading()
         # self.select.exec_()
 
-        # This doesn't seem to be working properly
-        with self.wait_cursor():
-            # Load and process measurement based on measurement type
-            if self.select.type == 'SonTek':
-                # Show folder name in GUI header
+        if len(self.select.type) > 0:
+            # This doesn't seem to be working properly
+            with self.wait_cursor():
+                # Load and process measurement based on measurement type
+                if self.select.type == 'SonTek':
+                    # Show folder name in GUI header
 
-                # Create measurement object
-                self.meas = Measurement(in_file=self.select.fullName, source='SonTek', proc_type='QRev')
+                    # Create measurement object
+                    self.meas = Measurement(in_file=self.select.fullName, source='SonTek', proc_type='QRev')
 
-            elif self.select.type == 'TRDI':
-                # Show mmt filename in GUI header
+                elif self.select.type == 'TRDI':
+                    # Show mmt filename in GUI header
 
-                # Create measurement object
-                self.meas = Measurement(in_file=self.select.fullName[0], source='TRDI', proc_type='QRev', checked=self.select.checked)
+                    # Create measurement object
+                    self.meas = Measurement(in_file=self.select.fullName[0], source='TRDI', proc_type='QRev', checked=self.select.checked)
 
-                # self.msg.destroy()
-            elif self.select.type == 'QRev':
-                self.meas = Measurement(in_file=self.select.fullName, source='QRev')
-            else:
-                print('Cancel')
+                    # self.msg.destroy()
+                elif self.select.type == 'QRev':
+                    self.meas = Measurement(in_file=self.select.fullName, source='QRev')
+                else:
+                    print('Cancel')
 
-            self.checked_transects_idx = Measurement.checked_transects(self.meas)
-            self.h_external_valid = Measurement.h_external_valid(self.meas)
-            self.actionSave.setEnabled(True)
-            self.actionComment.setEnabled(True)
-            self.update_main()
+                self.checked_transects_idx = Measurement.checked_transects(self.meas)
+                self.h_external_valid = Measurement.h_external_valid(self.meas)
+                self.actionSave.setEnabled(True)
+                self.actionComment.setEnabled(True)
+                self.update_main()
 
     def saveMeasurement(self):
         """Save measurement, triggered by actionSave
@@ -256,7 +257,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     def update_main(self):
         """Update Gui
         """
-        self.checked_transects_idx = Measurement.checked_transects(self.meas)
+
         self.actionCheck.setEnabled(True)
 
         if len(self.checked_transects_idx) == len(self.meas.transects):
@@ -1240,8 +1241,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setItem(2, 0, QtWidgets.QTableWidgetItem(self.tr('Frequency (kHz): ')))
         tbl.item(2, 0).setFlags(QtCore.Qt.ItemIsEnabled)
         tbl.item(2, 0).setFont(self.font_bold)
-        tbl.setItem(2, 1, QtWidgets.QTableWidgetItem(
-            '{:4.0f}'.format(self.meas.transects[self.checked_transects_idx[0]].adcp.frequency_khz)))
+        if self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'SonTek':
+            item = 'Variable'
+        else:
+            item = '{:4.0f}'.format(self.meas.transects[self.checked_transects_idx[0]].adcp.frequency_khz)
+        tbl.setItem(2, 1, QtWidgets.QTableWidgetItem(item))
         tbl.item(2, 1).setFlags(QtCore.Qt.ItemIsEnabled)
 
         tbl.setItem(2, 2, QtWidgets.QTableWidgetItem(self.tr('Depth Cell Size (cm): ')))
@@ -1263,15 +1267,21 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setItem(3, 0, QtWidgets.QTableWidgetItem(self.tr('Water Mode: ')))
         tbl.item(3, 0).setFlags(QtCore.Qt.ItemIsEnabled)
         tbl.item(3, 0).setFont(self.font_bold)
-        tbl.setItem(3, 1, QtWidgets.QTableWidgetItem(
-            '{:2.0f}'.format(self.meas.transects[self.checked_transects_idx[0]].w_vel.water_mode)))
+        if self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'SonTek':
+            item = 'Variable'
+        else:
+            item = '{:2.0f}'.format(self.meas.transects[self.checked_transects_idx[0]].w_vel.water_mode)
+        tbl.setItem(3, 1, QtWidgets.QTableWidgetItem(item))
         tbl.item(3, 1).setFlags(QtCore.Qt.ItemIsEnabled)
 
         tbl.setItem(3, 2, QtWidgets.QTableWidgetItem(self.tr('Bottom Mode: ')))
         tbl.item(3, 2).setFlags(QtCore.Qt.ItemIsEnabled)
         tbl.item(3, 2).setFont(self.font_bold)
-        tbl.setItem(3, 3, QtWidgets.QTableWidgetItem(
-            '{:2.0f}'.format(self.meas.transects[self.checked_transects_idx[0]].boat_vel.bt_vel.bottom_mode)))
+        if self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'SonTek':
+            item = 'Variable'
+        else:
+            item = '{:2.0f}'.format(self.meas.transects[self.checked_transects_idx[0]].boat_vel.bt_vel.bottom_mode)
+        tbl.setItem(3, 3, QtWidgets.QTableWidgetItem(item))
         tbl.item(3, 3).setFlags(QtCore.Qt.ItemIsEnabled)
 
         tbl.resizeColumnsToContents()
@@ -1332,6 +1342,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 tbl.item(idx_systest, 0).setFont(self.font_bold)
+                self.display_systest.clear()
                 self.display_systest.textCursor().insertText(self.meas.system_test[idx_systest].data)
 
                 tbl.resizeColumnsToContents()
@@ -1339,6 +1350,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Comments
         self.display_systest_comments.clear()
+        self.display_systest_messages.clear()
         if hasattr(self, 'meas'):
             self.display_systest_comments.moveCursor(QtGui.QTextCursor.Start)
             for comment in self.meas.comments:
@@ -1350,7 +1362,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.display_systest_comments.moveCursor(QtGui.QTextCursor.Start)
             for message in self.meas.qa.system_tst['messages']:
                 # Display each comment on a new line
-                self.display_systest_messages.textCursor().insertText(message)
+                self.display_systest_messages.textCursor().insertText(message[0])
                 self.display_systest_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_systest_messages.textCursor().insertBlock()
 
@@ -1360,7 +1372,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             with self.wait_cursor():
                 # Set all files to normal font
                 nrows = len(self.meas.system_test)
-                for nrow in range(1, nrows):
+                for nrow in range(nrows):
                     self.self.table_systest(nrow, 0).setFont(self.font_normal)
 
                 # Set selected file to bold font
@@ -1374,7 +1386,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     def compass_tab(self):
 
 
-        # Setup table
+        # Setup data table
         tbl = self.table_compass_pr
         table_header = [self.tr('Plot / Transect'),
                           self.tr('Magnetic \n Variation (deg)'),
@@ -1397,17 +1409,124 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
         tbl.cellClicked.connect(self.compass_table_clicked)
         self.update_compass_tab(tbl=tbl, old_discharge=self.meas.discharge,
-                                new_discharge=self.meas.discharge)
+                                new_discharge=self.meas.discharge, initial=0)
 
-    def update_compass_tab(self, tbl, old_discharge, new_discharge):
+        # Connect plot variable checkboxes
+        self.cb_adcp_compass.stateChanged.connect(self.compass_plot)
+        self.cb_ext_compass.stateChanged.connect(self.compass_plot)
+        self.cb_mag_field.stateChanged.connect(self.compass_plot)
+        self.cb_pitch.stateChanged.connect(self.pr_plot)
+        self.cb_roll.stateChanged.connect(self.pr_plot)
+        for transect_idx in self.checked_transects_idx:
+            if self.meas.transects[transect_idx].sensors.heading_deg.internal.mag_error is not None:
+                self.cb_mag_field.setEnabled(True)
+                break
+        for transect_idx in self.checked_transects_idx:
+            if self.meas.transects[transect_idx].sensors.heading_deg.external is not None:
+                self.cb_ext_compass.setEnabled(True)
+                break
+
+        self.compass_cal_eval(idx_eval=0)
+
+    def compass_cal_eval(self, idx_cal=None, idx_eval=None):
+
+
+        # Setup calibration table
+        tblc = self.table_compass_cal
+
+        nrows = len(self.meas.compass_cal)
+        tblc.setRowCount(nrows)
+        tblc.setColumnCount(1)
+        header_text = [self.tr('Date/Time')]
+        tblc.setHorizontalHeaderLabels(header_text)
+        tblc.horizontalHeader().setFont(self.font_bold)
+        tblc.verticalHeader().hide()
+        tblc.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        tblc.cellClicked.connect(self.select_calibration)
+
+        # Add calibrations
+        if nrows > 0:
+            for row, test in enumerate(self.meas.compass_cal):
+                col = 0
+                tblc.setItem(row, col, QtWidgets.QTableWidgetItem(test.time_stamp))
+                tblc.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            if idx_cal is not None:
+                self.display_compass_result.clear()
+                tblc.item(idx_cal, 0).setFont(self.font_bold)
+                self.display_compass_result.textCursor().insertText(self.meas.compass_cal[idx_cal].data)
+
+            tblc.resizeColumnsToContents()
+            tblc.resizeRowsToContents()
+
+        # Setup evaluation table
+        tble = self.table_compass_eval
+        if self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'SonTek':
+            evals = self.meas.compass_cal
+        else:
+            evals = self.meas.compass_eval
+        nrows = len(evals)
+        tble.setRowCount(nrows)
+        tble.setColumnCount(2)
+        header_text = [self.tr('Date/Time')]
+        tble.setHorizontalHeaderLabels(header_text)
+        tble.horizontalHeader().setFont(self.font_bold)
+        tble.verticalHeader().hide()
+        tble.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        tble.cellClicked.connect(self.select_evaluation)
+
+        # Add evaluations
+        if nrows > 0:
+            for row, test in enumerate(evals):
+                col = 0
+                tble.setItem(row, col, QtWidgets.QTableWidgetItem(test.time_stamp))
+                tble.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                col = 1
+                if type(test.result['compass']['error']) == str:
+                    item = test.result['compass']['error']
+                else:
+                    item = '{:2.2f}'.format(test.result['compass']['error'])
+                tble.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tble.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            if idx_eval is not None:
+                self.display_compass_result.clear()
+                tble.item(idx_eval, 0).setFont(self.font_bold)
+                self.display_compass_result.textCursor().insertText(evals[idx_eval].data)
+
+            tble.resizeColumnsToContents()
+            tble.resizeRowsToContents()
+
+        # Comments
+        self.display_compass_comments.clear()
+        self.display_compass_messages.clear()
+        if hasattr(self, 'meas'):
+            self.display_compass_comments.moveCursor(QtGui.QTextCursor.Start)
+            for comment in self.meas.comments:
+                # Display each comment on a new line
+                self.display_compass_comments.textCursor().insertText(comment)
+                self.display_compass_comments.moveCursor(QtGui.QTextCursor.End)
+                self.display_compass_comments.textCursor().insertBlock()
+
+            self.display_compass_comments.moveCursor(QtGui.QTextCursor.Start)
+            for message in self.meas.qa.compass['messages']:
+                # Display each comment on a new line
+                self.display_compass_messages.textCursor().insertText(message[0])
+                self.display_compass_messages.moveCursor(QtGui.QTextCursor.End)
+                self.display_compass_messages.textCursor().insertBlock()
+
+    def update_compass_tab(self, tbl, old_discharge, new_discharge, initial=None):
 
         for row in range(tbl.rowCount()):
             transect_id = self.checked_transects_idx[row]
 
             col = 0
-            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(self.meas.transects[transect_id].file_name[:-4]))
-            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            checked = QtWidgets.QTableWidgetItem(self.meas.transects[transect_id].file_name[:-4])
+            checked.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(checked))
 
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
                 self.meas.transects[transect_id].sensors.heading_deg.internal.mag_var_deg)))
@@ -1464,9 +1583,24 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.resizeColumnsToContents()
             tbl.resizeRowsToContents()
 
+            if initial is not None:
+                tbl.item(row, 0).setCheckState(QtCore.Qt.Unchecked)
+                tbl.item(initial, 0).setCheckState(QtCore.Qt.Checked)
+
+        self.compass_plot()
+        self.pr_plot()
+
     def compass_table_clicked(self, row, column):
         tbl = self.table_compass_pr
         with self.wait_cursor():
+            if column == 0:
+                if tbl.item(row, 0).checkState() == QtCore.Qt.Checked:
+                    tbl.item(row, 0).setCheckState(QtCore.Qt.Unchecked)
+                else:
+                    tbl.item(row, 0).setCheckState(QtCore.Qt.Checked)
+                self.compass_plot()
+                self.pr_plot()
+
             # Magnetic variation
             if column == 1:
                 # Intialize dialog
@@ -1518,6 +1652,91 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                         self.update_compass_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
 
+    def select_calibration(self, row, column):
+        if column == 0:
+            with self.wait_cursor():
+                # Set all files to normal font
+                for nrow in range(self.table_compass_cal.rowCount()):
+                    self.table_compass_cal.item(nrow, 0).setFont(self.font_normal)
+                for nrow in range(self.table_compass_eval.rowCount()):
+                    self.table_compass_eval.item(nrow, 0).setFont(self.font_normal)
+
+                # Set selected file to bold font
+                self.table_compass_cal.item(row, 0).setFont(self.font_bold)
+
+                # Update contour and shiptrack plot
+                self.compass_cal_eval(idx_cal=row)
+
+    def select_evaluation(self, row, column):
+        if column == 0:
+            with self.wait_cursor():
+                # Set all files to normal font
+                for nrow in range(self.table_compass_cal.rowCount()):
+                    self.table_compass_cal.item(nrow, 0).setFont(self.font_normal)
+                for nrow in range(self.table_compass_eval.rowCount()):
+                    self.table_compass_eval.item(nrow, 0).setFont(self.font_normal)
+
+                # Set selected file to bold font
+                self.table_compass_eval.item(row, 0).setFont(self.font_bold)
+
+                # Update contour and shiptrack plot
+                self.compass_cal_eval(idx_eval=row)
+
+    def compass_plot(self):
+        """Generates the graph of heading and magnetic change.
+        """
+
+        # Assign layout to widget to allow auto scaling
+        layout = QtWidgets.QVBoxLayout(self.graph_heading)
+        # Adjust margins of layout to maximize graphic area
+        layout.setContentsMargins(1, 1, 1, 1)
+
+        # canvas_size = self.middle_canvas.size()
+        # dpi = app.screens()[0].physicalDotsPerInch()
+
+        # If figure already exists update it. If not, create it.
+        if hasattr(self, 'heading_mpl'):
+            self.heading_mpl.fig.clear()
+            self.heading_mpl.heading_plot(qrev=self)
+        else:
+            self.heading_mpl = Qtmpl(self.graphics_main_timeseries, width=6, height=2, dpi=80)
+            self.heading_mpl.heading_plot(qrev=self)
+            layout.addWidget(self.heading_mpl)
+
+        # Draw canvas
+        self.heading_mpl.draw()
+
+    def pr_plot(self):
+        """Generates the graph of heading and magnetic change.
+        """
+
+        # Assign layout to widget to allow auto scaling
+        layout = QtWidgets.QVBoxLayout(self.graph_pr)
+        # Adjust margins of layout to maximize graphic area
+        layout.setContentsMargins(1, 1, 1, 1)
+
+        # canvas_size = self.middle_canvas.size()
+        # dpi = app.screens()[0].physicalDotsPerInch()
+
+        # If figure already exists update it. If not, create it.
+        if hasattr(self, 'pr_mpl'):
+            self.pr_mpl.fig.clear()
+            self.pr_mpl.pr_plot(qrev=self)
+        else:
+            self.pr_mpl = Qtmpl(self.graphics_main_timeseries, width=4, height=2, dpi=80)
+            self.pr_mpl.pr_plot(qrev=self)
+            layout.addWidget(self.pr_mpl)
+
+        # Draw canvas
+        self.pr_mpl.draw()
+
+
+
+
+
+
+
+
 # Split fuctions
 # ==============
     def split_initialization(self, pairings, data):
@@ -1530,6 +1749,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.meas = data
             self.pairings = pairings
             self.pair_idx = 0
+            self.checked_transects_idx = Measurement.checked_transects(self.meas)
+            self.h_external_valid = Measurement.h_external_valid(self.meas)
             self.split_processing(pairings[self.pair_idx])
 
     def split_processing(self, group):
@@ -1614,8 +1835,8 @@ if __name__ == "__main__":
         t.start()
     window.show()
     app.exec_()
-elif __name__ == 'UI.MeasSplitter':
-    app = QtWidgets.QApplication(sys.argv)
-    window = QRev()
-    window.show()
-    app.exec_()
+# elif __name__ == 'UI.MeasSplitter':
+#     app = QtWidgets.QApplication(sys.argv)
+#     window = QRev()
+#     window.show()
+#     app.exec_()

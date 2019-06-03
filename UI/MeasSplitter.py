@@ -74,8 +74,8 @@ class MeasSplitter(object):
                 end_serial_time: float
                 processed_discharge: float
         """
-        self.qrev.split_initialization(pairings = pairings, data = self.meas)
+        dsm = self.qrev.split_initialization(pairings = pairings, data = self.meas)
 
-        processing_complete = qrev.exec_()
+        processing_complete = self.qrev.exec_()
         if processing_complete:
-            return qrev.processed_measurements
+            return self.qrev.processed_measurements
