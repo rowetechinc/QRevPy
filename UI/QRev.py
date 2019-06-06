@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 # from Classes.stickysettings import StickySettings as SSet
-from PyQt5.QtCore import pyqtSignal, QObject
+from PyQt5.QtCore import pyqtSignal, QRegExp
 
 import UI.QRev_gui as QRev_gui
 import sys
@@ -11,7 +11,7 @@ from Classes.Python2Matlab import Python2Matlab
 from Classes.Sensors import Sensors
 import numpy as np
 from UI.Qtmpl import Qtmpl
-from MiscLibs.common_functions import units_conversion
+from MiscLibs.common_functions import units_conversion, convert_temperature
 from datetime import datetime
 from UI.Comment import Comment
 from UI.Transects2Use import Transects2Use
@@ -19,8 +19,12 @@ from UI.Options import Options
 from UI.MagVar import MagVar
 from UI.HOffset import HOffset
 from UI.HSource import HSource
+from UI.SOSSource import SOSSource
+from UI.TempSource import TempSource
+from UI.Salinity import Salinity
 from contextlib import contextmanager
 import time
+import re
 
 
 class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
@@ -1385,7 +1389,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     # ===========
     def compass_tab(self):
 
-
         # Setup data table
         tbl = self.table_compass_pr
         table_header = [self.tr('Plot / Transect'),
@@ -1497,7 +1500,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             tble.resizeColumnsToContents()
             tble.resizeRowsToContents()
+            self.compass_comment_messages()
 
+    def compass_comments_messages(self):
         # Comments
         self.display_compass_comments.clear()
         self.display_compass_messages.clear()
@@ -1589,6 +1594,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         self.compass_plot()
         self.pr_plot()
+        self.compass_comments_messages()
 
     def compass_table_clicked(self, row, column):
         tbl = self.table_compass_pr
@@ -1730,14 +1736,287 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Draw canvas
         self.pr_mpl.draw()
 
+    # Temperature & Salinity Tab
+    # ==========================
+    def tempsal_tab(self):
+        # Setup data table
+        tbl = self.table_tempsal
+        table_header = [self.tr('Transect'),
+                        self.tr('Temperature \n Source'),
+                        self.tr('Average \n Temperature'),
+                        self.tr('Average \n Salinity (ppt)'),
+                        self.tr('Speed of \n Sound Source'),
+                        self.tr('Speed of \n Sound' + self.units['label_V']),
+                        self.tr('Discharge \n Previous \n' + self.units['label_Q']),
+                        self.tr('Discharge \n Now \n' + self.units['label_Q']),
+                        self.tr('Discharge \n % Change')]
+        ncols = len(table_header)
+        nrows = len(self.checked_transects_idx)
+        tbl.setRowCount(nrows)
+        tbl.setColumnCount(ncols)
+        tbl.setHorizontalHeaderLabels(table_header)
+        tbl.horizontalHeader().setFont(self.font_bold)
+        tbl.verticalHeader().hide()
+        tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        tbl.cellClicked.connect(self.tempsal_table_clicked)
 
+        self.rb_c.toggled.connect(self.change_temp_units)
+        self.rb_f.toggled.connect(self.change_temp_units)
 
+        reg_ex = QRegExp("^[1-9]\d*(\.\d+)?$")
+        input_validator = QtGui.QRegExpValidator(reg_ex, self.ed_user_temp)
+        self.ed_user_temp.setValidator(input_validator)
+        input_validator = QtGui.QRegExpValidator(reg_ex, self.ed_adcp_temp)
+        self.ed_adcp_temp.setValidator(input_validator)
+        self.pb_ind_temp_apply.clicked.connect(self.apply_user_temp)
+        self.pb_adcp_temp_apply.clicked.connect(self.apply_adcp_temp)
+        self.ed_user_temp.textChanged.connect(self.user_temp_changed)
+        self.ed_adcp_temp.textChanged.connect(self.adcp_temp_changed)
 
+        self.update_tempsal_tab(tbl=tbl, old_discharge=self.meas.discharge,
+                                new_discharge=self.meas.discharge, initial=0)
 
+        self.plot_temperature()
 
+    def update_tempsal_tab(self, tbl, old_discharge, new_discharge, initial=None):
 
+        temp_all = np.array([])
+        for row in range(tbl.rowCount()):
+            transect_id = self.checked_transects_idx[row]
 
-# Split fuctions
+            col = 0
+            checked = QtWidgets.QTableWidgetItem(self.meas.transects[transect_id].file_name[:-4])
+            checked.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(checked))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            item = 'Internal (ADCP)'
+            if self.meas.transects[transect_id].sensors.speed_of_sound_mps.selected == 'user':
+                item = 'User'
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            temp = getattr(self.meas.transects[transect_id].sensors.temperature_deg_c,
+                           self.meas.transects[transect_id].sensors.temperature_deg_c.selected)
+            if self.rb_f.isChecked():
+                temp = convert_temperature(temp_in=temp.data, units_in='C', units_out='F')
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(np.nanmean(temp.data))))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            sal = getattr(self.meas.transects[transect_id].sensors.salinity_ppt,
+                           self.meas.transects[transect_id].sensors.salinity_ppt.selected)
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(np.nanmean(sal.data))))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            item = 'User'
+            if self.meas.transects[transect_id].sensors.temperature_deg_c.selected == 'internal':
+                if self.meas.transects[transect_id].sensors.temperature_deg_c.internal.source == 'Calculated':
+                    item = 'Internal (ADCP)'
+                else:
+                    item = 'Computed'
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            sos = getattr(self.meas.transects[transect_id].sensors.speed_of_sound_mps,
+                           self.meas.transects[transect_id].sensors.speed_of_sound_mps.selected)
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(np.nanmean(sos.data))))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:8.1f}'.format(old_discharge[transect_id].total)))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:8.1f}'.format(new_discharge[transect_id].total)))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            col += 1
+            per_change = ((new_discharge[transect_id].total - old_discharge[transect_id].total)
+                          / old_discharge[transect_id].total) * 100
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(per_change)))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            temp_all = np.append(temp_all, self.meas.transects[transect_id].sensors.temperature_deg_c.internal.data)
+
+        tbl.resizeColumnsToContents()
+        tbl.resizeRowsToContents()
+
+        if len(self.meas.ext_temp_chk['user']) > 0:
+            temp = float(self.meas.ext_temp_chk['user'])
+            if self.rb_f.isChecked():
+                temp = convert_temperature(self.meas.ext_temp_chk['user'])
+            self.ed_user_temp.setText('{:3.1f}'.format(temp))
+
+        if len(self.meas.ext_temp_chk['adcp']) > 0:
+            temp = float(self.meas.ext_temp_chk['adcp'])
+            if self.rb_f.isChecked():
+                temp = convert_temperature(self.meas.ext_temp_chk['adcp'])
+            self.ed_adcp_temp.setText('{:3.1f}'.format(temp))
+
+        temp = np.nanmean(temp_all)
+        if self.rb_f.isChecked():
+            temp = convert_temperature(temp, 'F', 'C')
+        self.txt_adcp_avg.setText('{:3.1F}'.format(temp))
+
+        self.tempsal_comments_messages()
+
+    def tempsal_table_clicked(self, row, column):
+        tbl = self.table_tempsal
+        if column == 1:
+            user_temp = None
+            # Intialize dialog
+            t_source_dialog = TempSource(self)
+            t_source_entered = t_source_dialog.exec_()
+            # If data entered.
+            if t_source_entered:
+                old_discharge = self.meas.discharge
+                if t_source_dialog.rb_internal:
+                    t_source = 'internal'
+                elif t_source_dialog.rb_user:
+                    t_source = 'user'
+                    user_temp = float(t_source_dialog.ed_user_temp.text())
+                if t_source_dialog.rb_all.isChecked():
+                    self.meas.change_sos(parameter='temperatureSrc',
+                                         temperature=user_temp,
+                                         selected=t_source)
+                else:
+                    self.meas.change_sos(transect_idx=self.transects_2_use[row],
+                                         parameter='temperatureSrc',
+                                         temperature=user_temp,
+                                         selected=t_source)
+
+                self.update_tempsal_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
+
+        elif column == 3:
+            # Intialize dialog
+            salinity_dialog = Salinity(self)
+            salinity_entered = salinity_dialog.exec_()
+            # Data entered.
+            if salinity_entered:
+                old_discharge = self.meas.discharge
+                salinity = float(salinity_dialog.ed_magvar.text())
+                if salinity_dialog.rb_all.isChecked():
+                    self.meas.change_sos(parameter='salinity',
+                                         salinity=salinity)
+                else:
+                    self.meas.change_sos(transect_idx=self.transects_2_use[row],
+                                         parameter='salinity',
+                                         salinity=salinity)
+
+                self.update_tempsal_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
+
+        elif column == 5:
+            user_sos = None
+            # Intialize dialog
+            sos_source_dialog = SOSSource(self)
+            sos_source_entered = sos_source_dialog.exec_()
+            # If data entered.
+            if sos_source_entered:
+                old_discharge = self.meas.discharge
+                if sos_source_dialog.rb_internal:
+                    sos_source = 'internal'
+                elif sos_source_dialog.rb_user:
+                    sos_source = 'user'
+                    user_sos = float(sos_source_dialog.ed_user_temp.text())
+                if sos_source_dialog.rb_all.isChecked():
+                    self.meas.change_sos(parameter='sosSrc',
+                                         speed=user_sos,
+                                         selected=sos_source)
+                else:
+                    self.meas.change_sos(transect_idx=self.transects_2_use[row],
+                                         parameter='sosSrc',
+                                         speed=user_sos,
+                                         selected=sos_source)
+
+                self.update_tempsal_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
+
+    def tempsal_comments_messages(self):
+        # Comments
+        self.display_tempsal_comments.clear()
+        self.display_tempsal_messages.clear()
+        if hasattr(self, 'meas'):
+            self.display_tempsal_comments.moveCursor(QtGui.QTextCursor.Start)
+            for comment in self.meas.comments:
+                # Display each comment on a new line
+                self.display_tempsal_comments.textCursor().insertText(comment)
+                self.display_tempsal_comments.moveCursor(QtGui.QTextCursor.End)
+                self.display_tempsal_comments.textCursor().insertBlock()
+
+            self.display_tempsal_comments.moveCursor(QtGui.QTextCursor.Start)
+            for message in self.meas.qa.temperature['messages']:
+                # Display each comment on a new line
+                self.display_tempsal_messages.textCursor().insertText(message[0])
+                self.display_tempsal_messages.moveCursor(QtGui.QTextCursor.End)
+                self.display_tempsal_messages.textCursor().insertBlock()
+
+    def plot_temperature(self):
+        """Generates the graph of temperature.
+        """
+
+        # Assign layout to widget to allow auto scaling
+        layout = QtWidgets.QVBoxLayout(self.graph_temperature)
+        # Adjust margins of layout to maximize graphic area
+        layout.setContentsMargins(1, 1, 1, 1)
+
+        # canvas_size = self.middle_canvas.size()
+        # dpi = app.screens()[0].physicalDotsPerInch()
+
+        # If figure already exists update it. If not, create it.
+        if hasattr(self, 'temperature_mpl'):
+            self.temperature_mpl.fig.clear()
+            self.temperature_mpl.temperature_plot(qrev=self)
+        else:
+            self.temperature_mpl = Qtmpl(self.graphics_main_timeseries, width=4, height=2, dpi=80)
+            self.temperature_mpl.temperature_plot(qrev=self)
+            layout.addWidget(self.temperature_mpl)
+
+        # Draw canvas
+        self.temperature_mpl.draw()
+
+    def change_temp_units(self):
+        self.update_tempsal_tab(tbl=self.table_tempsal, old_discharge=self.meas.discharge,
+                                new_discharge=self.meas.discharge, initial=0)
+
+        self.plot_temperature()
+
+    def apply_user_temp(self):
+
+        if len(self.ed_user_temp.text()) > 0:
+            temp = float(self.ed_user_temp.text())
+            if self.rb_f.isChecked():
+                temp = convert_temperature(temp, 'F', 'C')
+        else:
+            temp = []
+        self.meas.ext_temp_chk['user'] = temp
+        self.meas.qa.temperature_qa(self.meas)
+        self.tempsal_comments_messages()
+        self.pb_ind_temp_apply.setEnabled(False)
+
+    def apply_adcp_temp(self):
+        self.table_tempsal.setFocus()
+        if len(self.ed_adcp_temp.text()) > 0:
+            temp = float(self.ed_adcp_temp.text())
+            if self.rb_f.isChecked():
+                temp = convert_temperature(temp, 'F', 'C')
+        else:
+            temp = []
+        self.meas.ext_temp_chk['adcp'] = temp
+        self.meas.qa.temperature_qa(self.meas)
+        self.tempsal_comments_messages()
+        self.pb_adcp_temp_apply.setEnabled(False)
+
+    def user_temp_changed(self):
+        self.pb_ind_temp_apply.setEnabled(True)
+
+    def adcp_temp_changed(self):
+        self.pb_adcp_temp_apply.setEnabled(True)
+
+# Split functions
 # ==============
     def split_initialization(self, pairings, data):
         # Setting to allow processing to split measurement into multiple measurements
@@ -1803,6 +2082,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.system_tab()
         elif tab_idx == 2:
             self.compass_tab()
+        elif tab_idx == 3:
+            self.tempsal_tab()
 
 # Command line functions
 # ======================

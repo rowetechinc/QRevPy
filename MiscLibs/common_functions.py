@@ -201,3 +201,35 @@ def units_conversion(units_id='SI'):
                  'ID': 'English'}
 
     return units
+
+def convert_temperature(temp_in, units_in, units_out):
+    """Converts temperature from F to C or C to F.
+
+    Parameters
+    ==========
+    temp_in: np.array
+        temperature in units_in
+    units_in: str
+        C for Celcius or F for Fahrenheit
+    units_out: str
+        C for Celcius or F for Fahrenheit
+
+    Returns
+    =======
+    temp_out: np.array
+        temperature in units_out
+    """
+
+    if units_in == 'F':
+        if units_out == 'C':
+            temp_out = (temp_in - 32) * (5./9.)
+        else:
+            temp_out = temp_in
+
+    elif units_in == 'C':
+        if units_out == 'C':
+            temp_out = temp_in
+        else:
+            temp_out = (temp_in * (9./5.)) + 32
+
+    return temp_out

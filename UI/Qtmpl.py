@@ -6,6 +6,8 @@ import matplotlib.cm as cm
 import numpy as np
 from datetime import datetime
 import matplotlib.dates as mdates
+from Classes.Measurement import Measurement
+from MiscLibs.common_functions import convert_temperature
 from matplotlib.ticker import MaxNLocator
 
 
@@ -492,3 +494,43 @@ class Qtmpl(FigureCanvas):
                     if meas.transects[checked[row]].start_edge == 'Right':
                         np.flip(roll)
                     self.fig.axh.plot(roll, 'b-')
+
+    def temperature_plot(self, qrev):
+        """Generates the temperature plot.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
+
+        # Configure axis
+        self.fig.axt = self.fig.add_subplot(1, 1, 1)
+
+        # Set margins and padding for figure
+        self.fig.subplots_adjust(left=0.1, bottom=0.15, right=0.98, top=0.98, wspace=0.1, hspace=0)
+        temp, serial_time = Measurement.compute_time_series(qrev.meas, 'Temperature')
+
+        time_stamp = []
+        for t in serial_time:
+            time_stamp.append(datetime.fromtimestamp(t))
+
+        y_label = qrev.tr('Degrees C')
+        if qrev.rb_f.isChecked():
+            temp = convert_temperature(temp_in=temp, units_in='C', units_out='F')
+            y_label = qrev.tr('Degrees F')
+
+        self.fig.axt.plot(time_stamp, temp, 'b.')
+
+        # Customize axis
+        timeFmt = mdates.DateFormatter('%H:%M:%S')
+        self.fig.axt.xaxis.set_major_formatter(timeFmt)
+        self.fig.axt.set_xlabel(qrev.tr('Time '))
+        self.fig.axt.set_ylabel(y_label)
+        self.fig.axt.xaxis.label.set_fontsize(12)
+        self.fig.axt.yaxis.label.set_fontsize(12)
+        self.fig.axt.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+        self.fig.axt.set_ylim([np.nanmax(temp) + 2, np.nanmin(temp) - 2])
+        # self.fig.axq.xaxis.set_major_locator(MaxNLocator(4))
+        self.fig.axt.grid()
+

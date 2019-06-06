@@ -13,6 +13,7 @@ from Classes.Uncertainty import Uncertainty
 from Classes.QAData import QAData
 from MiscLibs.common_functions import cart2pol, pol2cart, rad2azdeg, nans, azdeg2rad
 from Classes.BoatStructure import BoatStructure
+import datetime
 
 
 class Measurement(object):
@@ -1548,5 +1549,18 @@ class Measurement(object):
                 checked_transect_idx.append(n)
         return checked_transect_idx
 
+    @staticmethod
+    def compute_time_series(meas, variable=None):
+
+        data=np.array([])
+        serial_time = np.array([])
+        idx_transects = Measurement.checked_transects(meas)
+        for idx in idx_transects:
+            if variable == 'Temperature':
+                data = np.append(data, meas.transects[idx].sensors.temperature_deg_c.internal.data)
+            ens_cum_time =  np.nancumsum(meas.transects[idx].date_time.ens_duration_sec)
+            ens_time =  meas.transects[idx].date_time.start_serial_time + ens_cum_time
+            serial_time = np.append(serial_time, ens_time)
+        return data, serial_time
 if __name__ == '__main__':
     pass
