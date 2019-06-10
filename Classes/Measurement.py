@@ -88,7 +88,7 @@ class Measurement(object):
         self.qa = None
         self.user_rating = None
         self.comments = []
-        self.ext_temp_chk = {'user': [], 'units': 'C', 'adcp': []}
+        self.ext_temp_chk = {'user': None, 'units': 'C', 'adcp': None}
 
         # Load data from selected source
         if source == 'QRev':
