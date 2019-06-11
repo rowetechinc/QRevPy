@@ -1490,8 +1490,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setSpan(row, col, row_span, col_span)
         tbl.setWordWrap(True)
 
-    # System test tab
-    # ===============
+# System test tab
+# ===============
     def system_tab(self, idx_systest=0):
         """Initialize and display data in the systems tab.
         idx_systest: int
