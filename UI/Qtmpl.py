@@ -211,7 +211,7 @@ class Qtmpl(FigureCanvas):
             speed_plt[j, :] = speed_xpand[n, :]
         return x_plt, cell_plt, speed_plt, ensembles, depth
 
-    def shiptrack_plot(self, transect, units):
+    def shiptrack_plot(self, transect, units, control=None):
         """Generates the shiptrack plot using all available references. Water vectors are plotted based on
         the selected reference.
 
@@ -221,25 +221,39 @@ class Qtmpl(FigureCanvas):
             Object of TransectData contain data to be plotted.
         units: dict
             Dictionary of unit conversions and labels
+        control: dict
+            Dict of boolean to determine what should be displayed in the plot
         """
 
+        if control is None:
+            control = {'bt': True, 'gga': True, 'vtg': True, 'vectors': True}
+
+        max_x_bt = np.nan
+        max_y_bt = np.nan
+        min_x_bt = np.nan
+        min_y_bt = np.nan
         max_x_vtg = np.nan
         max_y_vtg = np.nan
         min_x_vtg = np.nan
         min_y_vtg = np.nan
+        max_x_gga = np.nan
+        max_y_gga = np.nan
+        min_x_gga = np.nan
+        min_y_gga = np.nan
 
         # Plot shiptrack based on bottom track
-        ship_data_bt = transect.boat_vel.compute_boat_track(transect, ref='bt_vel')
-        self.fig.axst.plot(ship_data_bt['track_x_m'] * units['L'], ship_data_bt['track_y_m'] * units['L'], color='r',
-                           label='BT')
-        ship_data = ship_data_bt
-        max_x_bt = np.nanmax(ship_data_bt['track_x_m'])
-        max_y_bt = np.nanmax(ship_data_bt['track_y_m'])
-        min_x_bt = np.nanmin(ship_data_bt['track_x_m'])
-        min_y_bt = np.nanmin(ship_data_bt['track_y_m'])
+        if control['bt']:
+            ship_data_bt = transect.boat_vel.compute_boat_track(transect, ref='bt_vel')
+            self.fig.axst.plot(ship_data_bt['track_x_m'] * units['L'], ship_data_bt['track_y_m'] * units['L'], color='r',
+                               label='BT')
+            ship_data = ship_data_bt
+            max_x_bt = np.nanmax(ship_data_bt['track_x_m'])
+            max_y_bt = np.nanmax(ship_data_bt['track_y_m'])
+            min_x_bt = np.nanmin(ship_data_bt['track_x_m'])
+            min_y_bt = np.nanmin(ship_data_bt['track_y_m'])
 
         # Plot shiptrack based on vtg if available
-        if transect.boat_vel.vtg_vel is not None:
+        if transect.boat_vel.vtg_vel is not None and control['vtg']:
             ship_data_vtg = transect.boat_vel.compute_boat_track(transect, ref='vtg_vel')
             self.fig.axst.plot(ship_data_vtg['track_x_m'] * units['L'], ship_data_vtg['track_y_m'] * units['L'],
                                color='g', label='VTG')
@@ -252,7 +266,7 @@ class Qtmpl(FigureCanvas):
             min_y_vtg = np.nanmin(ship_data_vtg['track_y_m'])
 
         # Plot shiptrack based on gga if available
-        if transect.boat_vel.gga_vel is not None:
+        if transect.boat_vel.gga_vel is not None and control['gga']:
             ship_data_gga = transect.boat_vel.compute_boat_track(transect, ref='gga_vel')
             self.fig.axst.plot(ship_data_gga['track_x_m'] * units['L'], ship_data_gga['track_y_m'] * units['L'],
                                color='b', label='GGA')
@@ -534,3 +548,76 @@ class Qtmpl(FigureCanvas):
         # self.fig.axq.xaxis.set_major_locator(MaxNLocator(4))
         self.fig.axt.grid()
 
+    def boat_speed_plot (self, transect, units, control):
+        """Generates the pitch and roll plot.
+
+        Parameters
+        ----------
+                transect: TransectData
+            Object of TransectData contain data to be plotted.
+        units: dict
+            Dictionary of unit conversions and labels
+        control: dict
+            Dict of boolean to determine what should be displayed in the plot
+        """
+
+        # Configure axis
+        self.fig.axts = self.fig.add_subplot(1, 1, 1)
+
+        # Set margins and padding for figure
+        self.fig.subplots_adjust(left=0.1, bottom=0.15, right=0.98, top=0.98, wspace=0.1, hspace=0)
+        self.fig.axts.set_xlabel(self.tr('Ensembles'))
+        self.fig.axts.set_ylabel(self.tr('Boat speed' + units['label_V']))
+        self.fig.axts.xaxis.label.set_fontsize(10)
+        self.fig.axts.yaxis.label.set_fontsize(10)
+        self.fig.axts.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+
+        if control['bt']:
+            speed = np.sqrt(transect.boat_vel.bt_vel.u_processed_mps**2 + transect.boat_vel.bt_vel.v_processed**2)
+            self.fig.axts.plot(speed * units['V'], 'r-')
+
+        if transect.boat_vel.vtg_vel is not None and control['vtg']:
+            speed = np.sqrt(transect.boat_vel.vtg_vel.u_processed_mps ** 2 + transect.boat_vel.vtg_vel.v_processed ** 2)
+            self.fig.axts.plot(speed * units['V'], 'g-')
+
+        if transect.boat_vel.gga_vel is not None and control['gga']:
+            speed = np.sqrt(transect.boat_vel.gga_vel.u_processed_mps ** 2 + transect.boat_vel.gga_vel.v_processed ** 2)
+            self.fig.axts.plot(speed * units['V'], 'b-')
+
+    def stationary_plots(self, mb_test, units):
+        """Generates a moving-bed time series and upstream/downstream bottom track plot from stationary moving-bed
+        test data.
+
+        Parameters
+        ----------
+        mb_test: MovingBedTest
+            Object of MovingBedTest contain data to be plotted.
+        units: dict
+            Dictionary of unit conversions and labels.
+        """
+
+        # Setup grid space
+        gs = gridspec.GridSpec(1, 2)
+
+        # Set margins and padding for figure
+        self.fig.subplots_adjust(left=0.05, bottom=0.2, right=0.98, top=0.85, wspace=0.1, hspace=0)
+
+        # Generate color contour
+        self.fig.axmb = self.fig.add_subplot(gs[0, 0])
+        self.fig.axmb.set_xlabel(self.tr('Ensembles'))
+        self.fig.axmb.set_ylabel(self.tr('Moving-bed speed' + units['label_V']))
+        self.fig.axmb.xaxis.label.set_fontsize(10)
+        self.fig.axmb.yaxis.label.set_fontsize(10)
+        self.fig.axmb.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+
+        self.fig.axmb.plot(mb_test.stationary_mb_vel * units['V'], 'r-')
+
+        # Generate upstream/cross stream shiptrack
+        self.fig.axstud = self.fig.add_subplot(gs[0, 1])
+        self.fig.axstud.set_xlabel(self.tr('Distance cross stream' + units['label_L']))
+        self.fig.axstud.set_ylabel(self.tr('Distance upstream' + units['label_L']))
+        self.fig.axstud.xaxis.label.set_fontsize(10)
+        self.fig.axstud.yaxis.label.set_fontsize(10)
+        self.fig.axstud.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+
+        self.fig.axstud.plot(mb_test.stationary__cs_track * units['L'], mb_test.stationary__cs_track * units['L'], 'r-')

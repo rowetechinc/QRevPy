@@ -9,6 +9,7 @@ from UI.selectFile import OpenMeasurementDialog, SaveMeasurementDialog
 from Classes.Measurement import Measurement
 from Classes.Python2Matlab import Python2Matlab
 from Classes.Sensors import Sensors
+from Classes.MovingBedTests import MovingBedTests
 import numpy as np
 from UI.Qtmpl import Qtmpl
 from MiscLibs.common_functions import units_conversion, convert_temperature
@@ -2435,7 +2436,407 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
         self.pb_adcp_temp_apply.setEnabled(True)
 
-# Split functions
+# Moving-Bed Test Tab
+# ===================
+    def movbedtst_tab(self):
+        """Initialize, setup settings, and display initial data in moving-bed test tab.
+                """
+
+        # Setup data table
+        tbl = self.table_moving_bed
+        table_header = [self.tr('User \n Valid'),
+                        self.tr('User for \n Correction'),
+                        self.tr('Filename'),
+                        self.tr('Type'),
+                        self.tr('Duration \n (s)'),
+                        self.tr('Distance \n Upstream' + self.units['label_L']),
+                        self.tr('Moving-Bed \n Speed' + self.units['label_V']),
+                        self.tr('Moving-Bed \n Direction (deg)'),
+                        self.tr('Flow \n Speed' + self.units['label_V']),
+                        self.tr('Flow \n Direction (deg)'),
+                        self.tr('% Invalid \n BT'),
+                        self.tr('Compass \n Error (deg'),
+                        self.tr('% Moving \n Bed'),
+                        self.tr('Moving \n Bed'),
+                        self.tr('Quality')]
+        ncols = len(table_header)
+        nrows = len(self.meas.mb_tests)
+        tbl.setRowCount(nrows)
+        tbl.setColumnCount(ncols)
+        tbl.setHorizontalHeaderLabels(table_header)
+        tbl.horizontalHeader().setFont(self.font_bold)
+        tbl.verticalHeader().hide()
+        tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        tbl.cellClicked.connect(self.mb_table_clicked)
+
+        # Connect plot variable checkboxes
+        self.cb_mb_bt.stateChanged.connect(self.shiptrack_plot)
+        self.cb_mb_gga.stateChanged.connect(self.shiptrack_plot)
+        self.cb_mb_vtg.stateChanged.connect(self.shiptrack_plot)
+        self.cb_mb_vectors.stateChanged.connect(self.shiptrack_plot)
+
+        self.update_mb_table()
+        self.mb_plots(idx=0)
+        self.mb_comments_messages()
+
+    def update_mb_table(self):
+        """Populates the moving-bed table with the current settings and data.
+        """
+        with self.wait_cursor():
+
+            tbl = self.table_moving_bed
+            # Populate each row
+            for row in range(tbl.rowCount()):
+
+                # User Valid
+                col = 0
+                checked = QtWidgets.QTableWidgetItem('')
+                checked.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(checked))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Use for Correction
+                col += 1
+                checked2 = QtWidgets.QTableWidgetItem('')
+                checked2.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(checked2))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Filename
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(self.meas.mb_tests[row].transect.file_name[:-4]))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                if self.meas.mb_tests[row].selected:
+                    tbl.item(row, col).setFont(self.font_bold)
+
+                # Type
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(self.meas.mb_tests[row].type))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Duration
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:4.1f}'.format(self.meas.mb_tests[row].duration_sec)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Distance Upstream
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:4.1f}'.format(self.meas.mb_tests[row].dist_us_m)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Moving-Bed Speed
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.2f}'.format(self.meas.mb_tests[row].mb_spd_mps)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Moving-Bed Direction
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(self.meas.mb_tests[row].mb_dir)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Flow Speed
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
+                    self.meas.mb_tests[row].flow_spd_mps)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Flow Direction
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(self.meas.mb_tests[row].flow_dir)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent Invalid BT
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
+                    self.meas.mb_tests[row].percent_invalid_bt)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Compass Error
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
+                    self.meas.mb_tests[row].compass_diff_deg)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent Moving Bed
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
+                    self.meas.mb_tests[row].percent_mb)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Moving Bed
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(self.meas.mb_tests[row].moving_bed))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Quality
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(self.meas.mb_tests[row].test_quality))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Automatically resize rows and columns
+                tbl.resizeColumnsToContents()
+                tbl.resizeRowsToContents()
+
+    def mb_table_clicked(self, row, column):
+        """Manages actions caused by the user clicking in selected columns of the table.
+
+        Parameters
+        ==========
+        row: int
+            row in table clicked by user
+        column: int
+            column in table clicked by user
+        """
+
+        tbl = self.table_moving_bed
+        reprocess_measurement = True
+
+        # User valid
+        if column == 0:
+            if  tbl.item(row, 0).checkState()== QtCore.Qt.Checked:
+                tbl.item(row, 0).setCheckState(QtCore.Qt.Unchecked)
+                self.meas.mb_tests[row].user_valid = False
+            else:
+                tbl.item(row, 0).setCheckState(QtCore.Qt.Checked)
+                self.meas.mb_tests[row].user_valid = True
+
+            self.meas.mb_tests = MovingBedTests.auto_use_2_correct(
+                moving_bed_tests=self.meas.mb_tests,
+                boat_ref=self.meas.transects[self.checked_transects_idx[0].w_vel.nav_ref])
+
+        # Use to correct, manual override
+        if column == 1:
+            quality = tbl.item(row, 14).text()
+
+            if quality == 'Manual':
+                # Cancel Manual
+                tbl.item(row, 1).setCheckState(QtCore.Qt.Unchecked)
+                self.meas.mb_tests[row].use_2_correct == False
+                self.meas.mb_tests[row].moving_bed == 'Unknown'
+                self.meas.mb_tests[row].selected == False
+                self.meas.mb_tests[row].test_quality = "Errors"
+                self.meas.mb_tests = MovingBedTests.auto_use_2_correct(
+                    moving_bed_tests=self.meas.mb_tests,
+                    boat_ref=self.meas.transects[self.checked_transects_idx[0].w_vel.nav_ref])
+
+            elif quality == 'Errors':
+                # Manual override
+                # Warn user and force acknowledgement before proceeding
+                user_warning = QtWidgets.QMessageBox.question(self, 'Moving-Bed Test Manual Override',
+                                                              'QRev has determined this moving-bed test has '
+                                                              'critical errors and does not recommend using it '
+                                                              'for correction. If you choose to use the test '
+                                                              'anyway you will be required to justify its use.',
+                                                              QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel,
+                                                              QtWidgets.QMessageBox.Cancel)
+                if user_warning == QtWidgets.QMessageBox.Ok:
+                    # Apply manual override
+                    self.addComment()
+                    tbl.item(row, 1).setCheckState(QtCore.Qt.Checked)
+                    self.meas.mb_tests[row].use_2_correct == True
+                    self.meas.mb_tests[row].moving_bed == 'Yes'
+                    self.meas.mb_tests[row].selected == True
+                    self.meas.mb_tests[row].test_quality = "Manual"
+                    self.meas.mb_tests = MovingBedTests.auto_use_2_correct(
+                        moving_bed_tests=self.meas.mb_tests,
+                        boat_ref=self.meas.transects[self.checked_transects_idx[0].w_vel.nav_ref])
+                else:
+                    tbl.item(row, 1).setCheckState(QtCore.Qt.Unchecked)
+                    reprocess_measurement = False
+
+            elif tbl.item(row, 13) == 'Yes':
+                # Apply setting
+                tbl.item(row, 1).setCheckState(QtCore.Qt.Checked)
+                self.meas.mb_tests[row].use_2_correct == True
+
+                # Check to make sure the selected test are of the same type
+                test_type = []
+                test_quality = []
+                for test in self.meas.mb_tests:
+                    if test.selected:
+                        test_type = test.type
+                        test_quality = test.quality
+                unique_types = set(test_type)
+                if len(unique_types) == 1:
+
+                    # Check for errors
+                    if 'Errors' not in test_quality:
+
+                        # Multiple loops not allowed
+                        if test_type == 'Loop' and len(test_type) > 1:
+                            self.meas.mb_tests[row].use_2_correct == False
+                            reprocess_measurement = False
+                            tbl.item(row, 1).setCheckState(QtCore.Qt.Unchecked)
+                            user_warning = QtWidgets.QMessageBox.question(self, 'Multiple Loop Test Warning',
+                                                                          'Only one loop can be applied. '
+                                                                          'Select the best loop.',
+                                                                          QtWidgets.QMessageBox.Ok,
+                                                                          QtWidgets.QMessageBox.Ok)
+
+
+                else:
+                    # Mixing of stationary and loop tests are not allowed
+                    self.meas.mb_tests[row].use_2_correct == False
+                    reprocess_measurement = False
+                    user_warning = QtWidgets.QMessageBox.question(self, 'Mixed Moving-Bed Test Warning',
+                                                                  'Application of mixed moving-bed test types is '
+                                                                  'not allowed. Select only one loop or one or '
+                                                                  'more stationary test.',
+                                                                  QtWidgets.QMessageBox.Ok,
+                                                                  QtWidgets.QMessageBox.Ok)
+
+
+            else:
+                # No moving-bed, so no moving-bed correction is applied
+                tbl.item(row, 1).setCheckState(QtCore.Qt.Unchecked)
+                reprocess_measurement = False
+
+            # If changes were made reprocess the measurement
+            if reprocess_measurement:
+                self.meas.compute_discharge()
+                self.uncertainty.compute_uncertainty(self)
+                self.meas.qa.moving_bed_qa(self.meas)
+
+        # Data to plot
+        elif column == 2:
+           self.mb_plots(idx=row)
+
+    def mb_plots(self, idx=0):
+
+        self.shiptrack(transect=self.meas.mb_tests[idx].transect)
+        if self.meas.mb_tests[idx].type == 'Loop':
+            self.boat_speed_plot(transect=self.meas.mb_tests[idx].transect)
+        else:
+            self.stationary_plot(mb_test=self.meas.mb_tests[idx])
+
+    def shiptrack(self, transect):
+        """Generates the shiptrack plot for the moving-bed tab.
+
+        Parameters
+        ----------
+        transect_id: int
+            Index to check transects to identify the transect to be plotted
+        """
+
+        # Get settings from user to determine what should be shown in the shiptrack plot
+        control = {}
+        # BT
+        if self.cb_mb_bt.checkState() == QtCore.Qt.Checked:
+            control['bt'] = True
+        else:
+            control['bt'] = False
+        # GGA
+        if self.cb_mb_gga.checkState() == QtCore.Qt.Checked:
+            control['bt'] = True
+        else:
+            control['bt'] = False
+        # VTG
+        if self.cb_mb_vtg.checkState() == QtCore.Qt.Checked:
+            control['bt'] = True
+        else:
+            control['bt'] = False
+        # Vectors
+        if self.cb_mb_vectors.checkState() == QtCore.Qt.Checked:
+            control['bt'] = True
+        else:
+            control['bt'] = False
+
+        # Assign layout to widget to allow auto scaling
+        layout = QtWidgets.QVBoxLayout(self.graphic_mb_st)
+        # Adjust margins of layout to maximize graphic area
+        layout.setContentsMargins(1, 1, 1, 1)
+
+        # If figure already exists update it. If not, create it.
+        if hasattr(self, 'mb_st_mpl'):
+            self.mb_st_mpl.fig.clear()
+            self.mb_st_mpl.shiptrack(transect=transect, units=self.units, control=control)
+        else:
+            self.mb_st_mpl = Qtmpl(self.graphic_mb_st, width=4, height=4, dpi=80)
+            self.mb_st_mpl.shiptrack(transect=transect, units=self.units, control=control)
+            layout.addWidget(self.mb_st_mpl)
+
+        # Draw canvas
+        self.mb_st_mpl.draw()
+
+    def boat_speed_plot(self, transect):
+        """Generates the boat speed plot for the moving-bed tab.
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+        """
+
+        control = {'bt': True, 'gga': False, 'vtg': False}
+        # Assign layout to widget to allow auto scaling
+        layout = QtWidgets.QVBoxLayout(self.graphic_mb_ts)
+        # Adjust margins of layout to maximize graphic area
+        layout.setContentsMargins(1, 1, 1, 1)
+
+        # If figure already exists update it. If not, create it.
+        if hasattr(self, 'mb_ts_mpl'):
+            self.mb_ts_mpl.fig.clear()
+            self.mb_ts_mpl.boat_speed_plot(transect=transect, units=self.units, control=control)
+        else:
+            self.mb_ts_mpl = Qtmpl(self.graphic_mb_ts, width=8, height=2, dpi=80)
+            self.mb_ts_mpl.boat_speed_plot(transect=transect, units=self.units, control=control)
+            layout.addWidget(self.mb_ts_mpl)
+
+        # Draw canvas
+        self.mb_ts_mpl.draw()
+
+    def stationary_plot(self, mb_test):
+        """Generates the plots of stationary data for the moving-bed tab.
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+        """
+
+        # Assign layout to widget to allow auto scaling
+        layout = QtWidgets.QVBoxLayout(self.graphic_mb_ts)
+        # Adjust margins of layout to maximize graphic area
+        layout.setContentsMargins(1, 1, 1, 1)
+
+        # If figure already exists update it. If not, create it.
+        if hasattr(self, 'mb_ts_mpl'):
+            self.mb_ts_mpl.fig.clear()
+            self.mb_ts_mpl.stationary_plots(mb_test=mb_test, units=self.units)
+        else:
+            self.mb_ts_mpl = Qtmpl(self.graphic_mb_ts, width=8, height=2, dpi=80)
+            self.mb_ts_mpl.stationary_plots(mb_test=mb_test, units=self.units)
+            layout.addWidget(self.mb_ts_mpl)
+
+        # Draw canvas
+        self.mb_ts_mpl.draw()
+
+    def mb_comments_messages(self):
+        """Displays comments and messages associated with moving-bed tests in Messages tab.
+        """
+
+        # Clear comments and messages
+        self.display_mb_comments.clear()
+        self.display_mb_messages.clear()
+
+        if hasattr(self, 'meas'):
+            # Display each comment on a new line
+            self.display_mb_comments.moveCursor(QtGui.QTextCursor.Start)
+            for comment in self.meas.comments:
+                self.display_mb_comments.textCursor().insertText(comment)
+                self.display_mb_comments.moveCursor(QtGui.QTextCursor.End)
+                self.display_mb_comments.textCursor().insertBlock()
+
+            # Display each message on a new line
+            self.display_mb_messages.moveCursor(QtGui.QTextCursor.Start)
+            for message in self.meas.qa.moving_bed['messages']:
+                self.display_mb_messages.textCursor().insertText(message[0])
+                self.display_mb_messages.moveCursor(QtGui.QTextCursor.End)
+                self.display_mb_messages.textCursor().insertBlock()
+
+
+        
+    # Split functions
 # ==============
     def split_initialization(self, pairings, data):
         """Sets the GUI components to support semi-automatic processing of pairings that split a single

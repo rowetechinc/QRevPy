@@ -3,7 +3,7 @@
 This module performs 2-D interpolation on data that is assumed to be arranged in row-column format rather
 than in a random pattern. The rows represent vertical location or y-coordinate of each cell
 in the data array. The columns represent a horizontal location or x-coordinate of the data.
-The cell size and thus the y-coordinate of a cell can change for cell to cell or ensemble to ensemble.
+The cell size and thus the y-coordinate of a cell can change from cell to cell or ensemble to ensemble.
 The interpolation algorithm searches for the nearest valid cell above, below, before, and after
 the cell to be interpolated. All cells before and after that lie completely within the target cell are
 determined to be neighbors. If the target cell lies completely with in a larger cell before or after the
