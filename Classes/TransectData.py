@@ -869,14 +869,12 @@ class TransectData(object):
         if rsdata.Setup.startEdge > 0.1:
             ensembles_right = np.nansum(rsdata.System.Step == 2)
             ensembles_left = np.nansum(rsdata.System.Step == 4)
-            self.in_transect_idx = np.arange(ensembles_right + 1, num_ens - ensembles_left, 1)
             self.start_edge = 'Right'
         else:
             ensembles_right = np.nansum(rsdata.System.Step == 4)
             ensembles_left = np.nansum(rsdata.System.Step == 2)
-            self.in_transect_idx = np.arange(ensembles_left + 1, num_ens - ensembles_right, 1)
             self.start_edge = 'Left'
-
+        self.in_transect_idx = np.where(rsdata.System.Step == 3)[0]
         # Create left edge object
         edge_type = None
         if rsdata.Setup.Edges_0__Method == 2:
@@ -1013,7 +1011,7 @@ class TransectData(object):
         # Ensemble times
         ensemble_delta_time = np.append([0], np.diff(rsdata.System.Time))
         idx_missing = np.where(ensemble_delta_time > 1.5)
-        if len(idx_missing) > 0:
+        if len(idx_missing[0]) > 0:
             number_missing = np.sum(ensemble_delta_time[idx_missing]) - len(idx_missing)
             error_str = self.file_name + ' is missing ' + str(number_missing) + ' samples'
             # raise ValueError(error_str)

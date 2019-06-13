@@ -26,6 +26,7 @@ from UI.Salinity import Salinity
 from contextlib import contextmanager
 import time
 import re
+import os
 
 
 class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
@@ -2445,7 +2446,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Setup data table
         tbl = self.table_moving_bed
         table_header = [self.tr('User \n Valid'),
-                        self.tr('User for \n Correction'),
+                        self.tr('Used for \n Correction'),
                         self.tr('Filename'),
                         self.tr('Type'),
                         self.tr('Duration \n (s)'),
@@ -2468,12 +2469,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
         tbl.cellClicked.connect(self.mb_table_clicked)
+        # Automatically resize rows and columns
+        tbl.resizeColumnsToContents()
+        tbl.resizeRowsToContents()
 
         # Connect plot variable checkboxes
-        self.cb_mb_bt.stateChanged.connect(self.shiptrack_plot)
-        self.cb_mb_gga.stateChanged.connect(self.shiptrack_plot)
-        self.cb_mb_vtg.stateChanged.connect(self.shiptrack_plot)
-        self.cb_mb_vectors.stateChanged.connect(self.shiptrack_plot)
+        self.cb_mb_bt.stateChanged.connect(self.shiptrack_plot_change)
+        self.cb_mb_gga.stateChanged.connect(self.shiptrack_plot_change)
+        self.cb_mb_vtg.stateChanged.connect(self.shiptrack_plot_change)
+        self.cb_mb_vectors.stateChanged.connect(self.shiptrack_plot_change)
 
         self.update_mb_table()
         self.mb_plots(idx=0)
@@ -2494,6 +2498,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 checked.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(checked))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                if self.meas.mb_tests[row].user_valid:
+                    tbl.item(row, col).setCheckState(QtCore.Qt.Checked)
+                else:
+                    tbl.item(row, col).setCheckState(QtCore.Qt.Unchecked)
 
                 # Use for Correction
                 col += 1
@@ -2501,10 +2509,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 checked2.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(checked2))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                if self.meas.mb_tests[row].use_2_correct:
+                    tbl.item(row, col).setCheckState(QtCore.Qt.Checked)
+                else:
+                    tbl.item(row, col).setCheckState(QtCore.Qt.Unchecked)
 
                 # Filename
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(self.meas.mb_tests[row].transect.file_name[:-4]))
+                item = os.path.basename(self.meas.mb_tests[row].transect.file_name)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item[:-4]))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
                 if self.meas.mb_tests[row].selected:
                     tbl.item(row, col).setFont(self.font_bold)
@@ -2521,29 +2534,31 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Distance Upstream
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:4.1f}'.format(self.meas.mb_tests[row].dist_us_m)))
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:4.1f}'.format(self.meas.mb_tests[row].dist_us_m * self.units['L'])))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Moving-Bed Speed
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.2f}'.format(self.meas.mb_tests[row].mb_spd_mps)))
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.2f}'.format(self.meas.mb_tests[row].mb_spd_mps * self.units['V'])))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Moving-Bed Direction
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(self.meas.mb_tests[row].mb_dir)))
-                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                if type(self.meas.mb_tests[row].mb_dir) is not list:
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(self.meas.mb_tests[row].mb_dir)))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Flow Speed
                 col += 1
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
-                    self.meas.mb_tests[row].flow_spd_mps)))
+                    self.meas.mb_tests[row].flow_spd_mps * self.units['V'])))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Flow Direction
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(self.meas.mb_tests[row].flow_dir)))
-                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                if type(self.meas.mb_tests[row].flow_dir) is not list:
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(self.meas.mb_tests[row].flow_dir)))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Percent Invalid BT
                 col += 1
@@ -2553,9 +2568,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Compass Error
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
-                    self.meas.mb_tests[row].compass_diff_deg)))
-                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                if type(self.meas.mb_tests[row].compass_diff_deg) is not list:
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
+                        self.meas.mb_tests[row].compass_diff_deg)))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Percent Moving Bed
                 col += 1
@@ -2702,14 +2718,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
            self.mb_plots(idx=row)
 
     def mb_plots(self, idx=0):
+        item = os.path.basename(self.meas.mb_tests[idx].transect.file_name)
+        self.txt_mb_plotted.setText(item[:-4])
+        if len(self.meas.mb_tests) > 0:
+            self.shiptrack_plot(transect=self.meas.mb_tests[idx].transect)
+            if self.meas.mb_tests[idx].type == 'Loop':
+                self.boat_speed_plot(transect=self.meas.mb_tests[idx].transect)
+            else:
+                self.stationary_plot(mb_test=self.meas.mb_tests[idx])
 
-        self.shiptrack(transect=self.meas.mb_tests[idx].transect)
-        if self.meas.mb_tests[idx].type == 'Loop':
-            self.boat_speed_plot(transect=self.meas.mb_tests[idx].transect)
-        else:
-            self.stationary_plot(mb_test=self.meas.mb_tests[idx])
-
-    def shiptrack(self, transect):
+    def shiptrack_plot(self, transect):
         """Generates the shiptrack plot for the moving-bed tab.
 
         Parameters
@@ -2717,6 +2735,19 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         transect_id: int
             Index to check transects to identify the transect to be plotted
         """
+
+        # Enable check boxes as data is available
+        if transect.boat_vel.gga_vel is not None:
+            self.cb_mb_gga.setEnabled(True)
+        else:
+            self.cb_mb_gga.setCheckState(QtCore.Qt.Unchecked)
+            self.cb_mb_gga.setEnabled(False)
+
+        if transect.boat_vel.vtg_vel is not None:
+            self.cb_mb_vtg.setEnabled(True)
+        else:
+            self.cb_mb_vtg.setCheckState(QtCore.Qt.Unchecked)
+            self.cb_mb_vtg.setEnabled(False)
 
         # Get settings from user to determine what should be shown in the shiptrack plot
         control = {}
@@ -2727,33 +2758,58 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             control['bt'] = False
         # GGA
         if self.cb_mb_gga.checkState() == QtCore.Qt.Checked:
-            control['bt'] = True
+            control['gga'] = True
         else:
-            control['bt'] = False
+            control['gga'] = False
         # VTG
         if self.cb_mb_vtg.checkState() == QtCore.Qt.Checked:
-            control['bt'] = True
+            control['vtg'] = True
         else:
-            control['bt'] = False
+            control['vtg'] = False
         # Vectors
         if self.cb_mb_vectors.checkState() == QtCore.Qt.Checked:
-            control['bt'] = True
+            control['vectors'] = True
         else:
-            control['bt'] = False
+            control['vectors'] = False
 
         # Assign layout to widget to allow auto scaling
-        layout = QtWidgets.QVBoxLayout(self.graphic_mb_st)
+        layout = QtWidgets.QVBoxLayout(self.graph_mb_st)
         # Adjust margins of layout to maximize graphic area
         layout.setContentsMargins(1, 1, 1, 1)
 
         # If figure already exists update it. If not, create it.
         if hasattr(self, 'mb_st_mpl'):
             self.mb_st_mpl.fig.clear()
-            self.mb_st_mpl.shiptrack(transect=transect, units=self.units, control=control)
+            self.mb_st_mpl.shiptrack_plot(transect=transect, units=self.units, control=control)
         else:
-            self.mb_st_mpl = Qtmpl(self.graphic_mb_st, width=4, height=4, dpi=80)
-            self.mb_st_mpl.shiptrack(transect=transect, units=self.units, control=control)
+            self.mb_st_mpl = Qtmpl(self.graph_mb_st, width=4, height=4, dpi=80)
+            self.mb_st_mpl.shiptrack_plot(transect=transect, units=self.units, control=control)
             layout.addWidget(self.mb_st_mpl)
+
+        # Draw canvas
+        self.mb_st_mpl.draw()
+
+    def shiptrack_plot_change(self):
+
+        if self.cb_mb_bt.checkState() == QtCore.Qt.Checked:
+            self.mb_st_mpl.bt[0].set_visible(True)
+        else:
+            self.mb_st_mpl.bt[0].set_visible(False)
+        # GGA
+        if self.cb_mb_gga.checkState() == QtCore.Qt.Checked:
+            self.mb_st_mpl.gga[0].set_visible(True)
+        else:
+            self.mb_st_mpl.gga[0].set_visible(False)
+        # VTG
+        if self.cb_mb_vtg.checkState() == QtCore.Qt.Checked:
+            self.mb_st_mpl.vtg[0].set_visible(True)
+        else:
+            self.mb_st_mpl.vtg[0].set_visible(False)
+        # Vectors
+        if self.cb_mb_vectors.checkState() == QtCore.Qt.Checked:
+            self.mb_st_mpl.vectors.set_visible(True)
+        else:
+            self.mb_st_mpl.vectors.set_visible(False)
 
         # Draw canvas
         self.mb_st_mpl.draw()
@@ -2769,7 +2825,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         control = {'bt': True, 'gga': False, 'vtg': False}
         # Assign layout to widget to allow auto scaling
-        layout = QtWidgets.QVBoxLayout(self.graphic_mb_ts)
+        layout = QtWidgets.QVBoxLayout(self.graph_mb_ts)
         # Adjust margins of layout to maximize graphic area
         layout.setContentsMargins(1, 1, 1, 1)
 
@@ -2778,7 +2834,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.mb_ts_mpl.fig.clear()
             self.mb_ts_mpl.boat_speed_plot(transect=transect, units=self.units, control=control)
         else:
-            self.mb_ts_mpl = Qtmpl(self.graphic_mb_ts, width=8, height=2, dpi=80)
+            self.mb_ts_mpl = Qtmpl(self.graph_mb_ts, width=8, height=2, dpi=80)
             self.mb_ts_mpl.boat_speed_plot(transect=transect, units=self.units, control=control)
             layout.addWidget(self.mb_ts_mpl)
 
@@ -2795,7 +2851,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
 
         # Assign layout to widget to allow auto scaling
-        layout = QtWidgets.QVBoxLayout(self.graphic_mb_ts)
+        layout = QtWidgets.QVBoxLayout(self.graph_mb_ts)
         # Adjust margins of layout to maximize graphic area
         layout.setContentsMargins(1, 1, 1, 1)
 
@@ -2804,7 +2860,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.mb_ts_mpl.fig.clear()
             self.mb_ts_mpl.stationary_plots(mb_test=mb_test, units=self.units)
         else:
-            self.mb_ts_mpl = Qtmpl(self.graphic_mb_ts, width=8, height=2, dpi=80)
+            self.mb_ts_mpl = Qtmpl(self.graph_mb_ts, width=8, height=2, dpi=80)
             self.mb_ts_mpl.stationary_plots(mb_test=mb_test, units=self.units)
             layout.addWidget(self.mb_ts_mpl)
 
@@ -2951,6 +3007,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         elif tab_idx == 3:
             # Show temperature, salinity, speed of sound tab
             self.tempsal_tab()
+
+        elif tab_idx == 4:
+            # Moving-bed test tab
+            self.movbedtst_tab()
 
 # Command line functions
 # ======================

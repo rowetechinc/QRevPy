@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1062</width>
-    <height>670</height>
+    <width>1060</width>
+    <height>663</height>
    </rect>
   </property>
   <property name="palette">
@@ -1379,7 +1379,7 @@
                   </property>
                   <layout class="QGridLayout" name="gridLayout_21">
                    <item row="0" column="0">
-                    <layout class="QVBoxLayout" name="verticalLayout_13" stretch="1,6">
+                    <layout class="QVBoxLayout" name="verticalLayout_13" stretch="1,8">
                      <item>
                       <layout class="QHBoxLayout" name="horizontalLayout_17">
                        <item>
@@ -1477,7 +1477,7 @@
                          </property>
                          <property name="font">
                           <font>
-                           <pointsize>12</pointsize>
+                           <pointsize>10</pointsize>
                           </font>
                          </property>
                          <property name="text">
@@ -1527,6 +1527,11 @@
                            </disabled>
                           </palette>
                          </property>
+                         <property name="font">
+                          <font>
+                           <pointsize>10</pointsize>
+                          </font>
+                         </property>
                          <property name="text">
                           <string>GGA</string>
                          </property>
@@ -1571,6 +1576,11 @@
                            </disabled>
                           </palette>
                          </property>
+                         <property name="font">
+                          <font>
+                           <pointsize>10</pointsize>
+                          </font>
+                         </property>
                          <property name="text">
                           <string>VTG</string>
                          </property>
@@ -1578,6 +1588,11 @@
                        </item>
                        <item>
                         <widget class="QCheckBox" name="cb_mb_vectors">
+                         <property name="font">
+                          <font>
+                           <pointsize>10</pointsize>
+                          </font>
+                         </property>
                          <property name="text">
                           <string>Vectors</string>
                          </property>

@@ -1655,26 +1655,26 @@ class QComp(object):
 
         # Begin computing near-bed velocities
         n_ensembles = u.shape[1]
-        nb_U = np.tile([np.nan], (1, n_ensembles))
-        nb_V = np.tile([np.nan], (1, n_ensembles))
-        unit_NBU = np.tile([np.nan], (1, n_ensembles))
-        unit_NBV = np.tile([np.nan], (1, n_ensembles))
-        z_depth = np.tile([np.nan], (1, n_ensembles))
-        u_mean = np.tile([np.nan], (1, n_ensembles))
-        v_mean = np.tile([np.nan], (1, n_ensembles))
-        speed_near_bed = np.tile([np.nan], (1, n_ensembles))
+        nb_U = np.tile([np.nan], n_ensembles)
+        nb_V = np.tile([np.nan], n_ensembles)
+        unit_NBU = np.tile([np.nan], n_ensembles)
+        unit_NBV = np.tile([np.nan], n_ensembles)
+        z_depth = np.tile([np.nan], n_ensembles)
+        u_mean = np.tile([np.nan], n_ensembles)
+        v_mean = np.tile([np.nan], n_ensembles)
+        speed_near_bed = np.tile([np.nan], n_ensembles)
         for n in range(n_ensembles):
-            idx = np.where(np.isnan(u[:, n]) == False)
+            idx = np.where(np.isnan(u[:, n]) == False)[0]
             if len(idx) > 0:
-                idx = idx[1][-1]
+                idx = idx[-2:]
 
                 # Compute near-bed velocity
-                z_depth[n] = depth[n] - np.nanmean(bin_depth[idx, n])
-                u_mean[n] = np.nanmean(u[idx, n])
-                v_mean[n] = np.nanmean(v[idx, n])
+                z_depth[n] = depth[n] - np.nanmean(bin_depth[idx, n], 0)
+                u_mean[n] = np.nanmean(u[idx, n], 0)
+                v_mean[n] = np.nanmean(v[idx, n], 0)
                 nb_U[n] = (u_mean[n] / z_depth[n] ** (1. / 6.)) * (z_near_bed[n] ** (1. / 6.))
                 nb_V[n] = (v_mean[n] / z_depth[n] ** (1. / 6.)) * (z_near_bed[n] ** (1. / 6.))
-                speed_near_bed[n] = np.sqrt(nb_U ** 2 + nb_V[n] ** 2)
+                speed_near_bed[n] = np.sqrt(nb_U[n] ** 2 + nb_V[n] ** 2)
                 unit_NBU[n] = nb_U[n] / speed_near_bed[n]
                 unit_NBV[n] = nb_V[n] / speed_near_bed[n]
 

@@ -225,10 +225,10 @@ class MovingBedTests(object):
             consect_bt_time = np.zeros(n_ensembles)
             for n in range(1, n_ensembles):
                 if bt_valid[n]:
-                    consect_bt_time[n] = consect_bt_time[n - 1] + ens_duration[n]
-                else:
                     consect_bt_time[n] = 0
-                    
+                else:
+                    consect_bt_time[n] = consect_bt_time[n - 1] + ens_duration[n]
+
             max_consect_bt_time = np.nanmax(consect_bt_time)
             
             # Evaluate compass calibration based on flow direction
@@ -598,31 +598,38 @@ class MovingBedTests(object):
                 # Valid test according to user
                 lidx_user.append(test.user_valid == True)
                 # Valid test according to quality assessment
-                lidx_no_errors.append(test.test_quality == 'Errors')
+                lidx_no_errors.append(test.test_quality != 'Errors')
                 # Identify type of test
                 test_type.append(test.type)
-                lidx_stationary.append(test_type == 'Stationary')
-                lidx_loop.append(test_type == 'Loop')
+                lidx_stationary.append(test.type == 'Stationary')
+                lidx_loop.append(test.type == 'Loop')
                 flow_speed.append(test.flow_spd_mps)
 
             # Combine
-            lidx_valid_loop = np.all(np.vstack((lidx_user, lidx_no_errors, lidx_loop)))
-            lidx_valid_stationary = np.all(np.vstack((lidx_user, lidx_no_errors, lidx_stationary)))
+            lidx_valid_loop = np.all(np.vstack((lidx_user, lidx_no_errors, lidx_loop)), 0)
+            lidx_valid_stationary = np.all(np.vstack((lidx_user, lidx_no_errors, lidx_stationary)), 0)
 
             # Check flow speed
             lidx_flow_speed = np.array(flow_speed) > 0.25
 
             # Determine if there are valid loop tests
-            if np.any(lidx_valid_loop) and np.any(lidx_flow_speed):
-                lidx_loops_2_select = np.all(np.vstack((lidx_flow_speed, lidx_valid_loop)), 0)
-
+            # This is the code in matlab but I don't think it is correct. I the valid loop should also have a valid
+            # flow speed, if not then a stationary test, if available could be used.
+            # if np.any(lidx_valid_loop) and np.any(lidx_flow_speed):
+            #     lidx_loops_2_select = np.all(np.vstack((lidx_flow_speed, lidx_valid_loop)), 0)
+            lidx_loops_2_select = np.all(np.vstack((lidx_flow_speed, lidx_valid_loop)), 0)
+            if np.any(lidx_loops_2_select):
                 # Select last loop
-                idx_select = np.where(lidx_loops_2_select == True)[0]
-                if len(idx_select) > 0:
-                    idx = np.where(lidx_loop == True)[0]
-                    idx_select = idx(idx_select[-1])
-                else:
-                    idx_select = len(moving_bed_tests)
+                idx_select = np.where(lidx_loops_2_select)[0][-1]
+                # idx_select = np.where(lidx_loops_2_select == True)[0]
+                # if len(idx_select) > 0:
+                #     idx = np.where(np.array(lidx_loop) == True)[0]
+                #     idx_select = idx[idx_select[-1]]
+                # else:
+                #     # I think this is the correct code (dsm 6/13/2019)
+                #     idx_select = np.where(lidx_valid_loop)[0][-1]
+                #     # This was the code in matlab. However, the last test could be a stationary test
+                #     idx_select = len(moving_bed_tests)
                 test_select = moving_bed_tests[idx_select]
                 test_select.selected = True
 
@@ -637,10 +644,10 @@ class MovingBedTests(object):
                         # Determine if any stationary test resulted in a moving bed
                         if moving_bed_tests[lidx].moving_bed == 'Yes':
                             moving_bed_tests[lidx].use_2_correct = True
-
+            # If the flow speed is too low but there are not valid stationary tests use the last loop test.
             elif lidx_valid_loop:
                 # Select last loop
-                idx_select = np.where(lidx_valid_loop)[0][0]
+                idx_select = np.where(lidx_valid_loop)[0][-1]
                 moving_bed_tests[idx_select].selected = True
                 if moving_bed_tests[idx_select].moving_bed == 'Yes':
                     moving_bed_tests[idx_select].use_2_correct = True
