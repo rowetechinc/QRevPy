@@ -941,12 +941,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Setup table
         tbl = self.main_table_details
         summary_header = [self.tr('Transect'),
-                          self.tr('Width' + ' ' + self.units['label_L']),
-                          self.tr('Area' + ' ' + self.units['label_A']),
-                          self.tr('Avg Boat Speed' + ' ' + self.units['label_V']),
-                          self.tr('Course Made Good' + ' (deg)'),
+                          self.tr('Width' + '\n ' + self.units['label_L']),
+                          self.tr('Area' + '\n ' + self.units['label_A']),
+                          self.tr('Avg Boat \n Speed' + ' ' + self.units['label_V']),
+                          self.tr('Course Made \n Good' + ' (deg)'),
                           self.tr('Q/A' + ' ' + self.units['label_V']),
-                          self.tr('Avg Water Direction' + ' (deg)')]
+                          self.tr('Avg Water \n Direction' + ' (deg)')]
         ncols = len(summary_header)
         nrows = len(self.checked_transects_idx)
         tbl.setRowCount(nrows + 1)
@@ -1431,10 +1431,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.item(2, 2).setFlags(QtCore.Qt.ItemIsEnabled)
         tbl.item(2, 2).setFont(self.font_bold)
         # Check for and handle multiple cell sizes
-        cell_sizes = []
+        cell_sizes = np.array([])
         for n in range(len(self.checked_transects_idx)):
             transect = self.meas.transects[self.checked_transects_idx[n]]
-            cell_sizes.append(np.unique(transect.depths.bt_depths.depth_cell_size_m))
+            cell_sizes = np.append(cell_sizes, np.unique(transect.depths.bt_depths.depth_cell_size_m)[:])
         max_cell_size = np.nanmax(cell_sizes) * 100
         min_cell_size = np.nanmin(cell_sizes) * 100
         if max_cell_size - min_cell_size < 1:
@@ -1700,7 +1700,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         nrows = len(evals)
         tble.setRowCount(nrows)
         tble.setColumnCount(2)
-        header_text = [self.tr('Date/Time')]
+        header_text = [self.tr('Date/Time'), self.tr('Error')]
         tble.setHorizontalHeaderLabels(header_text)
         tble.horizontalHeader().setFont(self.font_bold)
         tble.verticalHeader().hide()
@@ -2718,14 +2718,20 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
            self.mb_plots(idx=row)
 
     def mb_plots(self, idx=0):
-        item = os.path.basename(self.meas.mb_tests[idx].transect.file_name)
-        self.txt_mb_plotted.setText(item[:-4])
         if len(self.meas.mb_tests) > 0:
-            self.shiptrack_plot(transect=self.meas.mb_tests[idx].transect)
-            if self.meas.mb_tests[idx].type == 'Loop':
-                self.boat_speed_plot(transect=self.meas.mb_tests[idx].transect)
-            else:
-                self.stationary_plot(mb_test=self.meas.mb_tests[idx])
+            item = os.path.basename(self.meas.mb_tests[idx].transect.file_name)
+            self.txt_mb_plotted.setText(item[:-4])
+            if len(self.meas.mb_tests) > 0:
+                self.shiptrack_plot(transect=self.meas.mb_tests[idx].transect)
+                if self.meas.mb_tests[idx].type == 'Loop':
+                    self.boat_speed_plot(transect=self.meas.mb_tests[idx].transect)
+                else:
+                    self.stationary_plot(mb_test=self.meas.mb_tests[idx])
+        else:
+            self.cb_mb_bt.setEnabled(False)
+            self.cb_mb_gga.setEnabled(False)
+            self.cb_mb_vtg.setEnabled(False)
+            self.cb_mb_vectors.setEnabled(False)
 
     def shiptrack_plot(self, transect):
         """Generates the shiptrack plot for the moving-bed tab.

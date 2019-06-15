@@ -153,8 +153,8 @@ class QAData(object):
 
                 # Save caution message
                 if num_missing > 0:
-                    self.transects['messages'].append([['Transects: ' + str(transect.file_name) + ' is missing'
-                                                       + str(int(num_missing)) + ' ensembles;'], 2, 0])
+                    self.transects['messages'].append(['Transects: ' + str(transect.file_name) + ' is missing'
+                                                       + str(int(num_missing)) + ' ensembles;', 2, 0])
                     self.transects['status'] = 'caution'
 
         # Check number of transects checked

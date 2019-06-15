@@ -261,50 +261,51 @@ class QComp(object):
 
         # Compute the discharge in each ensemble
         q_ensemble = self.top_ens + self.middle_ens + self.bottom_ens
+        valid_ens = np.where(np.isnan(q_ensemble) == False)[0]
+        if len(valid_ens) > 1:
+            idx = np.where(np.isnan(q_ensemble))[0]
 
-        idx = np.where(np.isnan(q_ensemble))[0]
+            if len(idx) > 0:
 
-        if len(idx) > 0:
+                # ID ensembles with valid discharge
+                valid_q = np.isnan(q_ensemble) == False
 
-            # ID ensembles with valid discharge
-            valid_q = np.isnan(q_ensemble) == False
+                # Compute the unit discharge by depth for each ensemble
+                depth_selected = getattr(transData.depths, transData.depths.selected)
+                unit_q_depth = (q_ensemble / depth_selected.depth_processed_m[transData.in_transect_idx]) \
+                               / transData.date_time.ens_duration_sec[transData.in_transect_idx]
 
-            # Compute the unit discharge by depth for each ensemble
-            depth_selected = getattr(transData.depths, transData.depths.selected)
-            unit_q_depth = (q_ensemble / depth_selected.depth_processed_m[transData.in_transect_idx]) \
-                           / transData.date_time.ens_duration_sec[transData.in_transect_idx]
+                # Compute boat track
+                boat_track = BoatStructure.compute_boat_track(transData, transData.boat_vel.selected)
 
-            # Compute boat track
-            boat_track = BoatStructure.compute_boat_track(transData, transData.boat_vel.selected)
+                # Create strict monotonic vector for 1-D interpolation
+                q_mono = unit_q_depth
+                x_mono = boat_track['distance_m'][transData.in_transect_idx]
 
-            # Create strict monotonic vector for 1-D interpolation
-            q_mono = unit_q_depth
-            x_mono = boat_track['distance_m'][transData.in_transect_idx]
+                # Identify duplicate values, and replace with an average
+                dups = self.group_consecutives(x_mono)
+                if len(dups):
+                    for dup in dups:
+                        q_avg = np.nanmean(q_mono[np.array(dup)])
+                        q_mono[dup[0]] = q_avg
+                        q_mono[dup[1::]] = np.nan
+                        x_mono[dup[1::]] = np.nan
 
-            # Identify duplicate values, and replace with an average q
-            dups = self.group_consecutives(x_mono)
-            if len(dups[0]):
-                for dup in dups:
-                    q_avg = np.nanmean(q_mono[np.array(dup)])
-                    q_mono[dup[0]] = q_avg
-                    q_mono[dup[1::]] = np.nan
-                    x_mono[dup[1::]] = np.nan
+                valid_q_mono = np.isnan(q_mono) == False
+                valid_x_mono = np.isnan(x_mono) == False
+                valid = np.all(np.vstack([valid_q_mono, valid_x_mono]), 0)
 
-            valid_q_mono = np.isnan(q_mono) == False
-            valid_x_mono = np.isnan(x_mono) == False
-            valid = np.all(np.vstack([valid_q_mono, valid_x_mono]), 0)
+                # Interpolate unit q
+                if np.any(valid):
+                    unit_q_int = np.interp(boat_track['distance_m'][transData.in_transect_idx], x_mono[valid],
+                                           q_mono[valid], left=np.nan, right=np.nan)
+                else:
+                    unit_q_int = 0
 
-            # Interpolate unit q
-            if np.any(valid):
-                unit_q_int = np.interp(boat_track['distance_m'][transData.in_transect_idx], x_mono[valid],
-                                       q_mono[valid], left=np.nan, right=np.nan)
-            else:
-                unit_q_int = 0
-
-            # Compute the discharge in each ensemble based on interpolated data
-            q_int = unit_q_int * depth_selected.depth_processed_m[transData.in_transect_idx] \
-                * transData.date_time.ens_duration_sec[transData.in_transect_idx]
-            self.middle_ens[idx] = q_int[idx]
+                # Compute the discharge in each ensemble based on interpolated data
+                q_int = unit_q_int * depth_selected.depth_processed_m[transData.in_transect_idx] \
+                    * transData.date_time.ens_duration_sec[transData.in_transect_idx]
+                self.middle_ens[idx] = q_int[idx]
 
 
     @staticmethod
@@ -314,10 +315,12 @@ class QComp(object):
         result = []
         expect = vals[0]
         j = 0
-        for n, v in enumerate(vals):
-            if v == expect:
+        for n in range(1, len(vals)):
+            if vals[n] == expect:
                 j += 1
                 if j > 1:
+                    run.append(n)
+                elif j > 0:
                     run.append(n-1)
                     run.append(n)
             elif j > 0:
