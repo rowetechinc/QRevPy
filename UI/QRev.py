@@ -25,17 +25,18 @@ from UI.TempSource import TempSource
 from UI.Salinity import Salinity
 from contextlib import contextmanager
 import time
-import re
 import os
 
 
+# class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     handle_args_trigger = pyqtSignal()
     gui_initialized = False
     command_arg = ""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, pairings=None, data=None, caller=None):
         super(QRev, self).__init__(parent)
+        self.setupUi(self)
 
         self.QRev_version = 'QRevPy Beta'
         self.setWindowTitle(self.QRev_version)
@@ -46,12 +47,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.change = False
         self.current_tab = 0
         # self.settings = SSet(self.settingsFile)
-        self.setupUi(self)
+
 
         # self.actionOpen.triggered.connect(self.selectMeasurement)
         # self.actionSave.triggered.connect(self.saveMeasurement)
         self.actionOpen.triggered.connect(self.select_measurement)
-        self.actionSave.triggered.connect(self.save_measurement)
         self.actionComment.triggered.connect(self.addComment)
         self.actionCheck.triggered.connect(self.selectTransects)
         self.actionBT.triggered.connect(self.setRef2BT)
@@ -108,6 +108,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         self.gui_initialized = True
 
+        if caller is not None:
+            self.caller = caller
+            self.split_initialization(pairings=pairings, data=data)
+            self.actionSave.triggered.connect(self.split_save)
+            self.processed_data = []
+        else:
+            self.actionSave.triggered.connect(self.save_measurement)
 
 # Toolbar functions
 # =================
@@ -290,6 +297,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.save_all = False
 
             self.tab_manager()
+
 # Main tab
 # ========
     def update_main(self):
@@ -2185,7 +2193,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.resizeRowsToContents()
 
         # Display independent temperature reading if available
-        if self.meas.ext_temp_chk['user'] is not None:
+        if np.isnan(self.meas.ext_temp_chk['user']) == False:
             try:
                 temp = float(self.meas.ext_temp_chk['user'])
                 if self.rb_f.isChecked():
@@ -2196,7 +2204,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 user = None
 
         # Display user provided adcp temperature reading if available
-        if self.meas.ext_temp_chk['adcp'] is not None:
+        if np.isnan(self.meas.ext_temp_chk['adcp']) == False:
             try:
                 temp = float(self.meas.ext_temp_chk['adcp'])
                 if self.rb_f.isChecked():
@@ -2896,11 +2904,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_mb_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_mb_messages.textCursor().insertBlock()
 
-
-        
-    # Split functions
+# Split functions
 # ==============
-    def split_initialization(self, pairings, data):
+    def split_initialization(self, pairings=None, data=None):
         """Sets the GUI components to support semi-automatic processing of pairings that split a single
         measurement into multiple measurements. Loads the first pairing.
 
@@ -2915,9 +2921,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if pairings is not None:
             # GUI settings to allow processing to split measurement into multiple measurements
             self.save_all = False
-            self.actionSave.triggered.connect(self.split_save)
             self.actionOpen.setEnabled(False)
             self.actionCheck.setEnabled(False)
+            self.actionSave.setEnabled(True)
+            self.actionComment.setEnabled(True)
 
             # Data settings
             self.meas = data
@@ -2927,7 +2934,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Process first pairing
             self.pair_idx = 0
-            self.split_processing(pairings[self.pair_idx])
+            self.checked_transects_idx = self.pairings[self.pair_idx]
+            self.split_processing(self.checked_transects_idx)
 
     def split_processing(self, group):
         """Creates the measurement based on the transect indices defined in group and updates the main tab with
@@ -2957,10 +2965,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, checked=self.pairings[self.pair_idx])
 
         # Create a summary of the processed discharges
+        discharge = Measurement.mean_discharges(self.meas)
         q = {'group': self.pairings[self.pair_idx],
              'start_serial_time': self.meas.transects[self.pairings[self.pair_idx][0]].date_time.start_serial_time,
              'end_serial_time': self.meas.transects[self.pairings[self.pair_idx][-1]].date_time.end_serial_time,
-             'processed_discharge': self.meas.discharge[-1].total}
+             'processed_discharge': discharge['total_mean']}
         self.processed_data.append(q)
 
         # Load next pairing
@@ -2968,7 +2977,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # If all pairings have been processed return control to the function initiating QRev.
         if self.pair_idx > len(self.pairings) - 1:
-            self.accept()
+            self.caller.processed_meas = self.processed_data
+            self.caller.Show_RIVRS()
+            self.close()
+
+        else:
+            self.checked_transects_idx = self.pairings[self.pair_idx]
+            self.split_processing(self.checked_transects_idx)
 
 # Support functions
 # =================

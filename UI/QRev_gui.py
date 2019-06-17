@@ -1237,7 +1237,7 @@ class Ui_MainWindow(object):
         self.actionOFF.setText(_translate("MainWindow", "OFF"))
 
 
-import dsm_rc
+import UI.dsm_rc
 
 
 if __name__ == "__main__":

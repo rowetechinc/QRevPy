@@ -1,5 +1,7 @@
 from UI.QRev import QRev
 from Classes.Measurement import Measurement
+from PyQt5 import QtWidgets
+import sys
 
 
 class MeasSplitter(object):
@@ -54,7 +56,7 @@ class MeasSplitter(object):
         elif source == 'QRev':
             self.meas = Measurement(in_file=files_in, source='QRev')
 
-        self.qrev = QRev()
+        # self.qrev = QRev()
 
     def pass2qrev (self, pairings):
         """QRev GUI is initiated using the self.meas data and the pairings created externally
@@ -74,8 +76,9 @@ class MeasSplitter(object):
                 end_serial_time: float
                 processed_discharge: float
         """
-        dsm = self.qrev.split_initialization(pairings = pairings, data = self.meas)
-
-        processing_complete = self.qrev.exec_()
+        # dsm = self.qrev.split_initialization(pairings = pairings, data = self.meas)
+        qrev = QRev()
+        dsm = qrev.split_initialization(pairings=pairings, data=self.meas)
+        processing_complete = app.exec_()
         if processing_complete:
             return self.qrev.processed_measurements
