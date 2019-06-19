@@ -57,7 +57,7 @@ class Python2Matlab(object):
         extrap.norm_data = norm_data
         self.matlab_dict['extrapFit'] = self.listobj2struct([extrap], py_2_mat_dict)
         mbTests = self.listobj2struct(meas_mat.mb_tests, py_2_mat_dict)
-        if np.isnan(mbTests)[0]:
+        if len(mbTests) == 0:
             mbTests = np.array([])
         self.matlab_dict['mbTests'] = mbTests
         self.matlab_dict['uncertainty'] = self.listobj2struct([meas_mat.uncertainty], py_2_mat_dict)

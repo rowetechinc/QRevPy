@@ -114,7 +114,7 @@ class Measurement(object):
                 #     ref = 'VTG'
 
                 # Process moving-bed tests
-                if self.mb_tests is not None:
+                if len(self.mb_tests) > 0:
                     self.mb_tests = MovingBedTests.auto_use_2_correct(
                         moving_bed_tests=self.mb_tests)
 

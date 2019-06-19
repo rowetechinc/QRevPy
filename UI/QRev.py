@@ -34,7 +34,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     gui_initialized = False
     command_arg = ""
 
-    def __init__(self, parent=None, pairings=None, data=None, caller=None):
+    def __init__(self, parent=None, groupings=None, data=None, caller=None):
         super(QRev, self).__init__(parent)
         self.setupUi(self)
 
@@ -110,7 +110,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         if caller is not None:
             self.caller = caller
-            self.split_initialization(pairings=pairings, data=data)
+            self.split_initialization(groupings=groupings, data=data)
             self.actionSave.triggered.connect(self.split_save)
             self.processed_data = []
         else:
@@ -2906,19 +2906,20 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
 # Split functions
 # ==============
-    def split_initialization(self, pairings=None, data=None):
+    def split_initialization(self, groupings=None, data=None):
         """Sets the GUI components to support semi-automatic processing of pairings that split a single
         measurement into multiple measurements. Loads the first pairing.
 
         Parameters
         ==========
-        pairings: list
+        groupings: list
             This a list of lists of transect indices splitting a single measurement into multiple measurements
-        data: object
+            Example groupings = [[0, 1], [2, 3, 4, 5], [8, 9]]
+        data: Measurement
             Object of class Measurement which contains all of the transects to be grouped into multiple measurements
         """
 
-        if pairings is not None:
+        if groupings is not None:
             # GUI settings to allow processing to split measurement into multiple measurements
             self.save_all = False
             self.actionOpen.setEnabled(False)
@@ -2928,13 +2929,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Data settings
             self.meas = data
-            self.pairings = pairings
+            self.groupings = groupings
             self.checked_transects_idx = Measurement.checked_transects(self.meas)
             self.h_external_valid = Measurement.h_external_valid(self.meas)
 
             # Process first pairing
-            self.pair_idx = 0
-            self.checked_transects_idx = self.pairings[self.pair_idx]
+            self.group_idx = 0
+            self.checked_transects_idx = self.groupings[self.group_idx]
             self.split_processing(self.checked_transects_idx)
 
     def split_processing(self, group):
@@ -2947,7 +2948,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             List of transect indices that comprise a single measurement.
         """
 
-        Measurement.selected_transects_changed(self.meas, group)
+        Measurement.selected_transects_changed(self.meas, selected_transects_idx=group)
         self.update_main()
 
     def split_save(self):
@@ -2962,27 +2963,27 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if self.save_all:
             Python2Matlab.save_matlab_file(self.meas, save_file.full_Name)
         else:
-            Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, checked=self.pairings[self.pair_idx])
+            Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, checked=self.groupings[self.group_idx])
 
         # Create a summary of the processed discharges
         discharge = Measurement.mean_discharges(self.meas)
-        q = {'group': self.pairings[self.pair_idx],
-             'start_serial_time': self.meas.transects[self.pairings[self.pair_idx][0]].date_time.start_serial_time,
-             'end_serial_time': self.meas.transects[self.pairings[self.pair_idx][-1]].date_time.end_serial_time,
+        q = {'group': self.groupings[self.group_idx],
+             'start_serial_time': self.meas.transects[self.groupings[self.group_idx][0]].date_time.start_serial_time,
+             'end_serial_time': self.meas.transects[self.groupings[self.group_idx][-1]].date_time.end_serial_time,
              'processed_discharge': discharge['total_mean']}
         self.processed_data.append(q)
 
         # Load next pairing
-        self.pair_idx += 1
+        self.group_idx += 1
 
         # If all pairings have been processed return control to the function initiating QRev.
-        if self.pair_idx > len(self.pairings) - 1:
+        if self.group_idx > len(self.groupings) - 1:
             self.caller.processed_meas = self.processed_data
             self.caller.Show_RIVRS()
             self.close()
 
         else:
-            self.checked_transects_idx = self.pairings[self.pair_idx]
+            self.checked_transects_idx = self.groupings[self.group_idx]
             self.split_processing(self.checked_transects_idx)
 
 # Support functions
