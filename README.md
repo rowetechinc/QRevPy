@@ -22,20 +22,40 @@
 
 QRevPy is currently being developed using Python 3.6.6 and makes use the following packages:
 
-numpy==1.15.2  
-PyQt5==5.10.1  
-pytest==3.8.2  
-scipy==1.1.0  
-statsmodels==0.9.0  
-utm==0.4.2  
-xmltodict==0.11.0  
+atomicwrites==1.3.0
+attrs==19.1.0
+Click==7.0
+colorama==0.4.1
+cycler==0.10.0
+kiwisolver==1.1.0
+matplotlib==3.0.3
+more-itertools==7.0.0
+numpy==1.15.2
+pandas==0.23.4
+patsy==0.5.1
+pluggy==0.11.0
+py==1.8.0
+pyparsing==2.4.0
+PyQt5==5.12.2
+PyQt5-sip==4.19.17
+pyqt5-tools==5.12.1.1.5rc4
+pytest==3.8.2
+python-dateutil==2.8.0
+python-dotenv==0.10.2
+pytz==2019.1
+scipy==1.1.0
+sip==4.19.8
+six==1.12.0
+statsmodels==0.9.0
+utm==0.4.2
+xmltodict==0.11.0
 
 
 ## Bugs
 Please report all bugs with appropriate instructions and files to reproduce the issue and add this to the issues tracking feature in this repository.
 
 ## Disclaimer
-This software has been approved for release by the U.S. Geological Survey (USGS). Although the software has been subjected to rigorous review, the USGS reserves the right to update the software as needed pursuant to further analysis and review. No warranty, expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related material nor shall the fact of release constitute any such warranty. Furthermore, the software is released on condition that neither the USGS nor the U.S. Government shall be held liable for any damages resulting from its authorized or unauthorized use.
+The Matlab version of this software has been approved for release by the U.S. Geological Survey (USGS). The Python version is under development. Although the software has been subjected to rigorous review, the USGS reserves the right to update the software as needed pursuant to further analysis and review. No warranty, expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related material nor shall the fact of release constitute any such warranty. Furthermore, the software is released on condition that neither the USGS nor the U.S. Government shall be held liable for any damages resulting from its authorized or unauthorized use.
 
 ## License
 
