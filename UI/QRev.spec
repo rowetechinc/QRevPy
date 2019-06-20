@@ -3,11 +3,11 @@
 block_cipher = None
 
 
-a = Analysis(['C:\\dsm\\dsm_documents\\QRevPy\\UI\\QRev.py'],
+a = Analysis(['QRev.py'],
              pathex=['C:\\dsm\\dsm_documents\\QRevPy\\UI'],
              binaries=[],
              datas=[],
-             hiddenimports=[],
+             hiddenimports=['statsmodels.tsa.statespace._kalman_filter', 'statsmodels.tsa.statespace._kalman_smoother', 'statsmodels.tsa.statespace._representation', 'statsmodels.tsa.statespace._simulation_smoother', 'statsmodels.tsa.statespace._statespace', 'statsmodels.tsa.statespace._tools', 'statsmodels.tsa.statespace._filters._conventional', 'statsmodels.tsa.statespace._filters._inversions', 'statsmodels.tsa.statespace._filters._univariate', 'statsmodels.tsa.statespace._smoothers._alternative', 'statsmodels.tsa.statespace._smoothers._classical', 'statsmodels.tsa.statespace._smoothers._conventional', 'statsmodels.tsa.statespace._smoothers._univariate'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -29,4 +29,4 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
-          console=True )
+          console=False , icon='QRev2.ico')

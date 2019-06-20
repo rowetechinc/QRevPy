@@ -221,7 +221,7 @@ class QAData(object):
         self.system_tst['status'] = 'good'
 
         # Determine is a system test was recorded
-        if not meas.system_test:
+        if not meas.system_tst:
             # No system test data recorded
             self.system_tst['status'] = 'warning'
             self.system_tst['messages'].append(['SYSTEM TEST: No system test;', 1, 3])
@@ -230,7 +230,7 @@ class QAData(object):
             pt3_fail = False
             num_tests_with_failure = 0
 
-            for test in meas.system_test:
+            for test in meas.system_tst:
                 if hasattr(test, 'result'):
                     if 'pt3' in test.result and test.result['pt3'] is not None:
 
@@ -259,7 +259,7 @@ class QAData(object):
                     ['System Test: One or more PT3 tests in the system test indicate potential EMI;', 2, 3])
 
             # Check for failed tests
-            if num_tests_with_failure == len(meas.system_test):
+            if num_tests_with_failure == len(meas.system_tst):
                 # All tests had a failure
                 self.system_tst['status'] = 'warning'
                 self.system_tst['messages'].append(

@@ -1088,7 +1088,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.item(0, 0).setFlags(QtCore.Qt.ItemIsEnabled)
         tbl.item(0, 0).setFont(self.font_bold)
         # Determine is a system test was recorded
-        if not self.meas.system_test:
+        if not self.meas.system_tst:
             tbl.setItem(0, 1, QtWidgets.QTableWidgetItem(self.tr('No')))
         else:
             tbl.setItem(0, 1, QtWidgets.QTableWidgetItem(self.tr('Yes')))
@@ -1099,7 +1099,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.item(0, 2).setFlags(QtCore.Qt.ItemIsEnabled)
         tbl.item(0, 2).setFont(self.font_bold)
         num_tests_with_failure = 0
-        for test in self.meas.system_test:
+        for test in self.meas.system_tst:
             if hasattr(test, 'result'):
                 if test.result['n_failed'] is not None and test.result['n_failed'] > 0:
                     num_tests_with_failure += 1
@@ -1510,7 +1510,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Setup table
         tbl = self.table_systest
-        nrows = len(self.meas.system_test)
+        nrows = len(self.meas.system_tst)
         tbl.setRowCount(nrows)
         tbl.setColumnCount(4)
         header_text = [self.tr('Date/Time'), self.tr('No. Tests'), self.tr('No. Failed'), self.tr('PT3')]
@@ -1522,7 +1522,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Add system tests
         if nrows > 0:
-            for row, test in enumerate(self.meas.system_test):
+            for row, test in enumerate(self.meas.system_tst):
 
                 # Test identifier
                 col = 0
@@ -1543,7 +1543,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 col += 1
                 if len(self.meas.qa.system_tst['messages']) > 0:
                     if self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'TRDI':
-                        if any("PT3" in item for item in self.meas.qa.system_test['messages']):
+                        if any("PT3" in item for item in self.meas.qa.system_tst['messages']):
                             tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Failed'))
                         else:
                             tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Pass'))
@@ -1558,7 +1558,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # Display selected test
                 tbl.item(idx_systest, 0).setFont(self.font_bold)
                 self.display_systest.clear()
-                self.display_systest.textCursor().insertText(self.meas.system_test[idx_systest].data)
+                self.display_systest.textCursor().insertText(self.meas.system_tst[idx_systest].data)
 
                 tbl.resizeColumnsToContents()
                 tbl.resizeRowsToContents()

@@ -29,7 +29,7 @@ class Measurement(object):
         List of transect objects of TransectData
     mb_tests: list
         List of moving-bed test objects of MovingBedTests
-    system_test: list
+    system_tst: list
         List of system test objects of PreMeasurement
     compass_cal: list
         List of compass calibration objects of PreMeasurement
@@ -77,7 +77,7 @@ class Measurement(object):
         self.station_number = None
         self.transects = []
         self.mb_tests = []
-        self.system_test = []
+        self.system_tst = []
         self.compass_cal = []
         self.compass_eval = []
         self.extrap_fit = None
@@ -293,7 +293,7 @@ class Measurement(object):
                 p_m = PreMeasurement()
                 p_m.populate_data(mmt.qaqc['RG_Test_TimeStamp'][n],
                                   mmt.qaqc['RG_Test'][n], 'TST')
-                self.system_test.append(p_m)
+                self.system_tst.append(p_m)
 
         # Compass calibration
         if 'Compass_Calibration' in mmt.qaqc:
@@ -474,7 +474,7 @@ class Measurement(object):
                     sys_test.populate_data(time_stamp=time_stamp,
                                            data_in=test_data,
                                            data_type='SST')
-                    self.system_test.append(sys_test)
+                    self.system_tst.append(sys_test)
 
         # Moving-bed tests
         self.sontek_moving_bed_tests(pathname)
@@ -536,7 +536,7 @@ class Measurement(object):
 
         self.transects = []
         self.mb_tests = []
-        self.system_test = []
+        self.system_tst = []
         self.compass_cal = []
         self.compass_eval = []
         self.ext_temp_chk = None

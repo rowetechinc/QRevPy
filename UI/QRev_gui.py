@@ -1130,9 +1130,9 @@ class Ui_MainWindow(object):
         self.tab_all.setCurrentIndex(0)
         self.tab_summary.setCurrentIndex(0)
         self.tab_mc.setCurrentIndex(0)
-        self.tab_systest_2.setCurrentIndex(1)
-        self.tab_compass_2.setCurrentIndex(2)
-        self.tab_tempsal_2.setCurrentIndex(1)
+        self.tab_systest_2.setCurrentIndex(0)
+        self.tab_compass_2.setCurrentIndex(0)
+        self.tab_tempsal_2.setCurrentIndex(0)
         self.tab_mtb_2.setCurrentIndex(0)
         self.tab_bt_2.setCurrentIndex(0)
         self.tab_gps_2.setCurrentIndex(1)
@@ -1237,7 +1237,7 @@ class Ui_MainWindow(object):
         self.actionOFF.setText(_translate("MainWindow", "OFF"))
 
 
-import UI.dsm_rc
+import dsm_rc
 
 
 if __name__ == "__main__":
