@@ -23,12 +23,15 @@ from UI.HSource import HSource
 from UI.SOSSource import SOSSource
 from UI.TempSource import TempSource
 from UI.Salinity import Salinity
+from UI.ShipTrack import Shiptrack
+from UI.BoatSpeed import BoatSpeed
+from UI.StationaryGraphs import StationaryGraphs
+from UI.MplCanvas import MplCanvas
 from contextlib import contextmanager
 import time
 import os
 
 
-# class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     handle_args_trigger = pyqtSignal()
     gui_initialized = False
@@ -48,9 +51,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.current_tab = 0
         # self.settings = SSet(self.settingsFile)
 
-
-        # self.actionOpen.triggered.connect(self.selectMeasurement)
-        # self.actionSave.triggered.connect(self.saveMeasurement)
         self.actionOpen.triggered.connect(self.select_measurement)
         self.actionComment.triggered.connect(self.addComment)
         self.actionCheck.triggered.connect(self.selectTransects)
@@ -2477,16 +2477,24 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
         tbl.cellClicked.connect(self.mb_table_clicked)
+
         # Automatically resize rows and columns
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
-        # Connect plot variable checkboxes
-        self.cb_mb_bt.stateChanged.connect(self.shiptrack_plot_change)
-        self.cb_mb_gga.stateChanged.connect(self.shiptrack_plot_change)
-        self.cb_mb_vtg.stateChanged.connect(self.shiptrack_plot_change)
-        self.cb_mb_vectors.stateChanged.connect(self.shiptrack_plot_change)
+        # Initialize checkbox settings
+        self.cb_mb_bt.setCheckState(QtCore.Qt.Checked)
+        self.cb_mb_gga.setCheckState(QtCore.Qt.Unchecked)
+        self.cb_mb_vtg.setCheckState(QtCore.Qt.Unchecked)
+        self.cb_mb_vectors.setCheckState(QtCore.Qt.Checked)
 
+        # Connect plot variable checkboxes
+        self.cb_mb_bt.stateChanged.connect(self.mb_plot_change)
+        self.cb_mb_gga.stateChanged.connect(self.mb_plot_change)
+        self.cb_mb_vtg.stateChanged.connect(self.mb_plot_change)
+        self.cb_mb_vectors.stateChanged.connect(self.mb_plot_change)
+
+        # Display content
         self.update_mb_table()
         self.mb_plots(idx=0)
         self.mb_comments_messages()
@@ -2726,160 +2734,139 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
            self.mb_plots(idx=row)
 
     def mb_plots(self, idx=0):
+        """Creates graphics specific to the type of moving-bed test.
+
+        Parameters
+        ----------
+        idx: int
+            Index of the test to be plotted.
+        """
+
         if len(self.meas.mb_tests) > 0:
+            # Show name of test plotted
             item = os.path.basename(self.meas.mb_tests[idx].transect.file_name)
             self.txt_mb_plotted.setText(item[:-4])
-            if len(self.meas.mb_tests) > 0:
-                self.shiptrack_plot(transect=self.meas.mb_tests[idx].transect)
-                if self.meas.mb_tests[idx].type == 'Loop':
-                    self.boat_speed_plot(transect=self.meas.mb_tests[idx].transect)
-                else:
-                    self.stationary_plot(mb_test=self.meas.mb_tests[idx])
+
+            # Always show the shiptrack plot
+            self.mb_shiptrack(transect=self.meas.mb_tests[idx].transect)
+
+            # Determine what plots to display based on test type
+            if self.meas.mb_tests[idx].type == 'Loop':
+                self.mb_boat_speed(transect=self.meas.mb_tests[idx].transect)
+            else:
+                self.stationary(mb_test=self.meas.mb_tests[idx])
         else:
+            # Disable user checkboxes if no tests are available
             self.cb_mb_bt.setEnabled(False)
             self.cb_mb_gga.setEnabled(False)
             self.cb_mb_vtg.setEnabled(False)
             self.cb_mb_vectors.setEnabled(False)
 
-    def shiptrack_plot(self, transect):
-        """Generates the shiptrack plot for the moving-bed tab.
-
-        Parameters
-        ----------
-        transect_id: int
-            Index to check transects to identify the transect to be plotted
-        """
-
-        # Enable check boxes as data is available
-        if transect.boat_vel.gga_vel is not None:
-            self.cb_mb_gga.setEnabled(True)
-        else:
-            self.cb_mb_gga.setCheckState(QtCore.Qt.Unchecked)
-            self.cb_mb_gga.setEnabled(False)
-
-        if transect.boat_vel.vtg_vel is not None:
-            self.cb_mb_vtg.setEnabled(True)
-        else:
-            self.cb_mb_vtg.setCheckState(QtCore.Qt.Unchecked)
-            self.cb_mb_vtg.setEnabled(False)
-
-        # Get settings from user to determine what should be shown in the shiptrack plot
-        control = {}
-        # BT
-        if self.cb_mb_bt.checkState() == QtCore.Qt.Checked:
-            control['bt'] = True
-        else:
-            control['bt'] = False
-        # GGA
-        if self.cb_mb_gga.checkState() == QtCore.Qt.Checked:
-            control['gga'] = True
-        else:
-            control['gga'] = False
-        # VTG
-        if self.cb_mb_vtg.checkState() == QtCore.Qt.Checked:
-            control['vtg'] = True
-        else:
-            control['vtg'] = False
-        # Vectors
-        if self.cb_mb_vectors.checkState() == QtCore.Qt.Checked:
-            control['vectors'] = True
-        else:
-            control['vectors'] = False
-
-        # Assign layout to widget to allow auto scaling
-        layout = QtWidgets.QVBoxLayout(self.graph_mb_st)
-        # Adjust margins of layout to maximize graphic area
-        layout.setContentsMargins(1, 1, 1, 1)
-
-        # If figure already exists update it. If not, create it.
-        if hasattr(self, 'mb_st_mpl'):
-            self.mb_st_mpl.fig.clear()
-            self.mb_st_mpl.shiptrack_plot(transect=transect, units=self.units, control=control)
-        else:
-            self.mb_st_mpl = Qtmpl(self.graph_mb_st, width=4, height=4, dpi=80)
-            self.mb_st_mpl.shiptrack_plot(transect=transect, units=self.units, control=control)
-            layout.addWidget(self.mb_st_mpl)
-
-        # Draw canvas
-        self.mb_st_mpl.draw()
-
-    def shiptrack_plot_change(self):
-
-        if self.cb_mb_bt.checkState() == QtCore.Qt.Checked:
-            self.mb_st_mpl.bt[0].set_visible(True)
-        else:
-            self.mb_st_mpl.bt[0].set_visible(False)
-        # GGA
-        if self.cb_mb_gga.checkState() == QtCore.Qt.Checked:
-            self.mb_st_mpl.gga[0].set_visible(True)
-        else:
-            self.mb_st_mpl.gga[0].set_visible(False)
-        # VTG
-        if self.cb_mb_vtg.checkState() == QtCore.Qt.Checked:
-            self.mb_st_mpl.vtg[0].set_visible(True)
-        else:
-            self.mb_st_mpl.vtg[0].set_visible(False)
-        # Vectors
-        if self.cb_mb_vectors.checkState() == QtCore.Qt.Checked:
-            self.mb_st_mpl.vectors.set_visible(True)
-        else:
-            self.mb_st_mpl.vectors.set_visible(False)
-
-        # Draw canvas
-        self.mb_st_mpl.draw()
-
-    def boat_speed_plot(self, transect):
-        """Generates the boat speed plot for the moving-bed tab.
+    def mb_shiptrack(self, transect):
+        """Creates shiptrack plot for data in transect.
 
         Parameters
         ----------
         transect: TransectData
-            Object of TransectData
+            Object of TransectData with data to be plotted.
         """
 
-        control = {'bt': True, 'gga': False, 'vtg': False}
-        # Assign layout to widget to allow auto scaling
-        layout = QtWidgets.QVBoxLayout(self.graph_mb_ts)
-        # Adjust margins of layout to maximize graphic area
-        layout.setContentsMargins(1, 1, 1, 1)
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'mb_shiptrack_canvas'):
+            # Create the canvas
+            self.mb_shiptrack_canvas = MplCanvas(parent=self.graph_mb_st, width=4, height=4, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_mb_st)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.mb_shiptrack_canvas)
 
-        # If figure already exists update it. If not, create it.
-        if hasattr(self, 'mb_ts_mpl'):
-            self.mb_ts_mpl.fig.clear()
-            self.mb_ts_mpl.boat_speed_plot(transect=transect, units=self.units, control=control)
-        else:
-            self.mb_ts_mpl = Qtmpl(self.graph_mb_ts, width=8, height=2, dpi=80)
-            self.mb_ts_mpl.boat_speed_plot(transect=transect, units=self.units, control=control)
-            layout.addWidget(self.mb_ts_mpl)
+        # Initialize the shiptrack figure and assign to the canvas
+        self.mb_shiptrack_fig = Shiptrack(canvas=self.mb_shiptrack_canvas)
+        # Create the figure with the specified data
+        self.mb_shiptrack_fig.create(transect=transect,
+                                     units=self.units,
+                                     cb=True,
+                                     cb_bt=self.cb_mb_bt,
+                                     cb_gga=self.cb_mb_gga,
+                                     cb_vtg=self.cb_mb_vtg,
+                                     cb_vectors=self.cb_mb_vectors)
 
         # Draw canvas
-        self.mb_ts_mpl.draw()
+        self.mb_shiptrack_canvas.draw()
 
-    def stationary_plot(self, mb_test):
-        """Generates the plots of stationary data for the moving-bed tab.
+    def mb_boat_speed(self, transect):
+        """Creates boat speed plot for data in transect.
 
         Parameters
         ----------
         transect: TransectData
-            Object of TransectData
+            Object of TransectData with data to be plotted.
         """
 
-        # Assign layout to widget to allow auto scaling
-        layout = QtWidgets.QVBoxLayout(self.graph_mb_ts)
-        # Adjust margins of layout to maximize graphic area
-        layout.setContentsMargins(1, 1, 1, 1)
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'mb_ts_canvas'):
+            # Create the canvas
+            self.mb_ts_canvas = MplCanvas(parent=self.graph_mb_ts, width=8, height=2, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_mb_ts)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.mb_ts_canvas)
 
-        # If figure already exists update it. If not, create it.
-        if hasattr(self, 'mb_ts_mpl'):
-            self.mb_ts_mpl.fig.clear()
-            self.mb_ts_mpl.stationary_plots(mb_test=mb_test, units=self.units)
-        else:
-            self.mb_ts_mpl = Qtmpl(self.graph_mb_ts, width=8, height=2, dpi=80)
-            self.mb_ts_mpl.stationary_plots(mb_test=mb_test, units=self.units)
-            layout.addWidget(self.mb_ts_mpl)
+        # Initialize the boat speed figure and assign to the canvas
+        self.mb_ts_fig = BoatSpeed(canvas=self.mb_ts_canvas)
+        # Create the figure with the specified data
+        self.mb_ts_fig.create(transect=transect,
+                                     units=self.units,
+                                     cb=True,
+                                     cb_bt=self.cb_mb_bt,
+                                     cb_gga=self.cb_mb_gga,
+                                     cb_vtg=self.cb_mb_vtg)
 
         # Draw canvas
-        self.mb_ts_mpl.draw()
+        self.mb_ts_canvas.draw()
+
+    def stationary(self, mb_test):
+        """Creates the plots for analyzing stationary moving-bed tests.
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData with data to be plotted.
+        """
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'mb_ts_canvas'):
+            # Create the canvas
+            self.mb_ts_canvas = MplCanvas(parent=self.graph_mb_ts, width=8, height=2, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_mb_ts)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add canvas
+            layout.addWidget(self.mb_ts_canvas)
+
+        # Initialize the stationary figure and assign to the canvas
+        self.mb_ts_fig = StationaryGraphs(canvas=self.mb_ts_canvas)
+        # Create the figure with the specified data
+        self.mb_ts_fig.create(mb_test=mb_test, units=self.units)
+        # Draw canvas
+        self.mb_ts_canvas.draw()
+
+    def mb_plot_change(self):
+        """Coordinates changes in what references should be displayed in the boat speed and shiptrack plots.
+        """
+
+        # Shiptrack
+        self.mb_shiptrack_fig.change()
+
+        # Boat speed
+        # Note if mb_ts_fig is set to stationary the StationaryGraphs class has a change method with does nothing,
+        # to maintain compatibility.
+        self.mb_ts_fig.change()
 
     def mb_comments_messages(self):
         """Displays comments and messages associated with moving-bed tests in Messages tab.
@@ -2903,6 +2890,20 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_mb_messages.textCursor().insertText(message[0])
                 self.display_mb_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_mb_messages.textCursor().insertBlock()
+
+# Bottom track tab
+# ================
+#     def bt_tab(self):
+#
+#     def update_bt_table(self):
+#
+#     def change_bt_beam(self):
+#
+#     def change_bt_error(self):
+#
+#     def change_bt_vertical(self):
+#
+#     def change_bt_other(self):
 
 # Split functions
 # ==============

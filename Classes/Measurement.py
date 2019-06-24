@@ -539,10 +539,12 @@ class Measurement(object):
         self.system_tst = []
         self.compass_cal = []
         self.compass_eval = []
-        self.ext_temp_chk = None
+        self.ext_temp_chk = {}
         self.extrap_fit = None
 
+
         # Discharge
+        self.discharge = []
         if hasattr(meas_struct.discharge, 'bottom'):
             # Measurement has discharge data from only one transect
             bottom = meas_struct.discharge.bottom
@@ -556,14 +558,8 @@ class Measurement(object):
                 q.populate_from_qrev_mat(q_data)
                 self.discharge.append(q)
 
-        # TODO write uncertainty class
-        self.uncertainty = None
 
-        # TODO write qa class
-        self.qa = None
 
-        self.comments = []
-        self.ext_temp_chk = {}
 
     @staticmethod
     def set_num_beam_wt_threshold_trdi(mmt_transect):

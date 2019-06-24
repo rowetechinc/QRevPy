@@ -238,10 +238,6 @@ class Qtmpl(FigureCanvas):
             self.fig.axst.xaxis.label.set_fontsize(12)
             self.fig.axst.yaxis.label.set_fontsize(12)
 
-        max_x_bt = np.nan
-        max_y_bt = np.nan
-        min_x_bt = np.nan
-        min_y_bt = np.nan
         max_x_vtg = np.nan
         max_y_vtg = np.nan
         min_x_vtg = np.nan
@@ -251,12 +247,10 @@ class Qtmpl(FigureCanvas):
         min_x_gga = np.nan
         min_y_gga = np.nan
 
-
-
         # Plot shiptrack based on bottom track
 
         ship_data_bt = transect.boat_vel.compute_boat_track(transect, ref='bt_vel')
-        self.bt = self.fig.axst.plot(ship_data_bt['track_x_m'] * units['L'], ship_data_bt['track_y_m'] * units['L'], color='r',
+        self.st_bt = self.fig.axst.plot(ship_data_bt['track_x_m'] * units['L'], ship_data_bt['track_y_m'] * units['L'], color='r',
                            label='BT')
         ship_data = ship_data_bt
         max_x_bt = np.nanmax(ship_data_bt['track_x_m'])
@@ -265,22 +259,22 @@ class Qtmpl(FigureCanvas):
         min_y_bt = np.nanmin(ship_data_bt['track_y_m'])
 
         if control['bt']:
-            self.bt[0].set_visible(True)
+            self.st_bt[0].set_visible(True)
         else:
-            self.bt[0].set_visible(False)
+            self.st_bt[0].set_visible(False)
 
         # Plot shiptrack based on vtg if available
         if transect.boat_vel.vtg_vel is not None:
             ship_data_vtg = transect.boat_vel.compute_boat_track(transect, ref='vtg_vel')
-            self.vtg = self.fig.axst.plot(ship_data_vtg['track_x_m'] * units['L'], ship_data_vtg['track_y_m'] * units['L'],
+            self.st_vtg = self.fig.axst.plot(ship_data_vtg['track_x_m'] * units['L'], ship_data_vtg['track_y_m'] * units['L'],
                                color='g', label='VTG')
             if transect.boat_vel.selected == 'vtg_vel':
                 ship_data = ship_data_vtg
 
             if control['vtg']:
-                self.vtg[0].set_visible(True)
+                self.st_vtg[0].set_visible(True)
             else:
-                self.vtg[0].set_visible(False)
+                self.st_vtg[0].set_visible(False)
 
             max_x_vtg = np.nanmax(ship_data_vtg['track_x_m'])
             max_y_vtg = np.nanmax(ship_data_vtg['track_y_m'])
@@ -290,15 +284,15 @@ class Qtmpl(FigureCanvas):
         # Plot shiptrack based on gga if available
         if transect.boat_vel.gga_vel is not None:
             ship_data_gga = transect.boat_vel.compute_boat_track(transect, ref='gga_vel')
-            self.gga = self.fig.axst.plot(ship_data_gga['track_x_m'] * units['L'], ship_data_gga['track_y_m'] * units['L'],
+            self.st_gga = self.fig.axst.plot(ship_data_gga['track_x_m'] * units['L'], ship_data_gga['track_y_m'] * units['L'],
                                color='b', label='GGA')
             if transect.boat_vel.selected == 'gga_vel':
                 ship_data = ship_data_gga
 
             if control['gga']:
-                self.gga[0].set_visible(True)
+                self.st_gga[0].set_visible(True)
             else:
-                self.gga[0].set_visible(False)
+                self.st_gga[0].set_visible(False)
 
             max_x_gga = np.nanmax(ship_data_gga['track_x_m'])
             max_y_gga = np.nanmax(ship_data_gga['track_y_m'])
@@ -334,13 +328,13 @@ class Qtmpl(FigureCanvas):
         v_mean = np.nanmean(v, axis=0)
 
         # Plot water vectors
-        self.vectors = self.fig.axst.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
+        self.st_vectors = self.fig.axst.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
                                         u_mean * units['V'], v_mean * units['V'], units='dots', width=1, scale=0.6)
 
         if control['vectors']:
-            self.vectors.set_visible(True)
+            self.st_vectors.set_visible(True)
         else:
-            self.vectors.set_visible(False)
+            self.st_vectors.set_visible(False)
         # qk = axst.quiverkey(quiv_plt, 0.9, 0.9, 1, r'$1 \frac{m}{s}$', labelpos='E',
         #                    coordinates='figure')
 
@@ -593,28 +587,48 @@ class Qtmpl(FigureCanvas):
         """
 
         # Configure axis
-        self.fig.axts = self.fig.add_subplot(1, 1, 1)
+        self.fig.axbs = self.fig.add_subplot(1, 1, 1)
 
         # Set margins and padding for figure
         self.fig.subplots_adjust(left=0.1, bottom=0.05, right=0.98, top=0.98, wspace=0.1, hspace=0)
-        self.fig.axts.set_xlabel(self.tr('Ensembles'))
-        self.fig.axts.set_ylabel(self.tr('Boat speed' + units['label_V']))
-        self.fig.axts.grid()
-        self.fig.axts.xaxis.label.set_fontsize(12)
-        self.fig.axts.yaxis.label.set_fontsize(12)
-        self.fig.axts.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+        self.fig.axbs.set_xlabel(self.tr('Ensembles'))
+        self.fig.axbs.set_ylabel(self.tr('Boat speed' + units['label_V']))
+        self.fig.axbs.grid()
+        self.fig.axbs.xaxis.label.set_fontsize(12)
+        self.fig.axbs.yaxis.label.set_fontsize(12)
+        self.fig.axbs.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
 
+        max_gga = np.nan
+        max_vtg = np.nan
+       
+        speed = np.sqrt(transect.boat_vel.bt_vel.u_processed_mps**2 + transect.boat_vel.bt_vel.v_processed_mps**2)
+        self.bs_bt = self.fig.axbs.plot(speed * units['V'], 'r-')
+        max_bt = np.nanmax(speed)
         if control['bt']:
-            speed = np.sqrt(transect.boat_vel.bt_vel.u_processed_mps**2 + transect.boat_vel.bt_vel.v_processed_mps**2)
-            self.fig.axts.plot(speed * units['V'], 'r-')
+            self.bs_bt[0].set_visible(True)
+        else:
+            self.bs_bt[0].set_visible(False)
 
-        if transect.boat_vel.vtg_vel is not None and control['vtg']:
+        if transect.boat_vel.vtg_vel is not None:
             speed = np.sqrt(transect.boat_vel.vtg_vel.u_processed_mps** 2 + transect.boat_vel.vtg_vel.v_processed_mps** 2)
-            self.fig.axts.plot(speed * units['V'], 'g-')
+            self.bs_vtg = self.fig.axbs.plot(speed * units['V'], 'g-')
+            max_vtg = np.nanmax(speed)
+            if control['vtg']:
+                self.bs_vtg[0].set_visible(True)
+            else:
+                self.bs_vtg[0].set_visible(False)
 
-        if transect.boat_vel.gga_vel is not None and control['gga']:
+        if transect.boat_vel.gga_vel is not None:
             speed = np.sqrt(transect.boat_vel.gga_vel.u_processed_mps** 2 + transect.boat_vel.gga_vel.v_processed_mps** 2)
-            self.fig.axts.plot(speed * units['V'], 'b-')
+            self.bs_gga = self.fig.axbs.plot(speed * units['V'], 'b-')
+            max_gga = np.nanmax(speed)
+            if control['gga']:
+                self.bs_gga[0].set_visible(True)
+            else:
+                self.bs_gga[0].set_visible(False)
+
+        max_y = np.nanmax([max_bt, max_gga, max_vtg]) * 1.1
+        self.fig.axbs.set_ylim(top=np.ceil(max_y * units['L']), bottom=0)
 
     def stationary_plots(self, mb_test, units):
         """Generates a moving-bed time series and upstream/downstream bottom track plot from stationary moving-bed
