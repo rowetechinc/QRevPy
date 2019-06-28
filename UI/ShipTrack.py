@@ -57,7 +57,8 @@ class Shiptrack(object):
         self.vtg = None
         self.vectors = None
 
-    def create(self, transect, units, cb=False, cb_bt=None, cb_gga=None, cb_vtg=None, cb_vectors=None):
+    def create(self, transect, units,
+               cb=False, cb_bt=None, cb_gga=None, cb_vtg=None, cb_vectors=None, invalid_bt=None, invalid_gps=None):
         """Create the axes and lines for the figure.
 
         Parameters
@@ -76,6 +77,10 @@ class Shiptrack(object):
             Name of QCheckBox for VTG
         cb_vectors: QCheckBox
             Name of QCheckBox for vectors
+        invalid_bt: np.array(bool)
+            Boolean array of invalid data based on filters for bottom track
+        invalid_gps: np.array(bool)
+            Boolean array of invalid data based on filters for gps data
         """
 
         # Assign and save parameters
@@ -89,10 +94,6 @@ class Shiptrack(object):
         # Check the checkbox to determine what should be shown in the plot
         control = self.checkbox_control(transect)
 
-        # # Assign layout to widget to allow auto scaling
-        # layout = QtWidgets.QVBoxLayout(self.parent)
-        # # Adjust margins of layout to maximize graphic area
-        # layout.setContentsMargins(1, 1, 1, 1)
         # Clear the plot
         self.fig.clear()
 
@@ -100,7 +101,7 @@ class Shiptrack(object):
         self.fig.ax = self.fig.add_subplot(1, 1, 1)
 
         # Set margins and padding for figure
-        self.fig.subplots_adjust(left=0.15, bottom=0.1, right=0.98, top=0.98, wspace=0.1, hspace=0)
+        self.fig.subplots_adjust(left=0.18, bottom=0.1, right=0.98, top=0.98, wspace=0.1, hspace=0)
         self.fig.ax.xaxis.label.set_fontsize(12)
         self.fig.ax.yaxis.label.set_fontsize(12)
 
@@ -120,16 +121,37 @@ class Shiptrack(object):
                                    color='r',
                                    label='BT')
 
+        # Plot invalid data points using a symbol to represent what caused the data to be invalid
+        if invalid_bt is not None:
+            self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][invalid_bt[1]] * units['L'],
+                                            ship_data_bt['track_y_m'][invalid_bt[1]] * units['L'],
+                                            'k', linestyle='', marker='$O$')[0])
+            self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][invalid_bt[2]] * units['L'],
+                                            ship_data_bt['track_y_m'][invalid_bt[2]] * units['L'],
+                                            'k', linestyle='', marker='$E$')[0])
+            self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][invalid_bt[3]] * units['L'],
+                                            ship_data_bt['track_y_m'][invalid_bt[3]] * units['L'],
+                                            'k', linestyle='', marker='$V$')[0])
+            self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][invalid_bt[4]] * units['L'],
+                                            ship_data_bt['track_y_m'][invalid_bt[4]] * units['L'],
+                                            'k', linestyle='', marker='$S$')[0])
+            self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][invalid_bt[5]] * units['L'],
+                                            ship_data_bt['track_y_m'][invalid_bt[5]] * units['L'],
+                                            'k', linestyle='', marker='$B$')[0])
+
         ship_data = ship_data_bt
         max_x_bt = np.nanmax(ship_data_bt['track_x_m'])
         max_y_bt = np.nanmax(ship_data_bt['track_y_m'])
         min_x_bt = np.nanmin(ship_data_bt['track_x_m'])
         min_y_bt = np.nanmin(ship_data_bt['track_y_m'])
 
+        # Based on checkbox control make bt visible or not
         if control['bt']:
-            self.bt[0].set_visible(True)
+            for n in range(len(self.bt)):
+                self.bt[n].set_visible(True)
         else:
-            self.bt[0].set_visible(False)
+            for n in range(len(self.bt)):
+                self.bt[0].set_visible(False)
 
         # Plot shiptrack based on vtg, if available
         if transect.boat_vel.vtg_vel is not None:
@@ -209,8 +231,6 @@ class Shiptrack(object):
         # qk = ax.quiverkey(quiv_plt, 0.9, 0.9, 1, r'$1 \frac{m}{s}$', labelpos='E',
         #                    coordinates='figure')
 
-        self.fig.ax.legend(loc='best')
-
         self.canvas.draw()
 
     def change(self):
@@ -219,9 +239,11 @@ class Shiptrack(object):
 
         if self.cb:
             if self.cb_bt.checkState() == QtCore.Qt.Checked:
-                self.bt[0].set_visible(True)
+                for item in self.bt:
+                    item.set_visible(True)
             else:
-                self.bt[0].set_visible(False)
+                for item in self.bt:
+                    item.set_visible(False)
             # GGA
             if self.cb_gga.checkState() == QtCore.Qt.Checked:
                 self.gga[0].set_visible(True)

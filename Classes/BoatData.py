@@ -1181,10 +1181,10 @@ class BoatData(object):
 
                 # Compute filter bounds
                 upper_limit = speed_smooth + multiplier * filter_array
-                lower_limit = speed_smooth + multiplier * filter_array
+                lower_limit = speed_smooth - multiplier * filter_array
 
                 # Apply filter to residuals
-                bt_bad_idx = np.where((speed > upper_limit) or (speed < lower_limit))[0]
+                bt_bad_idx = np.where(np.logical_or(np.greater(speed, upper_limit), np.less(speed, lower_limit)))[0]
                 speed_res[bt_bad_idx] = np.nan
 
             # Update valid_data property

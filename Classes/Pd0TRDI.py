@@ -784,7 +784,11 @@ class Pd0TRDI(object):
                                     self.Gps2.gga_expand(n_ensembles, i_ens)
 
                                 self.Gps2.gga_delta_time[i_ens, j100] = delta_time
-                                self.Gps2.gga_header[i_ens][j100] = ''.join([chr(x) for x in f.read(7)])
+                                try:
+                                    self.Gps2.gga_header[i_ens][j100] = ''.join([chr(x) for x in f.read(7)])
+                                except (IndexError):
+                                    self.Gps2.gga_header[i_ens][j100] = '       '
+
                                 try:
                                     temp = ''.join([chr(x) for x in f.read(10)])
                                     self.Gps2.utc[i_ens, j100] = \

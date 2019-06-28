@@ -534,12 +534,12 @@ class QAData(object):
         if temp_range > 2:
             check[0] = 3
             self.temperature['messages'].append(['TEMPERATURE: Temperature range is '
-                                                + '%3.1f % temp_range'
+                                                + '{:3.1f}'.format(temp_range)
                                                 + 'degrees C which is greater than 2 degrees;', 1, 5])
         elif temp_range > 1:
             check[0] = 2
             self.temperature['messages'].append(['TEMPERATURE: Temperature range is '
-                                                 + '%3.1f % temp_range'
+                                                 + '{:3.1f}'.format(temp_range)
                                                  + 'degrees C which is greater than 1 degrees;', 2, 5])
         else:
             check[0] = 1
@@ -550,11 +550,11 @@ class QAData(object):
                 user = float(meas.ext_temp_chk['user'])
             except (ValueError, TypeError) as e:
                 user = None
-            if user is None:
+            if user is None or np.isnan(user):
                 # No independent temperature reading
                 check[1] = 2
                 self.temperature['messages'].append(['Temperature: No independent temperature reading;', 2, 5])
-            elif meas.ext_temp_chk['adcp']:
+            elif not np.isnan(meas.ext_temp_chk['adcp']):
                 # Compare user to manually entered ADCP temperature
                 diff = np.abs(user - meas.ext_temp_chk['adcp'])
                 if diff < 2:
@@ -562,7 +562,8 @@ class QAData(object):
                 else:
                     check[1] = 3
                     self.temperature['messages'].append(
-                        ['TEMP.: The difference between ADCP and reference is > 2:  ' + '%3.1f % diff' + ' C;', 1, 5])
+                        ['TEMPERATURE: The difference between ADCP and reference is > 2:  '
+                         + '{:3.1f}'.format(diff) + ' C;', 1, 5])
             else:
                 # Compare user to mean of all temperature data
                 diff = np.abs(user - np.nanmean(temp))
@@ -571,7 +572,8 @@ class QAData(object):
                 else:
                     check[1] = 3
                     self.temperature['messages'].append(
-                        ['TEMP.: The difference between ADCP and reference is > 2:  ' + '%3.1f % diff' + ' C;', 1, 5])
+                        ['TEMPERATURE: The difference between ADCP and reference is > 2:  '
+                         + '{:3.1f}'.format(diff) + ' C;', 1, 5])
 
         # Assign temperature status
         max_check = max(check)

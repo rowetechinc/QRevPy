@@ -51,7 +51,8 @@ class BoatSpeed(object):
         self.gga = None
         self.vtg = None
 
-    def create(self, transect, units, cb=False, cb_bt=None, cb_gga=None, cb_vtg=None):
+    def create(self, transect, units,
+               cb=False, cb_bt=None, cb_gga=None, cb_vtg=None, invalid_bt=None, invalid_gps=None):
         """Create the axes and lines for the figure.
 
         Parameters
@@ -68,6 +69,10 @@ class BoatSpeed(object):
             Name of QCheckBox for GGA
         cb_vtg: QCheckBox
             Name of QCheckBox for VTG
+        invalid_bt: np.array(bool)
+            Boolean array of invalid data based on filters for bottom track
+        invalid_gps: np.array(bool)
+            Boolean array of invalid data based on filters for gps data
         """
 
         # Assign and save parameters
@@ -87,7 +92,7 @@ class BoatSpeed(object):
         self.fig.ax = self.fig.add_subplot(1, 1, 1)
 
         # Set margins and padding for figure
-        self.fig.subplots_adjust(left=0.1, bottom=0.05, right=0.98, top=0.98, wspace=0.1, hspace=0)
+        self.fig.subplots_adjust(left=0.1, bottom=0.2, right=0.98, top=0.98, wspace=0.1, hspace=0)
         self.fig.ax.set_xlabel(self.canvas.tr('Ensembles'))
         self.fig.ax.set_ylabel(self.canvas.tr('Boat speed' + units['label_V']))
         self.fig.ax.grid()
@@ -99,20 +104,40 @@ class BoatSpeed(object):
         max_gga = np.nan
         max_vtg = np.nan
 
+        ensembles = np.arange(1, len(transect.boat_vel.bt_vel.u_mps) + 1)
+
         # Plot bottom track boat speed
         speed = np.sqrt(transect.boat_vel.bt_vel.u_processed_mps ** 2 + transect.boat_vel.bt_vel.v_processed_mps ** 2)
-        self.bt = self.fig.ax.plot(speed * units['V'], 'r-')
+        self.bt = self.fig.ax.plot(ensembles, speed * units['V'], 'r-')
+
+        # Plot invalid data points using a symbol to represent what caused the data to be invalid
+        if invalid_bt is not None:
+            self.bt.append(self.fig.ax.plot(ensembles[invalid_bt[1]], speed[invalid_bt[1]] * units['V'],
+                                            'k', linestyle='', marker='$O$')[0])
+            self.bt.append(self.fig.ax.plot(ensembles[invalid_bt[2]], speed[invalid_bt[2]] * units['V'],
+                                            'k', linestyle='', marker='$E$')[0])
+            self.bt.append(self.fig.ax.plot(ensembles[invalid_bt[3]], speed[invalid_bt[3]] * units['V'],
+                                            'k', linestyle='', marker='$V$')[0])
+            self.bt.append(self.fig.ax.plot(ensembles[invalid_bt[4]], speed[invalid_bt[4]] * units['V'],
+                                            'k', linestyle='', marker='$S$')[0])
+            self.bt.append(self.fig.ax.plot(ensembles[invalid_bt[5]], speed[invalid_bt[5]] * units['V'],
+                                            'k', linestyle='', marker='$B$')[0])
+
         max_bt = np.nanmax(speed)
+
+        # Based on checkbox control make bt visible or not
         if control['bt']:
-            self.bt[0].set_visible(True)
+            for n in range(len(self.bt)):
+                self.bt[n].set_visible(True)
         else:
-            self.bt[0].set_visible(False)
+            for n in range(len(self.bt)):
+                self.bt[0].set_visible(False)
 
         # Plot VTG boat speed
         if transect.boat_vel.vtg_vel is not None:
             speed = np.sqrt(
                 transect.boat_vel.vtg_vel.u_processed_mps ** 2 + transect.boat_vel.vtg_vel.v_processed_mps ** 2)
-            self.vtg = self.fig.ax.plot(speed * units['V'], 'g-')
+            self.vtg = self.fig.ax.plot(ensembles, speed * units['V'], 'g-')
             max_vtg = np.nanmax(speed)
             if control['vtg']:
                 self.vtg[0].set_visible(True)
@@ -123,7 +148,7 @@ class BoatSpeed(object):
         if transect.boat_vel.gga_vel is not None:
             speed = np.sqrt(
                 transect.boat_vel.gga_vel.u_processed_mps ** 2 + transect.boat_vel.gga_vel.v_processed_mps ** 2)
-            self.gga = self.fig.ax.plot(speed * units['V'], 'b-')
+            self.gga = self.fig.ax.plot(ensembles, speed * units['V'], 'b-')
             max_gga = np.nanmax(speed)
             if control['gga']:
                 self.gga[0].set_visible(True)
@@ -188,9 +213,11 @@ class BoatSpeed(object):
         # If checkboxes are available, check status and set boat speed reference line visibility accordingly.
         if self.cb:
             if self.cb_bt.checkState() == QtCore.Qt.Checked:
-                self.bt[0].set_visible(True)
+                for item in self.bt:
+                    item.set_visible(True)
             else:
-                self.bt[0].set_visible(False)
+                for item in self.bt:
+                    item.set_visible(False)
             # GGA
             if self.cb_gga.checkState() == QtCore.Qt.Checked:
                 self.gga[0].set_visible(True)

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1058</width>
-    <height>719</height>
+    <width>1200</width>
+    <height>768</height>
    </rect>
   </property>
   <property name="palette">
@@ -492,7 +492,7 @@
            </layout>
           </item>
           <item>
-           <layout class="QVBoxLayout" name="verticalLayout_right" stretch="3,5,6">
+           <layout class="QVBoxLayout" name="verticalLayout_right" stretch="25,40,35">
             <item>
              <widget class="QTableWidget" name="table_qa"/>
             </item>
@@ -1713,9 +1713,9 @@
                </widget>
               </item>
               <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_22" stretch="6,3,2">
+               <layout class="QHBoxLayout" name="horizontalLayout_22" stretch="6,3,1">
                 <item>
-                 <layout class="QVBoxLayout" name="verticalLayout_17" stretch="1,1">
+                 <layout class="QVBoxLayout" name="verticalLayout_17" stretch="4,3">
                   <item>
                    <widget class="QGroupBox" name="gb_bt_radio">
                     <property name="title">
@@ -1733,6 +1733,9 @@
                          </property>
                          <property name="text">
                           <string>3 Beam Solutions</string>
+                         </property>
+                         <property name="checked">
+                          <bool>true</bool>
                          </property>
                         </widget>
                        </item>
@@ -2040,31 +2043,27 @@
                      <property name="title">
                       <string>3 Beam Solutions</string>
                      </property>
-                     <widget class="QComboBox" name="combo_bt_3beam">
-                      <property name="geometry">
-                       <rect>
-                        <x>10</x>
-                        <y>40</y>
-                        <width>141</width>
-                        <height>19</height>
-                       </rect>
-                      </property>
+                     <layout class="QVBoxLayout" name="verticalLayout_21">
                       <item>
-                       <property name="text">
-                        <string>Auto</string>
-                       </property>
+                       <widget class="QComboBox" name="combo_bt_3beam">
+                        <item>
+                         <property name="text">
+                          <string>Auto</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Allow</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>4-Beam Only</string>
+                         </property>
+                        </item>
+                       </widget>
                       </item>
-                      <item>
-                       <property name="text">
-                        <string>Allow</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>4-Beam Only</string>
-                       </property>
-                      </item>
-                     </widget>
+                     </layout>
                     </widget>
                    </item>
                    <item>
@@ -2079,86 +2078,61 @@
                      <property name="title">
                       <string>Error Velocity</string>
                      </property>
-                     <widget class="QComboBox" name="combo_bt_error_velocity">
-                      <property name="geometry">
-                       <rect>
-                        <x>8</x>
-                        <y>20</y>
-                        <width>141</width>
-                        <height>19</height>
-                       </rect>
-                      </property>
+                     <layout class="QVBoxLayout" name="verticalLayout_22">
                       <item>
-                       <property name="text">
-                        <string>Auto</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>Manual</string>
-                       </property>
-                      </item>
-                      <item>
-                       <property name="text">
-                        <string>Off</string>
-                       </property>
-                      </item>
-                     </widget>
-                     <widget class="QWidget" name="">
-                      <property name="geometry">
-                       <rect>
-                        <x>10</x>
-                        <y>50</y>
-                        <width>141</width>
-                        <height>31</height>
-                       </rect>
-                      </property>
-                      <layout class="QHBoxLayout" name="horizontalLayout_29" stretch="2,1">
-                       <item>
-                        <widget class="QLabel" name="txt_bt_error_velocity">
-                         <property name="font">
-                          <font>
-                           <pointsize>10</pointsize>
-                           <weight>50</weight>
-                           <bold>false</bold>
-                          </font>
-                         </property>
+                       <widget class="QComboBox" name="combo_bt_error_velocity">
+                        <item>
                          <property name="text">
-                          <string>Threshold (+/-):</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QPlainTextEdit" name="ed_bt_error_vel_threshold">
-                         <property name="enabled">
-                          <bool>false</bool>
-                         </property>
-                         <property name="font">
-                          <font>
-                           <pointsize>10</pointsize>
-                           <weight>50</weight>
-                           <bold>false</bold>
-                          </font>
-                         </property>
-                         <property name="inputMethodHints">
-                          <set>Qt::ImhNone</set>
-                         </property>
-                         <property name="verticalScrollBarPolicy">
-                          <enum>Qt::ScrollBarAlwaysOff</enum>
-                         </property>
-                         <property name="horizontalScrollBarPolicy">
-                          <enum>Qt::ScrollBarAlwaysOff</enum>
-                         </property>
-                         <property name="plainText">
                           <string>Auto</string>
                          </property>
-                         <property name="centerOnScroll">
-                          <bool>false</bool>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Manual</string>
                          </property>
-                        </widget>
-                       </item>
-                      </layout>
-                     </widget>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Off</string>
+                         </property>
+                        </item>
+                       </widget>
+                      </item>
+                      <item>
+                       <layout class="QHBoxLayout" name="horizontalLayout_29" stretch="2,0">
+                        <item>
+                         <widget class="QLabel" name="txt_bt_error_velocity">
+                          <property name="maximumSize">
+                           <size>
+                            <width>16777215</width>
+                            <height>20</height>
+                           </size>
+                          </property>
+                          <property name="font">
+                           <font>
+                            <pointsize>10</pointsize>
+                            <weight>50</weight>
+                            <bold>false</bold>
+                           </font>
+                          </property>
+                          <property name="text">
+                           <string>Threshold (+/-):</string>
+                          </property>
+                          <property name="alignment">
+                           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLineEdit" name="ed_bt_error_vel_threshold">
+                          <property name="enabled">
+                           <bool>false</bool>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
+                      </item>
+                     </layout>
                     </widget>
                    </item>
                    <item>
@@ -2173,92 +2147,61 @@
                      <property name="title">
                       <string>Vertical Velocity</string>
                      </property>
-                     <widget class="QWidget" name="">
-                      <property name="geometry">
-                       <rect>
-                        <x>10</x>
-                        <y>50</y>
-                        <width>141</width>
-                        <height>31</height>
-                       </rect>
-                      </property>
-                      <layout class="QHBoxLayout" name="horizontalLayout_31" stretch="2,1">
-                       <item>
-                        <widget class="QLabel" name="txt_bt_vert_velocity">
-                         <property name="font">
-                          <font>
-                           <pointsize>10</pointsize>
-                           <weight>50</weight>
-                           <bold>false</bold>
-                          </font>
-                         </property>
+                     <layout class="QVBoxLayout" name="verticalLayout_23">
+                      <item>
+                       <widget class="QComboBox" name="combo_bt_vert_velocity">
+                        <item>
                          <property name="text">
-                          <string>Threshold (+/-):</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QPlainTextEdit" name="ed_bt_vert_vel_threshold">
-                         <property name="enabled">
-                          <bool>false</bool>
-                         </property>
-                         <property name="sizePolicy">
-                          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                           <horstretch>0</horstretch>
-                           <verstretch>0</verstretch>
-                          </sizepolicy>
-                         </property>
-                         <property name="minimumSize">
-                          <size>
-                           <width>0</width>
-                           <height>0</height>
-                          </size>
-                         </property>
-                         <property name="font">
-                          <font>
-                           <pointsize>10</pointsize>
-                           <weight>50</weight>
-                           <bold>false</bold>
-                          </font>
-                         </property>
-                         <property name="verticalScrollBarPolicy">
-                          <enum>Qt::ScrollBarAlwaysOff</enum>
-                         </property>
-                         <property name="horizontalScrollBarPolicy">
-                          <enum>Qt::ScrollBarAlwaysOff</enum>
-                         </property>
-                         <property name="plainText">
                           <string>Auto</string>
                          </property>
-                        </widget>
-                       </item>
-                      </layout>
-                     </widget>
-                     <widget class="QComboBox" name="combo_bt_vert_velocity">
-                      <property name="geometry">
-                       <rect>
-                        <x>8</x>
-                        <y>20</y>
-                        <width>141</width>
-                        <height>19</height>
-                       </rect>
-                      </property>
-                      <item>
-                       <property name="text">
-                        <string>Auto</string>
-                       </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Manual</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Off</string>
+                         </property>
+                        </item>
+                       </widget>
                       </item>
                       <item>
-                       <property name="text">
-                        <string>Manual</string>
-                       </property>
+                       <layout class="QHBoxLayout" name="horizontalLayout_31" stretch="2,0">
+                        <item>
+                         <widget class="QLabel" name="txt_bt_vert_velocity">
+                          <property name="maximumSize">
+                           <size>
+                            <width>16777215</width>
+                            <height>20</height>
+                           </size>
+                          </property>
+                          <property name="font">
+                           <font>
+                            <pointsize>10</pointsize>
+                            <weight>50</weight>
+                            <bold>false</bold>
+                           </font>
+                          </property>
+                          <property name="text">
+                           <string>Threshold (+/-):</string>
+                          </property>
+                          <property name="alignment">
+                           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                          </property>
+                         </widget>
+                        </item>
+                        <item>
+                         <widget class="QLineEdit" name="ed_bt_vert_vel_threshold">
+                          <property name="enabled">
+                           <bool>false</bool>
+                          </property>
+                         </widget>
+                        </item>
+                       </layout>
                       </item>
-                      <item>
-                       <property name="text">
-                        <string>Off</string>
-                       </property>
-                      </item>
-                     </widget>
+                     </layout>
                     </widget>
                    </item>
                    <item>
@@ -2272,26 +2215,22 @@
                      <property name="title">
                       <string>Other</string>
                      </property>
-                     <widget class="QComboBox" name="combo_bt_other">
-                      <property name="geometry">
-                       <rect>
-                        <x>20</x>
-                        <y>30</y>
-                        <width>141</width>
-                        <height>19</height>
-                       </rect>
-                      </property>
+                     <layout class="QVBoxLayout" name="verticalLayout_24">
                       <item>
-                       <property name="text">
-                        <string>Off</string>
-                       </property>
+                       <widget class="QComboBox" name="combo_bt_other">
+                        <item>
+                         <property name="text">
+                          <string>Off</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Smooth</string>
+                         </property>
+                        </item>
+                       </widget>
                       </item>
-                      <item>
-                       <property name="text">
-                        <string>Smooth</string>
-                       </property>
-                      </item>
-                     </widget>
+                     </layout>
                     </widget>
                    </item>
                   </layout>

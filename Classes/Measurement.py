@@ -802,6 +802,10 @@ class Measurement(object):
 
             # Apply beam filter
                 bt_kwargs['beam'] = settings['BTbeamFilter']
+
+            # Apply smooth filter
+                bt_kwargs['other'] = settings['BTsmoothFilter']
+
             # Apply BT settings
             transect.boat_filters(update=False, **bt_kwargs)
 
