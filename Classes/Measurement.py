@@ -819,6 +819,7 @@ class Measurement(object):
                 gga_kwargs = {}
                 if transect.boat_vel.gga_vel is not None:
                     # GGA
+                    gga_kwargs['differential'] = settings['ggaDiffQualFilter']
                     if settings['ggaAltitudeFilter'] == 'Manual':
                         gga_kwargs['altitude'] = settings['ggaAltitudeFilter']
                         gga_kwargs['altitude_threshold'] = settings['ggaAltitudeFilterChange']
@@ -827,8 +828,8 @@ class Measurement(object):
 
                     # Set GGA HDOP Filter
                     if settings['GPSHDOPFilter'] == 'Manual':
-                        gga_kwargs['hdop'] = settings['GPSHDOPFilter'],
-                        gga_kwargs['hdop_max_threshold'] = settings['GPSHDOPFilterMax'],
+                        gga_kwargs['hdop'] = settings['GPSHDOPFilter']
+                        gga_kwargs['hdop_max_threshold'] = settings['GPSHDOPFilterMax']
                         gga_kwargs['hdop_change_threshold'] = settings['GPSHDOPFilterChange']
                     else:
                         gga_kwargs['hdop'] = settings['GPSHDOPFilter']

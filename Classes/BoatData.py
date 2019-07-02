@@ -1338,10 +1338,10 @@ class BoatData(object):
 
         # Set all data to valid
         self.valid_data[3, :] = True
-        self.valid_data[5, :] = True
+        # self.valid_data[5, :] = True
 
         # Manual or Auto is selected, apply filter
-        if self.gps_altitude_filter == 'Off':
+        if not self.gps_altitude_filter == 'Off':
             # Initialize variables
             num_valid_old = np.sum(self.valid_data[3, :])
             k = 0
@@ -1399,12 +1399,15 @@ class BoatData(object):
             self.valid_data[5, :] = True
 
             # Apply filter for manual or auto
-            if self.gps_HDOP_filter is not 'Off':
+            if not self.gps_HDOP_filter == 'Off':
 
                 # Initialize variables
                 num_valid_old = np.sum(self.valid_data[5, :])
                 k = 0
                 change = 1
+
+                # Apply max filter
+                self.valid_data[5, np.greater(gps_data.hdop_ens,self.gps_HDOP_filter_max)] = False
 
                 # Loop until the number of valid ensembles does not change
                 while k < 100 and change > 0.1:
@@ -1417,7 +1420,7 @@ class BoatData(object):
 
                     # If the change is HDOP or the value of HDOP is greater
                     # than the threshold setting mark the data invalid
-                    self.valid_data[5, diff > self.gps_HDOP_filter_change] = False
+                    self.valid_data[5, np.greater(diff, self.gps_HDOP_filter_change)] = False
 
                     k += 1
                     num_valid = np.sum(self.valid_data[5, :])

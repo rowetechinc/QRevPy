@@ -28,6 +28,7 @@ from UI.ShipTrack import Shiptrack
 from UI.BoatSpeed import BoatSpeed
 from UI.StationaryGraphs import StationaryGraphs
 from UI.BTFilters import BTFilters
+from UI.GPSFilters import GPSFilters
 from UI.MplCanvas import MplCanvas
 from contextlib import contextmanager
 import time
@@ -154,11 +155,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 else:
                     print('Cancel')
 
-                self.tab_all.setEnabled(True)
+
                 self.checked_transects_idx = Measurement.checked_transects(self.meas)
                 self.h_external_valid = Measurement.h_external_valid(self.meas)
-                self.actionSave.setEnabled(True)
-                self.actionComment.setEnabled(True)
+                self.config_gui()
                 self.change = True
                 self.tab_manager(tab_idx=0)
 
@@ -2197,7 +2197,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.resizeRowsToContents()
 
         # Display independent temperature reading if available
-        if np.isnan(self.meas.ext_temp_chk['user']) == False:
+
+        if self.meas.ext_temp_chk['user'] == np.nan:
             try:
                 temp = float(self.meas.ext_temp_chk['user'])
                 if self.rb_f.isChecked():
@@ -2961,10 +2962,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.cb_bt_vectors.stateChanged.connect(self.bt_plot_change)
 
         # Connect radio buttons
-        self.rb_bt_beam.toggled.connect(self.bt_filter_plots)
-        self.rb_bt_error.toggled.connect(self.bt_filter_plots)
-        self.rb_bt_vert.toggled.connect(self.bt_filter_plots)
-        self.rb_bt_other.toggled.connect(self.bt_filter_plots)
+        self.rb_bt_beam.toggled.connect(self.bt_radiobutton_control)
+        self.rb_bt_error.toggled.connect(self.bt_radiobutton_control)
+        self.rb_bt_vert.toggled.connect(self.bt_radiobutton_control)
+        self.rb_bt_other.toggled.connect(self.bt_radiobutton_control)
 
         # Connect manual entry
         self.ed_bt_error_vel_threshold.editingFinished.connect(self.change_error_vel_threshold)
@@ -3004,8 +3005,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.combo_bt_other.setCurrentIndex(1)
 
         # Display content
+        self.idx = 0
         self.update_bt_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
-        self.bt_plots(idx=0)
+        self.bt_plots()
         self.bt_comments_messages()
 
     def update_bt_table(self, old_discharge, new_discharge):
@@ -3043,6 +3045,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 item = QtWidgets.QTableWidgetItem(transect.file_name[:-4])
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                tbl.item(row, 0).setFont(self.font_normal)
 
                 # Total number of ensembles
                 col += 1
@@ -3109,16 +3112,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(per_change)))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
+            # Set selected file to bold font
+            tbl.item(self.idx, 0).setFont(self.font_bold)
+
             tbl.resizeColumnsToContents()
             tbl.resizeRowsToContents()
 
-    def bt_plots(self, idx):
+    def bt_plots(self):
         """Creates graphics for BT tab.
-
-        Parameters
-        ----------
-        idx: int
-            Index of the test to be plotted.
         """
 
         with self.wait_cursor():
@@ -3128,10 +3129,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.table_bt.item(nrow, 0).setFont(self.font_normal)
 
             # Set selected file to bold font
-            self.table_bt.item(idx, 0).setFont(self.font_bold)
+            self.table_bt.item(self.idx, 0).setFont(self.font_bold)
 
             # Determine transect selected
-            transect_id = self.checked_transects_idx[idx]
+            transect_id = self.checked_transects_idx[self.idx]
             self.transect = self.meas.transects[transect_id]
             self.invalid_bt = np.logical_not(self.transect.boat_vel.bt_vel.valid_data)
 
@@ -3199,6 +3200,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Draw canvas
         self.bt_bottom_canvas.draw()
 
+    @QtCore.Slot()
+    def bt_radiobutton_control(self):
+
+        with self.wait_cursor():
+            if self.sender().isChecked():
+                self.bt_filter_plots()
+
     def bt_filter_plots(self):
         """Creates plots of filter characteristics.
         """
@@ -3246,19 +3254,22 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
 
         if column == 0:
-            self.bt_plots(idx=row)
+            self.idx = row
+            self.bt_plots()
 
+    @QtCore.Slot()
     def bt_plot_change(self):
         """Coordinates changes in what references should be displayed in the boat speed and shiptrack plots.
         """
 
-        # Shiptrack
-        self.bt_shiptrack_fig.change()
-        self.bt_shiptrack_canvas.draw()
+        with self.wait_cursor():
+            # Shiptrack
+            self.bt_shiptrack_fig.change()
+            self.bt_shiptrack_canvas.draw()
 
-        # Boat speed
-        self.bt_bottom_fig.change()
-        self.bt_bottom_canvas.draw()
+            # Boat speed
+            self.bt_bottom_fig.change()
+            self.bt_bottom_canvas.draw()
 
     def update_bt_tab(self, s):
         """Updates the measurement and bottom track tab (table and graphics) after a change to settings has been made.
@@ -3279,10 +3290,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.update_bt_table(old_discharge=old_discharge, new_discharge=self.meas.discharge)
 
         # Update plots
-        self.bt_shiptrack()
-        self.bt_boat_speed()
-        self.bt_filter_plots()
+        self.bt_plots()
 
+    @QtCore.Slot(str)
     def change_bt_beam(self, text):
         """Coordinates user initiated change to the beam settings.
 
@@ -3292,20 +3302,22 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             User selection from combo box
         """
 
-        # Get current settings
-        s = self.meas.current_settings()
+        with self.wait_cursor():
 
-        # Change settings based on combo box selection
-        if text == 'Auto':
-            s['BTbeamFilter'] = -1
-        elif text == 'Allow':
-            s['BTbeamFilter'] = 3
-        elif text == '4-Beam Only':
-            s['BTbeamFilter'] = 4
+            # Get current settings
+            s = self.meas.current_settings()
 
-        # Update measurement and display
-        self.update_bt_tab(s)
+            if text == 'Auto':
+                s['BTbeamFilter'] = -1
+            elif text == 'Allow':
+                s['BTbeamFilter'] = 3
+            elif text == '4-Beam Only':
+                s['BTbeamFilter'] = 4
 
+            # Update measurement and display
+            self.update_bt_tab(s)
+
+    @QtCore.Slot(str)
     def change_bt_error(self, text):
         """Coordinates user initiated change to the error velocity settings.
 
@@ -3315,22 +3327,24 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
              User selection from combo box
          """
 
-        # Get current settings
-        s = self.meas.current_settings()
+        with self.wait_cursor():
+            # Get current settings
+            s = self.meas.current_settings()
 
-        # Change setting based on combo box selection
-        s['BTdFilter'] = text
+            # Change setting based on combo box selection
+            s['BTdFilter'] = text
 
-        if text == 'Manual':
-            # If Manual enable the line edit box for user input. Updates are not applied until the user has entered
-            # a value in the line edit box.
-            self.ed_bt_error_vel_threshold.setEnabled(True)
-        else:
-            # If manual is not selected the line edit box is cleared and disabled and the updates applied.
-            self.ed_bt_error_vel_threshold.setEnabled(False)
-            self.ed_bt_error_vel_threshold.setText('')
-            self.update_bt_tab(s)
+            if text == 'Manual':
+                # If Manual enable the line edit box for user input. Updates are not applied until the user has entered
+                # a value in the line edit box.
+                self.ed_bt_error_vel_threshold.setEnabled(True)
+            else:
+                # If manual is not selected the line edit box is cleared and disabled and the updates applied.
+                self.ed_bt_error_vel_threshold.setEnabled(False)
+                self.ed_bt_error_vel_threshold.setText('')
+                self.update_bt_tab(s)
 
+    @QtCore.Slot(str)
     def change_bt_vertical(self, text):
         """Coordinates user initiated change to the vertical velocity settings.
 
@@ -3340,22 +3354,24 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
          User selection from combo box
         """
 
-        # Get current settings
-        s = self.meas.current_settings()
+        with self.wait_cursor():
+            # Get current settings
+            s = self.meas.current_settings()
 
-        # Change setting based on combo box selection
-        s['BTwFilter'] = text
+            # Change setting based on combo box selection
+            s['BTwFilter'] = text
 
-        if text == 'Manual':
-            # If Manual enable the line edit box for user input. Updates are not applied until the user has entered
-            # a value in the line edit box.
-            self.ed_bt_vert_vel_threshold.setEnabled(True)
-        else:
-            # If manual is not selected the line edit box is cleared and disabled and the updates applied.
-            self.ed_bt_vert_vel_threshold.setEnabled(False)
-            self.ed_bt_vert_vel_threshold.setText('')
-            self.update_bt_tab(s)
+            if text == 'Manual':
+                # If Manual enable the line edit box for user input. Updates are not applied until the user has entered
+                # a value in the line edit box.
+                self.ed_bt_vert_vel_threshold.setEnabled(True)
+            else:
+                # If manual is not selected the line edit box is cleared and disabled and the updates applied.
+                self.ed_bt_vert_vel_threshold.setEnabled(False)
+                self.ed_bt_vert_vel_threshold.setText('')
+                self.update_bt_tab(s)
 
+    @QtCore.Slot(str)
     def change_bt_other(self, text):
         """Coordinates user initiated change to the vertical velocity settings.
 
@@ -3365,51 +3381,56 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
          User selection from combo box
         """
 
-        # Get current settings
-        s = self.meas.current_settings()
+        with self.wait_cursor():
+            # Get current settings
+            s = self.meas.current_settings()
 
-        # Change setting based on combo box selection
-        if text == 'Off':
-            s['BTsmoothFilter'] = 'Off'
-        elif text == 'Smooth':
-            s['BTsmoothFilter'] = 'On'
+            # Change setting based on combo box selection
+            if text == 'Off':
+                s['BTsmoothFilter'] = 'Off'
+            elif text == 'Smooth':
+                s['BTsmoothFilter'] = 'On'
 
-        # Update measurement and display
-        self.update_bt_tab(s)
+            # Update measurement and display
+            self.update_bt_tab(s)
 
+    @QtCore.Slot()
     def change_error_vel_threshold(self):
         """Coordinates application of a user specified error velocity threshold.
         """
 
-        # Get threshold and convert to SI units
-        threshold = float(self.ed_bt_error_vel_threshold.text()) / self.units['V']
+        with self.wait_cursor():
+            # Get threshold and convert to SI units
+            threshold = float(self.ed_bt_error_vel_threshold.text()) / self.units['V']
 
-        # Get current settings
-        s = self.meas.current_settings()
+            # Get current settings
+            s = self.meas.current_settings()
 
-        # Change settings to manual and the associated threshold
-        s['BTdFilter'] = 'Manual'
-        s['BTdFilterThreshold'] = threshold
+            # Change settings to manual and the associated threshold
+            s['BTdFilter'] = 'Manual'
+            s['BTdFilterThreshold'] = threshold
 
-        # Update measurement and display
-        self.update_bt_tab(s)
+            # Update measurement and display
+            self.update_bt_tab(s)
 
+    @QtCore.Slot()
     def change_vert_vel_threshold(self):
         """Coordinates application of a user specified vertical velocity threshold.
         """
 
-        # Get threshold and convert to SI units
-        threshold = float(self.ed_bt_vert_vel_threshold.text()) / self.units['V']
+        with self.wait_cursor():
+            # Get threshold and convert to SI units
+            threshold = float(self.ed_bt_vert_vel_threshold.text()) / self.units['V']
 
-        # Get current settings
-        s = self.meas.current_settings()
+            # Get current settings
+            s = self.meas.current_settings()
 
-        # Change settings to manual and the associated threshold
-        s['BTwFilter'] = 'Manual'
-        s['BTwFilterThreshold'] = threshold
+            # Change settings to manual and the associated threshold
+            s['BTwFilter'] = 'Manual'
+            s['BTwFilterThreshold'] = threshold
 
-        # Update measurement and display
-        self.update_bt_tab(s)
+            # Update measurement and display
+            self.update_bt_tab(s)
 
     def bt_comments_messages(self):
         """Displays comments and messages associated with bottom track filters in Messages tab.
@@ -3433,6 +3454,603 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_bt_messages.textCursor().insertText(message[0])
                 self.display_bt_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_bt_messages.textCursor().insertBlock()
+
+# GPS tab
+# =======
+    def gps_tab(self):
+        """Initialize, setup settings, and display initial data in gps tab.
+        """
+
+        # Setup data table
+        tbl = self.table_gps
+        table_header = [self.tr('Filename'),
+                        self.tr('Number or \n Ensembles'),
+                        self.tr('GGA \n % Invalid'),
+                        self.tr('VTG \n % Invalid'),
+                        self.tr('Diff. Qual. \n % Invalid'),
+                        self.tr('Alt. Change \n % Invalid'),
+                        self.tr('HDOP \n % Invalid'),
+                        self.tr('Sat Change \n % '),
+                        self.tr('Other \n % Invalid'),
+                        self.tr('Discharge \n Previous \n' + self.units['label_Q']),
+                        self.tr('Discharge \n Now \n' + self.units['label_Q']),
+                        self.tr('Discharge \n % Change')]
+        ncols = len(table_header)
+        nrows = len(self.checked_transects_idx)
+        tbl.setRowCount(nrows)
+        tbl.setColumnCount(ncols)
+        tbl.setHorizontalHeaderLabels(table_header)
+        tbl.horizontalHeader().setFont(self.font_bold)
+        tbl.verticalHeader().hide()
+        tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        tbl.cellClicked.connect(self.gps_table_clicked)
+
+        # Automatically resize rows and columns
+        tbl.resizeColumnsToContents()
+        tbl.resizeRowsToContents()
+
+        # Initialize checkbox settings for boat reference
+        self.cb_gps_bt.setCheckState(QtCore.Qt.Checked)
+        self.cb_gps_gga.setCheckState(QtCore.Qt.Unchecked)
+        self.cb_gps_vtg.setCheckState(QtCore.Qt.Unchecked)
+        selected = self.meas.transects[self.checked_transects_idx[0]].boat_vel.selected
+        if selected == 'gga_vel':
+            self.cb_gps_gga.setCheckState(QtCore.Qt.Checked)
+        elif selected == 'vtg_vel':
+            self.cb_gps_vtg.setCheckState(QtCore.Qt.Checked)
+
+        self.cb_gps_vectors.setCheckState(QtCore.Qt.Checked)
+
+        # Connect plot variable checkboxes
+        self.cb_gps_bt.stateChanged.connect(self.gps_plot_change)
+        self.cb_gps_gga.stateChanged.connect(self.gps_plot_change)
+        self.cb_gps_vtg.stateChanged.connect(self.gps_plot_change)
+        self.cb_gps_vectors.stateChanged.connect(self.gps_plot_change)
+
+        # Connect radio buttons
+        self.rb_gps_quality.toggled.connect(self.gps_radiobutton_control)
+        self.rb_gps_altitude.toggled.connect(self.gps_radiobutton_control)
+        self.rb_gps_hdop.toggled.connect(self.gps_radiobutton_control)
+        self.rb_gps_sats.toggled.connect(self.gps_radiobutton_control)
+        self.rb_gps_other.toggled.connect(self.gps_radiobutton_control)
+
+        # Connect manual entry
+        self.ed_gps_altitude_threshold.editingFinished.connect(self.change_altitude_threshold)
+        self.ed_gps_hdop_threshold.editingFinished.connect(self.change_hdop_threshold)
+
+        # Connect filters
+        self.combo_gps_qual.currentIndexChanged[str].connect(self.change_quality)
+        self.combo_gps_altitude.currentIndexChanged[str].connect(self.change_altitude)
+        self.combo_gps_hdop.currentIndexChanged[str].connect(self.change_hdop)
+        self.combo_gps_other.currentIndexChanged[str].connect(self.change_gps_other)
+
+        # Transect selected for display
+        self.transect = self.meas.transects[self.checked_transects_idx[0]]
+
+        # Set gps quality filter
+        if self.transect.boat_vel.gga_vel.gps_diff_qual_filter == 1:
+            self.combo_gps_qual.setCurrentIndex(0)
+        elif self.transect.boat_vel.gga_vel.gps_diff_qual_filter == 2:
+            self.combo_gps_qual.setCurrentIndex(1)
+        elif self.transect.boat_vel.gga_vel.gps_diff_qual_filter == 4:
+            self.combo_gps_qual.setCurrentIndex(2)
+        else:
+            self.combo_gps_qual.setCurrentIndex(0)
+
+        # Set altitude filter from transect data
+        index = self.combo_gps_altitude.findText(self.transect.boat_vel.gga_vel.gps_altitude_filter,
+                                                 QtCore.Qt.MatchFixedString)
+        self.combo_gps_altitude.setCurrentIndex(index)
+
+        # Set hdop filter from transect data
+        index = self.combo_gps_hdop.findText(self.transect.boat_vel.gga_vel.gps_HDOP_filter, QtCore.Qt.MatchFixedString)
+        self.combo_gps_hdop.setCurrentIndex(index)
+
+        # Set smooth filter from transect data
+        if self.transect.boat_vel.gga_vel.smooth_filter == 'Off':
+            self.combo_gps_other.setCurrentIndex(0)
+        elif self.transect.boat_vel.gga_vel.smooth_filter == 'On':
+            self.combo_gps_other.setCurrentIndex(1)
+
+        # Display content
+        self.idx = 0
+        self.update_gps_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
+        self.gps_plots()
+        self.gps_comments_messages()
+
+    def update_gps_table(self, old_discharge, new_discharge):
+        """Updates the gps table with new or reprocessed data.
+
+        Parameters
+        ----------
+        old_discharge: list
+            List of objects of QComp with previous settings
+        new_discharge: list
+            List of objects of QComp with new settings
+        """
+
+        with self.wait_cursor():
+            # Set tbl variable
+            tbl = self.table_gps
+
+            # Populate each row
+            for row in range(tbl.rowCount()):
+                # Identify transect associated with the row
+                transect_id = self.checked_transects_idx[row]
+                transect = self.meas.transects[transect_id]
+                valid_data = transect.boat_vel.gga_vel.valid_data
+                num_ensembles = len(valid_data[0,:])
+                if transect.boat_vel.gga_vel is not None:
+                    num_invalid_gga = np.nansum(np.logical_not(valid_data[0, :]))
+                    num_altitude_invalid = np.nansum(np.logical_not(valid_data[3, :]))
+                    num_quality_invalid = np.nansum(np.logical_not(valid_data[2, :]))
+                    num_hdop_invalid = np.nansum(np.logical_not(valid_data[5, :]))
+                    sats = np.copy(transect.gps.num_sats_ens)
+                    if np.nansum(sats) == 0:
+                        num_sat_changes = -1
+                    else:
+                        sats = sats[np.logical_not(np.isnan(sats))]
+                        diff_sats = np.diff(sats)
+                        num_sat_changes = np.nansum(np.logical_not(diff_sats == 0))
+                else:
+                    num_invalid_gga = -1
+                    num_altitude_invalid = -1
+                    num_quality_invalid = -1
+                    num_hdop_invalid = -1
+                if transect.boat_vel.vtg_vel is not None:
+                    num_invalid_vtg = np.nansum(np.logical_not(transect.boat_vel.vtg_vel.valid_data[0, :]))
+                else:
+                    num_invalid_vtg = -1
+
+                num_other_invalid = np.nansum(np.logical_not(valid_data[4, :]))
+
+                # File/transect name
+                col = 0
+                item = QtWidgets.QTableWidgetItem(transect.file_name[:-4])
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Total number of ensembles
+                col += 1
+                item = '{:5d}'.format(num_ensembles)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent of ensembles with invalid gga
+                col += 1
+                if num_invalid_gga > 0:
+                    item = '{:3.2f}'.format((num_invalid_gga / num_ensembles) * 100.)
+                else:
+                    item = 'N/A'
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent of ensembles with invalid vtg
+                col += 1
+                if num_invalid_vtg >= 0:
+                    item = '{:3.2f}'.format((num_invalid_vtg / num_ensembles) * 100.)
+                else:
+                    item = 'N/A'
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent of ensembles with invalid quality
+                col += 1
+                if num_quality_invalid >= 0:
+                    item = '{:3.2f}'.format((num_quality_invalid / num_ensembles) * 100.)
+                else:
+                    item = 'N/A'
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent ensembles with invalid altitude
+                col += 1
+                if num_altitude_invalid >= 0:
+                    item = '{:3.2f}'.format((num_altitude_invalid / num_ensembles) * 100.)
+                else:
+                    item = 'N/A'
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent ensembles with invalid HDOP
+                col += 1
+                if num_hdop_invalid >= 0:
+                    item = '{:3.2f}'.format((num_hdop_invalid / num_ensembles) * 100.)
+                else:
+                    item = 'N/A'
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent of ensembles with satellite changes
+                col += 1
+                if num_sat_changes >= 0:
+                    item = '{:3.2f}'.format((num_sat_changes / num_ensembles) * 100.)
+                else:
+                    item = 'N/A'
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent other filter
+                col += 1
+                if num_other_invalid >= 0:
+                    item = '{:3.2f}'.format((num_other_invalid / num_ensembles) * 100.)
+                else:
+                    item = 'N/A'
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Discharge before changes
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:8.1f}'.format(old_discharge[transect_id].total * self.units['Q'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Discharge after changes
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:8.1f}'.format(new_discharge[transect_id].total * self.units['Q'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent change in discharge
+                col += 1
+                per_change = ((new_discharge[transect_id].total - old_discharge[transect_id].total)
+                              / old_discharge[transect_id].total) * 100
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(per_change)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                self.table_gps.item(row, 0).setFont(self.font_normal)
+
+            # Set selected file to bold font
+            self.table_gps.item(self.idx, 0).setFont(self.font_bold)
+
+            tbl.resizeColumnsToContents()
+            tbl.resizeRowsToContents()
+
+    def gps_plots(self):
+        """Creates graphics for GPS tab.
+
+        Parameters
+        ----------
+        idx: int
+            Index of the test to be plotted.
+        """
+
+        with self.wait_cursor():
+            # Set all filenames to normal font
+            nrows = len(self.checked_transects_idx)
+
+            # Determine transect selected
+            transect_id = self.checked_transects_idx[self.idx]
+            self.transect = self.meas.transects[transect_id]
+            self.invalid_gps = np.logical_not(self.transect.boat_vel.gga_vel.valid_data)
+
+            for row in range(nrows):
+                self.table_gps.item(row, 0).setFont(self.font_normal)
+
+            # Set selected file to bold font
+            self.table_gps.item(self.idx, 0).setFont(self.font_bold)
+            # Update plots
+            self.gps_shiptrack()
+            self.gps_boat_speed()
+            self.gps_filter_plots()
+
+    def gps_shiptrack(self):
+        """Creates shiptrack plot for data in transect.
+        """
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'gps_shiptrack_canvas'):
+            # Create the canvas
+            self.gps_shiptrack_canvas = MplCanvas(parent=self.graph_gps_st, width=4, height=4, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_gps_st)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.gps_shiptrack_canvas)
+
+        # Initialize the shiptrack figure and assign to the canvas
+        self.gps_shiptrack_fig = Shiptrack(canvas=self.gps_shiptrack_canvas)
+        # Create the figure with the specified data
+        self.gps_shiptrack_fig.create(transect=self.transect,
+                                     units=self.units,
+                                     cb=True,
+                                     cb_bt=self.cb_gps_bt,
+                                     cb_gga=self.cb_gps_gga,
+                                     cb_vtg=self.cb_gps_vtg,
+                                     cb_vectors=self.cb_gps_vectors,
+                                     invalid_gps=self.invalid_gps)
+
+        # Draw canvas
+        self.gps_shiptrack_canvas.draw()
+
+    def gps_boat_speed(self):
+        """Creates boat speed plot for data in transect.
+        """
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'gps_bottom_canvas'):
+            # Create the canvas
+            self.gps_bottom_canvas = MplCanvas(parent=self.graph_gps_bottom, width=8, height=2, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_gps_bottom)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.gps_bottom_canvas)
+
+        # Initialize the boat speed figure and assign to the canvas
+        self.gps_bottom_fig = BoatSpeed(canvas=self.gps_bottom_canvas)
+        # Create the figure with the specified data
+        self.gps_bottom_fig.create(transect=self.transect,
+                                  units=self.units,
+                                  cb=True,
+                                  cb_bt=self.cb_gps_bt,
+                                  cb_gga=self.cb_gps_gga,
+                                  cb_vtg=self.cb_gps_vtg,
+                                  invalid_gps=self.invalid_gps)
+
+        # Draw canvas
+        self.gps_bottom_canvas.draw()
+
+    @QtCore.Slot()
+    def gps_radiobutton_control(self):
+
+        with self.wait_cursor():
+            if self.sender().isChecked():
+                self.gps_filter_plots()
+
+    def gps_filter_plots(self):
+        """Creates plots of filter characteristics.
+        """
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'gps_top_canvas'):
+            # Create the canvas
+            self.gps_top_canvas = MplCanvas(parent=self.graph_gps_top, width=8, height=2, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_gps_top)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.gps_top_canvas)
+
+        # Initialize the boat speed figure and assign to the canvas
+        self.gps_top_fig = GPSFilters(canvas=self.gps_top_canvas)
+
+        # Create the figure with the specified data
+        if self.rb_gps_quality.isChecked():
+            self.gps_top_fig.create(transect=self.transect,
+                                   units=self.units, selected='quality')
+        elif self.rb_gps_altitude.isChecked():
+            self.gps_top_fig.create(transect=self.transect,
+                                   units=self.units, selected='altitude')
+        elif self.rb_gps_hdop.isChecked():
+            self.gps_top_fig.create(transect=self.transect,
+                                   units=self.units, selected='hdop')
+        elif self.rb_gps_other.isChecked():
+            self.gps_top_fig.create(transect=self.transect,
+                                   units=self.units, selected='other')
+        elif self.rb_gps_sats.isChecked():
+            self.gps_top_fig.create(transect=self.transect,
+                                   units=self.units, selected='sats')
+
+        # Draw canvas
+        self.gps_top_canvas.draw()
+
+    def gps_table_clicked(self, row, column):
+        """Changes plotted data to the transect of the transect clicked.
+
+        Parameters
+        ----------
+        row: int
+            Row clicked by user
+        column: int
+            Column clicked by user
+        """
+
+        if column == 0:
+            self.idx = row
+            self.gps_plots()
+
+    @QtCore.Slot()
+    def gps_plot_change(self):
+        """Coordinates changes in what references should be displayed in the boat speed and shiptrack plots.
+        """
+        with self.wait_cursor():
+            # Shiptrack
+            self.gps_shiptrack_fig.change()
+            self.gps_shiptrack_canvas.draw()
+
+            # Boat speed
+            self.gps_bottom_fig.change()
+            self.gps_bottom_canvas.draw()
+
+    def update_gps_tab(self, s):
+        """Updates the measurement and bottom track tab (table and graphics) after a change to settings has been made.
+
+        Parameters
+        ----------
+        s: dict
+            Dictionary of all process settings for the measurement
+        """
+
+        # Save discharge from previous settings
+        old_discharge = copy.deepcopy(self.meas.discharge)
+
+        # Apply new settings
+        self.meas.apply_settings(settings=s)
+
+        # Update table
+        self.update_gps_table(old_discharge=old_discharge, new_discharge=self.meas.discharge)
+
+        # Update plots
+        self.gps_plots()
+
+    @QtCore.Slot(str)
+    def change_quality(self, text):
+        """Coordinates user initiated change to the beam settings.
+
+        Parameters
+        ----------
+        text: str
+            User selection from combo box
+        """
+
+        with self.wait_cursor():
+            # Get current settings
+            s = self.meas.current_settings()
+
+            # Change settings based on combo box selection
+            if text == '1-Autonomous':
+                s['ggaDiffQualFilter'] = 1
+            elif text == '2-Differential':
+                s['ggaDiffQualFilter'] = 2
+            elif text == '4+-RTK':
+                s['ggaDiffQualFilter'] = 4
+
+            # Update measurement and display
+            self.update_gps_tab(s)
+
+    @QtCore.Slot(str)
+    def change_altitude(self, text):
+        """Coordinates user initiated change to the error velocity settings.
+
+         Parameters
+         ----------
+         text: str
+             User selection from combo box
+         """
+
+        with self.wait_cursor():
+            # Get current settings
+            s = self.meas.current_settings()
+
+            # Change setting based on combo box selection
+            s['ggaAltitudeFilter'] = text
+
+            if text == 'Manual':
+                # If Manual enable the line edit box for user input. Updates are not applied until the user has entered
+                # a value in the line edit box.
+                self.ed_gps_altitude_threshold.setEnabled(True)
+            else:
+                # If manual is not selected the line edit box is cleared and disabled and the updates applied.
+                self.ed_gps_altitude_threshold.setEnabled(False)
+                self.ed_gps_altitude_threshold.setText('')
+                self.update_gps_tab(s)
+
+    @QtCore.Slot(str)
+    def change_hdop(self, text):
+        """Coordinates user initiated change to the vertical velocity settings.
+
+        Parameters
+        ----------
+        text: str
+         User selection from combo box
+        """
+
+        with self.wait_cursor():
+            # Get current settings
+            s = self.meas.current_settings()
+
+            # Change setting based on combo box selection
+            s['GPSHDOPFilter'] = text
+
+            if text == 'Manual':
+                # If Manual enable the line edit box for user input. Updates are not applied until the user has entered
+                # a value in the line edit box.
+                self.ed_gps_hdop_threshold.setEnabled(True)
+            else:
+                # If manual is not selected the line edit box is cleared and disabled and the updates applied.
+                self.ed_gps_hdop_threshold.setEnabled(False)
+                self.ed_gps_hdop_threshold.setText('')
+                self.update_gps_tab(s)
+
+    @QtCore.Slot(str)
+    def change_gps_other(self, text):
+        """Coordinates user initiated change to the vertical velocity settings.
+
+        Parameters
+        ----------
+        text: str
+         User selection from combo box
+        """
+
+        with self.wait_cursor():
+            # Get current settings
+            s = self.meas.current_settings()
+
+            # Change setting based on combo box selection
+            if text == 'Off':
+                s['GPSSmoothFilter'] = 'Off'
+            elif text == 'Smooth':
+                s['GPSSmoothFilter'] = 'On'
+
+            # Update measurement and display
+            self.update_gps_tab(s)
+
+    @QtCore.Slot()
+    def change_altitude_threshold(self):
+        """Coordinates application of a user specified error velocity threshold.
+        """
+
+        with self.wait_cursor():
+            # Get threshold and convert to SI units
+            threshold = float(self.ed_gps_altitude_threshold.text()) / self.units['L']
+
+            # Get current settings
+            s = self.meas.current_settings()
+
+            # Change settings to manual and the associated threshold
+            s['ggaAltitudeFilter'] = 'Manual'
+            s['ggaAltitudeFilterChange'] = threshold
+
+            # Update measurement and display
+            self.update_gps_tab(s)
+
+    @QtCore.Slot()
+    def change_hdop_threshold(self):
+        """Coordinates application of a user specified vertical velocity threshold.
+        """
+
+        with self.wait_cursor():
+            # Get threshold and convert to SI units
+            threshold = float(self.ed_gps_hdop_threshold.text())
+
+            # Get current settings
+            s = self.meas.current_settings()
+
+            # Change settings to manual and the associated threshold
+            s['GPSHDOPFilter'] = 'Manual'
+            s['GPSHDOPFilterMax'] = threshold
+
+            # Update measurement and display
+            self.update_gps_tab(s)
+
+    def gps_comments_messages(self):
+        """Displays comments and messages associated with bottom track filters in Messages tab.
+        """
+
+        # Clear comments and messages
+        self.display_gps_comments.clear()
+        self.display_gps_messages.clear()
+
+        if hasattr(self, 'meas'):
+            # Display each comment on a new line
+            self.display_gps_comments.moveCursor(QtGui.QTextCursor.Start)
+            for comment in self.meas.comments:
+                self.display_gps_comments.textCursor().insertText(comment)
+                self.display_gps_comments.moveCursor(QtGui.QTextCursor.End)
+                self.display_gps_comments.textCursor().insertBlock()
+
+            # Display each message on a new line
+            self.display_gps_messages.moveCursor(QtGui.QTextCursor.Start)
+            for message in self.meas.qa.gga_vel['messages']:
+                self.display_gps_messages.textCursor().insertText(message[0])
+                self.display_gps_messages.moveCursor(QtGui.QTextCursor.End)
+                self.display_gps_messages.textCursor().insertBlock()
+            for message in self.meas.qa.vtg_vel['messages']:
+                self.display_gps_messages.textCursor().insertText(message[0])
+                self.display_gps_messages.moveCursor(QtGui.QTextCursor.End)
+                self.display_gps_messages.textCursor().insertBlock()
 
 # Split functions
 # ==============
@@ -3566,6 +4184,43 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         elif tab_idx == 5:
             # Bottom track filters
             self.bt_tab()
+        elif tab_idx == 6:
+            self.gps_tab()
+
+    def config_gui(self):
+
+        self.tab_all.setCurrentIndex(0)
+        # After data is loaded enable GUI and buttons on toolbar
+        self.tab_all.setEnabled(True)
+        self.actionSave.setEnabled(True)
+        self.actionComment.setEnabled(True)
+
+        # Configure tabs and toolbar for the presence or absence of GPS data
+        self.tab_all.setTabEnabled(6, False)
+        self.actionGGA.setEnabled(False)
+        self.actionVTG.setEnabled(False)
+        self.actionON.setEnabled(False)
+        self.actionOFF.setEnabled(False)
+        for idx in self.checked_transects_idx:
+            if self.meas.transects[idx].boat_vel.gga_vel is not None:
+                self.tab_all.setTabEnabled(6, True)
+                self.actionGGA.setEnabled(True)
+                self.actionVTG.setEnabled(True)
+                self.actionON.setEnabled(True)
+                self.actionOFF.setEnabled(True)
+                break
+
+        # Configure tabs for the presence or absence of a compass
+        if np.any(self.checked_transects_idx):
+            heading = np.unique(self.meas.transects[self.checked_transects_idx.index(1)].sensors.heading_deg.internal.data)
+        else:
+            heading = np.array([0])
+
+        if len(heading) > 1 and np.any(np.not_equal(heading, 0)):
+            self.tab_all.setTabEnabled(2, True)
+        else:
+            self.tab_all.setTabEnabled(2, False)
+
 
 # Command line functions
 # ======================

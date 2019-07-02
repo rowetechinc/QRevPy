@@ -1,4 +1,3 @@
-from PyQt5 import QtCore
 import numpy as np
 import copy
 
@@ -14,7 +13,14 @@ class BTFilters(object):
         Figure object of the canvas
     units: dict
         Dictionary of units conversions
-
+    beam: object
+        Axis of figure for number of beams
+    error: object
+        Axis of figure for error velocity
+    vert: object
+        Axis of figure for vertical velocity
+    other: object
+        Axis of figure for other filters
     """
 
     def __init__(self, canvas):
@@ -30,7 +36,10 @@ class BTFilters(object):
         self.canvas = canvas
         self.fig = canvas.fig
         self.units = None
-
+        self.beam = None
+        self.error = None
+        self.vert = None
+        self.other = None
 
     def create(self, transect, units, selected):
         """Create the axes and lines for the figure.
@@ -55,7 +64,7 @@ class BTFilters(object):
         self.fig.ax = self.fig.add_subplot(1, 1, 1)
 
         # Set margins and padding for figure
-        self.fig.subplots_adjust(left=0.1, bottom=0.2, right=0.98, top=0.98, wspace=0.1, hspace=0)
+        self.fig.subplots_adjust(left=0.07, bottom=0.2, right=0.99, top=0.98, wspace=0.1, hspace=0)
         self.fig.ax.set_xlabel(self.canvas.tr('Ensembles'))
         self.fig.ax.grid()
         self.fig.ax.xaxis.label.set_fontsize(12)
@@ -71,9 +80,9 @@ class BTFilters(object):
             bt_temp.filter_beam(4)
             valid_4beam = bt_temp.valid_data[5, :].astype(int)
             beam_data = np.copy(valid_4beam).astype(int)
-            beam_data[valid_4beam == True] = 4
-            beam_data[valid_4beam == False] = 3
-            beam_data[transect.boat_vel.bt_vel.valid_data[1, :] == False] = 0
+            beam_data[valid_4beam == 1] = 4
+            beam_data[valid_4beam == 0] = 3
+            beam_data[np.logical_not(transect.boat_vel.bt_vel.valid_data[1, :])] = 0
 
             # Plot all data
             self.beam = self.fig.ax.plot(ensembles, beam_data, 'b.')
@@ -96,7 +105,7 @@ class BTFilters(object):
             self.error.append(self.fig.ax.plot(ensembles[invalid_error_vel],
                                                transect.boat_vel.bt_vel.d_mps[invalid_error_vel] * units['V'],
                                                'ro', markerfacecolor='none')[0])
-            self.fig.ax.set_ylim(top=max_y * units['L'], bottom=min_y * units['L'])
+            self.fig.ax.set_ylim(top=max_y * units['V'], bottom=min_y * units['V'])
             self.fig.ax.set_ylabel(self.canvas.tr('Error Velocity' + self.units['label_V']))
 
         elif selected == 'vert':
@@ -108,9 +117,8 @@ class BTFilters(object):
             self.vert.append(self.fig.ax.plot(ensembles[invalid_vert_vel],
                                               transect.boat_vel.bt_vel.w_mps[invalid_vert_vel] * units['V'],
                                               'ro', markerfacecolor='none')[0])
-            self.fig.ax.set_ylim(top=max_y * units['L'], bottom=min_y * units['L'])
+            self.fig.ax.set_ylim(top=max_y * units['V'], bottom=min_y * units['V'])
             self.fig.ax.set_ylabel(self.canvas.tr('Vert. Velocity' + self.units['label_V']))
-
 
         elif selected == 'other':
             # Plot smooth
@@ -118,10 +126,12 @@ class BTFilters(object):
                             + transect.boat_vel.bt_vel.v_mps ** 2)
             invalid_other_vel = np.logical_not(transect.boat_vel.bt_vel.valid_data[4, :])
             if transect.boat_vel.bt_vel.smooth_filter == 'On':
-                self.other = self.fig.ax.plot(ensembles,transect.boat_vel.bt_vel.smooth_lower_limit
-                                                           * self.units['V'], color='#d5dce6')
-                self.other.append(self.fig.ax.plot(ensembles,transect.boat_vel.bt_vel.smooth_upper_limit
-                                                           * self.units['V'], color='#d5dce6')[0])
+                self.other = self.fig.ax.plot(ensembles,
+                                              transect.boat_vel.bt_vel.smooth_lower_limit * self.units['V'],
+                                              color='#d5dce6')
+                self.other.append(self.fig.ax.plot(ensembles,
+                                                   transect.boat_vel.bt_vel.smooth_upper_limit * self.units['V'],
+                                                   color='#d5dce6')[0])
                 self.other.append(self.fig.ax.fill_between(ensembles,
                                                            transect.boat_vel.bt_vel.smooth_lower_limit
                                                            * self.units['V'],
@@ -138,6 +148,7 @@ class BTFilters(object):
             else:
                 self.other = self.fig.ax.plot(ensembles, speed * units['V'], 'r-')
 
+            self.fig.ax.set_ylabel(self.canvas.tr('Speed' + self.units['label_V']))
+        self.fig.ax.set_xlim(left=-1 * ensembles[-1] * 0.02, right=ensembles[-1] * 1.02)
+
         self.canvas.draw()
-
-

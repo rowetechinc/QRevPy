@@ -92,7 +92,7 @@ class BoatSpeed(object):
         self.fig.ax = self.fig.add_subplot(1, 1, 1)
 
         # Set margins and padding for figure
-        self.fig.subplots_adjust(left=0.1, bottom=0.2, right=0.98, top=0.98, wspace=0.1, hspace=0)
+        self.fig.subplots_adjust(left=0.08, bottom=0.2, right=0.98, top=0.98, wspace=0.1, hspace=0)
         self.fig.ax.set_xlabel(self.canvas.tr('Ensembles'))
         self.fig.ax.set_ylabel(self.canvas.tr('Boat speed' + units['label_V']))
         self.fig.ax.grid()
@@ -127,37 +127,66 @@ class BoatSpeed(object):
 
         # Based on checkbox control make bt visible or not
         if control['bt']:
-            for n in range(len(self.bt)):
-                self.bt[n].set_visible(True)
+            for item in self.bt:
+                item.set_visible(True)
         else:
-            for n in range(len(self.bt)):
-                self.bt[0].set_visible(False)
+            for item in self.bt:
+                item.set_visible(False)
 
         # Plot VTG boat speed
         if transect.boat_vel.vtg_vel is not None:
             speed = np.sqrt(
                 transect.boat_vel.vtg_vel.u_processed_mps ** 2 + transect.boat_vel.vtg_vel.v_processed_mps ** 2)
             self.vtg = self.fig.ax.plot(ensembles, speed * units['V'], 'g-')
+
+            # Plot invalid data points using a symbol to represent what caused the data to be invalid
+            if invalid_gps is not None:
+                self.vtg.append(self.fig.ax.plot(ensembles[invalid_gps[1]], speed[invalid_gps[1]] * units['V'],
+                                                'k', linestyle='', marker='$O$')[0])
+                self.vtg.append(self.fig.ax.plot(ensembles[invalid_gps[5]], speed[invalid_gps[5]] * units['V'],
+                                                'k', linestyle='', marker='$H$')[0])
+                self.vtg.append(self.fig.ax.plot(ensembles[invalid_gps[4]], speed[invalid_gps[4]] * units['V'],
+                                                'k', linestyle='', marker='$S$')[0])
+
             max_vtg = np.nanmax(speed)
             if control['vtg']:
-                self.vtg[0].set_visible(True)
+                for item in self.vtg:
+                    item.set_visible(True)
             else:
-                self.vtg[0].set_visible(False)
+                for item in self.vtg:
+                    item.set_visible(False)
 
         # Plot GGA boat speed
         if transect.boat_vel.gga_vel is not None:
             speed = np.sqrt(
                 transect.boat_vel.gga_vel.u_processed_mps ** 2 + transect.boat_vel.gga_vel.v_processed_mps ** 2)
             self.gga = self.fig.ax.plot(ensembles, speed * units['V'], 'b-')
+
+            # Plot invalid data points using a symbol to represent what caused the data to be invalid
+            if invalid_gps is not None:
+                self.gga.append(self.fig.ax.plot(ensembles[invalid_gps[1]], speed[invalid_gps[1]] * units['V'],
+                                                 'k', linestyle='', marker='$O$')[0])
+                self.gga.append(self.fig.ax.plot(ensembles[invalid_gps[2]], speed[invalid_gps[2]] * units['V'],
+                                                 'k', linestyle='', marker='$Q$')[0])
+                self.gga.append(self.fig.ax.plot(ensembles[invalid_gps[3]], speed[invalid_gps[3]] * units['V'],
+                                                 'k', linestyle='', marker='$A$')[0])
+                self.gga.append(self.fig.ax.plot(ensembles[invalid_gps[5]], speed[invalid_gps[5]] * units['V'],
+                                                 'k', linestyle='', marker='$H$')[0])
+                self.gga.append(self.fig.ax.plot(ensembles[invalid_gps[4]], speed[invalid_gps[4]] * units['V'],
+                                                'k', linestyle='', marker='$S$')[0])
+
             max_gga = np.nanmax(speed)
             if control['gga']:
-                self.gga[0].set_visible(True)
+                for item in self.gga:
+                    item.set_visible(True)
             else:
-                self.gga[0].set_visible(False)
+                for item in self.gga:
+                    item.set_visible(False)
 
         # Set axis limits
         max_y = np.nanmax([max_bt, max_gga, max_vtg]) * 1.1
-        self.fig.ax.set_ylim(top=np.ceil(max_y * units['L']), bottom=0)
+        self.fig.ax.set_ylim(top=np.ceil(max_y * units['L']), bottom=-0.5)
+        self.fig.ax.set_xlim(left=-1 * ensembles[-1] * 0.02, right=ensembles[-1] * 1.02)
 
         self.canvas.draw()
 

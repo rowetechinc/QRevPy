@@ -147,11 +147,11 @@ class Shiptrack(object):
 
         # Based on checkbox control make bt visible or not
         if control['bt']:
-            for n in range(len(self.bt)):
-                self.bt[n].set_visible(True)
+            for item in self.bt:
+                item.set_visible(True)
         else:
-            for n in range(len(self.bt)):
-                self.bt[0].set_visible(False)
+            for item in self.bt:
+                item.set_visible(False)
 
         # Plot shiptrack based on vtg, if available
         if transect.boat_vel.vtg_vel is not None:
@@ -160,13 +160,27 @@ class Shiptrack(object):
                                         ship_data_vtg['track_y_m'] * units['L'],
                                         color='g', label='VTG')
 
+            # Plot invalid data points using a symbol to represent what caused the data to be invalid
+            if invalid_gps is not None and not np.alltrue(np.isnan(ship_data_vtg['track_x_m'])):
+                self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][invalid_gps[1]] * units['L'],
+                                                 ship_data_vtg['track_y_m'][invalid_gps[1]] * units['L'],
+                                                 'k', linestyle='', marker='$O$')[0])
+                self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][invalid_gps[4]] * units['L'],
+                                                 ship_data_vtg['track_y_m'][invalid_gps[4]] * units['L'],
+                                                 'k', linestyle='', marker='$S$')[0])
+                self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][invalid_gps[5]] * units['L'],
+                                                 ship_data_vtg['track_y_m'][invalid_gps[5]] * units['L'],
+                                                 'k', linestyle='', marker='$H$')[0])
+
             if transect.boat_vel.selected == 'vtg_vel':
                 ship_data = ship_data_vtg
 
             if control['vtg']:
-                self.vtg[0].set_visible(True)
+                for item in self.vtg:
+                    item.set_visible(True)
             else:
-                self.vtg[0].set_visible(False)
+                for item in self.vtg:
+                    item.set_visible(False)
 
             max_x_vtg = np.nanmax(ship_data_vtg['track_x_m'])
             max_y_vtg = np.nanmax(ship_data_vtg['track_y_m'])
@@ -179,13 +193,34 @@ class Shiptrack(object):
             self.gga = self.fig.ax.plot(ship_data_gga['track_x_m'] * units['L'],
                                         ship_data_gga['track_y_m'] * units['L'],
                                         color='b', label='GGA')
+
+            # Plot invalid data points using a symbol to represent what caused the data to be invalid
+            if invalid_gps is not None and not np.alltrue(np.isnan(ship_data_gga['track_x_m'])):
+                self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[1]] * units['L'],
+                                                ship_data_gga['track_y_m'][invalid_gps[1]] * units['L'],
+                                                'k', linestyle='', marker='$O$')[0])
+                self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[2]] * units['L'],
+                                                ship_data_gga['track_y_m'][invalid_gps[2]] * units['L'],
+                                                'k', linestyle='', marker='$Q$')[0])
+                self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[3]] * units['L'],
+                                                ship_data_gga['track_y_m'][invalid_gps[3]] * units['L'],
+                                                'k', linestyle='', marker='$A$')[0])
+                self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[4]] * units['L'],
+                                                ship_data_gga['track_y_m'][invalid_gps[4]] * units['L'],
+                                                'k', linestyle='', marker='$S$')[0])
+                self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[5]] * units['L'],
+                                                ship_data_gga['track_y_m'][invalid_gps[5]] * units['L'],
+                                                'k', linestyle='', marker='$H$')[0])
+
             if transect.boat_vel.selected == 'gga_vel':
                 ship_data = ship_data_gga
 
             if control['gga']:
-                self.gga[0].set_visible(True)
+                for item in self.gga:
+                    item.set_visible(True)
             else:
-                self.gga[0].set_visible(False)
+                for item in self.gga:
+                    item.set_visible(False)
 
             max_x_gga = np.nanmax(ship_data_gga['track_x_m'])
             max_y_gga = np.nanmax(ship_data_gga['track_y_m'])
