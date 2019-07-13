@@ -653,7 +653,7 @@ class QAData(object):
                     self.moving_bed['code'] = 1
 
                     # Check if there is a moving-bed
-                    if any(mb):
+                    if 'Yes' in mb:
                         # Moving-bed present
                         self.moving_bed['messages'].append(
                             ['Moving-Bed Test: A moving-bed is present, use GPS or moving-bed correction;', 2, 6])
@@ -1115,7 +1115,7 @@ class QAData(object):
 
             # Generate message for all invalid
             if np.any(self.w_vel['all_invalid']):
-                self.w_vel['messages'].append(['WT-', prefix[0], 'There are no valid data for one or more transects.',
+                self.w_vel['messages'].append(['WT-' + prefix[0] + 'There are no valid data for one or more transects.',
                                                1, 11])
                 status_switch = 2
 
@@ -1338,7 +1338,7 @@ class QAData(object):
 
         n_runs = len(run_length0)
 
-        if valid[0] is True:
+        if valid[0] == True:
             n_start = 1
         else:
             n_start = 0

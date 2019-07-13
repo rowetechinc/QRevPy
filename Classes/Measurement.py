@@ -559,8 +559,6 @@ class Measurement(object):
                 self.discharge.append(q)
 
 
-
-
     @staticmethod
     def set_num_beam_wt_threshold_trdi(mmt_transect):
         """Get number of beams to use in processing for WT from mmt file
@@ -1450,10 +1448,11 @@ class Measurement(object):
 
                 # Get selected depth object
                 depth = getattr(transect.depths, transect.depths.selected)
-
+                depth_a = np.copy(depth.depth_processed_m)
+                depth_a[np.isnan(depth_a)] = 0
                 # Compute area of the moving-boat portion of the cross section using trapezoidal integration.
                 # This method is consistent with AreaComp but is different from QRev in Matlab
-                area_moving_boat = np.abs(np.trapz(depth.depth_processed_m[in_transect_idx], station[in_transect_idx]))
+                area_moving_boat = np.abs(np.trapz(depth_a[in_transect_idx], station[in_transect_idx]))
 
                 # Compute area of left edge
                 edge_idx = QComp.edge_ensembles('left', transect)

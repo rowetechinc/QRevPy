@@ -305,24 +305,28 @@ class TransectData(object):
 
             # Determine correct sign for latitude
             for n, lat_ref in enumerate(pd0_data.Gps2.lat_ref):
-                try:
-                    idx = [lat_ref.index('S')]
-                    if len(idx) > 0:
-                        raw_gga_lat[n, idx] = raw_gga_lat[n, idx] * -1
-                except ValueError:
-                    pass
+                idx = np.nonzero(np.array(lat_ref) == 'S')
+                raw_gga_lat[n, idx] = raw_gga_lat[n, idx] * -1
+                # try:
+                #     idx = [lat_ref.index('S')]
+                #     if len(idx) > 0:
+                #         raw_gga_lat[n, idx] = raw_gga_lat[n, idx] * -1
+                # except ValueError:
+                #     pass
             # idx = np.where(pd0_data.Gps2.lat_ref == 'S')[0]
             # if len(idx) > 0:
             #     raw_gga_lat[idx] = raw_gga_lat[idx] * -1
 
             # Determine correct sign for longitude
             for n, lon_ref in enumerate(pd0_data.Gps2.lon_ref):
-                try:
-                    idx = [lon_ref.index('W')]
-                    if len(idx) > 0:
-                        raw_gga_lon[n, idx] = raw_gga_lon[n, idx] * -1
-                except ValueError:
-                    pass
+                idx = np.nonzero(np.array(lon_ref) == 'W')
+                raw_gga_lon[n, idx] = raw_gga_lon[n, idx] * -1
+                # try:
+                #     idx = [lon_ref.index('W')]
+                #     if len(idx) > 0:
+                #         raw_gga_lon[n, idx] = raw_gga_lon[n, idx] * -1
+                # except ValueError:
+                #     pass
             # for sublist in data:
             #     if sublist[1] == 'W':
             #         print

@@ -982,19 +982,19 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Transect width
             col += 1
-            item = '{:10.2f}'.format(trans_prop['width'][transect_id])
+            item = '{:10.2f}'.format(trans_prop['width'][transect_id] * self.units['L'])
             tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(item))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
             # Transect area
             col += 1
-            item = '{:10.2f}'.format(trans_prop['area'][transect_id])
+            item = '{:10.2f}'.format(trans_prop['area'][transect_id] * self.units['A'])
             tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(item))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
             # Transect average boat speed
             col += 1
-            item = '{:6.2f}'.format(trans_prop['avg_boat_speed'][transect_id])
+            item = '{:6.2f}'.format(trans_prop['avg_boat_speed'][transect_id] * self.units['V'])
             tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(item))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -1006,7 +1006,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Transect average water speed
             col += 1
-            item = '{:6.2f}'.format(trans_prop['avg_water_speed'][transect_id])
+            item = '{:6.2f}'.format(trans_prop['avg_water_speed'][transect_id] * self.units['V'])
             tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(item))
             tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -1026,19 +1026,19 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Average width
         col += 1
-        item = '{:10.2f}'.format(trans_prop['width'][n_transects])
+        item = '{:10.2f}'.format(trans_prop['width'][n_transects] * self.units['L'])
         tbl.setItem(0, col, QtWidgets.QTableWidgetItem(item))
         tbl.item(0, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
         # Average area
         col += 1
-        item = '{:10.2f}'.format(trans_prop['area'][n_transects])
+        item = '{:10.2f}'.format(trans_prop['area'][n_transects] * self.units['A'])
         tbl.setItem(0, col, QtWidgets.QTableWidgetItem(item))
         tbl.item(0, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
         # Average boat speed
         col += 1
-        item = '{:6.2f}'.format(trans_prop['avg_boat_speed'][n_transects])
+        item = '{:6.2f}'.format(trans_prop['avg_boat_speed'][n_transects] * self.units['V'])
         tbl.setItem(0, col, QtWidgets.QTableWidgetItem(item))
         tbl.item(0, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -1047,7 +1047,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Average water speed
         col += 1
-        item = '{:6.2f}'.format(trans_prop['avg_water_speed'][n_transects])
+        item = '{:6.2f}'.format(trans_prop['avg_water_speed'][n_transects] * self.units['V'])
         tbl.setItem(0, col, QtWidgets.QTableWidgetItem(item))
         tbl.item(0, col).setFlags(QtCore.Qt.ItemIsEnabled)
 

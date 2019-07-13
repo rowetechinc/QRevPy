@@ -343,26 +343,28 @@ def abba_idw_interpolation(data_list, valid_data, cells_above_sl, y_centers, y_c
     # Initialize output list
     interpolated_data = [[] for _ in range(len(data_list))]
 
-    # Find neighbors associated with each target
-    interpolation_points = find_neighbors(valid_data=valid_data,
-                                          cells_above_sl=cells_above_sl,
-                                          y_cell_centers=y_centers,
-                                          y_cell_size=y_cell_size,
-                                          y_normalize=y_normalize)
+    valid_cells = np.flatnonzero(valid_data[0, :])
+    if len(valid_cells) > 0:
+        # Find neighbors associated with each target
+        interpolation_points = find_neighbors(valid_data=valid_data,
+                                              cells_above_sl=cells_above_sl,
+                                              y_cell_centers=y_centers,
+                                              y_cell_size=y_cell_size,
+                                              y_normalize=y_normalize)
 
-    # Process each target
-    for point in interpolation_points:
-        # Compute distance from target to neighbors
-        distances = compute_distances(target=point['target'],
-                                      neighbors=point['neighbors'],
-                                      x=x_shiptrack,
-                                      y=y_centers)
+        # Process each target
+        for point in interpolation_points:
+            # Compute distance from target to neighbors
+            distances = compute_distances(target=point['target'],
+                                          neighbors=point['neighbors'],
+                                          x=x_shiptrack,
+                                          y=y_centers)
 
-        # Interpolate target for each data set in data_list
-        for n, data in enumerate(data_list):
-            interpolated_value = idw_interpolation(data=data,
-                                                   neighbor_indices=point['neighbors'],
-                                                   distances=distances)
-            interpolated_data[n].append([point['target'], interpolated_value])
+            # Interpolate target for each data set in data_list
+            for n, data in enumerate(data_list):
+                interpolated_value = idw_interpolation(data=data,
+                                                       neighbor_indices=point['neighbors'],
+                                                       distances=distances)
+                interpolated_data[n].append([point['target'], interpolated_value])
 
     return interpolated_data

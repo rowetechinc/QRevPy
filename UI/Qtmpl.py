@@ -355,21 +355,22 @@ class Qtmpl(FigureCanvas):
         # Set margins and padding for figure
         self.fig.subplots_adjust(left=0.2, bottom=0.15, right=0.98, top=0.98, wspace=0.1, hspace=0)
 
-        # Plot median values with error bars
-        self.extrap_plot_med(meas.extrap_fit.norm_data[-1])
+        if np.any(np.isnan(meas.extrap_fit.norm_data[-1].unit_normalized) == False):
+            # Plot median values with error bars
+            self.extrap_plot_med(meas.extrap_fit.norm_data[-1])
 
-        # Plot selected and automatic fits
-        self.extrap_plot_fit(meas.extrap_fit.sel_fit[-1])
+            # Plot selected and automatic fits
+            self.extrap_plot_fit(meas.extrap_fit.sel_fit[-1])
 
-        # Customize axis
-        self.fig.ax.set_xlabel(self.tr('Normalized Unit Q '))
-        self.fig.ax.set_ylabel(self.tr('Normalized Z '))
-        self.fig.ax.xaxis.label.set_fontsize(10)
-        self.fig.ax.yaxis.label.set_fontsize(10)
-        self.fig.ax.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
-        self.fig.ax.grid()
-        for label in (self.fig.ax.get_xticklabels() + self.fig.ax.get_yticklabels()):
-            label.set_fontsize(10)
+            # Customize axis
+            self.fig.ax.set_xlabel(self.tr('Normalized Unit Q '))
+            self.fig.ax.set_ylabel(self.tr('Normalized Z '))
+            self.fig.ax.xaxis.label.set_fontsize(10)
+            self.fig.ax.yaxis.label.set_fontsize(10)
+            self.fig.ax.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+            self.fig.ax.grid()
+            for label in (self.fig.ax.get_xticklabels() + self.fig.ax.get_yticklabels()):
+                label.set_fontsize(10)
     #
     def extrap_plot_med(self, norm_data):
         """Plots median values and associated error bars.
