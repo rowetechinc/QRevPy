@@ -26,6 +26,8 @@ from UI.TempSource import TempSource
 from UI.Salinity import Salinity
 from UI.ShipTrack import Shiptrack
 from UI.BoatSpeed import BoatSpeed
+from UI.BeamDepths import BeamDepths
+from UI.CrossSection import CrossSection
 from UI.StationaryGraphs import StationaryGraphs
 from UI.BTFilters import BTFilters
 from UI.GPSFilters import GPSFilters
@@ -50,6 +52,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.settingsFile = 'QRev_Settings'
         self.units = units_conversion(units_id='English')
         self.save_all = True
+        self.save_stylesheet = False
         self.change = False
         self.current_tab = 0
         # self.settings = SSet(self.settingsFile)
@@ -277,6 +280,23 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 """
         # Intialize options dialog
         self.options = Options(self)
+
+        # Set dialog to current settings
+        if self.units['ID'] == 'SI':
+            self.options.rb_si.setChecked(True)
+        else:
+            self.options.rb_english.setChecked(True)
+
+        if self.save_all:
+            self.options.rb_All.setChecked(True)
+        else:
+            self.options.rb_checked.setChecked(True)
+
+        if self.save_stylesheet:
+            self.options.cb_stylesheet.setChecked(True)
+        else:
+            self.options.cb_stylesheet.setChecked(False)
+
         selected_options = self.options.exec_()
         with self.wait_cursor():
             if self.options.rb_english.isChecked():
@@ -4052,6 +4072,583 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_gps_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_gps_messages.textCursor().insertBlock()
 
+# Depth tab
+# =======
+    def depth_tab(self):
+        """Initialize, setup settings, and display initial data in depth tab.
+        """
+
+        # Setup data table
+        tbl = self.table_depth
+        self.idx = 0
+        table_header = [self.tr('Filename'),
+                        self.tr('Draft \n' + self.units['label_L']),
+                        self.tr('Number or \n Ensembles'),
+                        self.tr('Beam 1 \n % Invalid'),
+                        self.tr('Beam 2 \n % Invalid'),
+                        self.tr('Beam 3 \n % Invalid'),
+                        self.tr('Beam 4 \n % Invalid'),
+                        self.tr('Vertical \n % Invalid'),
+                        self.tr('Depth Sounder \n % Invalid'),
+                        self.tr('Discharge \n Previous \n' + self.units['label_Q']),
+                        self.tr('Discharge \n Now \n' + self.units['label_Q']),
+                        self.tr('Discharge \n % Change')]
+        ncols = len(table_header)
+        nrows = len(self.checked_transects_idx)
+        tbl.setRowCount(nrows)
+        tbl.setColumnCount(ncols)
+        tbl.setHorizontalHeaderLabels(table_header)
+        tbl.horizontalHeader().setFont(self.font_bold)
+        tbl.verticalHeader().hide()
+        tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        tbl.cellClicked.connect(self.depth_table_clicked)
+
+        # Automatically resize rows and columns
+        tbl.resizeColumnsToContents()
+        tbl.resizeRowsToContents()
+
+        # Initialize checkbox settings top plot and build depth ref combobox options
+        self.cb_depth_beam1.setCheckState(QtCore.Qt.Checked)
+        self.cb_depth_beam2.setCheckState(QtCore.Qt.Checked)
+        self.cb_depth_beam3.setCheckState(QtCore.Qt.Checked)
+        self.cb_depth_beam4.setCheckState(QtCore.Qt.Checked)
+        depth_ref_options = ['4-Beam Avg']
+        if self.meas.transects[self.checked_transects_idx[0]].depths.vb_depths is not None:
+            self.cb_depth_vert.setCheckState(QtCore.Qt.Checked)
+            depth_ref_options.append('Comp 4-Beam Preferred')
+            depth_ref_options.append('Vertical')
+            depth_ref_options.append('Comp Vertical Preferred')
+        else:
+            self.cb_depth_vert.setEnabled(False)
+            self.cb_depth_vert_cs.setEnabled(False)
+        if self.meas.transects[self.checked_transects_idx[0]].depths.ds_depths is not None:
+            self.cb_depth_ds.setCheckState(QtCore.Qt.Checked)
+            depth_ref_options.append('Depth Sounder')
+            depth_ref_options.append('Comp DS Preferred')
+        else:
+            self.cb_depth_ds.setEnabled(False)
+            self.cb_depth_ds_cs.setEnabled(False)
+
+        # Initialize checkbox settings bottom plot
+        self.cb_depth_4beam_cs.setCheckState(QtCore.Qt.Unchecked)
+        self.cb_depth_final_cs.setCheckState(QtCore.Qt.Checked)
+        self.cb_depth_vert_cs.setCheckState(QtCore.Qt.Unchecked)
+        self.cb_depth_ds_cs.setCheckState(QtCore.Qt.Unchecked)
+
+        # Connect top plot variable checkboxes
+        self.cb_depth_beam1.stateChanged.connect(self.depth_top_plot_change)
+        self.cb_depth_beam2.stateChanged.connect(self.depth_top_plot_change)
+        self.cb_depth_beam3.stateChanged.connect(self.depth_top_plot_change)
+        self.cb_depth_beam4.stateChanged.connect(self.depth_top_plot_change)
+        self.cb_depth_vert.stateChanged.connect(self.depth_top_plot_change)
+        self.cb_depth_ds.stateChanged.connect(self.depth_top_plot_change)
+
+        # Connect bottom plot variable checkboxes
+        self.cb_depth_4beam_cs.stateChanged.connect(self.depth_bottom_plot_change)
+        self.cb_depth_final_cs.stateChanged.connect(self.depth_bottom_plot_change)
+        self.cb_depth_vert_cs.stateChanged.connect(self.depth_bottom_plot_change)
+        self.cb_depth_ds_cs.stateChanged.connect(self.depth_bottom_plot_change)
+
+        # Connect options
+        self.combo_depth_ref.addItems(depth_ref_options)
+        self.combo_depth_ref.currentIndexChanged[str].connect(self.change_ref)
+        self.combo_depth_avg.currentIndexChanged[str].connect(self.change_avg_method)
+        self.combo_depth_filter.currentIndexChanged[str].connect(self.change_filter)
+
+        # Transect selected for display
+        self.transect = self.meas.transects[self.checked_transects_idx[0]]
+        depth_ref_selected = self.transect.depths.selected
+        depth_composite = self.transect.depths.selected
+
+        # Set depth reference
+        if depth_ref_selected == 'bt_depths':
+            if depth_composite == 'On':
+                self.combo_depth_ref.setCurrentIndex(1)
+            else:
+                self.combo_depth_ref.setCurrentIndex(0)
+        elif depth_ref_selected == 'vb_depths':
+            if depth_composite == 'On':
+                self.combo_depth_ref.setCurrentIndex(3)
+            else:
+                self.combo_depth_ref.setCurrentIndex(2)
+        elif depth_ref_selected == 'ds_depths':
+            if depth_composite == 'On':
+                self.combo_depth_ref.setCurrentIndex(5)
+            else:
+                self.combo_depth_ref.setCurrentIndex(4)
+
+        # Set depth average method
+        depths_selected = getattr(self.meas.transects[self.checked_transects_idx[0]].depths, depth_ref_selected)
+        if depths_selected.avg_method == 'IDW':
+            self.combo_depth_avg.setCurrentIndex(0)
+        else:
+            self.combo_depth_avg.setCurrentIndex(1)
+
+        # Set depth filter method
+        if depths_selected.filter_type == 'Smooth':
+            self.combo_depth_filter.setCurrentIndex(1)
+        elif depths_selected.filter_type == 'TRDI':
+            self.combo_depth_filter.setCurrentIndex(2)
+        else:
+            self.combo_depth_filter.setCurrentIndex(0)
+
+        # Display content
+        self.update_depth_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
+        self.depth_plots()
+        self.depth_comments_messages()
+
+    def update_depth_table(self, old_discharge, new_discharge):
+        """Updates the depth table with new or reprocessed data.
+
+        Parameters
+        ----------
+        old_discharge: list
+            List of objects of QComp with previous settings
+        new_discharge: list
+            List of objects of QComp with new settings
+        """
+
+        with self.wait_cursor():
+            # Set tbl variable
+            tbl = self.table_depth
+
+            # Populate each row
+            for row in range(tbl.rowCount()):
+                # Identify transect associated with the row
+                transect_id = self.checked_transects_idx[row]
+                transect = self.meas.transects[transect_id]
+                valid_beam_data = transect.depths.bt_depths.valid_beams
+                if transect.depths.vb_depths is not None:
+                    valid_vert_beam = transect.depths.vb_depths.valid_beams
+                else:
+                    valid_vert_beam = None
+                if transect.depths.ds_depths is not None:
+                    valid_ds_beam = transect.depths.ds_depths.valid_beams
+                else:
+                    valid_ds_beam = None
+
+                num_ensembles = len(valid_beam_data[0,:])
+
+                # File/transect name
+                col = 0
+                item = QtWidgets.QTableWidgetItem(transect.file_name[:-4])
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                col += 1
+                item = '{:5.2f}'.format(transect.depths.bt_depths.draft_use_m)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Total number of ensembles
+                col += 1
+                item = '{:5d}'.format(num_ensembles)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent of invalid depths in beam 1
+                col += 1
+                item = '{:3.2f}'.format(((num_ensembles - np.nansum(valid_beam_data[0, :])) / num_ensembles) * 100.)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent of invalid depths in beam 2
+                col += 1
+                item = '{:3.2f}'.format(((num_ensembles - np.nansum(valid_beam_data[1, :])) / num_ensembles) * 100.)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent of invalid depths in beam 3
+                col += 1
+                item = '{:3.2f}'.format(((num_ensembles - np.nansum(valid_beam_data[2, :])) / num_ensembles) * 100.)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent of invalid depths in beam 4
+                col += 1
+                item = '{:3.2f}'.format(((num_ensembles - np.nansum(valid_beam_data[3, :])) / num_ensembles) * 100.)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent of invalid depths in vertical beam
+                col += 1
+                if valid_vert_beam is not None:
+                    item = '{:3.2f}'.format(((num_ensembles - np.nansum(valid_vert_beam)) / num_ensembles) * 100.)
+                else:
+                    item = 'N/A'
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent of invalid depths in depth sounder
+                col += 1
+                if valid_ds_beam is not None:
+                    item = '{:3.2f}'.format(((num_ensembles - np.nansum(valid_ds_beam)) / num_ensembles) * 100.)
+                else:
+                    item = 'N/A'
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Discharge before changes
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:8.1f}'.format(old_discharge[transect_id].total * self.units['Q'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Discharge after changes
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:8.1f}'.format(new_discharge[transect_id].total * self.units['Q'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent change in discharge
+                col += 1
+                per_change = ((new_discharge[transect_id].total - old_discharge[transect_id].total)
+                              / old_discharge[transect_id].total) * 100
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(per_change)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                tbl.item(row, 0).setFont(self.font_normal)
+
+            # Set selected file to bold font
+            tbl.item(self.idx, 0).setFont(self.font_bold)
+
+            tbl.resizeColumnsToContents()
+            tbl.resizeRowsToContents()
+
+    def depth_plots(self):
+        """Creates graphics for depth tab.
+
+        Parameters
+        ----------
+        idx: int
+            Index of the test to be plotted.
+        """
+
+        with self.wait_cursor():
+            # Set all filenames to normal font
+            nrows = len(self.checked_transects_idx)
+
+            # Determine transect selected
+            transect_id = self.checked_transects_idx[self.idx]
+            self.transect = self.meas.transects[transect_id]
+
+            for row in range(nrows):
+                self.table_depth.item(row, 0).setFont(self.font_normal)
+
+            # Set selected file to bold font
+            self.table_depth.item(self.idx, 0).setFont(self.font_bold)
+
+            # Update plots
+            self.depth_top_plot()
+            self.depth_bottom_plot()
+
+    def depth_top_plot(self):
+        """Creates top plot containing individual beam depths.
+        """
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'depth_top_canvas'):
+            # Create the canvas
+            self.depth_top_canvas = MplCanvas(parent=self.graph_depth_beams, width=8, height=2, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_depth_beams)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.depth_top_canvas)
+
+        # Initialize the top figure and assign to the canvas
+        self.depth_top_fig = BeamDepths(canvas=self.depth_top_canvas)
+        # Create the figure with the specified data
+        self.depth_top_fig.create(transect=self.transect,
+                                  units=self.units,
+                                  cb_beam1=self.cb_depth_beam1,
+                                  cb_beam2=self.cb_depth_beam2,
+                                  cb_beam3=self.cb_depth_beam3,
+                                  cb_beam4=self.cb_depth_beam4,
+                                  cb_vert=self.cb_depth_vert,
+                                  cb_ds=self.cb_depth_ds)
+
+        # Draw canvas
+        self.depth_top_canvas.draw()
+
+    def depth_bottom_plot(self):
+        """Creates bottom plot containing average cross section.
+        """
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'depth_bottom_canvas'):
+            # Create the canvas
+            self.depth_bottom_canvas = MplCanvas(parent=self.graph_depth_cs, width=8, height=2, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_depth_cs)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.depth_bottom_canvas)
+
+        # Initialize the bottom figure and assign to the canvas
+        self.depth_bottom_fig = CrossSection(canvas=self.depth_bottom_canvas)
+        # Create the figure with the specified data
+        self.depth_bottom_fig.create(transect=self.transect,
+                                  units=self.units,
+                                  cb_beam_cs=self.cb_depth_4beam_cs,
+                                  cb_vert_cs=self.cb_depth_vert_cs,
+                                  cb_ds_cs=self.cb_depth_ds_cs,
+                                  cb_final_cs=self.cb_depth_final_cs)
+
+        # Draw canvas
+        self.depth_bottom_canvas.draw()
+
+    def depth_table_clicked(self, row, column):
+        """Changes plotted data to the transect of the transect clicked.
+
+        Parameters
+        ----------
+        row: int
+            Row clicked by user
+        column: int
+            Column clicked by user
+        """
+
+        if column == 0:
+            self.idx = row
+            self.depth_plots()
+
+    def update_depth_tab(self, s):
+        """Updates the measurement and bottom track tab (table and graphics) after a change to settings has been made.
+
+        Parameters
+        ----------
+        s: dict
+            Dictionary of all process settings for the measurement
+        """
+
+        # Save discharge from previous settings
+        old_discharge = copy.deepcopy(self.meas.discharge)
+
+        # Apply new settings
+        self.meas.apply_settings(settings=s)
+
+        # Update table
+        self.update_depth_table(old_discharge=old_discharge, new_discharge=self.meas.discharge)
+
+        # Update plots
+        self.depth_plots()
+
+    @QtCore.Slot()
+    def depth_top_plot_change(self):
+        """Coordinates changes in user selected data to be displayed in the top plot.
+        """
+        with self.wait_cursor():
+            self.depth_top_fig.change()
+            self.depth_top_canvas.draw()
+
+    @QtCore.Slot()
+    def depth_bottom_plot_change(self):
+        """Coordinates changes in user selected data to be displayed in the bottom plot.
+        """
+        with self.wait_cursor():
+            self.depth_bottom_fig.change()
+            self.depth_bottom_canvas.draw()
+
+    @QtCore.Slot(str)
+    def change_ref(self, text):
+        """Coordinates user initiated change to the beam settings.
+
+        Parameters
+        ----------
+        text: str
+            User selection from combo box
+        """
+
+        with self.wait_cursor():
+            # Get current settings
+            s = self.meas.current_settings()
+
+            # Change settings based on combo box selection
+            if text == '4-Beam Avg':
+                s['depthReference'] = 'bt_depths'
+                s['depthComposite'] = 'Off'
+            elif text == 'Comp 4-Beam Preferred':
+                s['depthReference'] = 'bt_depths'
+                s['depthComposite'] = 'On'
+            elif text == 'Vertical':
+                s['depthReference'] = 'vb_depths'
+                s['depthComposite'] = 'Off'
+            elif text == 'Comp Vertical Preferred':
+                s['depthReference'] = 'vb_depths'
+                s['depthComposite'] = 'On'
+            elif text == 'Depth Sounder':
+                s['depthReference'] = 'ds_depths'
+                s['depthComposite'] = 'Off'
+            elif text == 'Comp DS Preferred':
+                s['depthReference'] = 'ds_depths'
+                s['depthComposite'] = 'On'
+
+            # Update measurement and display
+            self.update_depth_tab(s)
+
+    @QtCore.Slot(str)
+    def change_filter(self, text):
+        """Coordinates user initiated change to the beam settings.
+
+    Parameters
+    ----------
+    text: str
+        User selection from combo box
+    """
+
+        with self.wait_cursor():
+            # Get current settings
+            s = self.meas.current_settings()
+            s['depthFilterType'] = text
+
+            # Update measurement and display
+            self.update_depth_tab(s)
+
+    @QtCore.Slot(str)
+    def change_avg_method(self, text):
+        """Coordinates user initiated change to the beam settings.
+
+    Parameters
+    ----------
+    text: str
+        User selection from combo box
+    """
+
+        with self.wait_cursor():
+            # Get current settings
+            s = self.meas.current_settings()
+            s['depthAvgMethod'] = text
+
+            # Update measurement and display
+            self.update_depth_tab(s)
+
+    def depth_comments_messages(self):
+        """Displays comments and messages associated with bottom track filters in Messages tab.
+        """
+
+        # Clear comments and messages
+        self.display_depth_comments.clear()
+        self.display_depth_messages.clear()
+
+        if hasattr(self, 'meas'):
+            # Display each comment on a new line
+            self.display_depth_comments.moveCursor(QtGui.QTextCursor.Start)
+            for comment in self.meas.comments:
+                self.display_depth_comments.textCursor().insertText(comment)
+                self.display_depth_comments.moveCursor(QtGui.QTextCursor.End)
+                self.display_depth_comments.textCursor().insertBlock()
+
+            # Display each message on a new line
+            self.display_depth_messages.moveCursor(QtGui.QTextCursor.Start)
+            for message in self.meas.qa.depths['messages']:
+                self.display_depth_messages.textCursor().insertText(message[0])
+                self.display_depth_messages.moveCursor(QtGui.QTextCursor.End)
+                self.display_depth_messages.textCursor().insertBlock()
+
+# WT tab
+# ======
+    def wt_tab(self):
+        """Initialize, setup settings, and display initial data in bottom track tab.
+        """
+
+        # Setup data table
+        tbl = self.table_wt
+        table_header = [self.tr('Filename'),
+                        self.tr('Number of \n Depth Cells'),
+                        self.tr('Beam \n % <4'),
+                        self.tr('Total \n % Invalid'),
+                        self.tr('Orig Data \n % Invalid'),
+                        self.tr('<4 Beam \n % Invalid'),
+                        self.tr('Error Vel \n % Invalid'),
+                        self.tr('Vert Vel \n % Invalid'),
+                        self.tr('Other \n % Invalid'),
+                        self.tr('SNR \n % Invalid'),
+                        self.tr('Discharge \n Previous \n' + self.units['label_Q']),
+                        self.tr('Discharge \n Now \n' + self.units['label_Q']),
+                        self.tr('Discharge \n % Change')]
+        ncols = len(table_header)
+        nrows = len(self.checked_transects_idx)
+        tbl.setRowCount(nrows)
+        tbl.setColumnCount(ncols)
+        tbl.setHorizontalHeaderLabels(table_header)
+        tbl.horizontalHeader().setFont(self.font_bold)
+        tbl.verticalHeader().hide()
+        tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        tbl.cellClicked.connect(self.wt_table_clicked)
+
+        # Automatically resize rows and columns
+        tbl.resizeColumnsToContents()
+        tbl.resizeRowsToContents()
+
+        # Initialize checkbox settings for boat reference
+        self.cb_wt_bt.setCheckState(QtCore.Qt.Checked)
+        self.cb_wt_gga.setCheckState(QtCore.Qt.Unchecked)
+        self.cb_wt_vtg.setCheckState(QtCore.Qt.Unchecked)
+        selected = self.meas.transects[self.checked_transects_idx[0]].boat_vel.selected
+        if selected == 'gga_vel':
+            self.cb_wt_gga.setCheckState(QtCore.Qt.Checked)
+        elif selected == 'vtg_vel':
+            self.cb_wt_vtg.setCheckState(QtCore.Qt.Checked)
+
+        self.cb_wt_vectors.setCheckState(QtCore.Qt.Checked)
+
+        # Connect plot variable checkboxes
+        self.cb_wt_bt.stateChanged.connect(self.wt_plot_change)
+        self.cb_wt_gga.stateChanged.connect(self.wt_plot_change)
+        self.cb_wt_vtg.stateChanged.connect(self.wt_plot_change)
+        self.cb_wt_vectors.stateChanged.connect(self.wt_plot_change)
+
+        # Connect radio buttons
+        self.rb_wt_beam.toggled.connect(self.wt_radiobutton_control)
+        self.rb_wt_error.toggled.connect(self.wt_radiobutton_control)
+        self.rb_wt_vert.toggled.connect(self.wt_radiobutton_control)
+        self.rb_wt_snr.toggled.connect(self.wt_radiobutton_control)
+        self.rb_wt_speed.toggled.connect(self.wt_radiobutton_control)
+
+        # Connect manual entry
+        self.ed_wt_error_vel_threshold.editingFinished.connect(self.change_error_vel_threshold)
+        self.ed_wt_vert_vel_threshold.editingFinished.connect(self.change_vert_vel_threshold)
+
+        # Connect filters
+        self.combo_wt_3beam.currentIndexChanged[str].connect(self.change_wt_beam)
+        self.combo_wt_error_velocity.currentIndexChanged[str].connect(self.change_wt_error)
+        self.combo_wt_vert_velocity.currentIndexChanged[str].connect(self.change_wt_vertical)
+        self.combo_wt_other.currentIndexChanged[str].connect(self.change_wt_other)
+
+        # Transect selected for display
+        self.transect = self.meas.transects[self.checked_transects_idx[0]]
+
+        # Set beam filter from transect data
+        if self.transect.wt_vel.beam_filter < 0:
+            self.combo_wt_3beam.setCurrentIndex(0)
+        elif self.transect.wt_vel.beam_filter == 3:
+            self.combo_wt_3beam.setCurrentIndex(1)
+        elif self.transect.wt_vel.beam_filter == 4:
+            self.combo_wt_3beam.setCurrentIndex(2)
+        else:
+            self.combo_wt_3beam.setCurrentIndex(0)
+
+        # Set error velocity filter from transect data
+        index = self.combo_wt_error_velocity.findText(self.transect.wt_vel.d_filter, QtCore.Qt.MatchFixedString)
+        self.combo_wt_error_velocity.setCurrentIndex(index)
+
+        # Set vertical velocity filter from transect data
+        index = self.combo_wt_vert_velocity.findText(self.transect.wt_vel.w_filter, QtCore.Qt.MatchFixedString)
+        self.combo_wt_vert_velocity.setCurrentIndex(index)
+
+        # Set smooth filter from transect data
+        if self.transect.wt_vel.smooth_filter == 'Off':
+            self.combo_wt_other.setCurrentIndex(0)
+        elif self.transect.wt_vel.smooth_filter == 'On':
+            self.combo_wt_other.setCurrentIndex(1)
+
+        # Display content
+        self.idx = 0
+        self.update_wt_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
+        self.wt_plots()
+        self.wt_comments_messages()
+
 # Split functions
 # ==============
     def split_initialization(self, groupings=None, data=None):
@@ -4185,7 +4782,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Bottom track filters
             self.bt_tab()
         elif tab_idx == 6:
+            # GPS filters
             self.gps_tab()
+        elif tab_idx == 7:
+            # Depth filters
+            self.depth_tab()
 
     def config_gui(self):
 
@@ -4212,7 +4813,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Configure tabs for the presence or absence of a compass
         if np.any(self.checked_transects_idx):
-            heading = np.unique(self.meas.transects[self.checked_transects_idx.index(1)].sensors.heading_deg.internal.data)
+            heading = np.unique(self.meas.transects[self.checked_transects_idx[0]].sensors.heading_deg.internal.data)
         else:
             heading = np.array([0])
 

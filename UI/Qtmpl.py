@@ -476,7 +476,7 @@ class Qtmpl(FigureCanvas):
                     # Plot ADCP heading
                     heading = np.copy(meas.transects[checked[row]].sensors.heading_deg.internal.data)
                     if meas.transects[checked[row]].start_edge == 'Right':
-                        np.flip(heading)
+                        heading = np.flip(heading)
                     self.fig.axh.plot(heading, 'r-')
 
                 if qrev.cb_ext_compass.isChecked():
