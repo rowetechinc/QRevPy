@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1202</width>
-    <height>775</height>
+    <width>1259</width>
+    <height>681</height>
    </rect>
   </property>
   <property name="palette">
@@ -1690,7 +1690,7 @@
            <enum>QTabWidget::Triangular</enum>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab_bt_2_data">
            <attribute name="title">
@@ -3653,7 +3653,7 @@
               <item>
                <layout class="QHBoxLayout" name="horizontalLayout_42" stretch="6,3,1">
                 <item>
-                 <layout class="QVBoxLayout" name="verticalLayout_49" stretch="4,3">
+                 <layout class="QVBoxLayout" name="verticalLayout_49" stretch="5,4">
                   <item>
                    <widget class="QGroupBox" name="gb_wt_radio">
                     <property name="title">
@@ -3670,7 +3670,7 @@
                           </font>
                          </property>
                          <property name="text">
-                          <string> Contour with Invalid</string>
+                          <string> Contour No Interp</string>
                          </property>
                          <property name="checked">
                           <bool>true</bool>
@@ -3685,7 +3685,7 @@
                           </font>
                          </property>
                          <property name="text">
-                          <string>3 Beam Solutions</string>
+                          <string>Beams Used</string>
                          </property>
                          <property name="checked">
                           <bool>false</bool>
@@ -3700,7 +3700,7 @@
                           </font>
                          </property>
                          <property name="text">
-                          <string>Error Velocity</string>
+                          <string>Error Vel.</string>
                          </property>
                         </widget>
                        </item>
@@ -3724,7 +3724,7 @@
                           </font>
                          </property>
                          <property name="text">
-                          <string>Vertical Velocity</string>
+                          <string>Vertical Vel.</string>
                          </property>
                         </widget>
                        </item>
@@ -3995,7 +3995,7 @@
                   <property name="title">
                    <string>Filters</string>
                   </property>
-                  <layout class="QVBoxLayout" name="verticalLayout_52" stretch="0,0,0,0">
+                  <layout class="QVBoxLayout" name="verticalLayout_52" stretch="0,0,0,0,0,0">
                    <item>
                     <widget class="QGroupBox" name="gb_wt_excluded">
                      <property name="font">
@@ -4036,7 +4036,7 @@
                         <item>
                          <widget class="QLineEdit" name="ed_wt_excluded_dist">
                           <property name="enabled">
-                           <bool>false</bool>
+                           <bool>true</bool>
                           </property>
                          </widget>
                         </item>
@@ -4218,6 +4218,48 @@
                      </layout>
                     </widget>
                    </item>
+                   <item>
+                    <widget class="QGroupBox" name="gb_snr">
+                     <property name="font">
+                      <font>
+                       <weight>50</weight>
+                       <bold>false</bold>
+                      </font>
+                     </property>
+                     <property name="title">
+                      <string>SNR</string>
+                     </property>
+                     <layout class="QVBoxLayout" name="verticalLayout_59">
+                      <item>
+                       <widget class="QComboBox" name="combo_wt_snr">
+                        <item>
+                         <property name="text">
+                          <string>Auto</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Off</string>
+                         </property>
+                        </item>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="verticalSpacer_6">
+                     <property name="orientation">
+                      <enum>Qt::Vertical</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>20</width>
+                       <height>40</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
                   </layout>
                  </widget>
                 </item>
@@ -4292,499 +4334,709 @@
        <attribute name="title">
         <string>Extrap</string>
        </attribute>
-       <widget class="QTabWidget" name="tab_extrap_2">
-        <property name="geometry">
-         <rect>
-          <x>0</x>
-          <y>0</y>
-          <width>1231</width>
-          <height>601</height>
-         </rect>
-        </property>
-        <property name="tabShape">
-         <enum>QTabWidget::Triangular</enum>
-        </property>
-        <property name="currentIndex">
-         <number>0</number>
-        </property>
-        <widget class="QWidget" name="tab_extrap_2_data">
-         <attribute name="title">
-          <string>Data</string>
-         </attribute>
-         <widget class="QGroupBox" name="groupBox">
-          <property name="geometry">
-           <rect>
-            <x>20</x>
-            <y>30</y>
-            <width>191</width>
-            <height>521</height>
-           </rect>
+       <layout class="QGridLayout" name="gridLayout_34">
+        <item row="0" column="0">
+         <widget class="QTabWidget" name="tab_extrap_2">
+          <property name="tabShape">
+           <enum>QTabWidget::Triangular</enum>
           </property>
-          <property name="title">
-           <string>GroupBox</string>
+          <property name="currentIndex">
+           <number>0</number>
           </property>
-          <widget class="QTableWidget" name="tableWidget">
-           <property name="geometry">
-            <rect>
-             <x>-10</x>
-             <y>30</y>
-             <width>256</width>
-             <height>192</height>
-            </rect>
-           </property>
+          <widget class="QWidget" name="tab_extrap_2_data">
+           <attribute name="title">
+            <string>Data</string>
+           </attribute>
+           <layout class="QHBoxLayout" name="horizontalLayout_58" stretch="1,2,1,1">
+            <item>
+             <widget class="QGroupBox" name="gp_data">
+              <property name="title">
+               <string>Data</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_44">
+               <item>
+                <widget class="QTableWidget" name="tableWidget"/>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_41">
+                 <item>
+                  <spacer name="horizontalSpacer_10">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="pb_extrap_threshold">
+                   <property name="text">
+                    <string>Threshold</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_11">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_54">
+                 <item>
+                  <spacer name="horizontalSpacer_12">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="pb_subsection">
+                   <property name="text">
+                    <string>Subsection</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_13">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_55">
+                 <item>
+                  <spacer name="horizontalSpacer_14">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="combo_extrap_type">
+                   <item>
+                    <property name="text">
+                     <string>Discharge</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Velocity</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_15">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_profile">
+              <property name="title">
+               <string>Profile</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_57" stretch="10,2,1">
+               <item>
+                <widget class="QWidget" name="widget" native="true"/>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_56">
+                 <item>
+                  <widget class="QGroupBox" name="gb_depth_cell">
+                   <property name="title">
+                    <string>Depth Cell</string>
+                   </property>
+                   <layout class="QVBoxLayout" name="verticalLayout_45">
+                    <item>
+                     <widget class="QCheckBox" name="cb_extrap_data">
+                      <property name="text">
+                       <string>Data</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QCheckBox" name="cb_extrap_surface">
+                      <property name="text">
+                       <string>Surface Cells</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QGroupBox" name="gb_transects">
+                   <property name="title">
+                    <string>Transects</string>
+                   </property>
+                   <layout class="QVBoxLayout" name="verticalLayout_46">
+                    <item>
+                     <widget class="QCheckBox" name="cb_extrap_trans_medians">
+                      <property name="text">
+                       <string>Medians</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QCheckBox" name="cb_extrap_trans_fit">
+                      <property name="text">
+                       <string>Fit</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QGroupBox" name="gb_measurement">
+                   <property name="title">
+                    <string>Measurement</string>
+                   </property>
+                   <layout class="QVBoxLayout" name="verticalLayout_47">
+                    <item>
+                     <widget class="QCheckBox" name="cb_extrap_meas_medians">
+                      <property name="text">
+                       <string>Medians</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QCheckBox" name="cb_extrap_meas_fit">
+                      <property name="text">
+                       <string>Fit</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_57">
+                 <item>
+                  <spacer name="horizontalSpacer_16">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="txt_start">
+                   <property name="text">
+                    <string>Start Edge: </string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="txt_left">
+                   <property name="palette">
+                    <palette>
+                     <active>
+                      <colorrole role="WindowText">
+                       <brush brushstyle="SolidPattern">
+                        <color alpha="255">
+                         <red>255</red>
+                         <green>0</green>
+                         <blue>255</blue>
+                        </color>
+                       </brush>
+                      </colorrole>
+                     </active>
+                     <inactive>
+                      <colorrole role="WindowText">
+                       <brush brushstyle="SolidPattern">
+                        <color alpha="255">
+                         <red>255</red>
+                         <green>0</green>
+                         <blue>255</blue>
+                        </color>
+                       </brush>
+                      </colorrole>
+                     </inactive>
+                     <disabled>
+                      <colorrole role="WindowText">
+                       <brush brushstyle="SolidPattern">
+                        <color alpha="255">
+                         <red>120</red>
+                         <green>120</green>
+                         <blue>120</blue>
+                        </color>
+                       </brush>
+                      </colorrole>
+                     </disabled>
+                    </palette>
+                   </property>
+                   <property name="text">
+                    <string>Left</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="txt_right">
+                   <property name="palette">
+                    <palette>
+                     <active>
+                      <colorrole role="WindowText">
+                       <brush brushstyle="SolidPattern">
+                        <color alpha="255">
+                         <red>0</red>
+                         <green>0</green>
+                         <blue>255</blue>
+                        </color>
+                       </brush>
+                      </colorrole>
+                     </active>
+                     <inactive>
+                      <colorrole role="WindowText">
+                       <brush brushstyle="SolidPattern">
+                        <color alpha="255">
+                         <red>0</red>
+                         <green>0</green>
+                         <blue>255</blue>
+                        </color>
+                       </brush>
+                      </colorrole>
+                     </inactive>
+                     <disabled>
+                      <colorrole role="WindowText">
+                       <brush brushstyle="SolidPattern">
+                        <color alpha="255">
+                         <red>120</red>
+                         <green>120</green>
+                         <blue>120</blue>
+                        </color>
+                       </brush>
+                      </colorrole>
+                     </disabled>
+                    </palette>
+                   </property>
+                   <property name="text">
+                    <string>Right</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_17">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_fit">
+              <property name="title">
+               <string>Fit</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_43" stretch="5,2,1,1,1,1">
+               <item>
+                <widget class="QTableWidget" name="table_extrap_fit"/>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_5">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_34">
+                 <item>
+                  <spacer name="horizontalSpacer">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="txt_fit">
+                   <property name="text">
+                    <string>Fit  </string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="combo_extrap_fit"/>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_6">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_38" stretch="2,2,3,3">
+                 <item>
+                  <spacer name="horizontalSpacer_2">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="txt_top">
+                   <property name="text">
+                    <string> Top  </string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="combo_extrap_top"/>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_7">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_39" stretch="0,5,4,7">
+                 <item>
+                  <spacer name="horizontalSpacer_4">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="txt_bottom">
+                   <property name="text">
+                    <string>Bottom  </string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="combo_extrap_bottom"/>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_8">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_40" stretch="1,5,4,5">
+                 <item>
+                  <spacer name="horizontalSpacer_5">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="txt_exponent">
+                   <property name="text">
+                    <string>Exponent  </string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLineEdit" name="ed_extrap_exponent"/>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_9">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="verticalLayout_33" stretch="2,4,1">
+              <item>
+               <widget class="QGroupBox" name="gb_previous">
+                <property name="title">
+                 <string>Previous Fit Settings</string>
+                </property>
+                <layout class="QGridLayout" name="gridLayout_32">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="txt_p_top">
+                   <property name="text">
+                    <string>Top:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QLabel" name="txt_extrap_p_top">
+                   <property name="text">
+                    <string>TextLabel</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="txt_p_bottom">
+                   <property name="text">
+                    <string>Bottom:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QLabel" name="txt_extrap_p_bottom">
+                   <property name="text">
+                    <string>TextLabel</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="txt_p_exponent">
+                   <property name="text">
+                    <string>Exponent:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QLabel" name="txt_extrap_p_exponent">
+                   <property name="text">
+                    <string>TextLabel</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
+               <widget class="QGroupBox" name="gb_q">
+                <property name="title">
+                 <string>Discharge Sensitivity</string>
+                </property>
+                <layout class="QGridLayout" name="gridLayout_36">
+                 <item row="0" column="0">
+                  <widget class="QTableWidget" name="table_extrap_qsense"/>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
+               <widget class="QGroupBox" name="groupBox">
+                <property name="title">
+                 <string/>
+                </property>
+                <layout class="QHBoxLayout" name="horizontalLayout_26">
+                 <item>
+                  <widget class="QPushButton" name="pb_extrap_cancel">
+                   <property name="text">
+                    <string>Cancel</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="pb_extrap_apply">
+                   <property name="text">
+                    <string>Apply</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
           </widget>
-          <widget class="QPushButton" name="pushButton">
-           <property name="geometry">
-            <rect>
-             <x>50</x>
-             <y>240</y>
-             <width>75</width>
-             <height>23</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>PushButton</string>
-           </property>
-          </widget>
-          <widget class="QPushButton" name="pushButton_2">
-           <property name="geometry">
-            <rect>
-             <x>40</x>
-             <y>280</y>
-             <width>75</width>
-             <height>23</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>PushButton</string>
-           </property>
-          </widget>
-          <widget class="QComboBox" name="comboBox_4">
-           <property name="geometry">
-            <rect>
-             <x>60</x>
-             <y>330</y>
-             <width>60</width>
-             <height>22</height>
-            </rect>
-           </property>
+          <widget class="QWidget" name="tab_extrap_messages">
+           <attribute name="title">
+            <string>Messages</string>
+           </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_58">
+            <item>
+             <widget class="QGroupBox" name="box_extrap_messages">
+              <property name="font">
+               <font>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="title">
+               <string>Quality Check Messages</string>
+              </property>
+              <layout class="QHBoxLayout" name="horizontalLayout_59">
+               <item>
+                <widget class="QPlainTextEdit" name="display_extap_messages">
+                 <property name="font">
+                  <font>
+                   <weight>50</weight>
+                   <bold>false</bold>
+                  </font>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="box_extrap_comments">
+              <property name="font">
+               <font>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="title">
+               <string>Comments</string>
+              </property>
+              <layout class="QHBoxLayout" name="horizontalLayout_60">
+               <item>
+                <widget class="QPlainTextEdit" name="display_extrap_comments">
+                 <property name="font">
+                  <font>
+                   <weight>50</weight>
+                   <bold>false</bold>
+                  </font>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+           </layout>
           </widget>
          </widget>
-         <widget class="QGroupBox" name="groupBox_2">
-          <property name="geometry">
-           <rect>
-            <x>240</x>
-            <y>40</y>
-            <width>331</width>
-            <height>521</height>
-           </rect>
-          </property>
-          <property name="title">
-           <string>GroupBox</string>
-          </property>
-          <widget class="QWidget" name="widget" native="true">
-           <property name="geometry">
-            <rect>
-             <x>100</x>
-             <y>50</y>
-             <width>120</width>
-             <height>80</height>
-            </rect>
-           </property>
-          </widget>
-          <widget class="QGroupBox" name="groupBox_3">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>290</y>
-             <width>120</width>
-             <height>80</height>
-            </rect>
-           </property>
-           <property name="title">
-            <string>GroupBox</string>
-           </property>
-           <widget class="QCheckBox" name="checkBox">
-            <property name="geometry">
-             <rect>
-              <x>20</x>
-              <y>20</y>
-              <width>64</width>
-              <height>18</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>CheckBox</string>
-            </property>
-           </widget>
-           <widget class="QCheckBox" name="checkBox_2">
-            <property name="geometry">
-             <rect>
-              <x>20</x>
-              <y>40</y>
-              <width>64</width>
-              <height>18</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>CheckBox</string>
-            </property>
-           </widget>
-          </widget>
-          <widget class="QGroupBox" name="groupBox_4">
-           <property name="geometry">
-            <rect>
-             <x>160</x>
-             <y>290</y>
-             <width>120</width>
-             <height>80</height>
-            </rect>
-           </property>
-           <property name="title">
-            <string>GroupBox</string>
-           </property>
-           <widget class="QCheckBox" name="checkBox_3">
-            <property name="geometry">
-             <rect>
-              <x>20</x>
-              <y>30</y>
-              <width>64</width>
-              <height>18</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>CheckBox</string>
-            </property>
-           </widget>
-           <widget class="QCheckBox" name="checkBox_4">
-            <property name="geometry">
-             <rect>
-              <x>20</x>
-              <y>50</y>
-              <width>64</width>
-              <height>18</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>CheckBox</string>
-            </property>
-           </widget>
-          </widget>
-          <widget class="QGroupBox" name="groupBox_5">
-           <property name="geometry">
-            <rect>
-             <x>160</x>
-             <y>390</y>
-             <width>120</width>
-             <height>80</height>
-            </rect>
-           </property>
-           <property name="title">
-            <string>GroupBox</string>
-           </property>
-           <widget class="QCheckBox" name="checkBox_5">
-            <property name="geometry">
-             <rect>
-              <x>20</x>
-              <y>20</y>
-              <width>64</width>
-              <height>18</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>CheckBox</string>
-            </property>
-           </widget>
-           <widget class="QCheckBox" name="checkBox_6">
-            <property name="geometry">
-             <rect>
-              <x>20</x>
-              <y>50</y>
-              <width>64</width>
-              <height>18</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>CheckBox</string>
-            </property>
-           </widget>
-          </widget>
-          <widget class="QLabel" name="label_3">
-           <property name="geometry">
-            <rect>
-             <x>50</x>
-             <y>490</y>
-             <width>47</width>
-             <height>14</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_4">
-           <property name="geometry">
-            <rect>
-             <x>110</x>
-             <y>490</y>
-             <width>47</width>
-             <height>14</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_5">
-           <property name="geometry">
-            <rect>
-             <x>170</x>
-             <y>490</y>
-             <width>47</width>
-             <height>14</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-         </widget>
-         <widget class="QGroupBox" name="groupBox_6">
-          <property name="geometry">
-           <rect>
-            <x>580</x>
-            <y>50</y>
-            <width>261</width>
-            <height>511</height>
-           </rect>
-          </property>
-          <property name="title">
-           <string>GroupBox</string>
-          </property>
-          <widget class="QTableWidget" name="tableWidget_2">
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>20</y>
-             <width>256</width>
-             <height>192</height>
-            </rect>
-           </property>
-          </widget>
-          <widget class="QComboBox" name="comboBox_5">
-           <property name="geometry">
-            <rect>
-             <x>170</x>
-             <y>240</y>
-             <width>60</width>
-             <height>22</height>
-            </rect>
-           </property>
-          </widget>
-          <widget class="QComboBox" name="comboBox_6">
-           <property name="geometry">
-            <rect>
-             <x>170</x>
-             <y>280</y>
-             <width>60</width>
-             <height>22</height>
-            </rect>
-           </property>
-          </widget>
-          <widget class="QComboBox" name="comboBox_7">
-           <property name="geometry">
-            <rect>
-             <x>170</x>
-             <y>320</y>
-             <width>60</width>
-             <height>22</height>
-            </rect>
-           </property>
-          </widget>
-          <widget class="QLineEdit" name="lineEdit">
-           <property name="geometry">
-            <rect>
-             <x>130</x>
-             <y>370</y>
-             <width>113</width>
-             <height>20</height>
-            </rect>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_6">
-           <property name="geometry">
-            <rect>
-             <x>60</x>
-             <y>370</y>
-             <width>47</width>
-             <height>14</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_7">
-           <property name="geometry">
-            <rect>
-             <x>90</x>
-             <y>320</y>
-             <width>47</width>
-             <height>14</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_8">
-           <property name="geometry">
-            <rect>
-             <x>90</x>
-             <y>280</y>
-             <width>47</width>
-             <height>14</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_9">
-           <property name="geometry">
-            <rect>
-             <x>90</x>
-             <y>240</y>
-             <width>47</width>
-             <height>14</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-         </widget>
-         <widget class="QGroupBox" name="groupBox_7">
-          <property name="geometry">
-           <rect>
-            <x>890</x>
-            <y>60</y>
-            <width>241</width>
-            <height>131</height>
-           </rect>
-          </property>
-          <property name="title">
-           <string>GroupBox</string>
-          </property>
-          <widget class="QLabel" name="label_10">
-           <property name="geometry">
-            <rect>
-             <x>30</x>
-             <y>30</y>
-             <width>47</width>
-             <height>14</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_11">
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>60</y>
-             <width>47</width>
-             <height>14</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_12">
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>90</y>
-             <width>47</width>
-             <height>14</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_13">
-           <property name="geometry">
-            <rect>
-             <x>120</x>
-             <y>30</y>
-             <width>47</width>
-             <height>14</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_14">
-           <property name="geometry">
-            <rect>
-             <x>120</x>
-             <y>60</y>
-             <width>47</width>
-             <height>14</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_15">
-           <property name="geometry">
-            <rect>
-             <x>120</x>
-             <y>90</y>
-             <width>47</width>
-             <height>14</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>TextLabel</string>
-           </property>
-          </widget>
-         </widget>
-         <widget class="QGroupBox" name="groupBox_8">
-          <property name="geometry">
-           <rect>
-            <x>900</x>
-            <y>280</y>
-            <width>251</width>
-            <height>241</height>
-           </rect>
-          </property>
-          <property name="title">
-           <string>GroupBox</string>
-          </property>
-          <widget class="QTableWidget" name="tableWidget_3">
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>20</y>
-             <width>256</width>
-             <height>192</height>
-            </rect>
-           </property>
-          </widget>
-         </widget>
-        </widget>
-        <widget class="QWidget" name="tab_wt_2_messages_2">
-         <attribute name="title">
-          <string>Messages</string>
-         </attribute>
-        </widget>
-       </widget>
+        </item>
+       </layout>
       </widget>
       <widget class="QWidget" name="tab_edges">
        <attribute name="title">
