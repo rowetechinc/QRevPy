@@ -151,4 +151,8 @@ class BTFilters(object):
             self.fig.ax.set_ylabel(self.canvas.tr('Speed' + self.units['label_V']))
         self.fig.ax.set_xlim(left=-1 * ensembles[-1] * 0.02, right=ensembles[-1] * 1.02)
 
+        if transect.start_edge == 'Right':
+            self.fig.ax.invert_xaxis()
+            self.fig.ax.set_xlim(right=-1 * ensembles[-1] * 0.02, left=ensembles[-1] * 1.02)
+
         self.canvas.draw()

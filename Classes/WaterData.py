@@ -63,15 +63,15 @@ class WaterData(object):
             Estimated number of depth cells in ensembles with no valid raw velocity data.
         valid_data: np.array(float)
             3-D logical array of valid data
-                Dim3 0 - composite
-                Dim3 1 - original, cells above side lobe
-                Dim3 2 - dfilter
-                Dim3 3 - wfilter
-                Dim3 4 - smoothFilter
-                Dim3 5 - beamFilter
-                Dim3 6 - excluded
-                Dim3 7 - snrFilter
-                Dim3 8 - validDepthFilter
+                Dim1 0 - composite
+                Dim1 1 - original, cells above side lobe
+                Dim1 2 - dfilter
+                Dim1 3 - wfilter
+                Dim1 4 - smoothFilter
+                Dim1 5 - beamFilter
+                Dim1 6 - excluded
+                Dim1 7 - snrFilter
+                Dim1 8 - validDepthFilter
 
     Processing settings:
         beam_filter: int
@@ -111,7 +111,7 @@ class WaterData(object):
         sl_cutoff_percent: float
             Percent cutoff defined by cos(angle)
         sl_cutoff_number: float
-            User specigied number of cells to cutoff from SonTek, not implemented, undefined
+            User specified number of cells to cutoff from SonTek, not implemented, undefined
         sl_cutoff_type: str
             Type of cutoff method "Percent" or "Number".
     """
@@ -1122,19 +1122,19 @@ class WaterData(object):
                 else:
                     std_diff = 0
                     
-            # Set valid data row 3 for difference velocity filter results
-            bad_idx_rows, bad_idx_cols = np.where(np.logical_or(np.greater(w_vel, w_vel_max_ref),
-                                                  np.less(w_vel, w_vel_min_ref)))
-            valid = copy.deepcopy(self.cells_above_sl)
-            if len(bad_idx_rows) > 0:
-                valid[bad_idx_rows, bad_idx_cols] = False
-            self.valid_data[3, :, :] = valid
+        # Set valid data row 3 for difference velocity filter results
+        bad_idx_rows, bad_idx_cols = np.where(np.logical_or(np.greater(w_vel, w_vel_max_ref),
+                                              np.less(w_vel, w_vel_min_ref)))
+        valid = copy.deepcopy(self.cells_above_sl)
+        if len(bad_idx_rows) > 0:
+            valid[bad_idx_rows, bad_idx_cols] = False
+        self.valid_data[3, :, :] = valid
 
-            # Set threshold property
-            self.w_filter_threshold = w_vel_max_ref
+        # Set threshold property
+        self.w_filter_threshold = w_vel_max_ref
 
-            # Combine all filter data and update processed properties
-            self.all_valid_data()
+        # Combine all filter data and update processed properties
+        self.all_valid_data()
                 
     def filter_smooth(self, transect, setting):
         """Filter water speed using a smooth filter.

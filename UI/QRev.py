@@ -31,6 +31,8 @@ from UI.CrossSection import CrossSection
 from UI.StationaryGraphs import StationaryGraphs
 from UI.BTFilters import BTFilters
 from UI.GPSFilters import GPSFilters
+from UI.WTContour import WTContour
+from UI.WTFilters import WTFilters
 from UI.MplCanvas import MplCanvas
 from contextlib import contextmanager
 import time
@@ -774,7 +776,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tab = 'tab_systest'
         elif key == 'temperature':
             tab = 'tab_tempsal'
-        elif key == 'transects' or 'user':
+        elif key == 'transects' or key == 'user':
             tab = 'tab_main'
             transects_status = self.meas.qa.transects['status']
             user_status = self.meas.qa.user['status']
@@ -2661,6 +2663,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.meas.mb_tests = MovingBedTests.auto_use_2_correct(
                 moving_bed_tests=self.meas.mb_tests,
                 boat_ref=self.meas.transects[self.checked_transects_idx[0]].w_vel.nav_ref)
+            self.meas.qa.moving_bed_qa(self.meas)
 
         # Use to correct, manual override
         if column == 1:
@@ -3137,6 +3140,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             tbl.resizeColumnsToContents()
             tbl.resizeRowsToContents()
+
+            self.bt_comments_messages()
 
     def bt_plots(self):
         """Creates graphics for BT tab.
@@ -3723,6 +3728,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             tbl.resizeColumnsToContents()
             tbl.resizeRowsToContents()
+
+            self.gps_comments_messages()
 
     def gps_plots(self):
         """Creates graphics for GPS tab.
@@ -4434,6 +4441,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Update plots
         self.depth_plots()
 
+        self.depth_comments_messages()
+
     @QtCore.Slot()
     def depth_top_plot_change(self):
         """Coordinates changes in user selected data to be displayed in the top plot.
@@ -4564,8 +4573,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         self.tr('Vert Vel \n % Invalid'),
                         self.tr('Other \n % Invalid'),
                         self.tr('SNR \n % Invalid'),
-                        self.tr('Discharge \n Previous \n' + self.units['label_Q']),
-                        self.tr('Discharge \n Now \n' + self.units['label_Q']),
+                        self.tr('Discharge \n Previous ' + self.units['label_Q']),
+                        self.tr('Discharge \n Now ' + self.units['label_Q']),
                         self.tr('Discharge \n % Change')]
         ncols = len(table_header)
         nrows = len(self.checked_transects_idx)
@@ -4603,51 +4612,549 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.rb_wt_beam.toggled.connect(self.wt_radiobutton_control)
         self.rb_wt_error.toggled.connect(self.wt_radiobutton_control)
         self.rb_wt_vert.toggled.connect(self.wt_radiobutton_control)
-        self.rb_wt_snr.toggled.connect(self.wt_radiobutton_control)
+        if self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'SonTek':
+            self.rb_wt_snr.setEnabled(True)
+            self.combo_wt_snr.setEnabled(True)
+            self.rb_wt_snr.toggled.connect(self.wt_radiobutton_control)
+        else:
+            self.rb_wt_snr.setEnabled(False)
+            self.combo_wt_snr.setEnabled(False)
+
         self.rb_wt_speed.toggled.connect(self.wt_radiobutton_control)
 
         # Connect manual entry
-        self.ed_wt_error_vel_threshold.editingFinished.connect(self.change_error_vel_threshold)
-        self.ed_wt_vert_vel_threshold.editingFinished.connect(self.change_vert_vel_threshold)
+        self.ed_wt_error_vel_threshold.editingFinished.connect(self.change_wt_error_vel_threshold)
+        self.ed_wt_vert_vel_threshold.editingFinished.connect(self.change_wt_vert_vel_threshold)
 
         # Connect filters
+        self.ed_wt_excluded_dist.editingFinished.connect(self.change_wt_excluded_dist)
         self.combo_wt_3beam.currentIndexChanged[str].connect(self.change_wt_beam)
         self.combo_wt_error_velocity.currentIndexChanged[str].connect(self.change_wt_error)
         self.combo_wt_vert_velocity.currentIndexChanged[str].connect(self.change_wt_vertical)
-        self.combo_wt_other.currentIndexChanged[str].connect(self.change_wt_other)
+        self.combo_wt_snr.currentIndexChanged[str].connect(self.change_wt_snr)
 
         # Transect selected for display
         self.transect = self.meas.transects[self.checked_transects_idx[0]]
+        self.idx = 0
+        self.update_wt_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
 
         # Set beam filter from transect data
-        if self.transect.wt_vel.beam_filter < 0:
+        if self.transect.w_vel.beam_filter < 0:
             self.combo_wt_3beam.setCurrentIndex(0)
-        elif self.transect.wt_vel.beam_filter == 3:
+        elif self.transect.w_vel.beam_filter == 3:
             self.combo_wt_3beam.setCurrentIndex(1)
-        elif self.transect.wt_vel.beam_filter == 4:
+        elif self.transect.w_vel.beam_filter == 4:
             self.combo_wt_3beam.setCurrentIndex(2)
         else:
             self.combo_wt_3beam.setCurrentIndex(0)
 
         # Set error velocity filter from transect data
-        index = self.combo_wt_error_velocity.findText(self.transect.wt_vel.d_filter, QtCore.Qt.MatchFixedString)
+        index = self.combo_wt_error_velocity.findText(self.transect.w_vel.d_filter, QtCore.Qt.MatchFixedString)
         self.combo_wt_error_velocity.setCurrentIndex(index)
 
         # Set vertical velocity filter from transect data
-        index = self.combo_wt_vert_velocity.findText(self.transect.wt_vel.w_filter, QtCore.Qt.MatchFixedString)
+        index = self.combo_wt_vert_velocity.findText(self.transect.w_vel.w_filter, QtCore.Qt.MatchFixedString)
         self.combo_wt_vert_velocity.setCurrentIndex(index)
 
         # Set smooth filter from transect data
-        if self.transect.wt_vel.smooth_filter == 'Off':
-            self.combo_wt_other.setCurrentIndex(0)
-        elif self.transect.wt_vel.smooth_filter == 'On':
-            self.combo_wt_other.setCurrentIndex(1)
+        if self.transect.w_vel.snr_filter == 'Auto':
+            self.combo_wt_snr.setCurrentIndex(0)
+        elif self.transect.w_vel.snr_filter == 'Off':
+            self.combo_wt_snr.setCurrentIndex(1)
 
         # Display content
-        self.idx = 0
-        self.update_wt_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
+
         self.wt_plots()
         self.wt_comments_messages()
+
+    def update_wt_table(self, old_discharge, new_discharge):
+        """Updates the bottom track table with new or reprocessed data.
+
+        Parameters
+        ----------
+        old_discharge: list
+            List of objects of QComp with previous settings
+        new_discharge: list
+            List of objects of QComp with new settings
+        """
+
+        with self.wait_cursor():
+            # Set tbl variable
+            tbl = self.table_wt
+
+            # Populate each row
+            for row in range(tbl.rowCount()):
+                # Identify transect associated with the row
+                transect_id = self.checked_transects_idx[row]
+                transect = self.meas.transects[transect_id]
+                valid_data = transect.w_vel.valid_data
+                useable_cells = transect.w_vel.valid_data[6, :, :]
+                num_useable_cells = np.nansum(np.nansum(useable_cells.astype(int)))
+                # less_than_4 = np.copy(transect.w_vel.d_mps)
+                # less_than_4[np.logical_not(transect.w_vel.valid_data[1, :, :])] = -999
+                # not_4beam = np.nansum(np.nansum(np.isnan(less_than_4[useable_cells])))
+                wt_temp = copy.deepcopy(transect.w_vel)
+                wt_temp.filter_beam(4)
+                not_4beam = np.nansum(np.nansum(np.logical_not(wt_temp.valid_data[5, :, :][useable_cells])))
+                num_invalid = np.nansum(np.nansum(np.logical_not(valid_data[0, :, :][useable_cells])))
+                num_orig_invalid = np.nansum(np.nansum(np.logical_not(valid_data[1, :, :][useable_cells])))
+                num_beam_invalid = np.nansum(np.nansum(np.logical_not(valid_data[5, :, :][useable_cells])))
+                num_error_invalid = np.nansum(np.nansum(np.logical_not(valid_data[2, :, :][useable_cells])))
+                num_vert_invalid = np.nansum(np.nansum(np.logical_not(valid_data[3, :, :][useable_cells])))
+                num_other_invalid = np.nansum(np.nansum(np.logical_not(valid_data[4, :, :][useable_cells])))
+                num_snr_invalid = np.nansum(np.nansum(np.logical_not(valid_data[7, :, :][useable_cells])))
+
+                # File/transect name
+                col = 0
+                item = QtWidgets.QTableWidgetItem(transect.file_name[:-4])
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                tbl.item(row, 0).setFont(self.font_normal)
+
+                # Total number of depth cells
+                col += 1
+                item = '{:7d}'.format(num_useable_cells)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Less than 4 beams
+                col += 1
+                item = '{:3.2f}'.format((not_4beam / num_useable_cells) * 100.)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Invalid total
+                col += 1
+                item = '{:3.2f}'.format((num_invalid / num_useable_cells) * 100.)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Invalid original data
+                col += 1
+                item = '{:3.2f}'.format((num_orig_invalid / num_useable_cells) * 100.)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Invalid 3 beam
+                col += 1
+                item = '{:3.2f}'.format((num_beam_invalid / num_useable_cells) * 100.)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Error velocity invalid
+                col += 1
+                item = '{:3.2f}'.format((num_error_invalid / num_useable_cells) * 100.)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Vertical velocity invalid
+                col += 1
+                item = '{:3.2f}'.format((num_vert_invalid / num_useable_cells) * 100.)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Other
+                col += 1
+                item = '{:3.2f}'.format((num_other_invalid / num_useable_cells) * 100.)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # SNR
+                col += 1
+                item = '{:3.2f}'.format((num_snr_invalid / num_useable_cells) * 100.)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Discharge before changes
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:8.1f}'.format(old_discharge[transect_id].total * self.units['Q'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Discharge after changes
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:8.1f}'.format(new_discharge[transect_id].total * self.units['Q'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent change in discharge
+                col += 1
+                per_change = ((new_discharge[transect_id].total - old_discharge[transect_id].total)
+                              / old_discharge[transect_id].total) * 100
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(per_change)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Set selected file to bold font
+            tbl.item(self.idx, 0).setFont(self.font_bold)
+
+            tbl.resizeColumnsToContents()
+            tbl.resizeRowsToContents()
+
+            self.wt_comments_messages()
+
+    def wt_plots(self):
+        """Creates graphics for WT tab.
+        """
+
+        with self.wait_cursor():
+            # Set all filenames to normal font
+            nrows = len(self.checked_transects_idx)
+            for nrow in range(nrows):
+                self.table_wt.item(nrow, 0).setFont(self.font_normal)
+
+            # Set selected file to bold font
+            self.table_wt.item(self.idx, 0).setFont(self.font_bold)
+
+            # Determine transect selected
+            transect_id = self.checked_transects_idx[self.idx]
+            self.transect = self.meas.transects[transect_id]
+            self.invalid_wt = np.logical_not(self.transect.w_vel.valid_data)
+
+            # Update plots
+            self.wt_shiptrack()
+            self.wt_water_speed_contour()
+            self.wt_filter_plots()
+
+    def wt_shiptrack(self):
+        """Creates shiptrack plot for data in transect.
+        """
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'wt_shiptrack_canvas'):
+            # Create the canvas
+            self.wt_shiptrack_canvas = MplCanvas(parent=self.graph_wt_st, width=4, height=4, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_wt_st)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.wt_shiptrack_canvas)
+
+        # Initialize the shiptrack figure and assign to the canvas
+        self.wt_shiptrack_fig = Shiptrack(canvas=self.wt_shiptrack_canvas)
+        # Create the figure with the specified data
+        self.wt_shiptrack_fig.create(transect=self.transect,
+                                     units=self.units,
+                                     cb=True,
+                                     cb_bt=self.cb_wt_bt,
+                                     cb_gga=self.cb_wt_gga,
+                                     cb_vtg=self.cb_wt_vtg,
+                                     cb_vectors=self.cb_wt_vectors)
+            # ,
+            #                          invalid_wt=self.invalid_wt)
+
+        # Draw canvas
+        self.wt_shiptrack_canvas.draw()
+
+    def wt_water_speed_contour(self):
+        """Creates boat speed plot for data in transect.
+        """
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'wt_bottom_canvas'):
+            # Create the canvas
+            self.wt_bottom_canvas = MplCanvas(parent=self.graph_wt_bottom, width=10, height=2, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_wt_bottom)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.wt_bottom_canvas)
+
+        # Initialize the boat speed figure and assign to the canvas
+        self.wt_bottom_fig = WTContour(canvas=self.wt_bottom_canvas)
+        # Create the figure with the specified data
+        self.wt_bottom_fig.create(transect=self.transect,
+                                  units=self.units)
+
+        # Draw canvas
+        self.wt_bottom_canvas.draw()
+
+    @QtCore.Slot()
+    def wt_radiobutton_control(self):
+
+        with self.wait_cursor():
+            if self.sender().isChecked():
+                self.wt_filter_plots()
+
+    def wt_filter_plots(self):
+        """Creates plots of filter characteristics.
+        """
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'wt_top_canvas'):
+            # Create the canvas
+            self.wt_top_canvas = MplCanvas(parent=self.graph_wt_top, width=10, height=2, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_wt_top)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.wt_top_canvas)
+
+        if self.rb_wt_contour.isChecked():
+            # Initialize the contour plot
+            # Initialize the water filters figure and assign to the canvas
+            self.wt_top_fig = WTContour(canvas=self.wt_top_canvas)
+            # Determine invalid data based on depth, nav, and wt
+            depth_valid = getattr(self.transect.depths, self.transect.depths.selected).valid_data
+            boat_valid = getattr(self.transect.boat_vel, self.transect.boat_vel.selected).valid_data[0, :]
+            invalid_ens = np.logical_not(np.logical_and(depth_valid, boat_valid))
+            valid_data = self.transect.w_vel.valid_data[0, :, :]
+            valid_data[:, invalid_ens] = False
+            # Create the figure with the specified data
+            self.wt_top_fig.create(transect=self.transect,
+                                      units=self.units,
+                                      invalid_data=np.logical_not(self.transect.w_vel.valid_data[0, :, :]))
+        else:
+            # Initialize the wt filters plot
+            self.wt_top_fig = WTFilters(canvas=self.wt_top_canvas)
+            # Create the figure with the specified data
+            if self.rb_wt_beam.isChecked():
+                self.wt_top_fig.create(transect=self.transect,
+                                       units=self.units, selected='beam')
+            elif self.rb_wt_error.isChecked():
+                self.wt_top_fig.create(transect=self.transect,
+                                       units=self.units, selected='error')
+            elif self.rb_wt_vert.isChecked():
+                self.wt_top_fig.create(transect=self.transect,
+                                       units=self.units, selected='vert')
+            elif self.rb_wt_speed.isChecked():
+                self.wt_top_fig.create(transect=self.transect,
+                                       units=self.units, selected='speed')
+            elif self.rb_wt_snr.isChecked():
+                self.wt_top_fig.create(transect=self.transect,
+                                       units=self.units, selected='snr')
+
+        # Draw canvas
+        self.wt_top_canvas.draw()
+
+    def wt_table_clicked(self, row, column):
+        """Changes plotted data to the transect of the transect clicked.
+
+        Parameters
+        ----------
+        row: int
+            Row clicked by user
+        column: int
+            Column clicked by user
+        """
+
+        if column == 0:
+            self.idx = row
+            self.wt_plots()
+
+    @QtCore.Slot()
+    def wt_plot_change(self):
+        """Coordinates changes in what references should be displayed in the shiptrack plots.
+        """
+
+        with self.wait_cursor():
+            # Shiptrack
+            self.wt_shiptrack_fig.change()
+            self.wt_shiptrack_canvas.draw()
+
+    def update_wt_tab(self, s):
+        """Updates the measurement and water track tab (table and graphics) after a change to settings has been made.
+
+        Parameters
+        ----------
+        s: dict
+            Dictionary of all process settings for the measurement
+        """
+
+        # Save discharge from previous settings
+        old_discharge = copy.deepcopy(self.meas.discharge)
+
+        # Apply new settings
+        self.meas.apply_settings(settings=s)
+
+        # Update table
+        self.update_wt_table(old_discharge=old_discharge, new_discharge=self.meas.discharge)
+
+        # Update plots
+        self.wt_plots()
+
+    @QtCore.Slot(str)
+    def change_wt_beam(self, text):
+        """Coordinates user initiated change to the beam settings.
+
+        Parameters
+        ----------
+        text: str
+            User selection from combo box
+        """
+
+        with self.wait_cursor():
+
+            # Get current settings
+            s = self.meas.current_settings()
+
+            if text == 'Auto':
+                s['WTbeamFilter'] = -1
+            elif text == 'Allow':
+                s['WTbeamFilter'] = 3
+            elif text == '4-Beam Only':
+                s['WTbeamFilter'] = 4
+
+            # Update measurement and display
+            self.update_wt_tab(s)
+
+    @QtCore.Slot(str)
+    def change_wt_error(self, text):
+        """Coordinates user initiated change to the error velocity settings.
+
+         Parameters
+         ----------
+         text: str
+             User selection from combo box
+         """
+
+        with self.wait_cursor():
+            # Get current settings
+            s = self.meas.current_settings()
+
+            # Change setting based on combo box selection
+            s['WTdFilter'] = text
+
+            if text == 'Manual':
+                # If Manual enable the line edit box for user input. Updates are not applied until the user has entered
+                # a value in the line edit box.
+                self.ed_wt_error_vel_threshold.setEnabled(True)
+            else:
+                # If manual is not selected the line edit box is cleared and disabled and the updates applied.
+                self.ed_wt_error_vel_threshold.setEnabled(False)
+                self.ed_wt_error_vel_threshold.setText('')
+                self.update_wt_tab(s)
+
+    @QtCore.Slot(str)
+    def change_wt_vertical(self, text):
+        """Coordinates user initiated change to the vertical velocity settings.
+
+        Parameters
+        ----------
+        text: str
+         User selection from combo box
+        """
+
+        with self.wait_cursor():
+            # Get current settings
+            s = self.meas.current_settings()
+
+            # Change setting based on combo box selection
+            s['WTwFilter'] = text
+
+            if text == 'Manual':
+                # If Manual enable the line edit box for user input. Updates are not applied until the user has entered
+                # a value in the line edit box.
+                self.ed_wt_vert_vel_threshold.setEnabled(True)
+            else:
+                # If manual is not selected the line edit box is cleared and disabled and the updates applied.
+                self.ed_wt_vert_vel_threshold.setEnabled(False)
+                self.ed_wt_vert_vel_threshold.setText('')
+                self.update_wt_tab(s)
+
+    @QtCore.Slot(str)
+    def change_wt_snr(self, text):
+        """Coordinates user initiated change to the vertical velocity settings.
+
+        Parameters
+        ----------
+        text: str
+         User selection from combo box
+        """
+
+        with self.wait_cursor():
+            # Get current settings
+            s = self.meas.current_settings()
+
+            # Change setting based on combo box selection
+            if text == 'Off':
+                s['WTsnrFilter'] = 'Off'
+            elif text == 'Auto':
+                s['WTsnrFilter'] = 'Auto'
+
+            # Update measurement and display
+            self.update_wt_tab(s)
+
+    @QtCore.Slot()
+    def change_wt_error_vel_threshold(self):
+        """Coordinates application of a user specified error velocity threshold.
+        """
+
+        with self.wait_cursor():
+            # Get threshold and convert to SI units
+            threshold = float(self.ed_wt_error_vel_threshold.text()) / self.units['V']
+
+            # Get current settings
+            s = self.meas.current_settings()
+
+            # Change settings to manual and the associated threshold
+            s['WTdFilter'] = 'Manual'
+            s['WTdFilterThreshold'] = threshold
+
+            # Update measurement and display
+            self.update_wt_tab(s)
+
+    @QtCore.Slot()
+    def change_wt_vert_vel_threshold(self):
+        """Coordinates application of a user specified vertical velocity threshold.
+        """
+
+        with self.wait_cursor():
+            # Get threshold and convert to SI units
+            threshold = float(self.ed_wt_vert_vel_threshold.text()) / self.units['V']
+
+            # Get current settings
+            s = self.meas.current_settings()
+
+            # Change settings to manual and the associated threshold
+            s['WTwFilter'] = 'Manual'
+            s['WTwFilterThreshold'] = threshold
+
+            # Update measurement and display
+            self.update_wt_tab(s)
+
+    @QtCore.Slot()
+    def change_wt_excluded_dist(self):
+        """Coordinates application of a user specified excluded distance.
+        """
+
+        with self.wait_cursor():
+            # Get threshold and convert to SI units
+            threshold = float(self.ed_wt_excluded_dist.text()) / self.units['L']
+
+            # Get current settings
+            s = self.meas.current_settings()
+
+            # Change settings
+            s['WTExcludedDistance'] = threshold
+
+            # Update measurement and display
+            self.update_wt_tab(s)
+
+    def wt_comments_messages(self):
+        """Displays comments and messages associated with bottom track filters in Messages tab.
+        """
+
+        # Clear comments and messages
+        self.display_wt_comments.clear()
+        self.display_wt_messages.clear()
+
+        if hasattr(self, 'meas'):
+            # Display each comment on a new line
+            self.display_wt_comments.moveCursor(QtGui.QTextCursor.Start)
+            for comment in self.meas.comments:
+                self.display_wt_comments.textCursor().insertText(comment)
+                self.display_wt_comments.moveCursor(QtGui.QTextCursor.End)
+                self.display_wt_comments.textCursor().insertBlock()
+
+            # Display each message on a new line
+            self.display_wt_messages.moveCursor(QtGui.QTextCursor.Start)
+            for message in self.meas.qa.w_vel['messages']:
+                self.display_wt_messages.textCursor().insertText(message[0])
+                self.display_wt_messages.moveCursor(QtGui.QTextCursor.End)
+                self.display_wt_messages.textCursor().insertBlock()
 
 # Split functions
 # ==============
@@ -4787,6 +5294,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         elif tab_idx == 7:
             # Depth filters
             self.depth_tab()
+        elif tab_idx == 8:
+            # Depth filters
+            self.wt_tab()
 
     def config_gui(self):
 
