@@ -4584,7 +4584,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 # WT tab
 # ======
     def wt_tab(self):
-        """Initialize, setup settings, and display initial data in bottom track tab.
+        """Initialize, setup settings, and display initial data in water track tab.
         """
 
         # Setup data table
@@ -5182,6 +5182,252 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_wt_messages.textCursor().insertText(message[0])
                 self.display_wt_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_wt_messages.textCursor().insertBlock()
+
+# Extrap Tab
+# ==========
+    def extrap_tab(self):
+
+        # Setup number of points data table
+        tbl = self.table_extrap_n_points
+        table_header = [self.tr('Z'),
+                        self.tr('No. Pts.')]
+        ncols = len(table_header)
+        nrows = len(self.meas.extrap_fit.norm_data[-1].unit_normalized_z)
+        tbl.setRowCount(nrows)
+        tbl.setColumnCount(ncols)
+        tbl.setHorizontalHeaderLabels(table_header)
+        tbl.horizontalHeader().setFont(self.font_bold)
+        tbl.verticalHeader().hide()
+        tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        self.n_points_table()
+
+        # Setup discharge sensitivity table
+        tbl = self.table_extrap_qsen
+        table_header = [self.tr('Top'),
+                        self.tr('Bottom'),
+                        self.tr('Exponent'),
+                        self.tr('% Difference')]
+        ncols = len(table_header)
+        nrows = 7
+        tbl.setRowCount(nrows)
+        tbl.setColumnCount(ncols)
+        tbl.setHorizontalHeaderLabels(table_header)
+        tbl.horizontalHeader().setFont(self.font_bold)
+        tbl.verticalHeader().hide()
+        tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        tbl.cellClicked.connect(self.sensitivity_change_fit)
+        self.q_sensitivity_table()
+
+        # Setup transect / measurement list table
+        tbl = self.table_extrap_fit
+        ncols = 1
+        nrows = len(self.checked_transects_idx) + 1
+        tbl.setRowCount(nrows)
+        tbl.setColumnCount(ncols)
+        tbl.verticalHeader().hide()
+        tbl.horizontalHeader().hide()
+        tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        tbl.cellClicked.connect(self.display_selected)
+        self.fit_list_table()
+
+        # Display Previous settings
+        self.txt_extrap_p_top.setText(self.meas.extrap_fit.sel_fit[-1].top_method)
+        self.txt_extrap_p_bottom.setText(self.meas.extrap_fit.sel_fit[-1].bot_method)
+        self.txt_extrap_p_exponent.setText('{:6.4f}'.format(self.meas.extrap_fit.sel_fit[-1].exponent))
+
+        # Setup fit method
+        if self.meas.extrap_fit.sel_fit[-1].fit_method == 'Automatic':
+            self.combo_extrap_fit.setCurrentIndex(0)
+            self.combo_extrap_top.setEnabled(False)
+            self.combo_extrap_bottom.setEnabled(False)
+            self.ed_extrap_exponent.setEnabled(False)
+        else:
+            self.combo_extrap_fit.setCurrentIndex(1)
+            self.combo_extrap_top.setEnabled(True)
+            self.combo_extrap_bottom.setEnabled(True)
+            self.ed_extrap_exponent.setEnabled(True)
+        self.combo_extrap_fit.currentIndexChanged[str].connect(self.change_fit_method)
+
+        # Set top method
+        if self.meas.extrap_fit.sel_fit[-1].top_method == 'Power':
+            self.combo_extrap_top.setCurrentIndex(0)
+        elif self.meas.extrap_fit.sel_fit[-1].top_method == 'Constant':
+            self.combo_extrap_top.setCurrentIndex(1)
+        else:
+            self.combo_extrap_top.setCurrentIndex(2)
+        self.combo_extrap_top.currentIndexChanged[str].connect(self.change_top_method)
+
+        # Set bottom method
+        if self.meas.extrap_fit.sel_fit[-1].bot_method == 'Power':
+            self.combo_extrap_bottom.setCurrentIndex(0)
+        else:
+            self.combo_extrap_bottom.setCurrentIndex(1)
+        self.combo_extrap_bottom.currentIndexChanged[str].connect(self.change_bottom_method)
+
+        # Set exponent
+        self.ed_extrap_exponent.setText('{:6.4f}'.format(self.meas.extrap_fit.sel_fit[-1].exponent))
+        self.combo_extrap_fit.currentIndexChanged[str].connect(self.change_exponent)
+
+        # Connect display settings
+        self.cb_extrap_data.stateChanged(self.extrap_display_settings)
+        self.cb_extrap_surface.stateChanged(self.extrap_display_settings)
+        self.cb_extrap_meas_medians.stateChanged(self.extrap_display_settings)
+        self.cb_extrap_meas_fit.stateChanged(self.extrap_display_settings)
+        self.cb_extrap_trans_medians.stateChanged(self.extrap_display_settings)
+        self.cb_extrap_trans_fit.stateChanged(self.extrap_display_settings)
+
+        # Connect data buttons
+        self.pb_extrap_threshold.clicked(self.change_threshold)
+        self.pb_extrap_subsection.clicked(self.change_subsection)
+        self.combo_extrap_type.stateChanged(self.change_extrap_data)
+
+        # Cancel and apply buttons
+        self.pb_extrap_apply.clicked(self.apply_extrap)
+        self.pb_extrap_cancel.clicked(self.cancel_extrap)
+
+    def n_points_table(self):
+        tbl = self.table_extrap_n_points
+        norm_data = self.meas.extrap_fit.norm_data[-1]
+        for row in range(len(norm_data.unit_normalized_z)):
+            col = 0
+            item = '{:6.4f}'.format(norm_data.unit_normalize_z[row])
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            col = 1
+            item = '{:8d}'.format(norm_data.unit_normalize_no[row])
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+    def q_sensitivity_table(self):
+
+        tbl = self.table_extrap_qsen
+        q_sen = self.meas.extrap_fit.q_sensitivity
+
+        # Get selected methods
+        top = self.meas.extrap_fit[-1].top_method
+        bottom = self.meas.extrap_fit[-1].bottom_method
+        exp = self.meas.extrap_fit[-1].exponent
+
+        row = 0
+        tbl.setItem(row, 0, QtWidgets.QTableWidgetItem('Power'))
+        tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+        tbl.setItem(row, 1, QtWidgets.QTableWidgetItem('Power'))
+        tbl.item(row, 1).setFlags(QtCore.Qt.ItemIsEnabled)
+        item = '{:6.4f}'.format(0.1667)
+        tbl.setItem(row, 2, QtWidgets.QTableWidgetItem(item))
+        tbl.item(row, 2).setFlags(QtCore.Qt.ItemIsEnabled)
+        item = '{:6.2f}'.format(q_sen.q_pp_per_diff)
+        tbl.setItem(row, 3, QtWidgets.QTableWidgetItem(item))
+        tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
+
+        row = 1
+        tbl.setItem(row, 0, QtWidgets.QTableWidgetItem('Power'))
+        tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+        tbl.setItem(row, 1, QtWidgets.QTableWidgetItem('Power'))
+        tbl.item(row, 1).setFlags(QtCore.Qt.ItemIsEnabled)
+        item = '{:6.4f}'.format(q_sen.pp_exp)
+        tbl.setItem(row, 2, QtWidgets.QTableWidgetItem(item))
+        tbl.item(row, 2).setFlags(QtCore.Qt.ItemIsEnabled)
+        item = '{:6.2f}'.format(q_sen.q_pp_opt_per_diff)
+        tbl.setItem(row, 3, QtWidgets.QTableWidgetItem(item))
+        tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
+
+        row = 2
+        tbl.setItem(row, 0, QtWidgets.QTableWidgetItem('Constant'))
+        tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+        tbl.setItem(row, 1, QtWidgets.QTableWidgetItem('No Slip'))
+        tbl.item(row, 1).setFlags(QtCore.Qt.ItemIsEnabled)
+        item = '{:6.4f}'.format(0.1667)
+        tbl.setItem(row, 2, QtWidgets.QTableWidgetItem(item))
+        tbl.item(row, 2).setFlags(QtCore.Qt.ItemIsEnabled)
+        item = '{:6.2f}'.format(q_sen.q_cns_per_diff)
+        tbl.setItem(row, 3, QtWidgets.QTableWidgetItem(item))
+        tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
+
+        row = 3
+        tbl.setItem(row, 0, QtWidgets.QTableWidgetItem('Constant'))
+        tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+        tbl.setItem(row, 1, QtWidgets.QTableWidgetItem('No Slip'))
+        tbl.item(row, 1).setFlags(QtCore.Qt.ItemIsEnabled)
+        item = '{:6.4f}'.format(q_sen.ns_exp)
+        tbl.setItem(row, 2, QtWidgets.QTableWidgetItem(item))
+        tbl.item(row, 2).setFlags(QtCore.Qt.ItemIsEnabled)
+        item = '{:6.2f}'.format(q_sen.q_cns_opt_per_diff)
+        tbl.setItem(row, 3, QtWidgets.QTableWidgetItem(item))
+        tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
+
+        row = 4
+        tbl.setItem(row, 0, QtWidgets.QTableWidgetItem('3-Point'))
+        tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+        tbl.setItem(row, 1, QtWidgets.QTableWidgetItem('No Slip'))
+        tbl.item(row, 1).setFlags(QtCore.Qt.ItemIsEnabled)
+        item = '{:6.4f}'.format(0.1667)
+        tbl.setItem(row, 2, QtWidgets.QTableWidgetItem(item))
+        tbl.item(row, 2).setFlags(QtCore.Qt.ItemIsEnabled)
+        item = '{:6.2f}'.format(q_sen.q_3p_ns_per_diff)
+        tbl.setItem(row, 3, QtWidgets.QTableWidgetItem(item))
+        tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
+
+        row = 5
+        tbl.setItem(row, 0, QtWidgets.QTableWidgetItem('3-Point'))
+        tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+        tbl.setItem(row, 1, QtWidgets.QTableWidgetItem('No Slip'))
+        tbl.item(row, 1).setFlags(QtCore.Qt.ItemIsEnabled)
+        item = '{:6.4f}'.format(q_sen.ns_exp)
+        tbl.setItem(row, 2, QtWidgets.QTableWidgetItem(item))
+        tbl.item(row, 2).setFlags(QtCore.Qt.ItemIsEnabled)
+        item = '{:6.2f}'.format(q_sen.q_3p_ns_opt_per_diff)
+        tbl.setItem(row, 3, QtWidgets.QTableWidgetItem(item))
+        tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
+
+        if q_sen.q_man_mean is not None:
+            row = 6
+            tbl.setItem(row, 0, QtWidgets.QTableWidgetItem(q_sen.man_top))
+            tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+            tbl.setItem(row, 1, QtWidgets.QTableWidgetItem(q_sen.man_bot))
+            tbl.item(row, 1).setFlags(QtCore.Qt.ItemIsEnabled)
+            item = '{:6.4f}'.format(q_sen.man_exp)
+            tbl.setItem(row, 2, QtWidgets.QTableWidgetItem(item))
+            tbl.item(row, 2).setFlags(QtCore.Qt.ItemIsEnabled)
+            item = '{:6.2f}'.format(q_sen.q_man_per_diff)
+            tbl.setItem(row, 3, QtWidgets.QTableWidgetItem(item))
+            tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
+
+        # Set reference
+        if q_sen.q_man_mean is not None:
+            self.set_extrap_reference(6)
+        elif  np.abs(q_sen.q_pp_per_diff) < 0.00000001:
+            self.set_extrap_reference(0)
+        elif np.abs(q_sen.q_pp_opt_per_diff) < 0.00000001:
+            self.set_extrap_reference(1)
+        elif np.abs(q_sen.q_cns_per_diff) < 0.00000001:
+            self.set_extrap_reference(2)
+        elif np.abs(q_sen.q_cns_opt_per_diff) < 0.00000001:
+            self.set_extrap_reference(3)
+        elif np.abs(q_sen.q_3p_ns_per_diff) < 0.00000001:
+            self.set_extrap_reference(4)
+        elif np.abs(q_sen.q_3p_ns_opt_per_diff) < 0.00000001:
+            self.set_extrap_reference(5)
+
+    def set_extrap_reference(self, reference_row):
+        tbl = self.table_extrap_qsen
+        for row in range(tbl.rowCount()):
+            for col in range(tbl.columnCount()):
+                tbl.item(row, col).setFont(self.font_normal)
+
+        # Set selected file to bold font
+        for col in range(tbl.columnCount()):
+            tbl.item(reference_row, col).setFont(self.font_bold)
+
+    def fit_list_table(self):
+        tbl = self.table_extrap_fit
+        for n in range(len(self.checked_transects_idx)):
+            item = self.meas.transects[self.checked_transects_idx[n]].file_name[:-4]
+            tbl.setItem(n, 0, QtWidgets.QTableWidgetItem(item))
+            tbl.item(n, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+        tbl.setItem(len(self.checked_transects_idx)+1, 0, QtWidgets.QTableWidgetItem('Measurement'))
+        tbl.setItem(len(self.checked_transects_idx) + 1, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+        tbl.item(len(self.checked_transects_idx) + 1, 0).setFont(self.font_bold)
 
 # Split functions
 # ==============

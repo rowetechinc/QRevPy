@@ -4355,7 +4355,7 @@
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_44">
                <item>
-                <widget class="QTableWidget" name="tableWidget"/>
+                <widget class="QTableWidget" name="table_extrap_n_points"/>
                </item>
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_41">
@@ -4410,7 +4410,7 @@
                   </spacer>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="pb_subsection">
+                  <widget class="QPushButton" name="pb_extrap_subsection">
                    <property name="text">
                     <string>Subsection</string>
                    </property>
@@ -4500,6 +4500,9 @@
                       <property name="text">
                        <string>Data</string>
                       </property>
+                      <property name="checked">
+                       <bool>true</bool>
+                      </property>
                      </widget>
                     </item>
                     <item>
@@ -4546,12 +4549,18 @@
                       <property name="text">
                        <string>Medians</string>
                       </property>
+                      <property name="checked">
+                       <bool>true</bool>
+                      </property>
                      </widget>
                     </item>
                     <item>
                      <widget class="QCheckBox" name="cb_extrap_meas_fit">
                       <property name="text">
                        <string>Fit</string>
+                      </property>
+                      <property name="checked">
+                       <bool>true</bool>
                       </property>
                      </widget>
                     </item>
@@ -4736,7 +4745,18 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QComboBox" name="combo_extrap_fit"/>
+                  <widget class="QComboBox" name="combo_extrap_fit">
+                   <item>
+                    <property name="text">
+                     <string>Automatic</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Manual</string>
+                    </property>
+                   </item>
+                  </widget>
                  </item>
                  <item>
                   <spacer name="horizontalSpacer_6">
@@ -4779,7 +4799,23 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QComboBox" name="combo_extrap_top"/>
+                  <widget class="QComboBox" name="combo_extrap_top">
+                   <item>
+                    <property name="text">
+                     <string>Power</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Constant</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>3-Point</string>
+                    </property>
+                   </item>
+                  </widget>
                  </item>
                  <item>
                   <spacer name="horizontalSpacer_7">
@@ -4797,7 +4833,7 @@
                 </layout>
                </item>
                <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_39" stretch="0,5,4,7">
+                <layout class="QHBoxLayout" name="horizontalLayout_39" stretch="0,5,0,7">
                  <item>
                   <spacer name="horizontalSpacer_4">
                    <property name="orientation">
@@ -4822,7 +4858,18 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QComboBox" name="combo_extrap_bottom"/>
+                  <widget class="QComboBox" name="combo_extrap_bottom">
+                   <item>
+                    <property name="text">
+                     <string>Power</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>No Slip</string>
+                    </property>
+                   </item>
+                  </widget>
                  </item>
                  <item>
                   <spacer name="horizontalSpacer_8">
@@ -4945,7 +4992,7 @@
                 </property>
                 <layout class="QGridLayout" name="gridLayout_36">
                  <item row="0" column="0">
-                  <widget class="QTableWidget" name="table_extrap_qsense"/>
+                  <widget class="QTableWidget" name="table_extrap_qsen"/>
                  </item>
                 </layout>
                </widget>
