@@ -140,7 +140,7 @@ class DepthData(object):
         self.draft_use_m = draft
         
         # Apply draft to ensemble depths if BT or VB
-        if self.depth_source == 'DS':
+        if self.depth_source != 'DS':
             self.depth_beams_m = self.depth_beams_m + draft_change
             self.depth_processed_m = self.depth_processed_m + draft_change 
             

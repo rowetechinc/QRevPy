@@ -5203,7 +5203,7 @@
      <normaloff>:/images/24x24/Red mark.png</normaloff>:/images/24x24/Red mark.png</iconset>
    </property>
    <property name="text">
-    <string>UncheckAll</string>
+    <string>Check/Uncheck</string>
    </property>
   </action>
   <action name="actionBT">

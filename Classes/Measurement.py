@@ -745,6 +745,17 @@ class Measurement(object):
 
         self.apply_settings(s)
 
+    def change_draft(self, draft, transect_idx=None):
+        s = self.current_settings()
+        if transect_idx is None:
+            # Apply change to all transects
+            for transect in self.transects:
+                transect.change_draft(draft)
+        else:
+            self.transects[transect_idx].change_draft(draft)
+
+        self.apply_settings(s)
+
     @staticmethod
     def h_external_valid(meas):
         external = False

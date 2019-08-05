@@ -27,12 +27,14 @@ from UI.Salinity import Salinity
 from UI.ShipTrack import Shiptrack
 from UI.BoatSpeed import BoatSpeed
 from UI.BeamDepths import BeamDepths
+from UI.Draft import Draft
 from UI.CrossSection import CrossSection
 from UI.StationaryGraphs import StationaryGraphs
 from UI.BTFilters import BTFilters
 from UI.GPSFilters import GPSFilters
 from UI.WTContour import WTContour
 from UI.WTFilters import WTFilters
+from UI.Rating import Rating
 from UI.MplCanvas import MplCanvas
 from contextlib import contextmanager
 import time
@@ -121,7 +123,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.caller = caller
             self.split_initialization(groupings=groupings, data=data)
             self.actionSave.triggered.connect(self.split_save)
+            self.config_gui()
             self.processed_data = []
+            self.processed_transects = []
         else:
             self.actionSave.triggered.connect(self.save_measurement)
 
@@ -4243,7 +4247,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 col += 1
-                item = '{:5.2f}'.format(transect.depths.bt_depths.draft_use_m)
+                item = '{:5.2f}'.format(transect.depths.bt_depths.draft_use_m * self.units['L'])
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -4406,7 +4410,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.depth_bottom_canvas.draw()
 
     def depth_table_clicked(self, row, column):
-        """Changes plotted data to the transect of the transect clicked.
+        """Changes plotted data to the transect of the transect clicked or allows changing of the draft.
 
         Parameters
         ----------
@@ -4416,12 +4420,34 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             Column clicked by user
         """
 
+        # Change transect plotted
         if column == 0:
             self.idx = row
             self.depth_plots()
 
+        # Change draft
+        if column == 1:
+            # Intialize dialog
+            draft_dialog = Draft(self)
+            draft_dialog.draft_units.setText(self.units['label_L'])
+            draft_entered = draft_dialog.exec_()
+            # If data entered.
+            with self.wait_cursor():
+                if draft_entered:
+                    draft = float(draft_dialog.ed_draft.text())
+                    draft = draft / self.units['L']
+                    # Apply change to selected or all transects
+                    if draft_dialog.rb_all.isChecked():
+                        self.meas.change_draft(draft=draft)
+                    else:
+                        self.meas.change_draft(draft=draft, transect_idx=self.checked_transects_idx[row])
+
+                    # Update depth tab
+                    s = self.meas.current_settings()
+                    self.update_depth_tab(s)
+
     def update_depth_tab(self, s):
-        """Updates the measurement and bottom track tab (table and graphics) after a change to settings has been made.
+        """Updates the depth tab (table and graphics) after a change to settings has been made.
 
         Parameters
         ----------
@@ -4621,6 +4647,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.combo_wt_snr.setEnabled(False)
 
         self.rb_wt_speed.toggled.connect(self.wt_radiobutton_control)
+        self.rb_wt_contour.toggled.connect(self.wt_radiobutton_control)
 
         # Connect manual entry
         self.ed_wt_error_vel_threshold.editingFinished.connect(self.change_wt_error_vel_threshold)
@@ -5208,6 +5235,30 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         the last pairing has been completed, returns control to the function initiating QRev.
         """
 
+        # Intialize dialog
+        rating_dialog = Rating(self)
+        rating_dialog.uncertainty_value.setText('{:4.1f}'.format(self.meas.uncertainty.total_95_user))
+        if self.meas.uncertainty.total_95_user < 3:
+            rating_dialog.rb_excellent.setChecked(True)
+        elif self.meas.uncertainty.total_95_user < 5.01:
+            rating_dialog.rb_good.setChecked(True)
+        elif self.meas.uncertainty.total_95_user < 8.01:
+            rating_dialog.rb_fair.setChecked(True)
+        else:
+            rating_dialog.rb_poor.setChecked(True)
+        rating_entered = rating_dialog.exec_()
+        # If data entered.
+        with self.wait_cursor():
+            if rating_entered:
+                if rating_dialog.rb_excellent.isChecked():
+                    rating = 'Excellent'
+                elif rating_dialog.rb_good.isChecked():
+                    rating = 'Good'
+                elif rating_dialog.rb_fair.isChecked():
+                    rating = 'Fair'
+                else:
+                    rating = 'Poor'
+
         # Create default file name
         save_file = SaveMeasurementDialog()
 
@@ -5222,7 +5273,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         q = {'group': self.groupings[self.group_idx],
              'start_serial_time': self.meas.transects[self.groupings[self.group_idx][0]].date_time.start_serial_time,
              'end_serial_time': self.meas.transects[self.groupings[self.group_idx][-1]].date_time.end_serial_time,
-             'processed_discharge': discharge['total_mean']}
+             'processed_discharge': discharge['total_mean'],
+             'rating': rating}
         self.processed_data.append(q)
 
         # Load next pairing
@@ -5230,7 +5282,17 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # If all pairings have been processed return control to the function initiating QRev.
         if self.group_idx > len(self.groupings) - 1:
+            # Create summary of all processed transects
+            for idx in range(len(self.meas.transects)):
+                q_trans = {'transect_id': idx,
+                           'transect_file': self.meas.transects[idx].file_name[:-4],
+                           'start_serial_time': self.meas.transects[idx].date_time.start_serial_time,
+                           'end_serial_time': self.meas.transects[idx].date_time.end_serial_time,
+                           'duration': self.meas.transects[idx].date_time.transect_duration_sec,
+                           'processed_discharge': self.meas.discharge[idx].total}
+                self.processed_transects.append(q_trans)
             self.caller.processed_meas = self.processed_data
+            self.caller.processed_transects = self.processed_transects
             self.caller.Show_RIVRS()
             self.close()
 

@@ -152,6 +152,78 @@ class RIVRS_Demo(QtWidgets.QMainWindow, wRIVRS_Demo.Ui_RIVRS_Demo):
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
+    def processed_transect_table(self, data):
+        """Creates a table to demonstrate the results of the initial processing of the measurement transects
+        prior to grouping.
+        """
+
+        # Setup table
+        tbl = self.table_original
+
+        # Add transect data
+        for row, transect in enumerate(data):
+            col = 0
+            # File/transect name
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(transect['transect_file']))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Transect start time
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.fromtimestamp(
+                transect['start_serial_time']), '%H:%M:%S')))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Transect start edge
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Transect end time
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.fromtimestamp(
+                transect['end_serial_time']), '%H:%M:%S')))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Transect duration
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:5.1f}'.format(transect['duration'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Transect total discharge
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:8.2f}'.format(transect['processed_discharge'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Transect top discharge
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Transect middle discharge
+            col += 1
+            tbl.setItem(row, col,
+                        QtWidgets.QTableWidgetItem(''))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Transect bottom discharge
+            col += 1
+            tbl.setItem(row, col,
+                        QtWidgets.QTableWidgetItem(''))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Transect left discharge
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Transect right discharge
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+        tbl.resizeColumnsToContents()
+        tbl.resizeRowsToContents()
+
     def processed_data_table(self, data):
         """Creates a table to demonstrate the grouped and processed data passed back to QRev
         """

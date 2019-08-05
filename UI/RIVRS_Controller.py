@@ -26,6 +26,7 @@ class RIVRS_Controller:
     def __init__(self):
         # Initialize attributes
         self.processed_meas = None
+        self.processed_transects = None
         RIVRS_Window = None
         QRev_Window = None
 
@@ -42,6 +43,7 @@ class RIVRS_Controller:
             # If processed_meas contains data this means that QRev has be run and a function in RIVRS, demoed here
             # with processed_data_table can be called and the processed_meas data passed to RIVRS
             self.RIVRS_Window.processed_data_table(data=self.processed_meas)
+            self.RIVRS_Window.processed_transect_table(data=self.processed_transects)
             self.RIVRS_Window.show()
             # The QRev GUI is closed automatically
             self.QRev_Window.close()

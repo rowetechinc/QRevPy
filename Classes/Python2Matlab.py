@@ -46,7 +46,7 @@ class Python2Matlab(object):
         discharge = np.copy(meas_mat.discharge)
         discharge_sel = [discharge[i] for i in checked_idx]
         self.matlab_dict['discharge'] = self.listobj2struct(discharge_sel, py_2_mat_dict)
-        self.matlab_dict['sysTest'] = self.listobj2struct(meas_mat.system_test, py_2_mat_dict)
+        self.matlab_dict['sysTest'] = self.listobj2struct(meas_mat.system_tst, py_2_mat_dict)
         transects = np.copy(meas_mat.transects)
         transects_sel = [transects[i] for i in checked_idx]
         self.matlab_dict['transects'] = self.listobj2struct(transects_sel, py_2_mat_dict)
