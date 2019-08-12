@@ -4347,15 +4347,29 @@
            <attribute name="title">
             <string>Data</string>
            </attribute>
-           <layout class="QHBoxLayout" name="horizontalLayout_58" stretch="1,2,1,1">
+           <layout class="QHBoxLayout" name="horizontalLayout_58" stretch="12,40,20,28">
             <item>
              <widget class="QGroupBox" name="gp_data">
+              <property name="font">
+               <font>
+                <weight>50</weight>
+                <bold>false</bold>
+               </font>
+              </property>
               <property name="title">
                <string>Data</string>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_44">
                <item>
-                <widget class="QTableWidget" name="table_extrap_n_points"/>
+                <widget class="QTableWidget" name="table_extrap_n_points">
+                 <property name="font">
+                  <font>
+                   <pointsize>10</pointsize>
+                   <weight>50</weight>
+                   <bold>false</bold>
+                  </font>
+                 </property>
+                </widget>
                </item>
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_41">
@@ -4374,6 +4388,13 @@
                  </item>
                  <item>
                   <widget class="QPushButton" name="pb_extrap_threshold">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <property name="text">
                     <string>Threshold</string>
                    </property>
@@ -4411,6 +4432,13 @@
                  </item>
                  <item>
                   <widget class="QPushButton" name="pb_extrap_subsection">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <property name="text">
                     <string>Subsection</string>
                    </property>
@@ -4448,6 +4476,13 @@
                  </item>
                  <item>
                   <widget class="QComboBox" name="combo_extrap_type">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <item>
                     <property name="text">
                      <string>Discharge</string>
@@ -4480,23 +4515,43 @@
             </item>
             <item>
              <widget class="QGroupBox" name="gb_profile">
+              <property name="font">
+               <font>
+                <weight>50</weight>
+                <bold>false</bold>
+               </font>
+              </property>
               <property name="title">
                <string>Profile</string>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_57" stretch="10,2,1">
                <item>
-                <widget class="QWidget" name="widget" native="true"/>
+                <widget class="QWidget" name="graph_extrap" native="true"/>
                </item>
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_56">
                  <item>
                   <widget class="QGroupBox" name="gb_depth_cell">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <property name="title">
                     <string>Depth Cell</string>
                    </property>
                    <layout class="QVBoxLayout" name="verticalLayout_45">
                     <item>
                      <widget class="QCheckBox" name="cb_extrap_data">
+                      <property name="font">
+                       <font>
+                        <pointsize>11</pointsize>
+                        <weight>50</weight>
+                        <bold>false</bold>
+                       </font>
+                      </property>
                       <property name="text">
                        <string>Data</string>
                       </property>
@@ -4507,6 +4562,13 @@
                     </item>
                     <item>
                      <widget class="QCheckBox" name="cb_extrap_surface">
+                      <property name="font">
+                       <font>
+                        <pointsize>11</pointsize>
+                        <weight>50</weight>
+                        <bold>false</bold>
+                       </font>
+                      </property>
                       <property name="text">
                        <string>Surface Cells</string>
                       </property>
@@ -4517,12 +4579,26 @@
                  </item>
                  <item>
                   <widget class="QGroupBox" name="gb_transects">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <property name="title">
                     <string>Transects</string>
                    </property>
                    <layout class="QVBoxLayout" name="verticalLayout_46">
                     <item>
                      <widget class="QCheckBox" name="cb_extrap_trans_medians">
+                      <property name="font">
+                       <font>
+                        <pointsize>11</pointsize>
+                        <weight>50</weight>
+                        <bold>false</bold>
+                       </font>
+                      </property>
                       <property name="text">
                        <string>Medians</string>
                       </property>
@@ -4530,6 +4606,13 @@
                     </item>
                     <item>
                      <widget class="QCheckBox" name="cb_extrap_trans_fit">
+                      <property name="font">
+                       <font>
+                        <pointsize>11</pointsize>
+                        <weight>50</weight>
+                        <bold>false</bold>
+                       </font>
+                      </property>
                       <property name="text">
                        <string>Fit</string>
                       </property>
@@ -4540,12 +4623,26 @@
                  </item>
                  <item>
                   <widget class="QGroupBox" name="gb_measurement">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <property name="title">
                     <string>Measurement</string>
                    </property>
                    <layout class="QVBoxLayout" name="verticalLayout_47">
                     <item>
                      <widget class="QCheckBox" name="cb_extrap_meas_medians">
+                      <property name="font">
+                       <font>
+                        <pointsize>11</pointsize>
+                        <weight>50</weight>
+                        <bold>false</bold>
+                       </font>
+                      </property>
                       <property name="text">
                        <string>Medians</string>
                       </property>
@@ -4556,6 +4653,13 @@
                     </item>
                     <item>
                      <widget class="QCheckBox" name="cb_extrap_meas_fit">
+                      <property name="font">
+                       <font>
+                        <pointsize>11</pointsize>
+                        <weight>50</weight>
+                        <bold>false</bold>
+                       </font>
+                      </property>
                       <property name="text">
                        <string>Fit</string>
                       </property>
@@ -4699,12 +4803,26 @@
             </item>
             <item>
              <widget class="QGroupBox" name="gb_fit">
+              <property name="font">
+               <font>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
               <property name="title">
                <string>Fit</string>
               </property>
               <layout class="QVBoxLayout" name="verticalLayout_43" stretch="5,2,1,1,1,1">
                <item>
-                <widget class="QTableWidget" name="table_extrap_fit"/>
+                <widget class="QTableWidget" name="table_extrap_fit">
+                 <property name="font">
+                  <font>
+                   <pointsize>10</pointsize>
+                   <weight>75</weight>
+                   <bold>true</bold>
+                  </font>
+                 </property>
+                </widget>
                </item>
                <item>
                 <spacer name="verticalSpacer_5">
@@ -4736,6 +4854,13 @@
                  </item>
                  <item>
                   <widget class="QLabel" name="txt_fit">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <property name="text">
                     <string>Fit  </string>
                    </property>
@@ -4746,6 +4871,13 @@
                  </item>
                  <item>
                   <widget class="QComboBox" name="combo_extrap_fit">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <item>
                     <property name="text">
                      <string>Automatic</string>
@@ -4790,6 +4922,13 @@
                  </item>
                  <item>
                   <widget class="QLabel" name="txt_top">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <property name="text">
                     <string> Top  </string>
                    </property>
@@ -4800,6 +4939,13 @@
                  </item>
                  <item>
                   <widget class="QComboBox" name="combo_extrap_top">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <item>
                     <property name="text">
                      <string>Power</string>
@@ -4833,7 +4979,7 @@
                 </layout>
                </item>
                <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_39" stretch="0,5,0,7">
+                <layout class="QHBoxLayout" name="horizontalLayout_39" stretch="1,2,9,0">
                  <item>
                   <spacer name="horizontalSpacer_4">
                    <property name="orientation">
@@ -4849,6 +4995,13 @@
                  </item>
                  <item>
                   <widget class="QLabel" name="txt_bottom">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <property name="text">
                     <string>Bottom  </string>
                    </property>
@@ -4859,6 +5012,13 @@
                  </item>
                  <item>
                   <widget class="QComboBox" name="combo_extrap_bottom">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <item>
                     <property name="text">
                      <string>Power</string>
@@ -4903,6 +5063,13 @@
                  </item>
                  <item>
                   <widget class="QLabel" name="txt_exponent">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <property name="text">
                     <string>Exponent  </string>
                    </property>
@@ -4912,7 +5079,15 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QLineEdit" name="ed_extrap_exponent"/>
+                  <widget class="QLineEdit" name="ed_extrap_exponent">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                  </widget>
                  </item>
                  <item>
                   <spacer name="horizontalSpacer_9">
@@ -4936,47 +5111,123 @@
              <layout class="QVBoxLayout" name="verticalLayout_33" stretch="2,4,1">
               <item>
                <widget class="QGroupBox" name="gb_previous">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
                 <property name="title">
                  <string>Previous Fit Settings</string>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_32">
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="txt_p_top">
-                   <property name="text">
-                    <string>Top:</string>
+                 <item row="3" column="1">
+                  <widget class="QLabel" name="txt_extrap_p_exponent">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
                    </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QLabel" name="txt_extrap_p_top">
                    <property name="text">
                     <string>TextLabel</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="txt_p_bottom">
+                 <item row="3" column="0">
+                  <widget class="QLabel" name="txt_p_exponent">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <property name="text">
-                    <string>Bottom:</string>
+                    <string>Exponent:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="txt_p_top">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>Top:</string>
                    </property>
                   </widget>
                  </item>
                  <item row="1" column="1">
+                  <widget class="QLabel" name="txt_extrap_p_top">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>TextLabel</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
                   <widget class="QLabel" name="txt_extrap_p_bottom">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <property name="text">
                     <string>TextLabel</string>
                    </property>
                   </widget>
                  </item>
                  <item row="2" column="0">
-                  <widget class="QLabel" name="txt_p_exponent">
+                  <widget class="QLabel" name="txt_p_bottom">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <property name="text">
-                    <string>Exponent:</string>
+                    <string>Bottom:</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="2" column="1">
-                  <widget class="QLabel" name="txt_extrap_p_exponent">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="txt_p_fit">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>Fit Method</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QLabel" name="txt_extrap_p_fit">
+                   <property name="font">
+                    <font>
+                     <pointsize>11</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
                    <property name="text">
                     <string>TextLabel</string>
                    </property>
@@ -4987,12 +5238,26 @@
               </item>
               <item>
                <widget class="QGroupBox" name="gb_q">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
                 <property name="title">
                  <string>Discharge Sensitivity</string>
                 </property>
-                <layout class="QGridLayout" name="gridLayout_36">
-                 <item row="0" column="0">
-                  <widget class="QTableWidget" name="table_extrap_qsen"/>
+                <layout class="QVBoxLayout" name="verticalLayout_60">
+                 <item>
+                  <widget class="QTableWidget" name="table_extrap_qsen">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                     <weight>75</weight>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                  </widget>
                  </item>
                 </layout>
                </widget>
@@ -5006,14 +5271,7 @@
                  <item>
                   <widget class="QPushButton" name="pb_extrap_cancel">
                    <property name="text">
-                    <string>Cancel</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="pb_extrap_apply">
-                   <property name="text">
-                    <string>Apply</string>
+                    <string>Reset to Previous</string>
                    </property>
                   </widget>
                  </item>

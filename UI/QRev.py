@@ -35,6 +35,9 @@ from UI.GPSFilters import GPSFilters
 from UI.WTContour import WTContour
 from UI.WTFilters import WTFilters
 from UI.Rating import Rating
+from UI.ExtrapPlot import ExtrapPlot
+from UI.Threshold import Threshold
+from UI.Subsection import Subsection
 from UI.MplCanvas import MplCanvas
 from contextlib import contextmanager
 import time
@@ -348,7 +351,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.uncertainty_table()
             self.qa_table()
             self.contour_shiptrack(self.checked_transects_idx[0])
-            self.extrap_plot()
+            self.main_extrap_plot()
             self.discharge_plot()
             self.messages_tab()
             self.comments_tab()
@@ -658,7 +661,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Draw canvas
         self.middle_mpl.draw()
 
-    def extrap_plot(self):
+    def main_extrap_plot(self):
         """Generates the color contour and shiptrack plot for the main tab.
         """
 
@@ -4326,11 +4329,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
     def depth_plots(self):
         """Creates graphics for depth tab.
-
-        Parameters
-        ----------
-        idx: int
-            Index of the test to be plotted.
         """
 
         with self.wait_cursor():
@@ -5187,6 +5185,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 # ==========
     def extrap_tab(self):
 
+        self.extrap_meas = copy.deepcopy(self.meas)
+
+        self.extrap_index(len(self.meas.transects) + 1)
+        self.start_bank = None
+
         # Setup number of points data table
         tbl = self.table_extrap_n_points
         table_header = [self.tr('Z'),
@@ -5208,7 +5211,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         self.tr('Exponent'),
                         self.tr('% Difference')]
         ncols = len(table_header)
-        nrows = 7
+        nrows = 6
         tbl.setRowCount(nrows)
         tbl.setColumnCount(ncols)
         tbl.setHorizontalHeaderLabels(table_header)
@@ -5227,13 +5230,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.verticalHeader().hide()
         tbl.horizontalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
-        tbl.cellClicked.connect(self.display_selected)
+        tbl.cellClicked.connect(self.fit_list_table_clicked)
         self.fit_list_table()
 
-        # Display Previous settings
-        self.txt_extrap_p_top.setText(self.meas.extrap_fit.sel_fit[-1].top_method)
-        self.txt_extrap_p_bottom.setText(self.meas.extrap_fit.sel_fit[-1].bot_method)
-        self.txt_extrap_p_exponent.setText('{:6.4f}'.format(self.meas.extrap_fit.sel_fit[-1].exponent))
+        self.display_current_fit()
 
         # Setup fit method
         if self.meas.extrap_fit.sel_fit[-1].fit_method == 'Automatic':
@@ -5266,47 +5266,76 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Set exponent
         self.ed_extrap_exponent.setText('{:6.4f}'.format(self.meas.extrap_fit.sel_fit[-1].exponent))
-        self.combo_extrap_fit.currentIndexChanged[str].connect(self.change_exponent)
+        self.ed_extrap_exponent.editingFinished.connect(self.change_exponent)
 
         # Connect display settings
-        self.cb_extrap_data.stateChanged(self.extrap_display_settings)
-        self.cb_extrap_surface.stateChanged(self.extrap_display_settings)
-        self.cb_extrap_meas_medians.stateChanged(self.extrap_display_settings)
-        self.cb_extrap_meas_fit.stateChanged(self.extrap_display_settings)
-        self.cb_extrap_trans_medians.stateChanged(self.extrap_display_settings)
-        self.cb_extrap_trans_fit.stateChanged(self.extrap_display_settings)
+        # self.cb_extrap_data.stateChanged.connect(self.extrap_plot_settings)
+        # self.cb_extrap_surface.stateChanged.connect(self.extrap_plot_settings)
+        # self.cb_extrap_meas_medians.stateChanged.connect(self.extrap_plot_settings)
+        # self.cb_extrap_meas_fit.stateChanged.connect(self.extrap_plot_settings)
+        # self.cb_extrap_trans_medians.stateChanged.connect(self.extrap_plot_settings)
+        # self.cb_extrap_trans_fit.stateChanged.connect(self.extrap_plot_settings)
+        self.cb_extrap_data.stateChanged.connect(self.extrap_plot)
+        self.cb_extrap_surface.stateChanged.connect(self.extrap_plot)
+        self.cb_extrap_meas_medians.stateChanged.connect(self.extrap_plot)
+        self.cb_extrap_meas_fit.stateChanged.connect(self.extrap_plot)
+        self.cb_extrap_trans_medians.stateChanged.connect(self.extrap_plot)
+        self.cb_extrap_trans_fit.stateChanged.connect(self.extrap_plot)
 
-        # Connect data buttons
-        self.pb_extrap_threshold.clicked(self.change_threshold)
-        self.pb_extrap_subsection.clicked(self.change_subsection)
-        self.combo_extrap_type.stateChanged(self.change_extrap_data)
+        # Connect data settings
+        self.pb_extrap_threshold.clicked.connect(self.change_threshold)
+        self.pb_extrap_subsection.clicked.connect(self.change_subsection)
+        self.combo_extrap_type.currentIndexChanged[str].connect(self.change_data_type)
+        if self.meas.extrap_fit.sel_fit[-1].data_type.lower() == 'q':
+            self.combo_extrap_type.setCurrentIndex(0)
+        else:
+            self.combo_extrap_type.setCurrentIndex(1)
 
         # Cancel and apply buttons
-        self.pb_extrap_apply.clicked(self.apply_extrap)
-        self.pb_extrap_cancel.clicked(self.cancel_extrap)
+        # self.pb_extrap_apply.clicked.connect(self.apply_extrap)
+        self.pb_extrap_cancel.clicked.connect(self.cancel_extrap)
+
+        self.extrap_plot()
+
+    def extrap_index(self, row):
+        if row > len(self.checked_transects_idx) - 1:
+            self.idx = len(self.meas.transects)
+        else:
+            self.idx = self.checked_transects_idx[row]
+
+    def display_current_fit(self):
+        # Display Previous settings
+        self.txt_extrap_p_fit.setText(self.meas.extrap_fit.sel_fit[-1].fit_method)
+        self.txt_extrap_p_top.setText(self.meas.extrap_fit.sel_fit[-1].top_method)
+        self.txt_extrap_p_bottom.setText(self.meas.extrap_fit.sel_fit[-1].bot_method)
+        self.txt_extrap_p_exponent.setText('{:6.4f}'.format(self.meas.extrap_fit.sel_fit[-1].exponent))
 
     def n_points_table(self):
         tbl = self.table_extrap_n_points
-        norm_data = self.meas.extrap_fit.norm_data[-1]
+        norm_data = self.meas.extrap_fit.norm_data[self.idx]
         for row in range(len(norm_data.unit_normalized_z)):
             col = 0
-            item = '{:6.4f}'.format(norm_data.unit_normalize_z[row])
-            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+            if np.isnan(norm_data.unit_normalized_z[row]):
+                value = 1 - row / 20.
+            else:
+                value = norm_data.unit_normalized_z[row]
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:6.4f}'.format(value)))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col = 1
-            item = '{:8d}'.format(norm_data.unit_normalize_no[row])
-            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+            if np.isnan(norm_data.unit_normalized_no[row]):
+                value = 0
+            else:
+                value = norm_data.unit_normalized_no[row]
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:8.0f}'.format(value)))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            tbl.resizeColumnsToContents()
+            tbl.resizeRowsToContents()
 
     def q_sensitivity_table(self):
 
         tbl = self.table_extrap_qsen
         q_sen = self.meas.extrap_fit.q_sensitivity
-
-        # Get selected methods
-        top = self.meas.extrap_fit[-1].top_method
-        bottom = self.meas.extrap_fit[-1].bottom_method
-        exp = self.meas.extrap_fit[-1].exponent
 
         row = 0
         tbl.setItem(row, 0, QtWidgets.QTableWidgetItem('Power'))
@@ -5381,7 +5410,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
 
         if q_sen.q_man_mean is not None:
-            row = 6
+            row = tbl.rowCount()
+            tbl.insertRow(row)
             tbl.setItem(row, 0, QtWidgets.QTableWidgetItem(q_sen.man_top))
             tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
             tbl.setItem(row, 1, QtWidgets.QTableWidgetItem(q_sen.man_bot))
@@ -5409,6 +5439,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         elif np.abs(q_sen.q_3p_ns_opt_per_diff) < 0.00000001:
             self.set_extrap_reference(5)
 
+        tbl.resizeColumnsToContents()
+        tbl.resizeRowsToContents()
+
     def set_extrap_reference(self, reference_row):
         tbl = self.table_extrap_qsen
         for row in range(tbl.rowCount()):
@@ -5425,9 +5458,257 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             item = self.meas.transects[self.checked_transects_idx[n]].file_name[:-4]
             tbl.setItem(n, 0, QtWidgets.QTableWidgetItem(item))
             tbl.item(n, 0).setFlags(QtCore.Qt.ItemIsEnabled)
-        tbl.setItem(len(self.checked_transects_idx)+1, 0, QtWidgets.QTableWidgetItem('Measurement'))
-        tbl.setItem(len(self.checked_transects_idx) + 1, 0).setFlags(QtCore.Qt.ItemIsEnabled)
-        tbl.item(len(self.checked_transects_idx) + 1, 0).setFont(self.font_bold)
+            tbl.item(n, 0).setFont(self.font_normal)
+        tbl.setItem(len(self.checked_transects_idx), 0, QtWidgets.QTableWidgetItem('Measurement'))
+        tbl.item(len(self.checked_transects_idx), 0).setFlags(QtCore.Qt.ItemIsEnabled)
+        tbl.item(len(self.checked_transects_idx), 0).setFont(self.font_bold)
+        tbl.resizeColumnsToContents()
+        tbl.resizeRowsToContents()
+
+    def fit_list_table_clicked(self, selected_row, selected_col):
+        with self.wait_cursor():
+            # Set all filenames to normal font
+            nrows = len(self.checked_transects_idx) + 1
+
+            for row in range(nrows):
+                self.table_extrap_fit.item(row, 0).setFont(self.font_normal)
+
+            # Set selected file to bold font
+            self.table_extrap_fit.item(selected_row, 0).setFont(self.font_bold)
+
+            self.extrap_index(selected_row)
+            self.extrap_plot()
+
+    def extrap_plot(self):
+            """Creates extrapolation plot.
+            """
+
+            # If the canvas has not been previously created, create the canvas and add the widget.
+            if not hasattr(self, 'extrap_canvas'):
+                # Create the canvas
+                self.extrap_canvas = MplCanvas(parent=self.graph_extrap, width=4, height=4, dpi=80)
+                # Assign layout to widget to allow auto scaling
+                layout = QtWidgets.QVBoxLayout(self.graph_extrap)
+                # Adjust margins of layout to maximize graphic area
+                layout.setContentsMargins(1, 1, 1, 1)
+                # Add the canvas
+                layout.addWidget(self.extrap_canvas)
+
+            # Initialize the figure and assign to the canvas
+            self.extrap_fig = ExtrapPlot(canvas=self.extrap_canvas)
+            # Create the figure with the specified data
+            self.determine_start_bank(self.meas.transects, self.idx)
+            self.extrap_fig.create(meas = self.meas,
+                                   checked = self.checked_transects_idx,
+                                   idx=self.idx,
+                                   data_type=self.combo_extrap_type.currentText(),
+                                   cb_data=self.cb_extrap_data.isChecked(),
+                                   cb_surface=self.cb_extrap_surface.isChecked(),
+                                   cb_trans_medians=self.cb_extrap_trans_medians.isChecked(),
+                                   cb_trans_fit=self.cb_extrap_trans_fit.isChecked(),
+                                   cb_meas_medians=self.cb_extrap_meas_medians.isChecked(),
+                                   cb_meas_fit=self.cb_extrap_meas_fit.isChecked())
+
+            self.extrap_canvas.draw()
+
+    def determine_start_bank(self, transects, idx):
+        if idx == len(self.checked_transects_idx)+1:
+            self.start_bank = []
+            for transect_idx in self.checked_transects_idx:
+                self.start_bank.append(transects[transect_idx].start_edge)
+        else:
+            self.start_bank = transects[idx].start_edge
+
+    def extrap_plot_settings(self):
+
+        self.extrap_fig.change_display(cb_data=self.cb_extrap_data.isChecked(),
+                                            cb_surface=self.cb_extrap_surface.isChecked(),
+                                            cb_trans_medians=self.cb_extrap_trans_medians,
+                                            cb_trans_fit=self.cb_extrap_trans_fit,
+                                            cb_meas_medians=self.cb_extrap_meas_medians,
+                                            cb_meas_fit=self.cb_extrap_meas_fit)
+        self.extrap_canvas.draw()
+
+    def change_threshold(self):
+        # Intialize dialog
+        threshold_dialog = Threshold(self)
+        threshold_dialog.ed_threshold.setText('{:3d}'.format(self.meas.extrap_fit.threshold))
+        threshold_entered = threshold_dialog.exec_()
+        # If data entered.
+        with self.wait_cursor():
+            if threshold_entered:
+                threshold = float(threshold_dialog.ed_threshold.text())
+
+                # Apply change to selected or all transects
+                if threshold_dialog.rb_default.isChecked():
+                    threshold = 20
+
+                self.meas.extrap_fit.change_threshold(self, transects=self.meas.transects,
+                                                      data_type=self.meas.extrap_fit.sel_fit[0].data_type,
+                                                      threshold=threshold)
+                # Update tab
+                self.n_points_table()
+                self.q_sensitivity_table()
+                self.display_current_fit()
+                self.extrap_plot()
+
+    def change_subsection(self):
+        # Intialize dialog
+        subsection_dialog = Subsection(self)
+        subsection_dialog.start_value.setText('{:3d}'.format(self.meas.extrap_fit.subsection[0]))
+        subsection_dialog.end_value.setText('{:3d}'.format(self.meas.extrap_fit.subsection[1]))
+        subsection_entered = subsection_dialog.exec_()
+        # If data entered.
+        with self.wait_cursor():
+            if subsection_entered:
+                subsection = []
+                subsection[0] = float(subsection_dialog.start_value.text())
+                subsection[1] = float(subsection_dialog.end_value.text())
+
+                # Apply change to selected or all transects
+                if subsection_dialog.rb_default.isChecked():
+                    subsection = [0, 100]
+
+                self.meas.extrap_fit.change_extents(self, transects=self.meas.transects,
+                                                      data_type=self.meas.extrap_fit.sel_fit[-1].data_type,
+                                                      extents=subsection)
+                # Update tab
+                self.n_points_table()
+                self.q_sensitivity_table()
+                self.display_current_fit()
+                self.extrap_plot()
+
+    def change_data_type(self, text):
+        """Coordinates user initiated change to the data type.
+
+        Parameters
+        ----------
+        text: str
+         User selection from combo box
+        """
+
+        with self.wait_cursor():
+
+            # Change setting based on combo box selection
+            data_type = 'q'
+            if text == 'Velocity':
+                data_type = 'v'
+
+            self.meas.extrap_fit.change_data_type(self, transects=self.meas.transects, data_type=data_type)
+
+            # Update tab
+            self.n_points_table()
+            self.q_sensitivity_table()
+            self.display_current_fit()
+            self.extrap_plot()
+
+    def change_fit_method(self, text):
+        """Coordinates user initiated changing the fit type.
+
+        Parameters
+        ----------
+        text: str
+         User selection from combo box
+        """
+
+        with self.wait_cursor():
+            # Change setting based on combo box selection
+            self.meas.extrap_fit.change_fit_method(transects=self.meas.transects,
+                                                   new_fit_method=text,
+                                                   idx=self.idx)
+
+            # Update tab
+            self.q_sensitivity_table()
+            self.display_current_fit()
+            self.extrap_plot()
+
+    def change_top_method(self, text):
+        """Coordinates user initiated changing the top method.
+
+        Parameters
+        ----------
+        text: str
+         User selection from combo box
+        """
+
+        with self.wait_cursor():
+            # Change setting based on combo box selection
+            self.meas.extrap_fit.change_fit_method(transects=self.meas.transects,
+                                                   new_fit_method='Manual',
+                                                   idx=self.idx,
+                                                   top=text)
+
+            # Update tab
+            self.q_sensitivity_table()
+            self.display_current_fit()
+            self.extrap_plot()
+
+    def change_bottom_method(self, text):
+        """Coordinates user initiated changing the bottom method.
+
+        Parameters
+        ----------
+        text: str
+         User selection from combo box
+        """
+
+        with self.wait_cursor():
+            # Change setting based on combo box selection
+            self.meas.extrap_fit.change_fit_method(transects=self.meas.transects,
+                                                   new_fit_method='Manual',
+                                                   idx=self.idx,
+                                                   bot=text)
+
+            # Update tab
+            self.q_sensitivity_table()
+            self.display_current_fit()
+            self.extrap_plot()
+
+    def change_exponent(self):
+        """Coordinates user initiated changing the bottom method.
+
+        Parameters
+        ----------
+        text: str
+         User selection from combo box
+        """
+
+        with self.wait_cursor():
+            exponent = float(self.ed_extrap_exponent.text())
+            # Change based on user input
+            self.meas.extrap_fit.change_fit_method(transects=self.meas.transects,
+                                                   new_fit_method='Manual',
+                                                   idx=self.idx,
+                                                   exponent=exponent)
+
+            # Update tab
+            self.q_sensitivity_table()
+            self.display_current_fit()
+            self.extrap_plot()
+
+    def sensitivity_change_fit(self, row, col):
+
+        with self.wait_cursor():
+            top = self.table_extrap_qsen.itemAt(row, 0).text()
+            bot = self.table_extrap_qsen.itemAt(row, 1).text()
+            exponent = float(self.table_extrap_qsen.itemAt(row, 2).text())
+
+            # Change based on user selection
+            self.meas.extrap_fit.change_fit_method(transects=self.meas.transects,
+                                                   new_fit_method='Manual',
+                                                   idx=self.idx,
+                                                   top=top,
+                                                   bot=bot,
+                                                   exponent=exponent)
+
+            # Update tab
+            self.q_sensitivity_table()
+            self.display_current_fit()
+            self.extrap_plot()
+
+    def cancel_extrap(self):
+        self.meas = copy.deepcopy(self.extrap_meas)
+
 
 # Split functions
 # ==============
@@ -5603,8 +5884,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Depth filters
             self.depth_tab()
         elif tab_idx == 8:
-            # Depth filters
+            # WT filters
             self.wt_tab()
+        elif tab_idx == 9:
+            # Extrapolation
+            self.extrap_tab()
 
     def config_gui(self):
 

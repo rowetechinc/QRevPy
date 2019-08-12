@@ -106,14 +106,14 @@ class ComputeExtrap(object):
         self.q_sensitivity = ExtrapQSensitivity()
         self.q_sensitivity.populate_data(transects, self.sel_fit)
         
-    def change_fit_method(self, transect, new_fit_method, n, kargs = None):
-        # TODO this function needs to be thought through only appears to be needed for setting individual transects to view in extrap window
-        """Function to change the extrapolation methods associated with single transect"""
+    def change_fit_method(self, transects, new_fit_method, idx, top=None, bot=None, exponent=None):
+        """Function to change the extrapolation method"""
         self.fit_method = new_fit_method
-        self.sel_fit = SelectFit()
-        self.sel_fit.populate_data(self.norm_data, new_fit_method, kargs)
-        # self.q_sensitivity = ExtrapQSensitivity()
-        # self.q_sensitivity.populate_data(trans_data, self.sel_fit)
+
+        self.sel_fit[idx].populate_data(self.norm_data[idx], new_fit_method,  top=top, bot=bot, exponent=exponent)
+        if idx == len(self.norm_data):
+            self.q_sensitivity = ExtrapQSensitivity()
+            self.q_sensitivity.populate_data(transects, self.sel_fit)
         
     def change_threshold(self, transects, data_type, threshold):
         """Function to change the threshold for accepting the increment median as valid.  The threshold
@@ -133,6 +133,6 @@ class ComputeExtrap(object):
         self.q_sensitivity = ExtrapQSensitivity()
         self.q_sensitivity.populate_data(transects=transects, extrap_fits=self.sel_fit)
         
-    def change_data_type(self, trans_data, data_type):
-        self.process_profiles(trans_data, data_type)
-        self.q_sensitivity = ExtrapQSensitivity(trans_data, self.selfit)
+    def change_data_type(self, transects, data_type):
+        self.process_profiles(transects, data_type)
+        self.q_sensitivity = ExtrapQSensitivity(transects, self.selfit)
