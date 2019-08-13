@@ -120,7 +120,7 @@ class NormData(object):
             # ensemble using the dot product and unit vector
             unit = np.tile([np.nan], w_vel_x.shape)
             for i in range(w_vel_x.shape[0]):
-                unit[i, :] = np.vstack([w_vel_x[i, :], w_vel_y[i, :]]).dot(unit_vec)
+                unit[i, :] = np.sum(np.vstack([w_vel_x[i, :], w_vel_y[i, :]]) * unit_vec, 0)
                                        
         # Compute Total
         unit_total = np.nansum(np.nansum(unit), 0)
@@ -190,9 +190,9 @@ class NormData(object):
 
         # Process each normalized increment
         for i in range(len(avg_interval) - 1):
-            condition_1 = self.cell_depth_normalized > avg_interval[i]
-            condition_2 = self.cell_depth_normalized <= avg_interval[i + 1]
-            condition_3 = np.isnan(self.unit_normalized) == False
+            condition_1 = np.greater(self.cell_depth_normalized, avg_interval[i])
+            condition_2 = np.less_equal(self.cell_depth_normalized, avg_interval[i + 1])
+            condition_3 = np.logical_not(np.isnan(self.unit_normalized))
             condition_all = np.logical_and(np.logical_and(condition_1, condition_2), condition_3)
             if np.any(condition_all):
                 unit_25[i], unit_norm_med[i], unit_75[i] = sp.mstats.mquantiles(self.unit_normalized[condition_all],

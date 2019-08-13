@@ -111,7 +111,7 @@ class ComputeExtrap(object):
         self.fit_method = new_fit_method
 
         self.sel_fit[idx].populate_data(self.norm_data[idx], new_fit_method,  top=top, bot=bot, exponent=exponent)
-        if idx == len(self.norm_data):
+        if idx == len(self.norm_data)-1:
             self.q_sensitivity = ExtrapQSensitivity()
             self.q_sensitivity.populate_data(transects, self.sel_fit)
         
@@ -134,5 +134,6 @@ class ComputeExtrap(object):
         self.q_sensitivity.populate_data(transects=transects, extrap_fits=self.sel_fit)
         
     def change_data_type(self, transects, data_type):
-        self.process_profiles(transects, data_type)
-        self.q_sensitivity = ExtrapQSensitivity(transects, self.selfit)
+        self.process_profiles(transects=transects, data_type=data_type)
+        self.q_sensitivity = ExtrapQSensitivity()
+        self.q_sensitivity.populate_data(transects=transects, extrap_fits=self.sel_fit)

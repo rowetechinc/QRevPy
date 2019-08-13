@@ -600,7 +600,7 @@ class DepthData(object):
 
             if np.sum(valid) > 1:
                 # Compute interpolation function from all valid data
-                depth_int = np.interp(x_mono, x_mono[valid], depth_mono[n, valid])
+                depth_int = np.interp(x_mono, x_mono[valid], depth_mono[n, valid], left=np.nan, right=np.nan)
                 # Fill in invalid data with interpolated data
                 depth_new[n, np.logical_not(self.valid_beams[n])] = depth_int[np.logical_not(self.valid_beams[n])]
 

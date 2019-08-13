@@ -177,7 +177,7 @@ class FitData(object):
                     # zc = zc.T
                     uc = np.tile(y[idxz[0]], zc.shape)
                 else:
-                    p = poly1d(avg_z[idxz[0:3]], y[idxz[0:3]])
+                    p = np.poly1d(avg_z[idxz[0:3]], y[idxz[0:3]])
                     zc = np.max([avg_z[idxz] + 0.01, 1.0, 0.01])
                     # zc = zc.T
                     uc = zc * p[0] + p[1]

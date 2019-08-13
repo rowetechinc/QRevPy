@@ -5184,10 +5184,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 # Extrap Tab
 # ==========
     def extrap_tab(self):
+        """Initializes all of the features on the extrap_tab.
+        """
 
         self.extrap_meas = copy.deepcopy(self.meas)
 
-        self.extrap_index(len(self.meas.transects) + 1)
+        self.extrap_index(len(self.checked_transects_idx))
         self.start_bank = None
 
         # Setup number of points data table
@@ -5234,47 +5236,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.fit_list_table()
 
         self.display_current_fit()
+        self.set_fit_options()
 
-        # Setup fit method
-        if self.meas.extrap_fit.sel_fit[-1].fit_method == 'Automatic':
-            self.combo_extrap_fit.setCurrentIndex(0)
-            self.combo_extrap_top.setEnabled(False)
-            self.combo_extrap_bottom.setEnabled(False)
-            self.ed_extrap_exponent.setEnabled(False)
-        else:
-            self.combo_extrap_fit.setCurrentIndex(1)
-            self.combo_extrap_top.setEnabled(True)
-            self.combo_extrap_bottom.setEnabled(True)
-            self.ed_extrap_exponent.setEnabled(True)
+        # Connect fit options
         self.combo_extrap_fit.currentIndexChanged[str].connect(self.change_fit_method)
-
-        # Set top method
-        if self.meas.extrap_fit.sel_fit[-1].top_method == 'Power':
-            self.combo_extrap_top.setCurrentIndex(0)
-        elif self.meas.extrap_fit.sel_fit[-1].top_method == 'Constant':
-            self.combo_extrap_top.setCurrentIndex(1)
-        else:
-            self.combo_extrap_top.setCurrentIndex(2)
         self.combo_extrap_top.currentIndexChanged[str].connect(self.change_top_method)
-
-        # Set bottom method
-        if self.meas.extrap_fit.sel_fit[-1].bot_method == 'Power':
-            self.combo_extrap_bottom.setCurrentIndex(0)
-        else:
-            self.combo_extrap_bottom.setCurrentIndex(1)
         self.combo_extrap_bottom.currentIndexChanged[str].connect(self.change_bottom_method)
-
-        # Set exponent
-        self.ed_extrap_exponent.setText('{:6.4f}'.format(self.meas.extrap_fit.sel_fit[-1].exponent))
         self.ed_extrap_exponent.editingFinished.connect(self.change_exponent)
 
         # Connect display settings
-        # self.cb_extrap_data.stateChanged.connect(self.extrap_plot_settings)
-        # self.cb_extrap_surface.stateChanged.connect(self.extrap_plot_settings)
-        # self.cb_extrap_meas_medians.stateChanged.connect(self.extrap_plot_settings)
-        # self.cb_extrap_meas_fit.stateChanged.connect(self.extrap_plot_settings)
-        # self.cb_extrap_trans_medians.stateChanged.connect(self.extrap_plot_settings)
-        # self.cb_extrap_trans_fit.stateChanged.connect(self.extrap_plot_settings)
         self.cb_extrap_data.stateChanged.connect(self.extrap_plot)
         self.cb_extrap_surface.stateChanged.connect(self.extrap_plot)
         self.cb_extrap_meas_medians.stateChanged.connect(self.extrap_plot)
@@ -5292,28 +5262,87 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.combo_extrap_type.setCurrentIndex(1)
 
         # Cancel and apply buttons
-        # self.pb_extrap_apply.clicked.connect(self.apply_extrap)
         self.pb_extrap_cancel.clicked.connect(self.cancel_extrap)
 
         self.extrap_plot()
 
     def extrap_index(self, row):
+        """Converts the row value to a transect index.
+
+        Parameters
+        ----------
+        row: int
+            Row selected from the fit list table
+        """
         if row > len(self.checked_transects_idx) - 1:
             self.idx = len(self.meas.transects)
         else:
             self.idx = self.checked_transects_idx[row]
 
     def display_current_fit(self):
+        """Displays the extrapolation methods currently used to compute discharge.
+        """
+
         # Display Previous settings
         self.txt_extrap_p_fit.setText(self.meas.extrap_fit.sel_fit[-1].fit_method)
         self.txt_extrap_p_top.setText(self.meas.extrap_fit.sel_fit[-1].top_method)
         self.txt_extrap_p_bottom.setText(self.meas.extrap_fit.sel_fit[-1].bot_method)
         self.txt_extrap_p_exponent.setText('{:6.4f}'.format(self.meas.extrap_fit.sel_fit[-1].exponent))
 
+    def set_fit_options(self):
+        """Sets the fit options for the currently selected transect or measurement.
+        """
+
+        # Setup fit method
+        self.combo_extrap_fit.blockSignals(True)
+        if self.meas.extrap_fit.sel_fit[self.idx].fit_method == 'Automatic':
+            self.combo_extrap_fit.setCurrentIndex(0)
+            self.combo_extrap_top.setEnabled(False)
+            self.combo_extrap_bottom.setEnabled(False)
+            self.ed_extrap_exponent.setEnabled(False)
+        else:
+            self.combo_extrap_fit.setCurrentIndex(1)
+            self.combo_extrap_top.setEnabled(True)
+            self.combo_extrap_bottom.setEnabled(True)
+            self.ed_extrap_exponent.setEnabled(True)
+        self.combo_extrap_fit.blockSignals(False)
+
+        # Set top method
+        self.combo_extrap_top.blockSignals(True)
+        if self.meas.extrap_fit.sel_fit[self.idx].top_method == 'Power':
+            self.combo_extrap_top.setCurrentIndex(0)
+        elif self.meas.extrap_fit.sel_fit[self.idx].top_method == 'Constant':
+            self.combo_extrap_top.setCurrentIndex(1)
+        else:
+            self.combo_extrap_top.setCurrentIndex(2)
+        self.combo_extrap_top.blockSignals(False)
+
+        # Set bottom method
+        self.combo_extrap_bottom.blockSignals(True)
+        if self.meas.extrap_fit.sel_fit[self.idx].bot_method == 'Power':
+            self.combo_extrap_bottom.setCurrentIndex(0)
+        else:
+            self.combo_extrap_bottom.setCurrentIndex(1)
+        self.combo_extrap_bottom.blockSignals(False)
+
+        # Set exponent
+        self.ed_extrap_exponent.blockSignals(True)
+        self.ed_extrap_exponent.setText('{:6.4f}'.format(self.meas.extrap_fit.sel_fit[self.idx].exponent))
+        self.ed_extrap_exponent.blockSignals(False)
+
     def n_points_table(self):
+        """Populates the table showing the normalized depth of each layer and how many data points are in each layer.
+        """
+
+        # Set table variable
         tbl = self.table_extrap_n_points
+
+        # Get normalized data for transect or measurement selected
         norm_data = self.meas.extrap_fit.norm_data[self.idx]
+
+        # Populate the table row by row substituting standard values if no data exist.
         for row in range(len(norm_data.unit_normalized_z)):
+            # Column 0 is normalized depth
             col = 0
             if np.isnan(norm_data.unit_normalized_z[row]):
                 value = 1 - row / 20.
@@ -5321,6 +5350,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 value = norm_data.unit_normalized_z[row]
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:6.4f}'.format(value)))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Column 1 is number of points
             col = 1
             if np.isnan(norm_data.unit_normalized_no[row]):
                 value = 0
@@ -5333,10 +5364,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.resizeRowsToContents()
 
     def q_sensitivity_table(self):
+        """Populates the discharge sensitivity table.
+        """
 
+        # Set table reference
         tbl = self.table_extrap_qsen
+
+        # Get sensitivity data
         q_sen = self.meas.extrap_fit.q_sensitivity
 
+        # Power / Power / 1/6
         row = 0
         tbl.setItem(row, 0, QtWidgets.QTableWidgetItem('Power'))
         tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
@@ -5349,6 +5386,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setItem(row, 3, QtWidgets.QTableWidgetItem(item))
         tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
 
+        # Power / Power / Optimize
         row = 1
         tbl.setItem(row, 0, QtWidgets.QTableWidgetItem('Power'))
         tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
@@ -5361,6 +5399,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setItem(row, 3, QtWidgets.QTableWidgetItem(item))
         tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
 
+        # Constant / No Slip / 1/6
         row = 2
         tbl.setItem(row, 0, QtWidgets.QTableWidgetItem('Constant'))
         tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
@@ -5373,6 +5412,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setItem(row, 3, QtWidgets.QTableWidgetItem(item))
         tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
 
+        # Constant / No Slip / Optimize
         row = 3
         tbl.setItem(row, 0, QtWidgets.QTableWidgetItem('Constant'))
         tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
@@ -5385,6 +5425,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setItem(row, 3, QtWidgets.QTableWidgetItem(item))
         tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
 
+        # 3-Point / No Slip / 1/6
         row = 4
         tbl.setItem(row, 0, QtWidgets.QTableWidgetItem('3-Point'))
         tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
@@ -5397,6 +5438,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setItem(row, 3, QtWidgets.QTableWidgetItem(item))
         tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
 
+        # 3-Point / No Slip / Optimize
         row = 5
         tbl.setItem(row, 0, QtWidgets.QTableWidgetItem('3-Point'))
         tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
@@ -5409,9 +5451,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setItem(row, 3, QtWidgets.QTableWidgetItem(item))
         tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
 
+        # Manually set fit method
         if q_sen.q_man_mean is not None:
             row = tbl.rowCount()
-            tbl.insertRow(row)
+            if row == 6:
+                tbl.insertRow(row)
+            else:
+                row = row - 1
             tbl.setItem(row, 0, QtWidgets.QTableWidgetItem(q_sen.man_top))
             tbl.item(row, 0).setFlags(QtCore.Qt.ItemIsEnabled)
             tbl.setItem(row, 1, QtWidgets.QTableWidgetItem(q_sen.man_bot))
@@ -5422,6 +5468,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             item = '{:6.2f}'.format(q_sen.q_man_per_diff)
             tbl.setItem(row, 3, QtWidgets.QTableWidgetItem(item))
             tbl.item(row, 3).setFlags(QtCore.Qt.ItemIsEnabled)
+        elif tbl.rowCount() == 7:
+            tbl.removeRow(6)
 
         # Set reference
         if q_sen.q_man_mean is not None:
@@ -5443,7 +5491,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.resizeRowsToContents()
 
     def set_extrap_reference(self, reference_row):
+        """Sets the discharge sensitivity table to show the selected method as the reference.
+        """
+
+        # Get table reference
         tbl = self.table_extrap_qsen
+
+        # Set all data to normal font
         for row in range(tbl.rowCount()):
             for col in range(tbl.columnCount()):
                 tbl.item(row, col).setFont(self.font_normal)
@@ -5453,7 +5507,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.item(reference_row, col).setFont(self.font_bold)
 
     def fit_list_table(self):
+        """Populates the fit list table to show all the checked transects and the composite measurement.
+        """
+
+        # Get table reference
         tbl = self.table_extrap_fit
+
+        # Add transects and Measurement to table
         for n in range(len(self.checked_transects_idx)):
             item = self.meas.transects[self.checked_transects_idx[n]].file_name[:-4]
             tbl.setItem(n, 0, QtWidgets.QTableWidgetItem(item))
@@ -5461,7 +5521,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.item(n, 0).setFont(self.font_normal)
         tbl.setItem(len(self.checked_transects_idx), 0, QtWidgets.QTableWidgetItem('Measurement'))
         tbl.item(len(self.checked_transects_idx), 0).setFlags(QtCore.Qt.ItemIsEnabled)
+
+        # Show the Measurement as the initial selection
         tbl.item(len(self.checked_transects_idx), 0).setFont(self.font_bold)
+
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
@@ -5477,6 +5540,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.table_extrap_fit.item(selected_row, 0).setFont(self.font_bold)
 
             self.extrap_index(selected_row)
+            self.n_points_table()
+            self.set_fit_options()
             self.extrap_plot()
 
     def extrap_plot(self):
@@ -5497,7 +5562,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Initialize the figure and assign to the canvas
             self.extrap_fig = ExtrapPlot(canvas=self.extrap_canvas)
             # Create the figure with the specified data
-            self.determine_start_bank(self.meas.transects, self.idx)
             self.extrap_fig.create(meas = self.meas,
                                    checked = self.checked_transects_idx,
                                    idx=self.idx,
@@ -5511,72 +5575,64 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             self.extrap_canvas.draw()
 
-    def determine_start_bank(self, transects, idx):
-        if idx == len(self.checked_transects_idx)+1:
-            self.start_bank = []
-            for transect_idx in self.checked_transects_idx:
-                self.start_bank.append(transects[transect_idx].start_edge)
-        else:
-            self.start_bank = transects[idx].start_edge
-
-    def extrap_plot_settings(self):
-
-        self.extrap_fig.change_display(cb_data=self.cb_extrap_data.isChecked(),
-                                            cb_surface=self.cb_extrap_surface.isChecked(),
-                                            cb_trans_medians=self.cb_extrap_trans_medians,
-                                            cb_trans_fit=self.cb_extrap_trans_fit,
-                                            cb_meas_medians=self.cb_extrap_meas_medians,
-                                            cb_meas_fit=self.cb_extrap_meas_fit)
-        self.extrap_canvas.draw()
-
     def change_threshold(self):
+        """Allows the user to change the threshold and then updates the data and display.
+        """
+
         # Intialize dialog
         threshold_dialog = Threshold(self)
-        threshold_dialog.ed_threshold.setText('{:3d}'.format(self.meas.extrap_fit.threshold))
+        threshold_dialog.ed_threshold.setText('{:3.0f}'.format(self.meas.extrap_fit.threshold))
         threshold_entered = threshold_dialog.exec_()
+
         # If data entered.
         with self.wait_cursor():
             if threshold_entered:
                 threshold = float(threshold_dialog.ed_threshold.text())
 
-                # Apply change to selected or all transects
+                # Apply change to all transects
                 if threshold_dialog.rb_default.isChecked():
                     threshold = 20
 
-                self.meas.extrap_fit.change_threshold(self, transects=self.meas.transects,
-                                                      data_type=self.meas.extrap_fit.sel_fit[0].data_type,
-                                                      threshold=threshold)
-                # Update tab
-                self.n_points_table()
-                self.q_sensitivity_table()
-                self.display_current_fit()
-                self.extrap_plot()
+                if threshold >= 0 and threshold <= 100:
+                    self.meas.extrap_fit.change_threshold(transects=self.meas.transects,
+                                                          data_type=self.meas.extrap_fit.sel_fit[0].data_type,
+                                                          threshold=threshold)
+                    # Update tab
+                    self.n_points_table()
+                    self.q_sensitivity_table()
+                    self.set_fit_options()
+                    self.extrap_plot()
 
     def change_subsection(self):
-        # Intialize dialog
+        """Allows the user to change the subsectioning and then updates the data and display.
+        """
+
+        # Initialize dialog
         subsection_dialog = Subsection(self)
-        subsection_dialog.start_value.setText('{:3d}'.format(self.meas.extrap_fit.subsection[0]))
-        subsection_dialog.end_value.setText('{:3d}'.format(self.meas.extrap_fit.subsection[1]))
+        subsection_dialog.start_value.setText('{:3.0f}'.format(self.meas.extrap_fit.subsection[0]))
+        subsection_dialog.end_value.setText('{:3.0f}'.format(self.meas.extrap_fit.subsection[1]))
         subsection_entered = subsection_dialog.exec_()
+
         # If data entered.
         with self.wait_cursor():
             if subsection_entered:
                 subsection = []
-                subsection[0] = float(subsection_dialog.start_value.text())
-                subsection[1] = float(subsection_dialog.end_value.text())
+                subsection.append(float(subsection_dialog.start_value.text()))
+                subsection.append(float(subsection_dialog.end_value.text()))
 
-                # Apply change to selected or all transects
+                # Apply change to all transects
                 if subsection_dialog.rb_default.isChecked():
                     subsection = [0, 100]
 
-                self.meas.extrap_fit.change_extents(self, transects=self.meas.transects,
-                                                      data_type=self.meas.extrap_fit.sel_fit[-1].data_type,
-                                                      extents=subsection)
-                # Update tab
-                self.n_points_table()
-                self.q_sensitivity_table()
-                self.display_current_fit()
-                self.extrap_plot()
+                if subsection[0] >= 0 and subsection[0] <= 100 and subsection[1] > subsection[0] and subsection[1] <= 100:
+                    self.meas.extrap_fit.change_extents(transects=self.meas.transects,
+                                                          data_type=self.meas.extrap_fit.sel_fit[-1].data_type,
+                                                          extents=subsection)
+                    # Update tab
+                    self.n_points_table()
+                    self.q_sensitivity_table()
+                    self.set_fit_options()
+                    self.extrap_plot()
 
     def change_data_type(self, text):
         """Coordinates user initiated change to the data type.
@@ -5594,12 +5650,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             if text == 'Velocity':
                 data_type = 'v'
 
-            self.meas.extrap_fit.change_data_type(self, transects=self.meas.transects, data_type=data_type)
+            self.meas.extrap_fit.change_data_type(transects=self.meas.transects, data_type=data_type)
 
             # Update tab
             self.n_points_table()
             self.q_sensitivity_table()
-            self.display_current_fit()
+            self.set_fit_options()
             self.extrap_plot()
 
     def change_fit_method(self, text):
@@ -5619,7 +5675,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Update tab
             self.q_sensitivity_table()
-            self.display_current_fit()
+            self.set_fit_options()
             self.extrap_plot()
 
     def change_top_method(self, text):
@@ -5640,7 +5696,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Update tab
             self.q_sensitivity_table()
-            self.display_current_fit()
+            self.set_fit_options()
             self.extrap_plot()
 
     def change_bottom_method(self, text):
@@ -5661,7 +5717,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Update tab
             self.q_sensitivity_table()
-            self.display_current_fit()
+            self.set_fit_options()
             self.extrap_plot()
 
     def change_exponent(self):
@@ -5683,15 +5739,19 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Update tab
             self.q_sensitivity_table()
-            self.display_current_fit()
+            self.set_fit_options()
             self.extrap_plot()
 
     def sensitivity_change_fit(self, row, col):
+        """Changes the fit based on the row in the discharge sensitivity table selected by the user.
+        """
 
         with self.wait_cursor():
-            top = self.table_extrap_qsen.itemAt(row, 0).text()
-            bot = self.table_extrap_qsen.itemAt(row, 1).text()
-            exponent = float(self.table_extrap_qsen.itemAt(row, 2).text())
+
+            # Get fit settings from table
+            top = self.table_extrap_qsen.item(row, 0).text()
+            bot = self.table_extrap_qsen.item(row, 1).text()
+            exponent = float(self.table_extrap_qsen.item(row, 2).text())
 
             # Change based on user selection
             self.meas.extrap_fit.change_fit_method(transects=self.meas.transects,
@@ -5703,12 +5763,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Update tab
             self.q_sensitivity_table()
-            self.display_current_fit()
+            self.set_extrap_reference(row)
+            self.set_fit_options()
             self.extrap_plot()
 
     def cancel_extrap(self):
         self.meas = copy.deepcopy(self.extrap_meas)
-
+        self.extrap_tab()
 
 # Split functions
 # ==============

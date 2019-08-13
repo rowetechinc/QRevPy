@@ -1,0 +1,122 @@
+# -*- coding: utf-8 -*-
+
+# Form implementation generated from reading ui file 'wThreshold.ui'
+#
+# Created by: PyQt5 UI code generator 5.12.2
+#
+# WARNING! All changes made in this file will be lost!
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+
+class Ui_threshold(object):
+    def setupUi(self, threshold):
+        threshold.setObjectName("threshold")
+        threshold.resize(420, 155)
+        self.gridLayout_2 = QtWidgets.QGridLayout(threshold)
+        self.gridLayout_2.setObjectName("gridLayout_2")
+        self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_3.setObjectName("horizontalLayout_3")
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout()
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout_2.addItem(spacerItem)
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem1)
+        self.threshold_label = QtWidgets.QLabel(threshold)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        font.setBold(True)
+        font.setWeight(75)
+        self.threshold_label.setFont(font)
+        self.threshold_label.setObjectName("threshold_label")
+        self.horizontalLayout_2.addWidget(self.threshold_label)
+        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem2)
+        self.verticalLayout_2.addLayout(self.horizontalLayout_2)
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        spacerItem3 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem3)
+        self.ed_threshold = QtWidgets.QLineEdit(threshold)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        self.ed_threshold.setFont(font)
+        self.ed_threshold.setObjectName("ed_threshold")
+        self.horizontalLayout.addWidget(self.ed_threshold)
+        self.threshold_units = QtWidgets.QLabel(threshold)
+        self.threshold_units.setObjectName("threshold_units")
+        self.horizontalLayout.addWidget(self.threshold_units)
+        spacerItem4 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem4)
+        self.horizontalLayout.setStretch(0, 2)
+        self.horizontalLayout.setStretch(1, 1)
+        self.horizontalLayout.setStretch(3, 2)
+        self.verticalLayout_2.addLayout(self.horizontalLayout)
+        spacerItem5 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.verticalLayout_2.addItem(spacerItem5)
+        self.horizontalLayout_3.addLayout(self.verticalLayout_2)
+        self.gb_hoffset = QtWidgets.QGroupBox(threshold)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        font.setBold(True)
+        font.setWeight(75)
+        self.gb_hoffset.setFont(font)
+        self.gb_hoffset.setObjectName("gb_hoffset")
+        self.gridLayout = QtWidgets.QGridLayout(self.gb_hoffset)
+        self.gridLayout.setObjectName("gridLayout")
+        self.verticalLayout = QtWidgets.QVBoxLayout()
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.rb_new = QtWidgets.QRadioButton(self.gb_hoffset)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        font.setBold(False)
+        font.setWeight(50)
+        self.rb_new.setFont(font)
+        self.rb_new.setChecked(True)
+        self.rb_new.setObjectName("rb_new")
+        self.verticalLayout.addWidget(self.rb_new)
+        self.rb_default = QtWidgets.QRadioButton(self.gb_hoffset)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        font.setBold(False)
+        font.setWeight(50)
+        self.rb_default.setFont(font)
+        self.rb_default.setObjectName("rb_default")
+        self.verticalLayout.addWidget(self.rb_default)
+        self.gridLayout.addLayout(self.verticalLayout, 0, 0, 1, 1)
+        self.horizontalLayout_3.addWidget(self.gb_hoffset)
+        self.gridLayout_2.addLayout(self.horizontalLayout_3, 0, 0, 1, 1)
+        self.buttonBox = QtWidgets.QDialogButtonBox(threshold)
+        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        self.buttonBox.setObjectName("buttonBox")
+        self.gridLayout_2.addWidget(self.buttonBox, 1, 0, 1, 1)
+
+        self.retranslateUi(threshold)
+        self.buttonBox.accepted.connect(threshold.accept)
+        self.buttonBox.rejected.connect(threshold.reject)
+        QtCore.QMetaObject.connectSlotsByName(threshold)
+
+    def retranslateUi(self, threshold):
+        _translate = QtCore.QCoreApplication.translate
+        threshold.setWindowTitle(_translate("threshold", "Extrap Threshold"))
+        self.threshold_label.setText(_translate("threshold", "Percentage of Points Threshold"))
+        self.threshold_units.setText(_translate("threshold", "%"))
+        self.gb_hoffset.setTitle(_translate("threshold", "Apply To:"))
+        self.rb_new.setText(_translate("threshold", "Apply"))
+        self.rb_default.setText(_translate("threshold", "Default (20%)"))
+
+
+
+
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    threshold = QtWidgets.QDialog()
+    ui = Ui_threshold()
+    ui.setupUi(threshold)
+    threshold.show()
+    sys.exit(app.exec_())
