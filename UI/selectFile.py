@@ -225,6 +225,7 @@ class SaveMeasurementDialog(QtWidgets.QDialog):
             self, self.tr('Save File'), file_name,
             self.tr('QRev File (*_QRev.mat)'))[0]
 
+
     @staticmethod
     def defaultFolder(settings):
         """Returns default folder.

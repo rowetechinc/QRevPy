@@ -907,13 +907,11 @@ class Measurement(object):
         # interpolations because the TRDI approach for power/power
         # using the power curve and exponent to estimate invalid cells.
 
-        if (self.extrap_fit is None) or (self.extrap_fit.fit_method == 'Automatic'):
+        if self.extrap_fit is None :
             self.extrap_fit = ComputeExtrap()
             self.extrap_fit.populate_data(transects=self.transects, compute_sensitivity=False)
-            top = self.extrap_fit.sel_fit[-1].top_method
-            bot = self.extrap_fit.sel_fit[-1].bot_method
-            exp = self.extrap_fit.sel_fit[-1].exponent
-            self.change_extrapolation(self.extrap_fit.fit_method, top=top, bot=bot, exp=exp)
+        elif self.extrap_fit.fit_method == 'Automatic':
+            self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
         else:
             if 'extrapTop' not in settings.keys():
                 settings['extrapTop'] = self.extrap_fit.sel_fit[-1].top_method
@@ -923,7 +921,8 @@ class Measurement(object):
             self.change_extrapolation(self.extrap_fit.fit_method,
                                       top=settings['extrapTop'],
                                       bot=settings['extrapBot'],
-                                      exp=settings['extrapExp'])
+                                      exp=settings['extrapExp'],
+                                      compute_q=False)
 
         for transect in self.transects:
 
@@ -1048,9 +1047,14 @@ class Measurement(object):
         settings['depthInterpolation'] = select.interp_type
         
         # Extrap Settings
-        settings['extrapTop'] = transect.extrap.top_method
-        settings['extrapBot'] = transect.extrap.bot_method
-        settings['extrapExp'] = transect.extrap.exponent
+        if self.extrap_fit is None:
+            settings['extrapTop'] = transect.extrap.top_method
+            settings['extrapBot'] = transect.extrap.bot_method
+            settings['extrapExp'] = transect.extrap.exponent
+        else:
+            settings['extrapTop'] = self.extrap_fit.sel_fit[-1].top_method
+            settings['extrapBot'] = self.extrap_fit.sel_fit[-1].bot_method
+            settings['extrapExp'] = self.extrap_fit.sel_fit[-1].exponent
         
         # Edge Settings
         settings['edgeVelMethod'] = transect.edges.vel_method
@@ -1270,7 +1274,7 @@ class Measurement(object):
         return settings
 
     def change_extrapolation(self, method, top=None, bot=None,
-                             exp=None, extents=None, threshold=None):
+                             exp=None, extents=None, threshold=None, compute_q=True):
         """Applies the selected extrapolation method to each transect.
 
         Parameters
@@ -1317,11 +1321,12 @@ class Measurement(object):
                                                 bot=self.extrap_fit.sel_fit[-1].bot_method,
                                                 exp=self.extrap_fit.sel_fit[-1].exponent)
 
-        self.extrap_fit.q_sensitivity = ExtrapQSensitivity()
-        self.extrap_fit.q_sensitivity.populate_data(transects=self.transects,
-                                                    extrap_fits=self.extrap_fit.sel_fit)
+        if compute_q:
+            self.extrap_fit.q_sensitivity = ExtrapQSensitivity()
+            self.extrap_fit.q_sensitivity.populate_data(transects=self.transects,
+                                                        extrap_fits=self.extrap_fit.sel_fit)
 
-        self.compute_discharge()
+            self.compute_discharge()
 
     @staticmethod
     def measurement_duration(self):

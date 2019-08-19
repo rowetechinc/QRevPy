@@ -82,36 +82,38 @@ class ComputeExtrap(object):
         comp_data = NormData()
         comp_data.create_composite(transects=transects, norm_data=self.norm_data, threshold=self.threshold)
         self.norm_data.append(comp_data)
-        sel_fit = None
 
         # Compute the fit for the selected  method
-        self.sel_fit = []
         if self.fit_method == 'Manual':
             for n in range(len(transects)):
-                sel_fit = SelectFit()
-                sel_fit.populate_data(normalized=self.norm_data[n], fit_method=self.fit_method, transect=transects[n])
-                self.sel_fit.append(sel_fit)
+                self.sel_fit[n].populate_data(normalized=self.norm_data[n],
+                                              fit_method=self.fit_method,
+                                              top=transects[n].extrap.top_method,
+                                              bot=transects[n].extrap.bot_method,
+                                              exponent=transects[n].extrap.exponent)
         else:
+            self.sel_fit = []
             for n in range(len(self.norm_data)):
                 sel_fit = SelectFit()
                 sel_fit.populate_data(self.norm_data[n], self.fit_method)
                 self.sel_fit.append(sel_fit)
 
-        if sel_fit.top_fit_r2 is not None:
+        if self.sel_fit[-1].top_fit_r2 is not None:
             # Evaluate if there is a potential that a 3-point top method may be appropriate
-            if (sel_fit.top_fit_r2 > 0.9 or sel_fit.top_r2 > 0.9) and np.abs(sel_fit.top_max_diff) > 0.2:
+            if (self.sel_fit[-1].top_fit_r2 > 0.9 or self.sel_fit[-1].top_r2 > 0.9) \
+                and np.abs(self.sel_fit[-1].top_max_diff) > 0.2:
                 self.messages.append('The measurement profile may warrant a 3-point fit at the top')
                 
     def update_q_sensitivity(self, transects):
         self.q_sensitivity = ExtrapQSensitivity()
         self.q_sensitivity.populate_data(transects, self.sel_fit)
         
-    def change_fit_method(self, transects, new_fit_method, idx, top=None, bot=None, exponent=None):
+    def change_fit_method(self, transects, new_fit_method, idx, top=None, bot=None, exponent=None, compute_qsens=True):
         """Function to change the extrapolation method"""
         self.fit_method = new_fit_method
 
         self.sel_fit[idx].populate_data(self.norm_data[idx], new_fit_method,  top=top, bot=bot, exponent=exponent)
-        if idx == len(self.norm_data)-1:
+        if compute_qsens & idx == len(self.norm_data)-1:
             self.q_sensitivity = ExtrapQSensitivity()
             self.q_sensitivity.populate_data(transects, self.sel_fit)
         

@@ -206,7 +206,7 @@
         <item row="0" column="0">
          <layout class="QHBoxLayout" name="horizontalLayout" stretch="8,2">
           <item>
-           <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,2">
+           <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,1">
             <item>
              <widget class="QTabWidget" name="tab_summary">
               <property name="palette">
@@ -574,6 +574,9 @@
                      <bold>false</bold>
                     </font>
                    </property>
+                   <property name="readOnly">
+                    <bool>true</bool>
+                   </property>
                   </widget>
                  </item>
                 </layout>
@@ -598,6 +601,9 @@
                      <weight>50</weight>
                      <bold>false</bold>
                     </font>
+                   </property>
+                   <property name="readOnly">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
@@ -982,6 +988,9 @@
                      <bold>false</bold>
                     </font>
                    </property>
+                   <property name="readOnly">
+                    <bool>true</bool>
+                   </property>
                   </widget>
                  </item>
                 </layout>
@@ -1006,6 +1015,9 @@
                      <weight>50</weight>
                      <bold>false</bold>
                     </font>
+                   </property>
+                   <property name="readOnly">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
@@ -1286,6 +1298,9 @@
                      <bold>false</bold>
                     </font>
                    </property>
+                   <property name="readOnly">
+                    <bool>true</bool>
+                   </property>
                   </widget>
                  </item>
                 </layout>
@@ -1310,6 +1325,9 @@
                      <weight>50</weight>
                      <bold>false</bold>
                     </font>
+                   </property>
+                   <property name="readOnly">
+                    <bool>true</bool>
                    </property>
                   </widget>
                  </item>
@@ -1638,6 +1656,9 @@
                    <bold>false</bold>
                   </font>
                  </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
                 </widget>
                </item>
               </layout>
@@ -1662,6 +1683,9 @@
                    <weight>50</weight>
                    <bold>false</bold>
                   </font>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
@@ -2263,6 +2287,9 @@
                    <bold>false</bold>
                   </font>
                  </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
                 </widget>
                </item>
               </layout>
@@ -2287,6 +2314,9 @@
                    <weight>50</weight>
                    <bold>false</bold>
                   </font>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
@@ -2898,6 +2928,9 @@
                    <bold>false</bold>
                   </font>
                  </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
                 </widget>
                </item>
               </layout>
@@ -2922,6 +2955,9 @@
                    <weight>50</weight>
                    <bold>false</bold>
                   </font>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
@@ -3585,6 +3621,9 @@
                    <bold>false</bold>
                   </font>
                  </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
                 </widget>
                </item>
               </layout>
@@ -3609,6 +3648,9 @@
                    <weight>50</weight>
                    <bold>false</bold>
                   </font>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
@@ -4294,6 +4336,9 @@
                    <bold>false</bold>
                   </font>
                  </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
+                 </property>
                 </widget>
                </item>
               </layout>
@@ -4318,6 +4363,9 @@
                    <weight>50</weight>
                    <bold>false</bold>
                   </font>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
@@ -5300,12 +5348,15 @@
               </property>
               <layout class="QHBoxLayout" name="horizontalLayout_59">
                <item>
-                <widget class="QPlainTextEdit" name="display_extap_messages">
+                <widget class="QPlainTextEdit" name="display_extrap_messages">
                  <property name="font">
                   <font>
                    <weight>50</weight>
                    <bold>false</bold>
                   </font>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
@@ -5331,6 +5382,9 @@
                    <weight>50</weight>
                    <bold>false</bold>
                   </font>
+                 </property>
+                 <property name="readOnly">
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>

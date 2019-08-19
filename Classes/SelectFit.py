@@ -300,7 +300,7 @@ class SelectFit(object):
             if exponent is None:
                 exponent = self.exponent
 
-            # Update fit with manual settins
+            # Update fit with manual settings
             update_fd = FitData()
             update_fd.populate_data(norm_data=normalized,
                                     top=top,

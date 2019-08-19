@@ -180,11 +180,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Create default file name
         save_file = SaveMeasurementDialog()
 
-        # Save data in Matlab format
-        if self.save_all:
-            Python2Matlab.save_matlab_file(self.meas, save_file.full_Name)
-        else:
-            Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, checked=self.checked_transects_idx)
+        if len(save_file.full_Name) > 0:
+            # Save data in Matlab format
+            if self.save_all:
+                Python2Matlab.save_matlab_file(self.meas, save_file.full_Name)
+            else:
+                Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, checked=self.checked_transects_idx)
+            self.config_gui()
 
     def addComment(self):
         """Add comment triggered by actionComment
@@ -198,7 +200,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             if hasattr(self, 'meas'):
                 self.meas.comments.append(self.comment.text_edit_comment.toPlainText())
             self.change = True
-            # self.tab_manager()
+            self.update_comments()
 
     def selectTransects(self):
         """Initializes a dialog to allow user to select or deselect transects to include in the measurement.
@@ -1596,6 +1598,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.resizeColumnsToContents()
                 tbl.resizeRowsToContents()
 
+                self.systest_comments_messages()
+
+    def systest_comments_messages(self):
+
         # Clear current contents
         self.display_systest_comments.clear()
         self.display_systest_messages.clear()
@@ -1940,6 +1946,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                     # Update compass tab
                     self.update_compass_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
+                    self.change = True
 
         # Heading Offset
         elif column == 2:
@@ -1961,6 +1968,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                         # Update compass tab
                         self.update_compass_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
+                        self.change = True
 
         # Heading Source
         elif column == 3:
@@ -1985,6 +1993,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                         # Update compass tab
                         self.update_compass_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
+                        self.change = True
 
     def select_calibration(self, row, column):
         """Displays selected compass calibration.
@@ -2227,7 +2236,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Display independent temperature reading if available
 
-        if self.meas.ext_temp_chk['user'] == np.nan:
+        if np.isnan(self.meas.ext_temp_chk['user']):
+            self.ed_user_temp.setText('')
+            self.pb_ind_temp_apply.setEnabled(False)
+        else:
             try:
                 temp = float(self.meas.ext_temp_chk['user'])
                 if self.rb_f.isChecked():
@@ -2236,6 +2248,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.pb_ind_temp_apply.setEnabled(False)
             except (ValueError, TypeError) as e:
                 user = None
+                self.ed_user_temp.setText('')
+                self.pb_ind_temp_apply.setEnabled(False)
 
         # Display user provided adcp temperature reading if available
         if np.isnan(self.meas.ext_temp_chk['adcp']) == False:
@@ -2671,6 +2685,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 moving_bed_tests=self.meas.mb_tests,
                 boat_ref=self.meas.transects[self.checked_transects_idx[0]].w_vel.nav_ref)
             self.meas.qa.moving_bed_qa(self.meas)
+            self.change = True
 
         # Use to correct, manual override
         if column == 1:
@@ -2772,6 +2787,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.meas.compute_discharge()
                 self.meas.uncertainty.compute_uncertainty(self.meas)
                 self.meas.qa.moving_bed_qa(self.meas)
+            self.change = True
 
         # Data to plot
         elif column == 2:
@@ -3003,7 +3019,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Connect filters
         self.combo_bt_3beam.currentIndexChanged[str].connect(self.change_bt_beam)
-        self.combo_bt_error_velocity.currentIndexChanged[str].connect(self.change_bt_error)
+        self.combo_bt_error_velocity.activated[str].connect(self.change_bt_error)
         self.combo_bt_vert_velocity.currentIndexChanged[str].connect(self.change_bt_vertical)
         self.combo_bt_other.currentIndexChanged[str].connect(self.change_bt_other)
 
@@ -3232,7 +3248,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Draw canvas
         self.bt_bottom_canvas.draw()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def bt_radiobutton_control(self):
 
         with self.wait_cursor():
@@ -3289,7 +3305,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.idx = row
             self.bt_plots()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def bt_plot_change(self):
         """Coordinates changes in what references should be displayed in the boat speed and shiptrack plots.
         """
@@ -3324,7 +3340,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Update plots
         self.bt_plots()
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def change_bt_beam(self, text):
         """Coordinates user initiated change to the beam settings.
 
@@ -3348,8 +3364,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Update measurement and display
             self.update_bt_tab(s)
+            self.change = True
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def change_bt_error(self, text):
         """Coordinates user initiated change to the error velocity settings.
 
@@ -3365,7 +3382,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Change setting based on combo box selection
             s['BTdFilter'] = text
-
             if text == 'Manual':
                 # If Manual enable the line edit box for user input. Updates are not applied until the user has entered
                 # a value in the line edit box.
@@ -3375,8 +3391,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.ed_bt_error_vel_threshold.setEnabled(False)
                 self.ed_bt_error_vel_threshold.setText('')
                 self.update_bt_tab(s)
+            self.change = True
 
-    @QtCore.Slot(str)
+
+    @QtCore.pyqtSlot(str)
     def change_bt_vertical(self, text):
         """Coordinates user initiated change to the vertical velocity settings.
 
@@ -3402,8 +3420,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.ed_bt_vert_vel_threshold.setEnabled(False)
                 self.ed_bt_vert_vel_threshold.setText('')
                 self.update_bt_tab(s)
+                self.change = True
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def change_bt_other(self, text):
         """Coordinates user initiated change to the vertical velocity settings.
 
@@ -3425,8 +3444,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Update measurement and display
             self.update_bt_tab(s)
+            self.change = True
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def change_error_vel_threshold(self):
         """Coordinates application of a user specified error velocity threshold.
         """
@@ -3437,15 +3457,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Get current settings
             s = self.meas.current_settings()
+            # Because editingFinished is used if return is pressed and later focus is changed the method could get
+            # twice. This line checks to see if there was and actual change.
+            if np.abs(threshold - s['BTdFilterThreshold']) > 0.0001:
+                # Change settings to manual and the associated threshold
+                s['BTdFilter'] = 'Manual'
+                s['BTdFilterThreshold'] = threshold
 
-            # Change settings to manual and the associated threshold
-            s['BTdFilter'] = 'Manual'
-            s['BTdFilterThreshold'] = threshold
+                # Update measurement and display
+                self.update_bt_tab(s)
+                self.change = True
 
-            # Update measurement and display
-            self.update_bt_tab(s)
-
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def change_vert_vel_threshold(self):
         """Coordinates application of a user specified vertical velocity threshold.
         """
@@ -3456,13 +3479,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Get current settings
             s = self.meas.current_settings()
+            # Because editingFinished is used if return is pressed and later focus is changed the method could get
+            # twice. This line checks to see if there was and actual change.
+            if np.abs(threshold - s['BTwFilterThreshold']) > 0.0001:
+                # Change settings to manual and the associated threshold
+                s['BTwFilter'] = 'Manual'
+                s['BTwFilterThreshold'] = threshold
 
-            # Change settings to manual and the associated threshold
-            s['BTwFilter'] = 'Manual'
-            s['BTwFilterThreshold'] = threshold
-
-            # Update measurement and display
-            self.update_bt_tab(s)
+                # Update measurement and display
+                self.update_bt_tab(s)
+                self.change = True
 
     def bt_comments_messages(self):
         """Displays comments and messages associated with bottom track filters in Messages tab.
@@ -3825,7 +3851,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Draw canvas
         self.gps_bottom_canvas.draw()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def gps_radiobutton_control(self):
 
         with self.wait_cursor():
@@ -3885,7 +3911,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.idx = row
             self.gps_plots()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def gps_plot_change(self):
         """Coordinates changes in what references should be displayed in the boat speed and shiptrack plots.
         """
@@ -3919,7 +3945,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Update plots
         self.gps_plots()
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def change_quality(self, text):
         """Coordinates user initiated change to the beam settings.
 
@@ -3943,8 +3969,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Update measurement and display
             self.update_gps_tab(s)
+            self.change = True
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def change_altitude(self, text):
         """Coordinates user initiated change to the error velocity settings.
 
@@ -3970,8 +3997,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.ed_gps_altitude_threshold.setEnabled(False)
                 self.ed_gps_altitude_threshold.setText('')
                 self.update_gps_tab(s)
+            self.change = True
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def change_hdop(self, text):
         """Coordinates user initiated change to the vertical velocity settings.
 
@@ -3997,8 +4025,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.ed_gps_hdop_threshold.setEnabled(False)
                 self.ed_gps_hdop_threshold.setText('')
                 self.update_gps_tab(s)
+            self.change = True
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def change_gps_other(self, text):
         """Coordinates user initiated change to the vertical velocity settings.
 
@@ -4020,8 +4049,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Update measurement and display
             self.update_gps_tab(s)
+            self.change = True
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def change_altitude_threshold(self):
         """Coordinates application of a user specified error velocity threshold.
         """
@@ -4032,15 +4062,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Get current settings
             s = self.meas.current_settings()
+            # Because editingFinished is used if return is pressed and later focus is changed the method could get
+            # twice. This line checks to see if there was and actual change.
+            if np.abs(threshold - s['ggaAltitudeFilterChange']) > 0.0001:
+                # Change settings to manual and the associated threshold
+                s['ggaAltitudeFilter'] = 'Manual'
+                s['ggaAltitudeFilterChange'] = threshold
 
-            # Change settings to manual and the associated threshold
-            s['ggaAltitudeFilter'] = 'Manual'
-            s['ggaAltitudeFilterChange'] = threshold
+                # Update measurement and display
+                self.update_gps_tab(s)
+                self.change = True
 
-            # Update measurement and display
-            self.update_gps_tab(s)
-
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def change_hdop_threshold(self):
         """Coordinates application of a user specified vertical velocity threshold.
         """
@@ -4051,13 +4084,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Get current settings
             s = self.meas.current_settings()
+            # Because editingFinished is used if return is pressed and later focus is changed the method could get
+            # twice. This line checks to see if there was and actual change.
+            if np.abs(threshold - s['GPSHDOPFilterMax']) > 0.0001:
+                # Change settings to manual and the associated threshold
+                s['GPSHDOPFilter'] = 'Manual'
+                s['GPSHDOPFilterMax'] = threshold
 
-            # Change settings to manual and the associated threshold
-            s['GPSHDOPFilter'] = 'Manual'
-            s['GPSHDOPFilterMax'] = threshold
-
-            # Update measurement and display
-            self.update_gps_tab(s)
+                # Update measurement and display
+                self.update_gps_tab(s)
+                self.change = True
 
     def gps_comments_messages(self):
         """Displays comments and messages associated with bottom track filters in Messages tab.
@@ -4467,7 +4503,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         self.depth_comments_messages()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def depth_top_plot_change(self):
         """Coordinates changes in user selected data to be displayed in the top plot.
         """
@@ -4475,7 +4511,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.depth_top_fig.change()
             self.depth_top_canvas.draw()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def depth_bottom_plot_change(self):
         """Coordinates changes in user selected data to be displayed in the bottom plot.
         """
@@ -4483,7 +4519,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.depth_bottom_fig.change()
             self.depth_bottom_canvas.draw()
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def change_ref(self, text):
         """Coordinates user initiated change to the beam settings.
 
@@ -4519,8 +4555,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Update measurement and display
             self.update_depth_tab(s)
+            self.change = True
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def change_filter(self, text):
         """Coordinates user initiated change to the beam settings.
 
@@ -4537,8 +4574,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Update measurement and display
             self.update_depth_tab(s)
+            self.change = True
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def change_avg_method(self, text):
         """Coordinates user initiated change to the beam settings.
 
@@ -4555,6 +4593,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Update measurement and display
             self.update_depth_tab(s)
+            self.change = True
 
     def depth_comments_messages(self):
         """Displays comments and messages associated with bottom track filters in Messages tab.
@@ -4895,7 +4934,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Draw canvas
         self.wt_bottom_canvas.draw()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def wt_radiobutton_control(self):
 
         with self.wait_cursor():
@@ -4969,7 +5008,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.idx = row
             self.wt_plots()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def wt_plot_change(self):
         """Coordinates changes in what references should be displayed in the shiptrack plots.
         """
@@ -5000,7 +5039,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Update plots
         self.wt_plots()
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def change_wt_beam(self, text):
         """Coordinates user initiated change to the beam settings.
 
@@ -5024,8 +5063,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Update measurement and display
             self.update_wt_tab(s)
+            self.change = True
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def change_wt_error(self, text):
         """Coordinates user initiated change to the error velocity settings.
 
@@ -5051,8 +5091,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.ed_wt_error_vel_threshold.setEnabled(False)
                 self.ed_wt_error_vel_threshold.setText('')
                 self.update_wt_tab(s)
+            self.change = True
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def change_wt_vertical(self, text):
         """Coordinates user initiated change to the vertical velocity settings.
 
@@ -5078,8 +5119,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.ed_wt_vert_vel_threshold.setEnabled(False)
                 self.ed_wt_vert_vel_threshold.setText('')
                 self.update_wt_tab(s)
+            self.change = True
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def change_wt_snr(self, text):
         """Coordinates user initiated change to the vertical velocity settings.
 
@@ -5101,8 +5143,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Update measurement and display
             self.update_wt_tab(s)
+            self.change = True
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def change_wt_error_vel_threshold(self):
         """Coordinates application of a user specified error velocity threshold.
         """
@@ -5113,15 +5156,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Get current settings
             s = self.meas.current_settings()
+            # Because editingFinished is used if return is pressed and later focus is changed the method could get
+            # twice. This line checks to see if there was and actual change.
+            if np.abs(threshold - s['WTdFilterThreshold']) > 0.0001:
+                # Change settings to manual and the associated threshold
+                s['WTdFilter'] = 'Manual'
+                s['WTdFilterThreshold'] = threshold
 
-            # Change settings to manual and the associated threshold
-            s['WTdFilter'] = 'Manual'
-            s['WTdFilterThreshold'] = threshold
+                # Update measurement and display
+                self.update_wt_tab(s)
+                self.change = True
 
-            # Update measurement and display
-            self.update_wt_tab(s)
-
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def change_wt_vert_vel_threshold(self):
         """Coordinates application of a user specified vertical velocity threshold.
         """
@@ -5132,15 +5178,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Get current settings
             s = self.meas.current_settings()
+            # Because editingFinished is used if return is pressed and later focus is changed the method could get
+            # twice. This line checks to see if there was and actual change.
+            if np.abs(threshold - s['WTwFilterThreshold']) > 0.0001:
+                # Change settings to manual and the associated threshold
+                s['WTwFilter'] = 'Manual'
+                s['WTwFilterThreshold'] = threshold
 
-            # Change settings to manual and the associated threshold
-            s['WTwFilter'] = 'Manual'
-            s['WTwFilterThreshold'] = threshold
+                # Update measurement and display
+                self.update_wt_tab(s)
+                self.change = True
 
-            # Update measurement and display
-            self.update_wt_tab(s)
-
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def change_wt_excluded_dist(self):
         """Coordinates application of a user specified excluded distance.
         """
@@ -5151,12 +5200,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Get current settings
             s = self.meas.current_settings()
+            # Because editingFinished is used if return is pressed and later focus is changed the method could get
+            # twice. This line checks to see if there was and actual change.
+            if np.abs(threshold - s['WTExcludedDistance']) > 0.0001:
+                # Change settings
+                s['WTExcludedDistance'] = threshold
 
-            # Change settings
-            s['WTExcludedDistance'] = threshold
-
-            # Update measurement and display
-            self.update_wt_tab(s)
+                # Update measurement and display
+                self.update_wt_tab(s)
+                self.change = True
 
     def wt_comments_messages(self):
         """Displays comments and messages associated with bottom track filters in Messages tab.
@@ -5264,6 +5316,20 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Cancel and apply buttons
         self.pb_extrap_cancel.clicked.connect(self.cancel_extrap)
 
+        self.extrap_plot()
+
+    def extrap_update(self):
+
+        if self.idx == len(self.meas.extrap_fit.sel_fit) - 1:
+            s = self.meas.current_settings()
+            self.meas.apply_settings(s)
+            self.q_sensitivity_table()
+            self.extrap_comments_messages()
+            self.change = True
+
+        # Update tab
+        self.n_points_table()
+        self.set_fit_options()
         self.extrap_plot()
 
     def extrap_index(self, row):
@@ -5587,6 +5653,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # If data entered.
         with self.wait_cursor():
             if threshold_entered:
+                self.pb_extrap_threshold.blockSignals(True)
                 threshold = float(threshold_dialog.ed_threshold.text())
 
                 # Apply change to all transects
@@ -5597,11 +5664,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     self.meas.extrap_fit.change_threshold(transects=self.meas.transects,
                                                           data_type=self.meas.extrap_fit.sel_fit[0].data_type,
                                                           threshold=threshold)
-                    # Update tab
-                    self.n_points_table()
-                    self.q_sensitivity_table()
-                    self.set_fit_options()
-                    self.extrap_plot()
+                    self.pb_extrap_threshold.blockSignals(False)
+                    self.extrap_update()
 
     def change_subsection(self):
         """Allows the user to change the subsectioning and then updates the data and display.
@@ -5628,11 +5692,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     self.meas.extrap_fit.change_extents(transects=self.meas.transects,
                                                           data_type=self.meas.extrap_fit.sel_fit[-1].data_type,
                                                           extents=subsection)
-                    # Update tab
-                    self.n_points_table()
-                    self.q_sensitivity_table()
-                    self.set_fit_options()
-                    self.extrap_plot()
+                    self.extrap_update()
 
     def change_data_type(self, text):
         """Coordinates user initiated change to the data type.
@@ -5652,11 +5712,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             self.meas.extrap_fit.change_data_type(transects=self.meas.transects, data_type=data_type)
 
-            # Update tab
-            self.n_points_table()
-            self.q_sensitivity_table()
-            self.set_fit_options()
-            self.extrap_plot()
+            self.extrap_update()
 
     def change_fit_method(self, text):
         """Coordinates user initiated changing the fit type.
@@ -5673,10 +5729,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                                    new_fit_method=text,
                                                    idx=self.idx)
 
-            # Update tab
-            self.q_sensitivity_table()
-            self.set_fit_options()
-            self.extrap_plot()
+            self.extrap_update()
 
     def change_top_method(self, text):
         """Coordinates user initiated changing the top method.
@@ -5694,10 +5747,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                                    idx=self.idx,
                                                    top=text)
 
-            # Update tab
-            self.q_sensitivity_table()
-            self.set_fit_options()
-            self.extrap_plot()
+            self.extrap_update()
 
     def change_bottom_method(self, text):
         """Coordinates user initiated changing the bottom method.
@@ -5715,10 +5765,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                                    idx=self.idx,
                                                    bot=text)
 
-            # Update tab
-            self.q_sensitivity_table()
-            self.set_fit_options()
-            self.extrap_plot()
+            self.extrap_update()
 
     def change_exponent(self):
         """Coordinates user initiated changing the bottom method.
@@ -5731,16 +5778,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         with self.wait_cursor():
             exponent = float(self.ed_extrap_exponent.text())
-            # Change based on user input
-            self.meas.extrap_fit.change_fit_method(transects=self.meas.transects,
-                                                   new_fit_method='Manual',
-                                                   idx=self.idx,
-                                                   exponent=exponent)
 
-            # Update tab
-            self.q_sensitivity_table()
-            self.set_fit_options()
-            self.extrap_plot()
+            if np.abs(exponent - self.meas.extrap_fit.sel_fit[self.idx].exponent) > 0.00001:
+                # Change based on user input
+                self.meas.extrap_fit.change_fit_method(transects=self.meas.transects,
+                                                       new_fit_method='Manual',
+                                                       idx=self.idx,
+                                                       exponent=exponent)
+
+                self.extrap_update()
 
     def sensitivity_change_fit(self, row, col):
         """Changes the fit based on the row in the discharge sensitivity table selected by the user.
@@ -5761,15 +5807,35 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                                    bot=bot,
                                                    exponent=exponent)
 
-            # Update tab
-            self.q_sensitivity_table()
-            self.set_extrap_reference(row)
-            self.set_fit_options()
-            self.extrap_plot()
+            self.extrap_update()
 
     def cancel_extrap(self):
         self.meas = copy.deepcopy(self.extrap_meas)
         self.extrap_tab()
+        self.change = False
+
+    def extrap_comments_messages(self):
+        """Displays comments and messages associated with bottom track filters in Messages tab.
+        """
+
+        # Clear comments and messages
+        self.display_extrap_comments.clear()
+        self.display_extrap_messages.clear()
+
+        if hasattr(self, 'meas'):
+            # Display each comment on a new line
+            self.display_extrap_comments.moveCursor(QtGui.QTextCursor.Start)
+            for comment in self.meas.comments:
+                self.display_extrap_comments.textCursor().insertText(comment)
+                self.display_extrap_comments.moveCursor(QtGui.QTextCursor.End)
+                self.display_extrap_comments.textCursor().insertBlock()
+
+            # Display each message on a new line
+            self.display_extrap_messages.moveCursor(QtGui.QTextCursor.Start)
+            for message in self.meas.qa.extrapolation['messages']:
+                self.display_extrap_messages.textCursor().insertText(message[0])
+                self.display_extrap_messages.moveCursor(QtGui.QTextCursor.End)
+                self.display_extrap_messages.textCursor().insertBlock()
 
 # Split functions
 # ==============
@@ -5935,21 +6001,88 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         elif tab_idx == 4:
             # Moving-bed test tab
             self.movbedtst_tab()
+
         elif tab_idx == 5:
             # Bottom track filters
             self.bt_tab()
+
         elif tab_idx == 6:
             # GPS filters
             self.gps_tab()
+
         elif tab_idx == 7:
             # Depth filters
             self.depth_tab()
+
         elif tab_idx == 8:
             # WT filters
             self.wt_tab()
+
         elif tab_idx == 9:
             # Extrapolation
             self.extrap_tab()
+
+        # elif tab_idx == 10:
+        #     # Edges
+        #     self.edges_tab()
+
+    def update_comments (self, tab_idx=None):
+        """Manages the initialization of content for each tab and updates that information as necessary.
+
+        Parameters
+        ----------
+        tab_idx: int
+            Index of tab clicked by user
+        """
+
+        if tab_idx is None:
+            tab_idx = self.current_tab
+        else:
+            self.current_tab = tab_idx
+
+        if tab_idx == 0:
+           self.comments_tab()
+
+        elif tab_idx == 1:
+            # Show system tab
+            self.systest_comments_messages()
+
+        elif tab_idx == 2:
+            # Show compass/pr tab
+            self.compass_comments_messages()
+
+        elif tab_idx == 3:
+            # Temperature, salinity, speed of sound tab
+            self.tempsal_comments_messages()
+
+        elif tab_idx == 4:
+            # Moving-bed test tab
+            self.mb_comments_messages()
+
+        elif tab_idx == 5:
+            # Bottom track filters
+            self.bt_comments_messages()
+
+        elif tab_idx == 6:
+            # GPS filters
+            self.gps_comments_messages()
+
+        elif tab_idx == 7:
+            # Depth filters
+            self.depth_comments_messages()
+
+        elif tab_idx == 8:
+            # WT filters
+            self.wt_comments_messages()
+
+        elif tab_idx == 9:
+            # Extrapolation
+            self.extrap_comments_messages()
+
+        # elif tab_idx == 10:
+        #     # Edges
+        #     self.edges_comments_messages()
+
 
     def config_gui(self):
 
