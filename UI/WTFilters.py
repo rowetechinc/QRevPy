@@ -144,7 +144,8 @@ class WTFilters(object):
             speed = np.nanmean(np.sqrt(transect.w_vel.u_mps ** 2
                             + transect.w_vel.v_mps ** 2), 0)
             max_y = np.nanmax(speed) * 1.1
-            min_y = np.nanmin(speed) * 1.1
+            # min_y = np.nanmin(speed) * 0.7
+            min_y = 0
             invalid_wt = np.logical_and(np.logical_not(transect.w_vel.valid_data), cas)
 
             self.speed = self.fig.ax.plot(ensembles[0, :],

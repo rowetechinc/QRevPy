@@ -139,3 +139,11 @@ class ComputeExtrap(object):
         self.process_profiles(transects=transects, data_type=data_type)
         self.q_sensitivity = ExtrapQSensitivity()
         self.q_sensitivity.populate_data(transects=transects, extrap_fits=self.sel_fit)
+
+    def change_data_auto(self, transects):
+        self.threshold = 20
+        self.subsection = [0,100]
+        self.process_profiles(transects=transects, data_type='q')
+        # Compute the sensitivity of the final discharge to changes in extrapolation methods
+        self.q_sensitivity = ExtrapQSensitivity()
+        self.q_sensitivity.populate_data(transects=transects, extrap_fits=self.sel_fit)

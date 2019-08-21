@@ -3549,12 +3549,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Initialize checkbox settings for boat reference
         self.cb_gps_bt.setCheckState(QtCore.Qt.Checked)
-        self.cb_gps_gga.setCheckState(QtCore.Qt.Unchecked)
-        self.cb_gps_vtg.setCheckState(QtCore.Qt.Unchecked)
-        selected = self.meas.transects[self.checked_transects_idx[0]].boat_vel.selected
-        if selected == 'gga_vel':
+        if self.meas.transects[self.checked_transects_idx[0]].boat_vel.gga_vel is not None:
             self.cb_gps_gga.setCheckState(QtCore.Qt.Checked)
-        elif selected == 'vtg_vel':
+        if self.meas.transects[self.checked_transects_idx[0]].boat_vel.vtg_vel is not None:
             self.cb_gps_vtg.setCheckState(QtCore.Qt.Checked)
 
         self.cb_gps_vectors.setCheckState(QtCore.Qt.Checked)
@@ -4208,7 +4205,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Transect selected for display
         self.transect = self.meas.transects[self.checked_transects_idx[0]]
         depth_ref_selected = self.transect.depths.selected
-        depth_composite = self.transect.depths.selected
+        depth_composite = self.transect.depths.composite
 
         # Set depth reference
         if depth_ref_selected == 'bt_depths':
@@ -4711,6 +4708,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.combo_wt_3beam.setCurrentIndex(2)
         else:
             self.combo_wt_3beam.setCurrentIndex(0)
+
+        # Set excluded distance from transect data
+        ex_dist = self.meas.transects[self.checked_transects_idx[0]].w_vel.excluded_dist_m * self.units['L']
+        self.ed_wt_excluded_dist.setText('{:2.2f}'.format(ex_dist))
 
         # Set error velocity filter from transect data
         index = self.combo_wt_error_velocity.findText(self.transect.w_vel.d_filter, QtCore.Qt.MatchFixedString)
@@ -5263,7 +5264,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         table_header = [self.tr('Top'),
                         self.tr('Bottom'),
                         self.tr('Exponent'),
-                        self.tr('% Difference')]
+                        self.tr('% Diff')]
         ncols = len(table_header)
         nrows = 6
         tbl.setRowCount(nrows)
@@ -5305,13 +5306,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.cb_extrap_trans_fit.stateChanged.connect(self.extrap_plot)
 
         # Connect data settings
-        self.pb_extrap_threshold.clicked.connect(self.change_threshold)
-        self.pb_extrap_subsection.clicked.connect(self.change_subsection)
+        self.combo_extrap_data.currentIndexChanged[str].connect(self.change_data)
+        self.ed_extrap_threshold.editingFinished.connect(self.change_threshold)
+        self.ed_extrap_subsection.editingFinished.connect(self.change_subsection)
         self.combo_extrap_type.currentIndexChanged[str].connect(self.change_data_type)
-        if self.meas.extrap_fit.sel_fit[-1].data_type.lower() == 'q':
-            self.combo_extrap_type.setCurrentIndex(0)
-        else:
-            self.combo_extrap_type.setCurrentIndex(1)
+
+        self.extrap_set_data()
 
         # Cancel and apply buttons
         self.pb_extrap_cancel.clicked.connect(self.cancel_extrap)
@@ -5594,6 +5594,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
+    @QtCore.pyqtSlot(int, int)
     def fit_list_table_clicked(self, selected_row, selected_col):
         with self.wait_cursor():
             # Set all filenames to normal font
@@ -5641,59 +5642,107 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             self.extrap_canvas.draw()
 
+    def extrap_set_data(self):
+        if self.meas.extrap_fit.sel_fit[-1].data_type.lower() != 'q':
+            self.extrap_set_data_manual()
+        elif self.meas.extrap_fit.threshold != 20:
+            self.extrap_set_data_manual()
+        elif self.meas.extrap_fit.subsection[0] != 0 or self.meas.extrap_fit.subsection[1] != 100:
+            self.extrap_set_data_manual()
+        else:
+            self.extrap_set_data_auto()
+
+    def extrap_set_data_manual(self):
+        if self.combo_extrap_data.currentIndex() == 0:
+            self.combo_extrap_data.setCurrentIndex(1)
+        self.ed_extrap_threshold.setEnabled(True)
+        self.ed_extrap_subsection.setEnabled(True)
+        self.combo_extrap_type.setEnabled(True)
+        self.ed_extrap_threshold.setText('{:3.0f}'.format(self.meas.extrap_fit.threshold))
+        self.ed_extrap_subsection.setText('{:.0f}:{:.0f}'.format(self.meas.extrap_fit.subsection[0],
+                                                                   self.meas.extrap_fit.subsection[1]))
+        if self.meas.extrap_fit.sel_fit[-1].data_type.lower() == 'q':
+            self.combo_extrap_type.setCurrentIndex(0)
+        else:
+            self.combo_extrap_type.setCurrentIndex(1)
+
+    def extrap_set_data_auto(self):
+        if self.combo_extrap_data.currentIndex() == 1:
+            self.combo_extrap_data.setCurrentIndex(0)
+        self.ed_extrap_threshold.setEnabled(False)
+        self.ed_extrap_subsection.setEnabled(False)
+        self.combo_extrap_type.setEnabled(False)
+        self.ed_extrap_threshold.setText('20')
+        self.ed_extrap_subsection.setText('0:100')
+        self.combo_extrap_type.setCurrentIndex(0)
+
+
+
+
+    @QtCore.pyqtSlot(str)
+    def change_data(self, text):
+        """Coordinates user initiated change to the data from automatic to manual.
+
+        Parameters
+        ----------
+        text: str
+         User selection from combo box
+        """
+
+        with self.wait_cursor():
+            if text == 'Manual':
+                self.ed_extrap_threshold.setEnabled(True)
+                self.ed_extrap_subsection.setEnabled(True)
+                self.combo_extrap_type.setEnabled(True)
+            else:
+                self.ed_extrap_threshold.setEnabled(False)
+                self.ed_extrap_subsection.setEnabled(False)
+                self.combo_extrap_type.setEnabled(False)
+                self.ed_extrap_threshold.setText('20')
+                self.ed_extrap_subsection.setText('0:100')
+                self.combo_extrap_type.setCurrentIndex(0)
+                self.meas.extrap_fit.change_data_auto(self.meas.transects)
+
+    @QtCore.pyqtSlot()
     def change_threshold(self):
         """Allows the user to change the threshold and then updates the data and display.
         """
 
-        # Intialize dialog
-        threshold_dialog = Threshold(self)
-        threshold_dialog.ed_threshold.setText('{:3.0f}'.format(self.meas.extrap_fit.threshold))
-        threshold_entered = threshold_dialog.exec_()
-
         # If data entered.
         with self.wait_cursor():
-            if threshold_entered:
-                self.pb_extrap_threshold.blockSignals(True)
-                threshold = float(threshold_dialog.ed_threshold.text())
+            threshold = float(self.ed_extrap_threshold.text())
 
-                # Apply change to all transects
-                if threshold_dialog.rb_default.isChecked():
-                    threshold = 20
-
+            if np.abs(threshold - self.meas.extrap_fit.threshold) > 0.0001:
                 if threshold >= 0 and threshold <= 100:
                     self.meas.extrap_fit.change_threshold(transects=self.meas.transects,
                                                           data_type=self.meas.extrap_fit.sel_fit[0].data_type,
                                                           threshold=threshold)
-                    self.pb_extrap_threshold.blockSignals(False)
                     self.extrap_update()
+                else:
+                    self.ed_extrap_threshold.setText('{:3.0f}'.format(self.meas.extrap_fit.threshold))
 
+    @QtCore.pyqtSlot()
     def change_subsection(self):
         """Allows the user to change the subsectioning and then updates the data and display.
         """
 
-        # Initialize dialog
-        subsection_dialog = Subsection(self)
-        subsection_dialog.start_value.setText('{:3.0f}'.format(self.meas.extrap_fit.subsection[0]))
-        subsection_dialog.end_value.setText('{:3.0f}'.format(self.meas.extrap_fit.subsection[1]))
-        subsection_entered = subsection_dialog.exec_()
-
         # If data entered.
         with self.wait_cursor():
-            if subsection_entered:
-                subsection = []
-                subsection.append(float(subsection_dialog.start_value.text()))
-                subsection.append(float(subsection_dialog.end_value.text()))
-
-                # Apply change to all transects
-                if subsection_dialog.rb_default.isChecked():
-                    subsection = [0, 100]
-
+            sub_list = self.ed_extrap_subsection.text().split(':')
+            subsection = []
+            subsection.append(float(sub_list[0]))
+            subsection.append(float(sub_list[1]))
+            if np.abs(subsection[0] - self.meas.extrap_fit.subsection[0]) > 0.0001\
+                    or np.abs(subsection[1] - self.meas.extrap_fit.subsection[1]) > 0.0001:
                 if subsection[0] >= 0 and subsection[0] <= 100 and subsection[1] > subsection[0] and subsection[1] <= 100:
                     self.meas.extrap_fit.change_extents(transects=self.meas.transects,
                                                           data_type=self.meas.extrap_fit.sel_fit[-1].data_type,
                                                           extents=subsection)
                     self.extrap_update()
+                else:
+                    self.ed_extrap_subsection.setText('{:3.0f}:{:3.0f}'.format(self.meas.extrap_fit.subsection))
 
+    @QtCore.pyqtSlot(str)
     def change_data_type(self, text):
         """Coordinates user initiated change to the data type.
 
@@ -5714,6 +5763,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             self.extrap_update()
 
+    @QtCore.pyqtSlot(str)
     def change_fit_method(self, text):
         """Coordinates user initiated changing the fit type.
 
@@ -5731,6 +5781,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             self.extrap_update()
 
+    @QtCore.pyqtSlot(str)
     def change_top_method(self, text):
         """Coordinates user initiated changing the top method.
 
@@ -5749,6 +5800,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             self.extrap_update()
 
+    @QtCore.pyqtSlot(str)
     def change_bottom_method(self, text):
         """Coordinates user initiated changing the bottom method.
 
@@ -5767,6 +5819,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             self.extrap_update()
 
+    @QtCore.pyqtSlot()
     def change_exponent(self):
         """Coordinates user initiated changing the bottom method.
 
@@ -5778,7 +5831,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         with self.wait_cursor():
             exponent = float(self.ed_extrap_exponent.text())
-
+            # Because editingFinished is used if return is pressed and later focus is changed the method could get
+            # twice. This line checks to see if there was and actual change.
             if np.abs(exponent - self.meas.extrap_fit.sel_fit[self.idx].exponent) > 0.00001:
                 # Change based on user input
                 self.meas.extrap_fit.change_fit_method(transects=self.meas.transects,

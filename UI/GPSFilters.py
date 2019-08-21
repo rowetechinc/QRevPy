@@ -125,12 +125,16 @@ class GPSFilters (object):
             # Select an object to use for the smooth
             if transect.boat_vel.selected == 'gga_vel':
                 boat_gps = transect.boat_vel.gga_vel
+                data_color = ['b-', 'b.']
             elif transect.boat_vel.selected == 'vtg_vel':
                 boat_gps = transect.boat_vel.vtg_vel
+                data_color = ['g-', 'g.']
             elif transect.boat_vel.vtg_vel is not None:
                 boat_gps = transect.boat_vel.vtg_vel
+                data_color = ['g-', 'g.']
             else:
                 boat_gps = transect.boat_vel.gga_vel
+                data_color = ['b-', 'b.']
 
             # Plot smooth
             speed = np.sqrt(boat_gps.u_mps ** 2
@@ -151,14 +155,14 @@ class GPSFilters (object):
                                                            * self.units['V'],
                                                            facecolor='#d5dce6'))
 
-                self.other.append(self.fig.ax.plot(ensembles, speed * units['V'], 'r-')[0])
+                self.other.append(self.fig.ax.plot(ensembles, speed * units['V'], data_color[0])[0])
                 self.other.append(self.fig.ax.plot(ensembles,
                                                    boat_gps.smooth_speed * self.units['V'])[0])
                 self.other.append(self.fig.ax.plot(ensembles[invalid_other_vel],
                                                    speed[invalid_other_vel] * units['V'],
                                                    'ko', linestyle='')[0])
             else:
-                self.other = self.fig.ax.plot(ensembles, speed * units['V'], 'r.')
+                self.other = self.fig.ax.plot(ensembles, speed * units['V'], data_color[1])
             self.fig.ax.set_ylabel(self.canvas.tr('Speed' + units['label_V']))
         self.fig.ax.set_xlim(left=-1 * ensembles[-1] * 0.02, right=ensembles[-1] * 1.02)
 

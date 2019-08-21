@@ -99,14 +99,14 @@ class DepthStructure(object):
             
             # Prepare vertical beam data, using only data prior to interpolation
             if self.vb_depths is not None:
-                vb_filtered = self.vb_depths.depth_processed_m
+                vb_filtered = np.copy(self.vb_depths.depth_processed_m)
                 vb_filtered[np.squeeze(np.equal(self.vb_depths.valid_data, False))] = np.nan
             else:
                 vb_filtered = np.tile(np.nan, n_ensembles)
                   
             # Prepare depth sounder data, using only data prior to interpolation
             if self.ds_depths is not None:
-                ds_filtered = self.ds_depths.depth_processed_m
+                ds_filtered = np.copy(self.ds_depths.depth_processed_m)
                 ds_filtered[np.squeeze(np.equal(self.ds_depths.valid_data, False))] = np.nan
             else:
                 ds_filtered = np.tile(np.nan, n_ensembles)
