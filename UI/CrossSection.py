@@ -106,75 +106,76 @@ class CrossSection(object):
         # Compute x axis data
         boat_track = transect.boat_vel.compute_boat_track(transect=transect)
         x = boat_track['distance_m']
-        depth_selected = getattr(transect.depths, transect.depths.selected)
-        beam_depths = depth_selected.depth_processed_m
+        if not np.alltrue(np.isnan(boat_track['track_x_m'])):
+            depth_selected = getattr(transect.depths, transect.depths.selected)
+            beam_depths = depth_selected.depth_processed_m
 
-        # Plot Final
-        self.final_cs = self.fig.ax.plot(x * units['L'],
-                                         beam_depths * units['L'],
-                                         'k-')
-        max_final = np.nanmax(beam_depths)
+            # Plot Final
+            self.final_cs = self.fig.ax.plot(x * units['L'],
+                                             beam_depths * units['L'],
+                                             'k-')
+            max_final = np.nanmax(beam_depths)
 
-        # Plot 4 beam average
-        beam_depths = transect.depths.bt_depths.depth_processed_m
-        self.beam_cs = self.fig.ax.plot(x * units['L'],
-                                        beam_depths * units['L'],
-                                        'r-')
-        max_beam = np.nanmax(beam_depths)
+            # Plot 4 beam average
+            beam_depths = transect.depths.bt_depths.depth_processed_m
+            self.beam_cs = self.fig.ax.plot(x * units['L'],
+                                            beam_depths * units['L'],
+                                            'r-')
+            max_beam = np.nanmax(beam_depths)
 
-        # Plot vertical beam
-        if transect.depths.vb_depths is not None:
-            beam_depths = transect.depths.vb_depths.depth_processed_m
-            self.vb_cs = self.fig.ax.plot(x * units['L'],
-                                          beam_depths * units['L'],
-                                          color='#aa00ff',
-                                          linestyle='-')
-            max_vb = np.nanmax(beam_depths)
+            # Plot vertical beam
+            if transect.depths.vb_depths is not None:
+                beam_depths = transect.depths.vb_depths.depth_processed_m
+                self.vb_cs = self.fig.ax.plot(x * units['L'],
+                                              beam_depths * units['L'],
+                                              color='#aa00ff',
+                                              linestyle='-')
+                max_vb = np.nanmax(beam_depths)
 
-        # Plot depth sounder
-        if transect.depths.ds_depths is not None:
-            beam_depths = transect.depths.ds_depths.depth_processed_m
-            self.ds_cs = self.fig.ax.plot(x * units['L'],
-                                          beam_depths * units['L'],
-                                          color='#00aaff',
-                                          linestyle='-')
-            max_ds = np.nanmax(beam_depths)
+            # Plot depth sounder
+            if transect.depths.ds_depths is not None:
+                beam_depths = transect.depths.ds_depths.depth_processed_m
+                self.ds_cs = self.fig.ax.plot(x * units['L'],
+                                              beam_depths * units['L'],
+                                              color='#00aaff',
+                                              linestyle='-')
+                max_ds = np.nanmax(beam_depths)
 
-        # Based on checkbox control make cross sections visible or not
-        if cb_beam_cs.checkState() == QtCore.Qt.Checked:
-            for item in self.beam_cs:
-                item.set_visible(True)
-        else:
-            for item in self.beam_cs:
-                item.set_visible(False)
-
-        if cb_vert_cs.isEnabled():
-            if cb_vert_cs.checkState() == QtCore.Qt.Checked:
-                for item in self.vb_cs:
+            # Based on checkbox control make cross sections visible or not
+            if cb_beam_cs.checkState() == QtCore.Qt.Checked:
+                for item in self.beam_cs:
                     item.set_visible(True)
             else:
-                for item in self.vb_cs:
+                for item in self.beam_cs:
                     item.set_visible(False)
 
-        if cb_ds_cs.isEnabled():
-            if cb_ds_cs.checkState() == QtCore.Qt.Checked:
-                for item in self.ds_cs:
-                    item.set_visible(True)
-            else:
-                for item in self.ds_cs:
-                    item.set_visible(False)
+            if cb_vert_cs.isEnabled():
+                if cb_vert_cs.checkState() == QtCore.Qt.Checked:
+                    for item in self.vb_cs:
+                        item.set_visible(True)
+                else:
+                    for item in self.vb_cs:
+                        item.set_visible(False)
 
-        # Set axis limits
-        max_y = np.nanmax([max_beam, max_vb, max_ds, max_final]) * 1.1
-        self.fig.ax.invert_yaxis()
-        self.fig.ax.set_ylim(bottom=np.ceil(max_y * units['L']), top=0)
-        self.fig.ax.set_xlim(left=-1 * x[-1] * 0.02 * units['L'], right=x[-1] * 1.02 * units['L'])
+            if cb_ds_cs.isEnabled():
+                if cb_ds_cs.checkState() == QtCore.Qt.Checked:
+                    for item in self.ds_cs:
+                        item.set_visible(True)
+                else:
+                    for item in self.ds_cs:
+                        item.set_visible(False)
 
-        if transect.start_edge == 'Right':
-            self.fig.ax.invert_xaxis()
-            self.fig.ax.set_xlim(right=-1 * x[-1] * 0.02 * units['L'], left=x[-1] * 1.02 * units['L'])
+            # Set axis limits
+            max_y = np.nanmax([max_beam, max_vb, max_ds, max_final]) * 1.1
+            self.fig.ax.invert_yaxis()
+            self.fig.ax.set_ylim(bottom=np.ceil(max_y * units['L']), top=0)
+            self.fig.ax.set_xlim(left=-1 * x[-1] * 0.02 * units['L'], right=x[-1] * 1.02 * units['L'])
 
-        self.canvas.draw()
+            if transect.start_edge == 'Right':
+                self.fig.ax.invert_xaxis()
+                self.fig.ax.set_xlim(right=-1 * x[-1] * 0.02 * units['L'], left=x[-1] * 1.02 * units['L'])
+
+            self.canvas.draw()
 
     def change(self):
         """Changes the visibility of the available beams based on user input via checkboxes.

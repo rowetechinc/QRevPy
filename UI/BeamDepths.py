@@ -125,133 +125,134 @@ class BeamDepths(object):
 
         # Compute x axis data
         boat_track = transect.boat_vel.compute_boat_track(transect=transect)
-        x = boat_track['distance_m']
-        invalid_beams = np.logical_not(transect.depths.bt_depths.valid_beams)
-        beam_depths = transect.depths.bt_depths.depth_beams_m
+        if not np.alltrue(np.isnan(boat_track['track_x_m'])):
+            x = boat_track['distance_m']
+            invalid_beams = np.logical_not(transect.depths.bt_depths.valid_beams)
+            beam_depths = transect.depths.bt_depths.depth_beams_m
 
-        # Plot beams
-        self.beam1 = self.fig.ax.plot(x * units['L'],
-                                      beam_depths[0, :] * units['L'],
-                                      'r-')
-        self.beam1.append(self.fig.ax.plot(x[invalid_beams[0, :]] * units['L'],
-                                           beam_depths[0, invalid_beams[0, :]] * units['L'],
-                                           'r', linestyle='',
-                                           marker='$O$')[0])
+            # Plot beams
+            self.beam1 = self.fig.ax.plot(x * units['L'],
+                                          beam_depths[0, :] * units['L'],
+                                          'r-')
+            self.beam1.append(self.fig.ax.plot(x[invalid_beams[0, :]] * units['L'],
+                                               beam_depths[0, invalid_beams[0, :]] * units['L'],
+                                               'r', linestyle='',
+                                               marker='$O$')[0])
 
-        self.beam2 = self.fig.ax.plot(x * units['L'],
-                                      beam_depths[1, :] * units['L'],
-                                      color='#005500')
-        self.beam2.append(self.fig.ax.plot(x[invalid_beams[1, :]] * units['L'],
-                                           beam_depths[1, invalid_beams[1, :]] * units['L'],
-                                           color='#005500',
-                                           linestyle='-',
-                                           marker='$O$')[0])
+            self.beam2 = self.fig.ax.plot(x * units['L'],
+                                          beam_depths[1, :] * units['L'],
+                                          color='#005500')
+            self.beam2.append(self.fig.ax.plot(x[invalid_beams[1, :]] * units['L'],
+                                               beam_depths[1, invalid_beams[1, :]] * units['L'],
+                                               color='#005500',
+                                               linestyle='-',
+                                               marker='$O$')[0])
 
-        self.beam3 = self.fig.ax.plot(x * units['L'],
-                                      beam_depths[2, :] * units['L'],
-                                      'b-')
-        self.beam3.append(self.fig.ax.plot(x[invalid_beams[2, :]] * units['L'],
-                                           beam_depths[2, invalid_beams[2, :]] * units['L'],
-                                           'b',
-                                           linestyle='-',
-                                           marker='$O$')[0])
+            self.beam3 = self.fig.ax.plot(x * units['L'],
+                                          beam_depths[2, :] * units['L'],
+                                          'b-')
+            self.beam3.append(self.fig.ax.plot(x[invalid_beams[2, :]] * units['L'],
+                                               beam_depths[2, invalid_beams[2, :]] * units['L'],
+                                               'b',
+                                               linestyle='-',
+                                               marker='$O$')[0])
 
-        self.beam4 = self.fig.ax.plot(x * units['L'],
-                                      beam_depths[3, :] * units['L'],
-                                      color='#aa5500',
-                                      linestyle='-')
-        self.beam4.append(self.fig.ax.plot(x[invalid_beams[3, :]] * units['L'],
-                                           beam_depths[3, invalid_beams[3, :]] * units['L'],
-                                           color='#aa5500',
-                                           linestyle='',
-                                           marker='$O$')[0])
-        # Compute max depth from beams
-        max_beams = np.nanmax(np.nanmax(transect.depths.bt_depths.depth_beams_m))
+            self.beam4 = self.fig.ax.plot(x * units['L'],
+                                          beam_depths[3, :] * units['L'],
+                                          color='#aa5500',
+                                          linestyle='-')
+            self.beam4.append(self.fig.ax.plot(x[invalid_beams[3, :]] * units['L'],
+                                               beam_depths[3, invalid_beams[3, :]] * units['L'],
+                                               color='#aa5500',
+                                               linestyle='',
+                                               marker='$O$')[0])
+            # Compute max depth from beams
+            max_beams = np.nanmax(np.nanmax(transect.depths.bt_depths.depth_beams_m))
 
-        # Based on checkbox control make beams visible or not
-        if cb_beam1.checkState() == QtCore.Qt.Checked:
-            for item in self.beam1:
-                item.set_visible(True)
-        else:
-            for item in self.beam1:
-                item.set_visible(False)
-
-        if cb_beam2.checkState() == QtCore.Qt.Checked:
-            for item in self.beam2:
-                item.set_visible(True)
-        else:
-            for item in self.beam2:
-                item.set_visible(False)
-
-        if cb_beam3.checkState() == QtCore.Qt.Checked:
-            for item in self.beam3:
-                item.set_visible(True)
-        else:
-            for item in self.beam3:
-                item.set_visible(False)
-
-        if cb_beam4.checkState() == QtCore.Qt.Checked:
-            for item in self.beam4:
-                item.set_visible(True)
-        else:
-            for item in self.beam4:
-                item.set_visible(False)
-
-        # Plot vertical beam
-        if transect.depths.vb_depths is not None:
-            invalid_beams = np.logical_not(transect.depths.vb_depths.valid_beams[0, :])
-            beam_depths = transect.depths.vb_depths.depth_beams_m[0, :]
-            self.vb = self.fig.ax.plot(x * units['L'],
-                                       beam_depths * units['L'],
-                                       color='#aa00ff',
-                                       linestyle='-')
-            self.vb.append(self.fig.ax.plot(x[invalid_beams] * units['L'],
-                                            beam_depths[invalid_beams] * units['L'],
-                                            color='#aa00ff',
-                                            linestyle='',
-                                            marker='$O$')[0])
-
-            if cb_vert.checkState() == QtCore.Qt.Checked:
-                for item in self.vb:
+            # Based on checkbox control make beams visible or not
+            if cb_beam1.checkState() == QtCore.Qt.Checked:
+                for item in self.beam1:
                     item.set_visible(True)
             else:
-                for item in self.vb:
+                for item in self.beam1:
                     item.set_visible(False)
 
-            max_vert = np.nanmax(beam_depths)
+            if cb_beam2.checkState() == QtCore.Qt.Checked:
+                for item in self.beam2:
+                    item.set_visible(True)
+            else:
+                for item in self.beam2:
+                    item.set_visible(False)
 
-            # Plot depth sounder
-            if transect.depths.ds_depths is not None:
-                invalid_beams = np.logical_not(transect.depths.ds_depths.valid_beams[0, :])
-                beam_depths = transect.depths.ds_depths.depth_beams_m[0, :]
-                self.ds = self.fig.ax.plot(x * units['L'],
+            if cb_beam3.checkState() == QtCore.Qt.Checked:
+                for item in self.beam3:
+                    item.set_visible(True)
+            else:
+                for item in self.beam3:
+                    item.set_visible(False)
+
+            if cb_beam4.checkState() == QtCore.Qt.Checked:
+                for item in self.beam4:
+                    item.set_visible(True)
+            else:
+                for item in self.beam4:
+                    item.set_visible(False)
+
+            # Plot vertical beam
+            if transect.depths.vb_depths is not None:
+                invalid_beams = np.logical_not(transect.depths.vb_depths.valid_beams[0, :])
+                beam_depths = transect.depths.vb_depths.depth_beams_m[0, :]
+                self.vb = self.fig.ax.plot(x * units['L'],
                                            beam_depths * units['L'],
-                                           color='#00aaff')
-                self.ds.append(self.fig.ax.plot(x[invalid_beams] * units['L'],
+                                           color='#aa00ff',
+                                           linestyle='-')
+                self.vb.append(self.fig.ax.plot(x[invalid_beams] * units['L'],
                                                 beam_depths[invalid_beams] * units['L'],
-                                                color='#00aaff',
+                                                color='#aa00ff',
                                                 linestyle='',
                                                 marker='$O$')[0])
 
-                if cb_ds.checkState() == QtCore.Qt.Checked:
-                    for item in self.ds:
+                if cb_vert.checkState() == QtCore.Qt.Checked:
+                    for item in self.vb:
                         item.set_visible(True)
                 else:
-                    for item in self.ds:
+                    for item in self.vb:
                         item.set_visible(False)
 
-                max_ds = np.nanmax(beam_depths)
+                max_vert = np.nanmax(beam_depths)
 
-        # Set axis limits
-        max_y = np.nanmax([max_beams, max_vert, max_ds]) * 1.1
-        self.fig.ax.invert_yaxis()
-        self.fig.ax.set_ylim(bottom=np.ceil(max_y * units['L']), top=0)
-        self.fig.ax.set_xlim(left=-1 * x[-1] * 0.02 * units['L'], right=x[-1] * 1.02 * units['L'])
-        if transect.start_edge == 'Right':
-            self.fig.ax.invert_xaxis()
-            self.fig.ax.set_xlim(right=-1 * x[-1] * 0.02 * units['L'], left=x[-1] * 1.02 * units['L'])
+                # Plot depth sounder
+                if transect.depths.ds_depths is not None:
+                    invalid_beams = np.logical_not(transect.depths.ds_depths.valid_beams[0, :])
+                    beam_depths = transect.depths.ds_depths.depth_beams_m[0, :]
+                    self.ds = self.fig.ax.plot(x * units['L'],
+                                               beam_depths * units['L'],
+                                               color='#00aaff')
+                    self.ds.append(self.fig.ax.plot(x[invalid_beams] * units['L'],
+                                                    beam_depths[invalid_beams] * units['L'],
+                                                    color='#00aaff',
+                                                    linestyle='',
+                                                    marker='$O$')[0])
 
-        self.canvas.draw()
+                    if cb_ds.checkState() == QtCore.Qt.Checked:
+                        for item in self.ds:
+                            item.set_visible(True)
+                    else:
+                        for item in self.ds:
+                            item.set_visible(False)
+
+                    max_ds = np.nanmax(beam_depths)
+
+            # Set axis limits
+            max_y = np.nanmax([max_beams, max_vert, max_ds]) * 1.1
+            self.fig.ax.invert_yaxis()
+            self.fig.ax.set_ylim(bottom=np.ceil(max_y * units['L']), top=0)
+            self.fig.ax.set_xlim(left=-1 * x[-1] * 0.02 * units['L'], right=x[-1] * 1.02 * units['L'])
+            if transect.start_edge == 'Right':
+                self.fig.ax.invert_xaxis()
+                self.fig.ax.set_xlim(right=-1 * x[-1] * 0.02 * units['L'], left=x[-1] * 1.02 * units['L'])
+
+            self.canvas.draw()
 
     def change(self):
         """Changes the visibility of the available beams based on user input via checkboxes.

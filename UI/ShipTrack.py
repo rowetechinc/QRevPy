@@ -123,7 +123,7 @@ class Shiptrack(object):
                                    label='BT')
 
         # Plot invalid data points using a symbol to represent what caused the data to be invalid
-        if invalid_bt is not None:
+        if invalid_bt is not None and not np.alltrue(np.isnan(ship_data_bt['track_x_m'])):
             self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][invalid_bt[1]] * units['L'],
                                             ship_data_bt['track_y_m'][invalid_bt[1]] * units['L'],
                                             'k', linestyle='', marker='$O$')[0])

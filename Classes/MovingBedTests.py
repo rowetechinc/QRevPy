@@ -645,7 +645,7 @@ class MovingBedTests(object):
                         if moving_bed_tests[n].moving_bed == 'Yes':
                             moving_bed_tests[n].use_2_correct = True
             # If the flow speed is too low but there are not valid stationary tests use the last loop test.
-            elif lidx_valid_loop:
+            elif np.any(lidx_valid_loop):
                 # Select last loop
                 idx_select = np.where(lidx_valid_loop)[0][-1]
                 moving_bed_tests[idx_select].selected = True

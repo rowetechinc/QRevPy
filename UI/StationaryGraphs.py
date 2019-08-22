@@ -59,24 +59,25 @@ class StationaryGraphs(object):
         self.fig.axmb.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
 
         valid_data = mb_test.transect.boat_vel.bt_vel.valid_data[0, mb_test.transect.in_transect_idx]
-        invalid_data = np.logical_not(valid_data)
-        ensembles = np.arange(1, len(valid_data) + 1)
-        self.fig.axmb.plot(ensembles, mb_test.stationary_mb_vel * units['V'], 'b-')
-        self.fig.axmb.plot(ensembles[invalid_data], mb_test.stationary_mb_vel[invalid_data] * units['V'], 'ro')
+        if np.any(valid_data):
+            invalid_data = np.logical_not(valid_data)
+            ensembles = np.arange(1, len(valid_data) + 1)
+            self.fig.axmb.plot(ensembles, mb_test.stationary_mb_vel * units['V'], 'b-')
+            self.fig.axmb.plot(ensembles[invalid_data], mb_test.stationary_mb_vel[invalid_data] * units['V'], 'ro')
 
-        # Generate upstream/cross stream shiptrack
-        self.fig.axstud = self.fig.add_subplot(gs[0, 1])
-        self.fig.axstud.set_xlabel(self.canvas.tr('Distance cross stream' + units['label_L']))
-        self.fig.axstud.set_ylabel(self.canvas.tr('Distance upstream' + units['label_L']))
-        self.fig.axstud.grid()
-        self.fig.axstud.xaxis.label.set_fontsize(12)
-        self.fig.axstud.yaxis.label.set_fontsize(12)
-        self.fig.axstud.axis('equal')
-        self.fig.axstud.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+            # Generate upstream/cross stream shiptrack
+            self.fig.axstud = self.fig.add_subplot(gs[0, 1])
+            self.fig.axstud.set_xlabel(self.canvas.tr('Distance cross stream' + units['label_L']))
+            self.fig.axstud.set_ylabel(self.canvas.tr('Distance upstream' + units['label_L']))
+            self.fig.axstud.grid()
+            self.fig.axstud.xaxis.label.set_fontsize(12)
+            self.fig.axstud.yaxis.label.set_fontsize(12)
+            self.fig.axstud.axis('equal')
+            self.fig.axstud.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
 
-        self.fig.axstud.plot(mb_test.stationary_cs_track * units['L'], mb_test.stationary_us_track * units['L'], 'r-')
+            self.fig.axstud.plot(mb_test.stationary_cs_track * units['L'], mb_test.stationary_us_track * units['L'], 'r-')
 
-        self.canvas.draw()
+            self.canvas.draw()
 
     def change(self):
         """Function to all call to change, but there is nothing to change for this class. Mirrors BoatSpeed class

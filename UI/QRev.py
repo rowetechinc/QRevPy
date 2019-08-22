@@ -2593,64 +2593,94 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Duration
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:4.1f}'.format(self.meas.mb_tests[row].duration_sec)))
+                item = '{:4.1f}'.format(self.meas.mb_tests[row].duration_sec)
+                if 'nan' in item:
+                    item = ''
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Distance Upstream
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:4.1f}'.format(self.meas.mb_tests[row].dist_us_m * self.units['L'])))
+                item = '{:4.1f}'.format(self.meas.mb_tests[row].dist_us_m * self.units['L'])
+                if 'nan' in item:
+                    item = ''
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Moving-Bed Speed
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.2f}'.format(self.meas.mb_tests[row].mb_spd_mps * self.units['V'])))
+                item = '{:3.2f}'.format(self.meas.mb_tests[row].mb_spd_mps * self.units['V'])
+                if 'nan' in item:
+                    item = ''
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Moving-Bed Direction
                 col += 1
+
                 if type(self.meas.mb_tests[row].mb_dir) is not list:
-                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(self.meas.mb_tests[row].mb_dir)))
+                    item = '{:3.1f}'.format(self.meas.mb_tests[row].mb_dir)
+                    if 'nan' in item:
+                        item = ''
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                     tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Flow Speed
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
-                    self.meas.mb_tests[row].flow_spd_mps * self.units['V'])))
+                item = '{:3.1f}'.format(self.meas.mb_tests[row].flow_spd_mps * self.units['V'])
+                if 'nan' in item:
+                    item = ''
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Flow Direction
                 col += 1
                 if type(self.meas.mb_tests[row].flow_dir) is not list:
-                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(self.meas.mb_tests[row].flow_dir)))
+                    item = '{:3.1f}'.format(self.meas.mb_tests[row].flow_dir)
+                    if 'nan' in item:
+                        item = ''
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                     tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Percent Invalid BT
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
-                    self.meas.mb_tests[row].percent_invalid_bt)))
+                item = '{:3.1f}'.format(self.meas.mb_tests[row].percent_invalid_bt)
+                if 'nan' in item:
+                    item = ''
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Compass Error
                 col += 1
                 if type(self.meas.mb_tests[row].compass_diff_deg) is not list:
-                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
-                        self.meas.mb_tests[row].compass_diff_deg)))
+                    item = '{:3.1f}'.format(self.meas.mb_tests[row].compass_diff_deg)
+                    if 'nan' in item:
+                        item = ''
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                     tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Percent Moving Bed
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
-                    self.meas.mb_tests[row].percent_mb)))
+                item = '{:3.1f}'.format(self.meas.mb_tests[row].percent_mb)
+                if 'nan' in item:
+                    item = ''
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Moving Bed
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(self.meas.mb_tests[row].moving_bed))
+                item = self.meas.mb_tests[row].moving_bed
+                if 'nan' in item:
+                    item = ''
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Quality
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(self.meas.mb_tests[row].test_quality))
+                item = self.meas.mb_tests[row].test_quality
+                if 'nan' in item:
+                    item = ''
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Automatically resize rows and columns

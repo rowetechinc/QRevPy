@@ -330,7 +330,7 @@ class QAData(object):
                             self.compass['status1'] = 'good'
                         else:
                             self.compass['status1'] = 'caution'
-                            self.compass['messages'].append(['COMPASS: Calibration result > 0.2 deg;', 2, 4])
+                            self.compass['messages'].append(['Compass: Calibration result > 0.2 deg;', 2, 4])
 
                 elif meas.transects[checked.index(True)].adcp.manufacturer == 'TRDI':
                     # TRDI ADCP

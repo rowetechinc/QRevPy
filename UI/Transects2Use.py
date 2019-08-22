@@ -31,7 +31,7 @@ class Transects2Use(QtWidgets.QDialog, wTransects2Use.Ui_Transects2Use):
         # Setup table
         tbl = self.tableSelect
         units = parent.units
-        summary_header = [parent.tr('Select'), parent.tr('Transect'), parent.tr('Start'), parent.tr('Bank'),
+        summary_header = [parent.tr('Select Transect'), parent.tr('Start'), parent.tr('Bank'),
                           parent.tr('End'), parent.tr('Duration'), parent.tr('Total Q'), parent.tr('Top Q'),
                           parent.tr('Meas Q'), parent.tr('Bottom Q'), parent.tr('Left Q'), parent.tr('Right Q')]
         ncols = len(summary_header)
