@@ -677,16 +677,14 @@ class Measurement(object):
         if transect_idx is None:
             # Apply to all transects
             for transect in self.transects:
-                transect.change_sos(self,
-                                    parameter=parameter,
+                transect.change_sos(parameter=parameter,
                                     salinity=salinity,
                                     temperature=temperature,
                                     selected=selected,
                                     speed=speed)
         else:
             # Apply to a single transect
-            self.transects[transect_idx].change_sos(self,
-                                                    parameter=parameter,
+            self.transects[transect_idx].change_sos(parameter=parameter,
                                                     salinity=salinity,
                                                     temperature=temperature,
                                                     selected=selected,

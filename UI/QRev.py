@@ -813,6 +813,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         elif key == 'w_vel':
             tab = 'tab_wt'
 
+        self.setTabIcon(tab, status)
+
+    def setTabIcon(self, tab, status):
         # Set appropriate icon
         if status == 'good':
             self.tab_all.setTabIcon(self.tab_all.indexOf(self.tab_all.findChild(QtWidgets.QWidget, tab)),
@@ -1266,11 +1269,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Sets the station name to the name entered by the user.
         """
         self.meas.station_name = self.ed_site_name.text()
+        self.meas.qa.user_qa(self.meas)
+        self.messages_tab()
 
     def update_site_number(self):
         """Sets the station number to the number entered by the user.
         """
         self.meas.station_number = self.ed_site_name.text()
+        self.meas.qa.user_qa(self.meas)
+        self.messages_tab()
 
     def main_settings_table(self):
         """Create and populate settings table.
@@ -1648,6 +1655,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_systest_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_systest_messages.textCursor().insertBlock()
 
+            self.setTabIcon('tab_systest', self.meas.qa.system_tst['status'])
+
     def select_systest(self, row, column):
         """Displays selected system test in text box.
 
@@ -1827,6 +1836,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_compass_messages.textCursor().insertText(message[0])
                 self.display_compass_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_compass_messages.textCursor().insertBlock()
+
+            self.setTabIcon('tab_compass', self.meas.qa.compass['status'])
 
     def update_compass_tab(self, tbl, old_discharge, new_discharge, initial=None):
         """Populates the table and draws the graphs with the current data.
@@ -2352,7 +2363,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             if salinity_entered:
                 # Assign data based on change made by user
                 old_discharge = copy.deepcopy(self.meas.discharge)
-                salinity = float(salinity_dialog.ed_magvar.text())
+                salinity = float(salinity_dialog.ed_salinity.text())
 
                 # Apply change to all or only selected transect based on user input
                 if salinity_dialog.rb_all.isChecked():
@@ -2376,11 +2387,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             if sos_source_entered:
                 # Assign data based on change made by user
                 old_discharge = copy.deepcopy(self.meas.discharge)
-                if sos_source_dialog.rb_internal:
+                if sos_source_dialog.rb_internal.isChecked():
                     sos_source = 'internal'
-                elif sos_source_dialog.rb_user:
+                elif sos_source_dialog.rb_user.isChecked():
                     sos_source = 'user'
-                    user_sos = float(sos_source_dialog.ed_user_temp.text())
+                    user_sos = float(sos_source_dialog.ed_sos_user.text())
 
                 # Apply change to all or only selected transect based on user input
                 if sos_source_dialog.rb_all.isChecked():
@@ -2419,6 +2430,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_tempsal_messages.textCursor().insertText(message[0])
                 self.display_tempsal_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_tempsal_messages.textCursor().insertBlock()
+
+            self.setTabIcon('tab_tempsal', self.meas.qa.temperature['status'])
 
     def plot_temperature(self):
         """Generates the graph of temperature.
@@ -3010,6 +3023,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_mb_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_mb_messages.textCursor().insertBlock()
 
+            self.setTabIcon('tab_mbt', self.meas.qa.moving_bed['status'])
+
 # Bottom track tab
 # ================
     def bt_tab(self):
@@ -3448,7 +3463,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.update_bt_tab(s)
             self.change = True
 
-
     @QtCore.pyqtSlot(str)
     def change_bt_vertical(self, text):
         """Coordinates user initiated change to the vertical velocity settings.
@@ -3567,6 +3581,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_bt_messages.textCursor().insertText(message[0])
                 self.display_bt_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_bt_messages.textCursor().insertBlock()
+
+            self.setTabIcon('tab_bt', self.meas.qa.bt_vel['status'])
 
 # GPS tab
 # =======
@@ -4174,6 +4190,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_gps_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_gps_messages.textCursor().insertBlock()
 
+            gga_status = self.meas.qa.gga_vel['status']
+            vtg_status = self.meas.qa.vtg_vel['status']
+            status = 'good'
+            if gga_status == 'caution' or vtg_status == 'caution':
+                status = 'caution'
+            if gga_status == 'warning' or vtg_status == 'warning':
+                status = 'warning'
+            self.setTabIcon('tab_gps', status)
+
 # Depth tab
 # =======
     def depth_tab(self):
@@ -4669,6 +4694,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_depth_messages.textCursor().insertText(message[0])
                 self.display_depth_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_depth_messages.textCursor().insertBlock()
+
+            self.setTabIcon('tab_depth', self.meas.qa.depths['status'])
 
 # WT tab
 # ======
@@ -5289,6 +5316,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_wt_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_wt_messages.textCursor().insertBlock()
 
+            self.setTabIcon('tab_wt', self.meas.qa.w_vel['status'])
+
 # Extrap Tab
 # ==========
     def extrap_tab(self):
@@ -5731,9 +5760,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.ed_extrap_subsection.setText('0:100')
         self.combo_extrap_type.setCurrentIndex(0)
 
-
-
-
     @QtCore.pyqtSlot(str)
     def change_data(self, text):
         """Coordinates user initiated change to the data from automatic to manual.
@@ -5945,6 +5971,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_extrap_messages.textCursor().insertText(message[0])
                 self.display_extrap_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_extrap_messages.textCursor().insertBlock()
+
+            self.setTabIcon('tab_extrap', self.meas.qa.extrapolation['status'])
 
 # Split functions
 # ==============
