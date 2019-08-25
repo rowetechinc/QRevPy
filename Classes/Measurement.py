@@ -1121,7 +1121,14 @@ class Measurement(object):
         settings['depthReference'] = 'bt_depths'
         # Depth settings
         settings['depthFilterType'] = 'Smooth'
-        settings['depthComposite'] = 'On'
+        for transect in self.transects:
+            if transect.checked:
+
+                if transect.depths.vb_depths is not None or transect.depths.ds_depths is not None:
+                    settings['depthComposite'] = 'On'
+                else:
+                    settings['depthComposite'] = 'Off'
+            break
 
         # Interpolation settings
         settings = self.qrev_default_interpolation_methods(settings)

@@ -2271,21 +2271,20 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.resizeRowsToContents()
 
         # Display independent temperature reading if available
-
-        if np.isnan(self.meas.ext_temp_chk['user']):
-            self.ed_user_temp.setText('')
-            self.pb_ind_temp_apply.setEnabled(False)
-        else:
-            try:
+        try:
+            if np.isnan(self.meas.ext_temp_chk['user']):
+                self.ed_user_temp.setText('')
+                self.pb_ind_temp_apply.setEnabled(False)
+            else:
                 temp = float(self.meas.ext_temp_chk['user'])
                 if self.rb_f.isChecked():
                     temp = convert_temperature(self.meas.ext_temp_chk['user'], units_in='C', units_out='F')
                 self.ed_user_temp.setText('{:3.1f}'.format(temp))
                 self.pb_ind_temp_apply.setEnabled(False)
-            except (ValueError, TypeError) as e:
-                user = None
-                self.ed_user_temp.setText('')
-                self.pb_ind_temp_apply.setEnabled(False)
+        except (ValueError, TypeError) as e:
+            user = None
+            self.ed_user_temp.setText('')
+            self.pb_ind_temp_apply.setEnabled(False)
 
         # Display user provided adcp temperature reading if available
         if np.isnan(self.meas.ext_temp_chk['adcp']) == False:
