@@ -1528,7 +1528,11 @@ class TransectData(object):
         elif parameter == 'salinity':
             if salinity is not None:
                 self.sensors.salinity_ppt.user.change_data(data_in=salinity)
-                if self.sensors.salinity_ppt.user.data == self.sensors.salinity_ppt.internal.data[0]:
+                if type(self.sensors.salinity_ppt.internal.data) is float:
+                    sos_internal = self.sensors.salinity_ppt.internal.data
+                else:
+                    sos_internal = self.sensors.salinity_ppt.internal.data[0]
+                if self.sensors.salinity_ppt.user.data == sos_internal:
                     self.sensors.salinity_ppt.set_selected(selected_name='internal')
                 else:
                     self.sensors.salinity_ppt.set_selected(selected_name='user')

@@ -2232,11 +2232,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Speed of sound source
             col += 1
             item = 'User'
-            if self.meas.transects[transect_id].sensors.temperature_deg_c.selected == 'internal':
-                if self.meas.transects[transect_id].sensors.temperature_deg_c.internal.source == 'Calculated':
+            if self.meas.transects[transect_id].sensors.speed_of_sound_mps.selected == 'internal':
+                if self.meas.transects[transect_id].sensors.speed_of_sound_mps.internal.source == 'Calculated':
                     item = 'Internal (ADCP)'
                 else:
                     item = 'Computed'
+            else:
+                item = 'User'
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -2319,7 +2321,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
 
         tbl = self.table_tempsal
-
+        transect_id = self.checked_transects_idx[row]
         # Change temperature
         if column == 1:
             user_temp = None
@@ -2376,11 +2378,17 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.update_tempsal_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
                 self.change = True
         # Change speed of sound
-        elif column == 5:
+        elif column == 4:
             user_sos = None
 
             # Intialize dialog for user input
-            sos_source_dialog = SOSSource(self)
+            sos_setting = self.meas.transects[transect_id].sensors.speed_of_sound_mps.selected
+            sos = None
+            if sos_setting == 'user':
+                sos = getattr(self.meas.transects[transect_id].sensors.speed_of_sound_mps,
+                              self.meas.transects[transect_id].sensors.speed_of_sound_mps.selected).data[0]
+
+            sos_source_dialog = SOSSource(self.units, setting=sos_setting,sos=sos)
             sos_source_entered = sos_source_dialog.exec_()
 
             if sos_source_entered:
@@ -4276,6 +4284,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.cb_depth_ds_cs.stateChanged.connect(self.depth_bottom_plot_change)
 
         # Connect options
+        self.combo_depth_ref.clear()
         self.combo_depth_ref.addItems(depth_ref_options)
         self.combo_depth_ref.currentIndexChanged[str].connect(self.change_ref)
         self.combo_depth_avg.currentIndexChanged[str].connect(self.change_avg_method)

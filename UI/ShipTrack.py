@@ -274,9 +274,11 @@ class Shiptrack(object):
         v_mean = np.nanmean(v, axis=0)
 
         # Plot water vectors
+        # self.vectors = self.fig.ax.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
+        #                                   u_mean * units['V'], v_mean * units['V'], units='dots', width=1, scale=0.6)
         self.vectors = self.fig.ax.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
-                                          u_mean * units['V'], v_mean * units['V'], units='dots', width=1, scale=0.6)
-
+                                          u_mean * units['V'], v_mean * units['V'], units='dots', width=1,
+                                          scale_units='width', scale=20)
         if control['vectors']:
             self.vectors.set_visible(True)
         else:
