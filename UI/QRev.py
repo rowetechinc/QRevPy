@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
-# from Classes.stickysettings import StickySettings as SSet
+from Classes.stickysettings import StickySettings as SSet
 from PyQt5.QtCore import pyqtSignal, QRegExp
 
 import UI.QRev_gui as QRev_gui
@@ -36,8 +36,6 @@ from UI.WTContour import WTContour
 from UI.WTFilters import WTFilters
 from UI.Rating import Rating
 from UI.ExtrapPlot import ExtrapPlot
-from UI.Threshold import Threshold
-from UI.Subsection import Subsection
 from UI.MplCanvas import MplCanvas
 from contextlib import contextmanager
 import time
@@ -56,31 +54,63 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.QRev_version = 'QRevPy Beta'
         self.setWindowTitle(self.QRev_version)
 
+        # Setting file for settings to carry over from one session to the next
+        # (examples: Folder, UnitsID)
         self.settingsFile = 'QRev_Settings'
-        self.units = units_conversion(units_id='English')
-        self.save_all = True
-        self.save_stylesheet = False
-        self.change = False
-        self.current_tab = 0
-        # self.settings = SSet(self.settingsFile)
+        # Create settings object which contains the default values from previous use
+        self.sticky_settings = SSet(self.settingsFile)
 
+        # Set units based on previous session or default to English
+        try:
+            units_id = self.sticky_settings.get('UnitsID')
+            if not units_id:
+                self.sticky_settings.set('UnitsID', 'English')
+        except KeyError:
+            self.sticky_settings.new('UnitsID', 'English')
+        self.units = units_conversion(units_id=self.sticky_settings.get('UnitsID'))
+
+        # Save all transects by default
+        self.save_all = True
+
+        # Do not save a stylesheet with each measurement by default
+        self.save_stylesheet = False
+
+        # Set initial change switch to false
+        self.change = False
+
+        # Set the initial tab to the main tab
+        self.current_tab = 0
+
+        # Connect toolbar button to methods
         self.actionOpen.triggered.connect(self.select_measurement)
-        self.actionComment.triggered.connect(self.addComment)
-        self.actionCheck.triggered.connect(self.selectTransects)
-        self.actionBT.triggered.connect(self.setRef2BT)
-        self.actionGGA.triggered.connect(self.setRef2GGA)
-        self.actionVTG.triggered.connect(self.setRef2VTG)
-        self.actionOFF.triggered.connect(self.compTracksOff)
-        self.actionON.triggered.connect(self.compTracksOn)
+        self.actionComment.triggered.connect(self.add_comment)
+        self.actionCheck.triggered.connect(self.select_q_transects)
+        self.actionBT.triggered.connect(self.set_ref_bt)
+        self.actionGGA.triggered.connect(self.set_ref_gga)
+        self.actionVTG.triggered.connect(self.set_ref_vtg)
+        self.actionOFF.triggered.connect(self.comp_tracks_off)
+        self.actionON.triggered.connect(self.comp_tracks_on)
         self.actionOptions.triggered.connect(self.qrev_options)
+
+        # Connect a change in tab to display to the tab manager
         self.tab_all.currentChanged.connect(self.tab_manager)
+
+        # Disable all tabs until data are loaded
         self.tab_all.setEnabled(False)
 
+        # Disable toolbar icons until data are loaded
+        self.actionSave.setDisabled(True)
+        self.actionComment.setDisabled(True)
+        self.actionEDI.setDisabled(True)
+        self.actionCheck.setDisabled(True)
+
+        # Configure bold and normal fonts
         self.font_bold = QtGui.QFont()
         self.font_bold.setBold(True)
         self.font_normal = QtGui.QFont()
         self.font_normal.setBold(False)
 
+        # Setup indicator icons
         self.icon_caution = QtGui.QIcon()
         self.icon_caution.addPixmap(QtGui.QPixmap(":/images/24x24/Warning.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
 
@@ -96,12 +126,20 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.icon_unChecked = QtGui.QIcon()
         self.icon_unChecked.addPixmap(QtGui.QPixmap(":/images/24x24/Warning.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
 
-        self.actionSave.setDisabled(True)
-        self.actionComment.setDisabled(True)
-        self.actionEDI.setDisabled(True)
-        self.actionCheck.setDisabled(True)
+        # Tab initialization tracking setup
+        self.main_initialized = False
+        self.systest_initialized = False
+        self.compass_pr_initialized = False
+        self.tempsal_initialized = False
+        self.mb_initialized = False
+        self.bt_initialized = False
+        self.gps_initialized = False
+        self.depth_initialized = False
+        self.wt_initialized = False
+        self.extrap_initialized = False
+        self.edges_initialized = False
 
-
+        # Special commands to ensure proper operation on Windows 10
         if QtCore.QSysInfo.windowsVersion() == QtCore.QSysInfo.WV_WINDOWS10:
             self.setStyleSheet(
                 "QHeaderView::section{"
@@ -120,8 +158,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 "background-color: white;"
                 "}")
 
+        # Used for command line interface
         self.gui_initialized = True
 
+        # If called by RIVRS setup QRev for automated group processing
         if caller is not None:
             self.caller = caller
             self.split_initialization(groupings=groupings, data=data)
@@ -139,36 +179,38 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
 
         # Open dialog
-        self.select = OpenMeasurementDialog(self)
-        self.select.exec_()
+        select = OpenMeasurementDialog(parent=self)
+        select.exec_()
 
         # If a selection is made begin loading
-        if len(self.select.type) > 0:
-            # wait_cursor doesn't seem to be working properly
+        if len(select.type) > 0:
             with self.wait_cursor():
-                # Load and process measurement based on measurement type
-                if self.select.type == 'SonTek':
+                # Load and process Sontek data
+                if select.type == 'SonTek':
                     # Show folder name in GUI header
-                    self.setWindowTitle(self.QRev_version + ': ' + self.select.pathName)
+                    self.setWindowTitle(self.QRev_version + ': ' + select.pathName)
                     # Create measurement object
-                    self.meas = Measurement(in_file=self.select.fullName, source='SonTek', proc_type='QRev')
+                    self.meas = Measurement(in_file=select.fullName, source='SonTek', proc_type='QRev')
 
-                elif self.select.type == 'TRDI':
+                # Load and process TRDI data
+                elif select.type == 'TRDI':
                     # Show mmt filename in GUI header
-                    self.setWindowTitle(self.QRev_version + ': ' + self.select.fullName[0])
+                    self.setWindowTitle(self.QRev_version + ': ' + select.fullName[0])
                     # Create measurement object
-                    self.meas = Measurement(in_file=self.select.fullName[0], source='TRDI', proc_type='QRev', checked=self.select.checked)
+                    self.meas = Measurement(in_file=select.fullName[0], source='TRDI', proc_type='QRev', checked=self.select.checked)
 
-                    # self.msg.destroy()
-                elif self.select.type == 'QRev':
+                # Load QRev data
+                elif select.type == 'QRev':
                     # Show QRev filename in GUI header
-                    self.setWindowTitle(self.QRev_version + ': ' + self.select.fullName[0])
-                    self.meas = Measurement(in_file=self.select.fullName, source='QRev')
+                    self.setWindowTitle(self.QRev_version + ': ' + select.fullName[0])
+                    self.meas = Measurement(in_file=select.fullName, source='QRev')
                 else:
                     print('Cancel')
 
-
+                # Identify transects to be used in discharge computation
                 self.checked_transects_idx = Measurement.checked_transects(self.meas)
+                
+                # Determine if external heading is included in the data
                 self.h_external_valid = Measurement.h_external_valid(self.meas)
                 self.config_gui()
                 self.change = True
@@ -188,21 +230,21 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, checked=self.checked_transects_idx)
             self.config_gui()
 
-    def addComment(self):
+    def add_comment(self):
         """Add comment triggered by actionComment
         """
         # Intialize comment dialog
-        self.comment = Comment(self)
-        comment_entered = self.comment.exec_()
+        comment = Comment()
+        comment_entered = comment.exec_()
 
         # If comment entered and measurement open, save comment, and update comments tab.
         if comment_entered:
             if hasattr(self, 'meas'):
-                self.meas.comments.append(self.comment.text_edit_comment.toPlainText())
+                self.meas.comments.append(comment.text_edit_comment.toPlainText())
             self.change = True
             self.update_comments()
 
-    def selectTransects(self):
+    def select_q_transects(self):
         """Initializes a dialog to allow user to select or deselect transects to include in the measurement.
         """
 
@@ -231,56 +273,71 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.change = True
                 self.tab_manager()
 
-    def setRef2BT(self):
+    def set_ref_bt(self):
         """Changes the navigation reference to Bottom Track
         """
         with self.wait_cursor():
+            # Get all current settings
             settings = Measurement.current_settings(self.meas)
+            # Change NavRef setting to selected value
             settings['NavRef'] = 'BT'
+            # Update the measurement and GUI
             Measurement.apply_settings(self.meas, settings)
             self.update_toolbar_nav_ref()
             self.change = True
             self.tab_manager()
 
-    def setRef2GGA(self):
+    def set_ref_gga(self):
         """Changes the navigation reference to GPS GGA
         """
         with self.wait_cursor():
+            # Get all current settings
             settings = Measurement.current_settings(self.meas)
+            # Change NavRef to selected setting
             settings['NavRef'] = 'GGA'
+            # Update measurement and GUI
             Measurement.apply_settings(self.meas, settings)
             self.update_toolbar_nav_ref()
             self.change = True
             self.tab_manager()
 
-    def setRef2VTG(self):
+    def set_ref_vtg(self):
         """Changes the navigation reference to GPS VTG
         """
         with self.wait_cursor():
+            # Get all current settings
             settings = Measurement.current_settings(self.meas)
+            # Set NavRef to selected setting
             settings['NavRef'] = 'VTG'
+            # Update measurement and GUI
             Measurement.apply_settings(self.meas, settings)
             self.update_toolbar_nav_ref()
             self.change = True
             self.tab_manager()
 
-    def compTracksOn(self):
+    def comp_tracks_on(self):
         """Change composite tracks setting to On and update measurement and display.
         """
         with self.wait_cursor():
+            # Get all current settings
             settings = Measurement.current_settings(self.meas)
+            # Change CompTracks to selected setting
             settings['CompTracks'] = 'On'
+            # Update measurement and GUI
             Measurement.apply_settings(self.meas, settings)
             self.update_toolbar_composite_tracks()
             self.change = True
             self.tab_manager()
 
-    def compTracksOff(self):
+    def comp_tracks_off(self):
         """Change composite tracks setting to Off and update measurement and display.
         """
         with self.wait_cursor():
+            # Get all current settings
             settings = Measurement.current_settings(self.meas)
+            # Change CompTracks to selected setting
             settings['CompTracks'] = 'Off'
+            # Update measurement and GUI
             Measurement.apply_settings(self.meas, settings)
             self.update_toolbar_composite_tracks()
             self.change = True
@@ -288,50 +345,60 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
     def qrev_options(self):
         """Change options triggered by actionOptions
-                """
-        # Intialize options dialog
-        self.options = Options(self)
+        """
+        # Initialize options dialog
+        options = Options()
 
         # Set dialog to current settings
         if self.units['ID'] == 'SI':
-            self.options.rb_si.setChecked(True)
+            options.rb_si.setChecked(True)
         else:
-            self.options.rb_english.setChecked(True)
+            options.rb_english.setChecked(True)
 
         if self.save_all:
-            self.options.rb_All.setChecked(True)
+            options.rb_All.setChecked(True)
         else:
-            self.options.rb_checked.setChecked(True)
+            options.rb_checked.setChecked(True)
 
         if self.save_stylesheet:
-            self.options.cb_stylesheet.setChecked(True)
+            options.cb_stylesheet.setChecked(True)
         else:
-            self.options.cb_stylesheet.setChecked(False)
+            options.cb_stylesheet.setChecked(False)
 
-        selected_options = self.options.exec_()
+        # Execute the options window
+        rsp = options.exec_()
+
         with self.wait_cursor():
-            if self.options.rb_english.isChecked():
-                if self.units['ID'] == 'SI':
-                    self.units = units_conversion(units_id='English')
-                    self.update_main()
-                    self.change = True
-            else:
-                if self.units['ID'] == 'English':
-                    self.units = units_conversion(units_id='SI')
-                    self.update_main()
-                    self.change = True
+            # Apply current settings from options window
+            if rsp == QtWidgets.QDialog.Accepted:
+                # Units options
+                if options.rb_english.isChecked():
+                    if self.units['ID'] == 'SI':
+                        self.units = units_conversion(units_id='English')
+                        self.sticky_settings.set('UnitsID', 'English')
+                        self.update_main()
+                        self.change = True
+                else:
+                    if self.units['ID'] == 'English':
+                        self.units = units_conversion(units_id='SI')
+                        self.sticky_settings.set('UnitsID', 'SI')
+                        self.update_main()
+                        self.change = True
 
-            if self.options.rb_All.isChecked():
-                self.save_all = True
-            else:
-                self.save_all = False
+                # Save options
+                if options.rb_All.isChecked():
+                    self.save_all = True
+                else:
+                    self.save_all = False
 
-            if self.options.cb_stylesheet.isChecked():
-                self.save_stylesheet = True
-            else:
-                self.save_all = False
+                # Stylesheet option
+                if options.cb_stylesheet.isChecked():
+                    self.save_stylesheet = True
+                else:
+                    self.save_all = False
 
-            self.tab_manager()
+                # Update tabs
+                self.tab_manager()
 
 # Main tab
 # ========
@@ -339,6 +406,17 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Update Gui
         """
         with self.wait_cursor():
+            # If this is the first time this tab is used setup interface connections
+            if not self.main_initialized:
+                self.main_table_summary.cellClicked.connect(self.select_transect)
+                self.main_table_details.cellClicked.connect(self.select_transect)
+                self.ed_site_name.editingFinished.connect(self.update_site_name)
+                self.ed_site_number.editingFinished.connect(self.update_site_number)
+                self.table_premeas.cellClicked.connect(self.settings_table_row_adjust)
+
+                # Main tab has been initialized
+                self.main_initialized = True
+
             # Update the transect select icon on the toolbar
             self.update_toolbar_trans_select()
 
@@ -348,7 +426,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Set toolbar composite tracks indicator
             self.update_toolbar_composite_tracks()
 
-
+            # Setup and populate tables
             self.main_summary_table()
             self.uncertainty_table()
             self.qa_table()
@@ -358,10 +436,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.main_adcp_table()
             self.messages_tab()
             self.comments_tab()
+
+            # Setup and create graphs
             if len(self.checked_transects_idx) > 0:
                 self.contour_shiptrack(self.checked_transects_idx[0])
                 self.main_extrap_plot()
                 self.discharge_plot()
+
+            # If graphics have been created, update them
             else:
                 if hasattr(self, 'extrap_mpl'):
                     self.extrap_mpl.fig.clear()
@@ -372,14 +454,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 if hasattr(self, 'discharge_mpl'):
                     self.discharge_mpl.fig.clear()
                     self.discharge_mpl.draw()
+
+            # Toggles changes indicating the main has been updated
             self.change = False
             print('complete')
 
     def update_toolbar_trans_select(self):
         """Updates the icon for the select transects on the toolbar.
         """
-        self.actionCheck.setEnabled(True)
-        self.tab_all.setEnabled(True)
+
         if len(self.checked_transects_idx) == len(self.meas.transects):
             self.actionCheck.setIcon(self.icon_allChecked)
         elif len(self.checked_transects_idx) > 0:
@@ -635,18 +718,22 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Transect column was selected
         if column == 0 and row > 0:
             with self.wait_cursor():
+
                 # Set all files to normal font
                 nrows = len(self.checked_transects_idx)
                 for nrow in range(1, nrows+1):
                     self.main_table_summary.item(nrow, 0).setFont(self.font_normal)
                     self.main_table_details.item(nrow, 0).setFont(self.font_normal)
                     self.table_settings.item(nrow + 2, 0).setFont(self.font_normal)
+
                 # Set selected file to bold font
                 self.main_table_summary.item(row, 0).setFont(self.font_bold)
                 self.main_table_details.item(row, 0).setFont(self.font_bold)
                 self.table_settings.item(row + 2, 0).setFont(self.font_bold)
+
                 # Determine transect selected
                 transect_id = self.checked_transects_idx[row-1]
+
                 # Update contour and shiptrack plot
                 self.contour_shiptrack(transect_id=transect_id)
 
@@ -859,7 +946,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
-        tbl.cellClicked.connect(self.select_transect)
 
         if len(self.checked_transects_idx) > 0:
             # Add transect data
@@ -1020,7 +1106,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
-        tbl.cellClicked.connect(self.select_transect)
 
         if len(self.checked_transects_idx) > 0:
             trans_prop = Measurement.compute_measurement_properties(self.meas)
@@ -1128,8 +1213,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Initialize and connect the station name and number fields
         self.ed_site_name.setText(self.meas.station_name)
         self.ed_site_number.setText(self.meas.station_number)
-        self.ed_site_name.editingFinished.connect(self.update_site_name)
-        self.ed_site_number.editingFinished.connect(self.update_site_number)
 
         # Setup table
         tbl = self.table_premeas
@@ -1291,7 +1374,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.horizontalHeader().hide()
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
-        tbl.cellClicked.connect(self.settings_table_row_adjust)
 
         if len(self.checked_transects_idx) > 0:
             # Build column labels using custom_header to create appropriate spans
@@ -1585,7 +1667,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
-        tbl.cellClicked.connect(self.select_systest)
 
         # Add system tests
         if nrows > 0:
@@ -1622,15 +1703,19 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     tbl.setItem(row, col, QtWidgets.QTableWidgetItem('N/A'))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-                # Display selected test
-                tbl.item(idx_systest, 0).setFont(self.font_bold)
-                self.display_systest.clear()
-                self.display_systest.textCursor().insertText(self.meas.system_tst[idx_systest].data)
+            # Display selected test
+            tbl.item(idx_systest, 0).setFont(self.font_bold)
+            self.display_systest.clear()
+            self.display_systest.textCursor().insertText(self.meas.system_tst[idx_systest].data)
 
-                tbl.resizeColumnsToContents()
-                tbl.resizeRowsToContents()
+        tbl.resizeColumnsToContents()
+        tbl.resizeRowsToContents()
 
-                self.systest_comments_messages()
+        if not self.systest_initialized:
+            tbl.cellClicked.connect(self.select_systest)
+            self.systest_initialized = True
+
+        self.systest_comments_messages()
 
     def systest_comments_messages(self):
 
@@ -1672,9 +1757,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if column == 0:
             with self.wait_cursor():
                 # Set all files to normal font
-                nrows = len(self.meas.system_test)
+                nrows = len(self.meas.system_tst)
                 for nrow in range(nrows):
-                    self.self.table_systest(nrow, 0).setFont(self.font_normal)
+                    self.table_systest.item(nrow, 0).setFont(self.font_normal)
 
                 # Set selected file to bold font
                 self.table_systest.item(row, 0).setFont(self.font_bold)
@@ -1690,6 +1775,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Setup data table
         tbl = self.table_compass_pr
+        tbl.clear()
         table_header = [self.tr('Plot / Transect'),
                           self.tr('Magnetic \n Variation (deg)'),
                           self.tr('Heading \n Offset (deg)'),
@@ -1709,18 +1795,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
-        tbl.cellClicked.connect(self.compass_table_clicked)
 
         # Update table, graphs, messages, and comments
         self.update_compass_tab(tbl=tbl, old_discharge=self.meas.discharge,
                                 new_discharge=self.meas.discharge, initial=0)
 
-        # Connect plot variable checkboxes
-        self.cb_adcp_compass.stateChanged.connect(self.compass_plot)
-        self.cb_ext_compass.stateChanged.connect(self.compass_plot)
-        self.cb_mag_field.stateChanged.connect(self.compass_plot)
-        self.cb_pitch.stateChanged.connect(self.pr_plot)
-        self.cb_roll.stateChanged.connect(self.pr_plot)
         for transect_idx in self.checked_transects_idx:
             if self.meas.transects[transect_idx].sensors.heading_deg.internal.mag_error is not None:
                 self.cb_mag_field.setEnabled(True)
@@ -1732,6 +1811,17 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Initialize the calibration/evaluation tab
         self.compass_cal_eval(idx_eval=0)
+
+        if not self.compass_pr_initialized:
+            # Connect table
+            tbl.cellClicked.connect(self.compass_table_clicked)
+            # Connect plot variable checkboxes
+            self.cb_adcp_compass.stateChanged.connect(self.compass_plot)
+            self.cb_ext_compass.stateChanged.connect(self.compass_plot)
+            self.cb_mag_field.stateChanged.connect(self.compass_plot)
+            self.cb_pitch.stateChanged.connect(self.pr_plot)
+            self.cb_roll.stateChanged.connect(self.pr_plot)
+            self.compass_pr_initialized = True
 
     def compass_cal_eval(self, idx_cal=None, idx_eval=None):
         """Displays data in the calibration / evaluation tab.
@@ -1853,6 +1943,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
 
         with self.wait_cursor():
+
             # Populate each row
             for row in range(tbl.rowCount()):
                 transect_id = self.checked_transects_idx[row]
@@ -1941,6 +2032,80 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.pr_plot()
             self.compass_comments_messages()
 
+    def change_table_data (self, tbl, old_discharge, new_discharge, initial=None):
+        """Populates the table and draws the graphs with the current data.
+
+        tbl: QTableWidget
+            Reference to the QTableWidget
+        old_discharge: object
+            Object of class QComp with discharge from previous settings, same as new if not changes
+        new_discharge: object
+            Object of class QComp with discharge from current settings
+        initial: int
+            Identifies row that should be checked and displayed in the graphs. Used for initial display of data.
+        """
+
+        with self.wait_cursor():
+
+            # Populate each row
+            for row in range(tbl.rowCount()):
+                transect_id = self.checked_transects_idx[row]
+
+                # File/Transect name
+                col = 0
+                # Magnetic variation
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
+                    self.meas.transects[transect_id].sensors.heading_deg.internal.mag_var_deg)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Heading offset
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
+                    self.meas.transects[transect_id].sensors.heading_deg.internal.align_correction_deg)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Heading source
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    self.meas.transects[transect_id].sensors.heading_deg.selected))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Mean pitch
+                col += 1
+
+                # Pitch standard deviation
+                col += 1
+
+                # Mean roll
+                col += 1
+
+                # Roll standard deviation
+                col += 1
+
+                # Discharge from previous settings
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:8.1f}'.format(old_discharge[transect_id].total * self.units['Q'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Discharge from new/current settings
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:8.1f}'.format(new_discharge[transect_id].total * self.units['Q'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Percent difference in old and new discharges
+                col += 1
+                per_change = ((new_discharge[transect_id].total - old_discharge[transect_id].total)
+                              / old_discharge[transect_id].total) * 100
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(per_change)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Update graphics, comments, and messages
+            self.compass_plot()
+            self.pr_plot()
+            self.compass_comments_messages()
+
+    @QtCore.pyqtSlot(int, int)
     def compass_table_clicked(self, row, column):
         """Manages actions caused by the user clicking in selected columns of the table.
 
@@ -1967,10 +2132,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if column == 1:
             # Intialize dialog
             magvar_dialog = MagVar(self)
-            magvar_entered = magvar_dialog.exec_()
+            rsp = magvar_dialog.exec_()
             # Data entered.
             with self.wait_cursor():
-                if magvar_entered:
+                if rsp == QtWidgets.QDialog.Accepted:
                     old_discharge = copy.deepcopy(self.meas.discharge)
                     magvar = float(magvar_dialog.ed_magvar.text())
 
@@ -1981,7 +2146,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         self.meas.change_magvar( magvar=magvar, transect_idx=self.transects_2_use[row])
 
                     # Update compass tab
-                    self.update_compass_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
+                    self.change_table_data(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
                     self.change = True
 
         # Heading Offset
@@ -2153,23 +2318,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
-        tbl.cellClicked.connect(self.tempsal_table_clicked)
-
-        # Connect temperature units radio buttons
-        self.rb_c.toggled.connect(self.change_temp_units)
-        self.rb_f.toggled.connect(self.change_temp_units)
-
-        # Setup input validator for independent and adcp user temperature
-        reg_ex = QRegExp("^[1-9]\d*(\.\d+)?$")
-        input_validator = QtGui.QRegExpValidator(reg_ex, self)
-
-        # Connect independent and adcp input option
-        self.ed_user_temp.setValidator(input_validator)
-        self.ed_adcp_temp.setValidator(input_validator)
-        self.pb_ind_temp_apply.clicked.connect(self.apply_user_temp)
-        self.pb_adcp_temp_apply.clicked.connect(self.apply_adcp_temp)
-        self.ed_user_temp.textChanged.connect(self.user_temp_changed)
-        self.ed_adcp_temp.textChanged.connect(self.adcp_temp_changed)
 
         # Update the table, independent, and user temperatures
         self.update_tempsal_tab(tbl=tbl, old_discharge=self.meas.discharge,
@@ -2177,6 +2325,27 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Display the times series plot of ADCP temperatures
         self.plot_temperature()
+
+        if not self.tempsal_initialized:
+            tbl.cellClicked.connect(self.tempsal_table_clicked)
+
+            # Connect temperature units radio buttons
+            self.rb_c.toggled.connect(self.change_temp_units)
+            self.rb_f.toggled.connect(self.change_temp_units)
+
+            # Setup input validator for independent and adcp user temperature
+            reg_ex = QRegExp("^[1-9]\d*(\.\d+)?$")
+            input_validator = QtGui.QRegExpValidator(reg_ex, self)
+
+            # Connect independent and adcp input option
+            self.ed_user_temp.setValidator(input_validator)
+            self.ed_adcp_temp.setValidator(input_validator)
+            self.pb_ind_temp_apply.clicked.connect(self.apply_user_temp)
+            self.pb_adcp_temp_apply.clicked.connect(self.apply_adcp_temp)
+            self.ed_user_temp.textChanged.connect(self.user_temp_changed)
+            self.ed_adcp_temp.textChanged.connect(self.adcp_temp_changed)
+
+            self.tempsal_initialized = True
 
     def update_tempsal_tab(self, tbl, old_discharge, new_discharge):
         """Updates all data displayed on the tempsal tab.
@@ -2569,28 +2738,32 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
-        tbl.cellClicked.connect(self.mb_table_clicked)
 
         # Automatically resize rows and columns
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
-        # Initialize checkbox settings
-        self.cb_mb_bt.setCheckState(QtCore.Qt.Checked)
-        self.cb_mb_gga.setCheckState(QtCore.Qt.Unchecked)
-        self.cb_mb_vtg.setCheckState(QtCore.Qt.Unchecked)
-        self.cb_mb_vectors.setCheckState(QtCore.Qt.Checked)
-
-        # Connect plot variable checkboxes
-        self.cb_mb_bt.stateChanged.connect(self.mb_plot_change)
-        self.cb_mb_gga.stateChanged.connect(self.mb_plot_change)
-        self.cb_mb_vtg.stateChanged.connect(self.mb_plot_change)
-        self.cb_mb_vectors.stateChanged.connect(self.mb_plot_change)
-
         # Display content
         self.update_mb_table()
         self.mb_plots(idx=0)
         self.mb_comments_messages()
+
+        if not self.mb_initialized:
+            tbl.cellClicked.connect(self.mb_table_clicked)
+
+            # Initialize checkbox settings
+            self.cb_mb_bt.setCheckState(QtCore.Qt.Checked)
+            self.cb_mb_gga.setCheckState(QtCore.Qt.Unchecked)
+            self.cb_mb_vtg.setCheckState(QtCore.Qt.Unchecked)
+            self.cb_mb_vectors.setCheckState(QtCore.Qt.Checked)
+
+            # Connect plot variable checkboxes
+            self.cb_mb_bt.stateChanged.connect(self.mb_plot_change)
+            self.cb_mb_gga.stateChanged.connect(self.mb_plot_change)
+            self.cb_mb_vtg.stateChanged.connect(self.mb_plot_change)
+            self.cb_mb_vectors.stateChanged.connect(self.mb_plot_change)
+
+            self.mb_initialized = True
 
     def update_mb_table(self):
         """Populates the moving-bed table with the current settings and data.
@@ -2751,7 +2924,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             if tbl.item(row, 0).checkState()== QtCore.Qt.Checked:
                 # tbl.item(row, 0).setCheckState(QtCore.Qt.Unchecked)
                 self.meas.mb_tests[row].user_valid = False
-                self.addComment()
+                self.add_comment()
             else:
                 # tbl.item(row, 0).setCheckState(QtCore.Qt.Checked)
                 self.meas.mb_tests[row].user_valid = True
@@ -2789,7 +2962,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                                               QtWidgets.QMessageBox.Cancel)
                 if user_warning == QtWidgets.QMessageBox.Ok:
                     # Apply manual override
-                    self.addComment()
+                    self.add_comment()
                     # tbl.item(row, 1).setCheckState(QtCore.Qt.Checked)
                     self.meas.mb_tests[row].use_2_correct == True
                     self.meas.mb_tests[row].moving_bed == 'Yes'
@@ -2806,7 +2979,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 if tbl.item(row, 1).checkState() == QtCore.Qt.Checked:
                     # tbl.item(row, 1).setCheckState(QtCore.Qt.Unchecked)
                     self.meas.mb_tests[row].use_2_correct = False
-                    self.addComment()
+                    self.add_comment()
                 else:
                     # Apply setting
                     # tbl.item(row, 1).setCheckState(QtCore.Qt.Checked)
@@ -3060,16 +3233,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
-        tbl.cellClicked.connect(self.bt_table_clicked)
 
         # Automatically resize rows and columns
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
-        # Initialize checkbox settings for boat reference
-        self.cb_bt_bt.setCheckState(QtCore.Qt.Checked)
-        self.cb_bt_gga.setCheckState(QtCore.Qt.Unchecked)
-        self.cb_bt_vtg.setCheckState(QtCore.Qt.Unchecked)
         selected = self.meas.transects[self.checked_transects_idx[0]].boat_vel.selected
         if selected == 'gga_vel':
             self.cb_bt_gga.setCheckState(QtCore.Qt.Checked)
@@ -3077,28 +3245,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.cb_bt_vtg.setCheckState(QtCore.Qt.Checked)
 
         self.cb_bt_vectors.setCheckState(QtCore.Qt.Checked)
-
-        # Connect plot variable checkboxes
-        self.cb_bt_bt.stateChanged.connect(self.bt_plot_change)
-        self.cb_bt_gga.stateChanged.connect(self.bt_plot_change)
-        self.cb_bt_vtg.stateChanged.connect(self.bt_plot_change)
-        self.cb_bt_vectors.stateChanged.connect(self.bt_plot_change)
-
-        # Connect radio buttons
-        self.rb_bt_beam.toggled.connect(self.bt_radiobutton_control)
-        self.rb_bt_error.toggled.connect(self.bt_radiobutton_control)
-        self.rb_bt_vert.toggled.connect(self.bt_radiobutton_control)
-        self.rb_bt_other.toggled.connect(self.bt_radiobutton_control)
-
-        # Connect manual entry
-        self.ed_bt_error_vel_threshold.editingFinished.connect(self.change_error_vel_threshold)
-        self.ed_bt_vert_vel_threshold.editingFinished.connect(self.change_vert_vel_threshold)
-
-        # Connect filters
-        self.combo_bt_3beam.currentIndexChanged[str].connect(self.change_bt_beam)
-        self.combo_bt_error_velocity.activated[str].connect(self.change_bt_error)
-        self.combo_bt_vert_velocity.currentIndexChanged[str].connect(self.change_bt_vertical)
-        self.combo_bt_other.currentIndexChanged[str].connect(self.change_bt_other)
 
         # Transect selected for display
         self.transect = self.meas.transects[self.checked_transects_idx[0]]
@@ -3132,6 +3278,38 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.update_bt_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
         self.bt_plots()
         self.bt_comments_messages()
+
+        if not self.bt_initialized:
+            tbl.cellClicked.connect(self.bt_table_clicked)
+
+            # Initialize checkbox settings for boat reference
+            self.cb_bt_bt.setCheckState(QtCore.Qt.Checked)
+            self.cb_bt_gga.setCheckState(QtCore.Qt.Unchecked)
+            self.cb_bt_vtg.setCheckState(QtCore.Qt.Unchecked)
+
+            # Connect plot variable checkboxes
+            self.cb_bt_bt.stateChanged.connect(self.bt_plot_change)
+            self.cb_bt_gga.stateChanged.connect(self.bt_plot_change)
+            self.cb_bt_vtg.stateChanged.connect(self.bt_plot_change)
+            self.cb_bt_vectors.stateChanged.connect(self.bt_plot_change)
+
+            # Connect radio buttons
+            self.rb_bt_beam.toggled.connect(self.bt_radiobutton_control)
+            self.rb_bt_error.toggled.connect(self.bt_radiobutton_control)
+            self.rb_bt_vert.toggled.connect(self.bt_radiobutton_control)
+            self.rb_bt_other.toggled.connect(self.bt_radiobutton_control)
+
+            # Connect manual entry
+            self.ed_bt_error_vel_threshold.editingFinished.connect(self.change_error_vel_threshold)
+            self.ed_bt_vert_vel_threshold.editingFinished.connect(self.change_vert_vel_threshold)
+
+            # Connect filters
+            self.combo_bt_3beam.currentIndexChanged[str].connect(self.change_bt_beam)
+            self.combo_bt_error_velocity.activated[str].connect(self.change_bt_error)
+            self.combo_bt_vert_velocity.currentIndexChanged[str].connect(self.change_bt_vertical)
+            self.combo_bt_other.currentIndexChanged[str].connect(self.change_bt_other)
+
+            self.bt_initialized = True
 
     def update_bt_table(self, old_discharge, new_discharge):
         """Updates the bottom track table with new or reprocessed data.
@@ -3619,7 +3797,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
-        tbl.cellClicked.connect(self.gps_table_clicked)
 
         # Automatically resize rows and columns
         tbl.resizeColumnsToContents()
@@ -3633,29 +3810,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.cb_gps_vtg.setCheckState(QtCore.Qt.Checked)
 
         self.cb_gps_vectors.setCheckState(QtCore.Qt.Checked)
-
-        # Connect plot variable checkboxes
-        self.cb_gps_bt.stateChanged.connect(self.gps_plot_change)
-        self.cb_gps_gga.stateChanged.connect(self.gps_plot_change)
-        self.cb_gps_vtg.stateChanged.connect(self.gps_plot_change)
-        self.cb_gps_vectors.stateChanged.connect(self.gps_plot_change)
-
-        # Connect radio buttons
-        self.rb_gps_quality.toggled.connect(self.gps_radiobutton_control)
-        self.rb_gps_altitude.toggled.connect(self.gps_radiobutton_control)
-        self.rb_gps_hdop.toggled.connect(self.gps_radiobutton_control)
-        self.rb_gps_sats.toggled.connect(self.gps_radiobutton_control)
-        self.rb_gps_other.toggled.connect(self.gps_radiobutton_control)
-
-        # Connect manual entry
-        self.ed_gps_altitude_threshold.editingFinished.connect(self.change_altitude_threshold)
-        self.ed_gps_hdop_threshold.editingFinished.connect(self.change_hdop_threshold)
-
-        # Connect filters
-        self.combo_gps_qual.currentIndexChanged[str].connect(self.change_quality)
-        self.combo_gps_altitude.currentIndexChanged[str].connect(self.change_altitude)
-        self.combo_gps_hdop.currentIndexChanged[str].connect(self.change_hdop)
-        self.combo_gps_other.currentIndexChanged[str].connect(self.change_gps_other)
 
         # Transect selected for display
         self.transect = self.meas.transects[self.checked_transects_idx[0]]
@@ -3690,6 +3844,33 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.update_gps_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
         self.gps_plots()
         self.gps_comments_messages()
+
+        if not self.gps_initialized:
+            tbl.cellClicked.connect(self.gps_table_clicked)
+            # Connect plot variable checkboxes
+            self.cb_gps_bt.stateChanged.connect(self.gps_plot_change)
+            self.cb_gps_gga.stateChanged.connect(self.gps_plot_change)
+            self.cb_gps_vtg.stateChanged.connect(self.gps_plot_change)
+            self.cb_gps_vectors.stateChanged.connect(self.gps_plot_change)
+
+            # Connect radio buttons
+            self.rb_gps_quality.toggled.connect(self.gps_radiobutton_control)
+            self.rb_gps_altitude.toggled.connect(self.gps_radiobutton_control)
+            self.rb_gps_hdop.toggled.connect(self.gps_radiobutton_control)
+            self.rb_gps_sats.toggled.connect(self.gps_radiobutton_control)
+            self.rb_gps_other.toggled.connect(self.gps_radiobutton_control)
+
+            # Connect manual entry
+            self.ed_gps_altitude_threshold.editingFinished.connect(self.change_altitude_threshold)
+            self.ed_gps_hdop_threshold.editingFinished.connect(self.change_hdop_threshold)
+
+            # Connect filters
+            self.combo_gps_qual.currentIndexChanged[str].connect(self.change_quality)
+            self.combo_gps_altitude.currentIndexChanged[str].connect(self.change_altitude)
+            self.combo_gps_hdop.currentIndexChanged[str].connect(self.change_hdop)
+            self.combo_gps_other.currentIndexChanged[str].connect(self.change_gps_other)
+
+            self.gps_initialized = True
 
     def update_gps_table(self, old_discharge, new_discharge):
         """Updates the gps table with new or reprocessed data.
@@ -4235,60 +4416,70 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
-        tbl.cellClicked.connect(self.depth_table_clicked)
 
         # Automatically resize rows and columns
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
-        # Initialize checkbox settings top plot and build depth ref combobox options
-        self.cb_depth_beam1.setCheckState(QtCore.Qt.Checked)
-        self.cb_depth_beam2.setCheckState(QtCore.Qt.Checked)
-        self.cb_depth_beam3.setCheckState(QtCore.Qt.Checked)
-        self.cb_depth_beam4.setCheckState(QtCore.Qt.Checked)
-        depth_ref_options = ['4-Beam Avg']
-        if self.meas.transects[self.checked_transects_idx[0]].depths.vb_depths is not None:
-            self.cb_depth_vert.setCheckState(QtCore.Qt.Checked)
-            depth_ref_options.append('Comp 4-Beam Preferred')
-            depth_ref_options.append('Vertical')
-            depth_ref_options.append('Comp Vertical Preferred')
-        else:
-            self.cb_depth_vert.setEnabled(False)
-            self.cb_depth_vert_cs.setEnabled(False)
-        if self.meas.transects[self.checked_transects_idx[0]].depths.ds_depths is not None:
-            self.cb_depth_ds.setCheckState(QtCore.Qt.Checked)
-            depth_ref_options.append('Depth Sounder')
-            depth_ref_options.append('Comp DS Preferred')
-        else:
-            self.cb_depth_ds.setEnabled(False)
-            self.cb_depth_ds_cs.setEnabled(False)
+        if not self.depth_initialized:
+            tbl.cellClicked.connect(self.depth_table_clicked)
 
-        # Initialize checkbox settings bottom plot
-        self.cb_depth_4beam_cs.setCheckState(QtCore.Qt.Unchecked)
-        self.cb_depth_final_cs.setCheckState(QtCore.Qt.Checked)
-        self.cb_depth_vert_cs.setCheckState(QtCore.Qt.Unchecked)
-        self.cb_depth_ds_cs.setCheckState(QtCore.Qt.Unchecked)
+            # Initialize checkbox settings top plot and build depth ref combobox options
+            self.cb_depth_beam1.setCheckState(QtCore.Qt.Checked)
+            self.cb_depth_beam2.setCheckState(QtCore.Qt.Checked)
+            self.cb_depth_beam3.setCheckState(QtCore.Qt.Checked)
+            self.cb_depth_beam4.setCheckState(QtCore.Qt.Checked)
 
-        # Connect top plot variable checkboxes
-        self.cb_depth_beam1.stateChanged.connect(self.depth_top_plot_change)
-        self.cb_depth_beam2.stateChanged.connect(self.depth_top_plot_change)
-        self.cb_depth_beam3.stateChanged.connect(self.depth_top_plot_change)
-        self.cb_depth_beam4.stateChanged.connect(self.depth_top_plot_change)
-        self.cb_depth_vert.stateChanged.connect(self.depth_top_plot_change)
-        self.cb_depth_ds.stateChanged.connect(self.depth_top_plot_change)
+            # Initialize checkbox settings bottom plot
+            self.cb_depth_4beam_cs.setCheckState(QtCore.Qt.Unchecked)
+            self.cb_depth_final_cs.setCheckState(QtCore.Qt.Checked)
+            self.cb_depth_vert_cs.setCheckState(QtCore.Qt.Unchecked)
+            self.cb_depth_ds_cs.setCheckState(QtCore.Qt.Unchecked)
 
-        # Connect bottom plot variable checkboxes
-        self.cb_depth_4beam_cs.stateChanged.connect(self.depth_bottom_plot_change)
-        self.cb_depth_final_cs.stateChanged.connect(self.depth_bottom_plot_change)
-        self.cb_depth_vert_cs.stateChanged.connect(self.depth_bottom_plot_change)
-        self.cb_depth_ds_cs.stateChanged.connect(self.depth_bottom_plot_change)
+            # Connect top plot variable checkboxes
+            self.cb_depth_beam1.stateChanged.connect(self.depth_top_plot_change)
+            self.cb_depth_beam2.stateChanged.connect(self.depth_top_plot_change)
+            self.cb_depth_beam3.stateChanged.connect(self.depth_top_plot_change)
+            self.cb_depth_beam4.stateChanged.connect(self.depth_top_plot_change)
+            self.cb_depth_vert.stateChanged.connect(self.depth_top_plot_change)
+            self.cb_depth_ds.stateChanged.connect(self.depth_top_plot_change)
 
-        # Connect options
-        self.combo_depth_ref.clear()
-        self.combo_depth_ref.addItems(depth_ref_options)
-        self.combo_depth_ref.currentIndexChanged[str].connect(self.change_ref)
-        self.combo_depth_avg.currentIndexChanged[str].connect(self.change_avg_method)
-        self.combo_depth_filter.currentIndexChanged[str].connect(self.change_filter)
+            # Connect bottom plot variable checkboxes
+            self.cb_depth_4beam_cs.stateChanged.connect(self.depth_bottom_plot_change)
+            self.cb_depth_final_cs.stateChanged.connect(self.depth_bottom_plot_change)
+            self.cb_depth_vert_cs.stateChanged.connect(self.depth_bottom_plot_change)
+            self.cb_depth_ds_cs.stateChanged.connect(self.depth_bottom_plot_change)
+
+            # Initialize checkbox settings top plot and build depth ref combobox options
+            self.cb_depth_beam1.setCheckState(QtCore.Qt.Checked)
+            self.cb_depth_beam2.setCheckState(QtCore.Qt.Checked)
+            self.cb_depth_beam3.setCheckState(QtCore.Qt.Checked)
+            self.cb_depth_beam4.setCheckState(QtCore.Qt.Checked)
+            depth_ref_options = ['4-Beam Avg']
+            if self.meas.transects[self.checked_transects_idx[0]].depths.vb_depths is not None:
+                self.cb_depth_vert.setCheckState(QtCore.Qt.Checked)
+                depth_ref_options.append('Comp 4-Beam Preferred')
+                depth_ref_options.append('Vertical')
+                depth_ref_options.append('Comp Vertical Preferred')
+            else:
+                self.cb_depth_vert.setEnabled(False)
+                self.cb_depth_vert_cs.setEnabled(False)
+            if self.meas.transects[self.checked_transects_idx[0]].depths.ds_depths is not None:
+                self.cb_depth_ds.setCheckState(QtCore.Qt.Checked)
+                depth_ref_options.append('Depth Sounder')
+                depth_ref_options.append('Comp DS Preferred')
+            else:
+                self.cb_depth_ds.setEnabled(False)
+                self.cb_depth_ds_cs.setEnabled(False)
+
+            # Connect options
+            self.combo_depth_ref.clear()
+            self.combo_depth_ref.addItems(depth_ref_options)
+            self.combo_depth_ref.currentIndexChanged[str].connect(self.change_ref)
+            self.combo_depth_avg.currentIndexChanged[str].connect(self.change_avg_method)
+            self.combo_depth_filter.currentIndexChanged[str].connect(self.change_filter)
+
+            self.depth_initialized = True
 
         # Transect selected for display
         self.transect = self.meas.transects[self.checked_transects_idx[0]]
@@ -4528,6 +4719,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Draw canvas
         self.depth_bottom_canvas.draw()
 
+    @QtCore.pyqtSlot(int, int)
     def depth_table_clicked(self, row, column):
         """Changes plotted data to the transect of the transect clicked or allows changing of the draft.
 
@@ -4539,6 +4731,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             Column clicked by user
         """
 
+        self.table_depth.blockSignals(True)
         # Change transect plotted
         if column == 0:
             self.idx = row
@@ -4564,6 +4757,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     # Update depth tab
                     s = self.meas.current_settings()
                     self.update_depth_tab(s)
+        self.table_depth.blockSignals(False)
 
     def update_depth_tab(self, s):
         """Updates the depth tab (table and graphics) after a change to settings has been made.
@@ -4734,7 +4928,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
-        tbl.cellClicked.connect(self.wt_table_clicked)
 
         # Automatically resize rows and columns
         tbl.resizeColumnsToContents()
@@ -4758,10 +4951,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.cb_wt_vtg.stateChanged.connect(self.wt_plot_change)
         self.cb_wt_vectors.stateChanged.connect(self.wt_plot_change)
 
-        # Connect radio buttons
-        self.rb_wt_beam.toggled.connect(self.wt_radiobutton_control)
-        self.rb_wt_error.toggled.connect(self.wt_radiobutton_control)
-        self.rb_wt_vert.toggled.connect(self.wt_radiobutton_control)
         if self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'SonTek':
             self.rb_wt_snr.setEnabled(True)
             self.combo_wt_snr.setEnabled(True)
@@ -4770,19 +4959,27 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.rb_wt_snr.setEnabled(False)
             self.combo_wt_snr.setEnabled(False)
 
-        self.rb_wt_speed.toggled.connect(self.wt_radiobutton_control)
-        self.rb_wt_contour.toggled.connect(self.wt_radiobutton_control)
+        if not self.wt_initialized:
+            tbl.cellClicked.connect(self.wt_table_clicked)
+            # Connect radio buttons
+            self.rb_wt_beam.toggled.connect(self.wt_radiobutton_control)
+            self.rb_wt_error.toggled.connect(self.wt_radiobutton_control)
+            self.rb_wt_vert.toggled.connect(self.wt_radiobutton_control)
+            self.rb_wt_speed.toggled.connect(self.wt_radiobutton_control)
+            self.rb_wt_contour.toggled.connect(self.wt_radiobutton_control)
 
-        # Connect manual entry
-        self.ed_wt_error_vel_threshold.editingFinished.connect(self.change_wt_error_vel_threshold)
-        self.ed_wt_vert_vel_threshold.editingFinished.connect(self.change_wt_vert_vel_threshold)
+            # Connect manual entry
+            self.ed_wt_error_vel_threshold.editingFinished.connect(self.change_wt_error_vel_threshold)
+            self.ed_wt_vert_vel_threshold.editingFinished.connect(self.change_wt_vert_vel_threshold)
 
-        # Connect filters
-        self.ed_wt_excluded_dist.editingFinished.connect(self.change_wt_excluded_dist)
-        self.combo_wt_3beam.currentIndexChanged[str].connect(self.change_wt_beam)
-        self.combo_wt_error_velocity.currentIndexChanged[str].connect(self.change_wt_error)
-        self.combo_wt_vert_velocity.currentIndexChanged[str].connect(self.change_wt_vertical)
-        self.combo_wt_snr.currentIndexChanged[str].connect(self.change_wt_snr)
+            # Connect filters
+            self.ed_wt_excluded_dist.editingFinished.connect(self.change_wt_excluded_dist)
+            self.combo_wt_3beam.currentIndexChanged[str].connect(self.change_wt_beam)
+            self.combo_wt_error_velocity.currentIndexChanged[str].connect(self.change_wt_error)
+            self.combo_wt_vert_velocity.currentIndexChanged[str].connect(self.change_wt_vertical)
+            self.combo_wt_snr.currentIndexChanged[str].connect(self.change_wt_snr)
+
+            self.wt_initialized = True
 
         # Transect selected for display
         self.transect = self.meas.transects[self.checked_transects_idx[0]]
@@ -5365,7 +5562,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
-        tbl.cellClicked.connect(self.sensitivity_change_fit)
         self.q_sensitivity_table()
 
         # Setup transect / measurement list table
@@ -5377,38 +5573,43 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.verticalHeader().hide()
         tbl.horizontalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
-        tbl.cellClicked.connect(self.fit_list_table_clicked)
         self.fit_list_table()
 
         self.display_current_fit()
         self.set_fit_options()
 
-        # Connect fit options
-        self.combo_extrap_fit.currentIndexChanged[str].connect(self.change_fit_method)
-        self.combo_extrap_top.currentIndexChanged[str].connect(self.change_top_method)
-        self.combo_extrap_bottom.currentIndexChanged[str].connect(self.change_bottom_method)
-        self.ed_extrap_exponent.editingFinished.connect(self.change_exponent)
-
-        # Connect display settings
-        self.cb_extrap_data.stateChanged.connect(self.extrap_plot)
-        self.cb_extrap_surface.stateChanged.connect(self.extrap_plot)
-        self.cb_extrap_meas_medians.stateChanged.connect(self.extrap_plot)
-        self.cb_extrap_meas_fit.stateChanged.connect(self.extrap_plot)
-        self.cb_extrap_trans_medians.stateChanged.connect(self.extrap_plot)
-        self.cb_extrap_trans_fit.stateChanged.connect(self.extrap_plot)
-
-        # Connect data settings
-        self.combo_extrap_data.currentIndexChanged[str].connect(self.change_data)
-        self.ed_extrap_threshold.editingFinished.connect(self.change_threshold)
-        self.ed_extrap_subsection.editingFinished.connect(self.change_subsection)
-        self.combo_extrap_type.currentIndexChanged[str].connect(self.change_data_type)
-
         self.extrap_set_data()
-
-        # Cancel and apply buttons
-        self.pb_extrap_cancel.clicked.connect(self.cancel_extrap)
-
         self.extrap_plot()
+
+        if not self.extrap_initialized:
+            self.table_extrap_qsen.cellClicked.connect(self.sensitivity_change_fit)
+            self.table_extrap_fit.cellClicked.connect(self.fit_list_table_clicked)
+            # Connect fit options
+            self.combo_extrap_fit.currentIndexChanged[str].connect(self.change_fit_method)
+            self.combo_extrap_top.currentIndexChanged[str].connect(self.change_top_method)
+            self.combo_extrap_bottom.currentIndexChanged[str].connect(self.change_bottom_method)
+            self.ed_extrap_exponent.editingFinished.connect(self.change_exponent)
+
+            # Connect display settings
+            self.cb_extrap_data.stateChanged.connect(self.extrap_plot)
+            self.cb_extrap_surface.stateChanged.connect(self.extrap_plot)
+            self.cb_extrap_meas_medians.stateChanged.connect(self.extrap_plot)
+            self.cb_extrap_meas_fit.stateChanged.connect(self.extrap_plot)
+            self.cb_extrap_trans_medians.stateChanged.connect(self.extrap_plot)
+            self.cb_extrap_trans_fit.stateChanged.connect(self.extrap_plot)
+
+            # Connect data settings
+            self.combo_extrap_data.currentIndexChanged[str].connect(self.change_data)
+            self.ed_extrap_threshold.editingFinished.connect(self.change_threshold)
+            self.ed_extrap_subsection.editingFinished.connect(self.change_subsection)
+            self.combo_extrap_type.currentIndexChanged[str].connect(self.change_data_type)
+
+            # Cancel and apply buttons
+            self.pb_extrap_cancel.clicked.connect(self.cancel_extrap)
+
+            self.extrap_initialized = True
+
+
 
     def extrap_update(self):
 
@@ -6236,6 +6437,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.tab_all.setEnabled(True)
         self.actionSave.setEnabled(True)
         self.actionComment.setEnabled(True)
+        self.actionCheck.setEnabled(True)
 
         # Configure tabs and toolbar for the presence or absence of GPS data
         self.tab_all.setTabEnabled(6, False)
