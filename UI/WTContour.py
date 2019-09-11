@@ -30,7 +30,7 @@ class WTContour(object):
         self.fig = canvas.fig
         self.units = None
 
-    def create(self, transect, units, invalid_data=None):
+    def create(self, transect, units, invalid_data=None, n_ensembles=None, edge_start=None):
         """Create the axes and lines for the figure.
 
         Parameters
@@ -57,7 +57,9 @@ class WTContour(object):
 
         x_plt, cell_plt, speed_plt, ensembles, depth = self.color_contour_data_prep(transect=transect,
                                                                                     data_type='Processed',
-                                                                                    invalid_data=invalid_data)
+                                                                                    invalid_data=invalid_data,
+                                                                                    n_ensembles = n_ensembles,
+                                                                                    edge_start = edge_start)
         # Determine limits for color map
         max_limit = 0
         min_limit = 0
@@ -75,21 +77,25 @@ class WTContour(object):
         # Add color bar and axis labels
         cb = self.fig.colorbar(c, pad=0.02)
         cb.ax.set_ylabel(self.canvas.tr('Water Speed ') + units['label_V'])
+        cb.ax.yaxis.label.set_fontsize(12)
+        cb.ax.tick_params(labelsize=12)
         # self.fig.ax.set_title(self.canvas.tr('Water Speed ') + units['label_V'])
         self.fig.ax.invert_yaxis()
         self.fig.ax.plot(ensembles, depth * units['L'], color='k')
         self.fig.ax.set_xlabel(self.canvas.tr('Ensembles'))
         self.fig.ax.set_ylabel(self.canvas.tr('Depth ') + units['label_L'])
+        self.fig.ax.xaxis.label.set_fontsize(12)
+        self.fig.ax.yaxis.label.set_fontsize(12)
         self.fig.ax.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
         self.fig.ax.set_ylim(top=0, bottom=np.ceil(np.nanmax(depth * units['L'])))
-        self.fig.ax.set_xlim(left=-1 * ensembles[-1] * 0.02, right=ensembles[-1] * 1.02)
+        self.fig.ax.set_xlim(left=ensembles[0] - len(ensembles) * 0.02, right=ensembles[-1] + len(ensembles) * 0.02)
         if transect.start_edge == 'Right':
             self.fig.ax.invert_xaxis()
-            self.fig.ax.set_xlim(right=-1 * ensembles[-1] * 0.02, left=ensembles[-1] * 1.02)
+            self.fig.ax.set_xlim(right=ensembles[0] - len(ensembles) * 0.02, left=ensembles[-1] + len(ensembles) * 0.02)
 
         self.canvas.draw()
     @staticmethod
-    def color_contour_data_prep(transect, data_type='Processed', invalid_data=None):
+    def color_contour_data_prep(transect, data_type='Processed', invalid_data=None, n_ensembles=None, edge_start=None):
         """Modifies the selected data from transect into arrays matching the meshgrid format for
         creating contour or color plots.
 
@@ -116,18 +122,51 @@ class WTContour(object):
         in_transect_idx = transect.in_transect_idx
 
         # Get data from transect
-        if data_type == 'Processed':
-            water_u = transect.w_vel.u_processed_mps[:, in_transect_idx]
-            water_v = transect.w_vel.v_processed_mps[:, in_transect_idx]
-        else:
-            water_u = transect.w_vel.u_mps[:, in_transect_idx]
-            water_v = transect.w_vel.v_mps[:, in_transect_idx]
+        if n_ensembles is None:
+            if data_type == 'Processed':
+                water_u = transect.w_vel.u_processed_mps[:, in_transect_idx]
+                water_v = transect.w_vel.v_processed_mps[:, in_transect_idx]
+            else:
+                water_u = transect.w_vel.u_mps[:, in_transect_idx]
+                water_v = transect.w_vel.v_mps[:, in_transect_idx]
 
-        depth_selected = getattr(transect.depths, transect.depths.selected)
-        depth = depth_selected.depth_processed_m[in_transect_idx]
-        cell_depth = depth_selected.depth_cell_depth_m[:, in_transect_idx]
-        cell_size = depth_selected.depth_cell_size_m[:, in_transect_idx]
-        ensembles = in_transect_idx
+            depth_selected = getattr(transect.depths, transect.depths.selected)
+            depth = depth_selected.depth_processed_m[in_transect_idx]
+            cell_depth = depth_selected.depth_cell_depth_m[:, in_transect_idx]
+            cell_size = depth_selected.depth_cell_size_m[:, in_transect_idx]
+            ensembles = in_transect_idx
+        else:
+            n_ensembles = int(n_ensembles)
+            if edge_start:
+                if data_type == 'Processed':
+                    water_u = transect.w_vel.u_processed_mps[:, :n_ensembles]
+                    water_v = transect.w_vel.v_processed_mps[:, :n_ensembles]
+                else:
+                    water_u = transect.w_vel.u_mps[:, :n_ensembles]
+                    water_v = transect.w_vel.v_mps[:, :n_ensembles]
+
+                depth_selected = getattr(transect.depths, transect.depths.selected)
+                depth = depth_selected.depth_processed_m[:n_ensembles]
+                cell_depth = depth_selected.depth_cell_depth_m[:, :n_ensembles]
+                cell_size = depth_selected.depth_cell_size_m[:, :n_ensembles]
+                ensembles = in_transect_idx[:n_ensembles]
+                if invalid_data is not None:
+                    invalid_data = invalid_data[:, :n_ensembles]
+            else:
+                if data_type == 'Processed':
+                    water_u = transect.w_vel.u_processed_mps[:, -n_ensembles:]
+                    water_v = transect.w_vel.v_processed_mps[:, -n_ensembles:]
+                else:
+                    water_u = transect.w_vel.u_mps[:, -n_ensembles:]
+                    water_v = transect.w_vel.v_mps[:, -n_ensembles:]
+
+                depth_selected = getattr(transect.depths, transect.depths.selected)
+                depth = depth_selected.depth_processed_m[-n_ensembles:]
+                cell_depth = depth_selected.depth_cell_depth_m[:, -n_ensembles:]
+                cell_size = depth_selected.depth_cell_size_m[:, -n_ensembles:]
+                ensembles = in_transect_idx[-n_ensembles:]
+                if invalid_data is not None:
+                    invalid_data = invalid_data[:, -n_ensembles:]
 
         # Prep water speed to use -999 instead of nans
         water_speed = np.sqrt(water_u ** 2 + water_v ** 2)

@@ -8,6 +8,7 @@ import threading
 import copy
 from UI.selectFile import OpenMeasurementDialog, SaveMeasurementDialog
 from Classes.Measurement import Measurement
+from Classes.QComp import QComp
 from Classes.Python2Matlab import Python2Matlab
 from Classes.Sensors import Sensors
 from Classes.MovingBedTests import MovingBedTests
@@ -36,6 +37,10 @@ from UI.WTContour import WTContour
 from UI.WTFilters import WTFilters
 from UI.Rating import Rating
 from UI.ExtrapPlot import ExtrapPlot
+from UI.StartEdge import StartEdge
+from UI.EdgeType import EdgeType
+from UI.EdgeDist import EdgeDist
+from UI.EdgeEns import EdgeEns
 from UI.MplCanvas import MplCanvas
 from contextlib import contextmanager
 import time
@@ -197,7 +202,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     # Show mmt filename in GUI header
                     self.setWindowTitle(self.QRev_version + ': ' + select.fullName[0])
                     # Create measurement object
-                    self.meas = Measurement(in_file=select.fullName[0], source='TRDI', proc_type='QRev', checked=self.select.checked)
+                    self.meas = Measurement(in_file=select.fullName[0],
+                                            source='TRDI',
+                                            proc_type='QRev',
+                                            checked=select.checked)
 
                 # Load QRev data
                 elif select.type == 'QRev':
@@ -319,15 +327,24 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Change composite tracks setting to On and update measurement and display.
         """
         with self.wait_cursor():
-            # Get all current settings
-            settings = Measurement.current_settings(self.meas)
-            # Change CompTracks to selected setting
-            settings['CompTracks'] = 'On'
-            # Update measurement and GUI
-            Measurement.apply_settings(self.meas, settings)
-            self.update_toolbar_composite_tracks()
-            self.change = True
-            self.tab_manager()
+            for test in self.meas.mb_tests:
+                if test.selected:
+                    if test.moving_bed == 'Yes' and \
+                        self.meas.transects[self.checked_transects_idx[0]].w_vel.nav_ref == 'BT':
+                        QtWidgets.QMessageBox.about(self, 'Composite Tracks Message',
+                                                    'A moving-bed condition exists and BT is the current reference,'
+                                                    'composite tracks cannot be used in this situation.')
+                    else:
+
+                        # Get all current settings
+                        settings = Measurement.current_settings(self.meas)
+                        # Change CompTracks to selected setting
+                        settings['CompTracks'] = 'On'
+                        # Update measurement and GUI
+                        Measurement.apply_settings(self.meas, settings)
+                        self.update_toolbar_composite_tracks()
+                        self.change = True
+                        self.tab_manager()
 
     def comp_tracks_off(self):
         """Change composite tracks setting to Off and update measurement and display.
@@ -936,8 +953,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Setup table
         tbl = self.main_table_summary
         summary_header = [self.tr('Transect'), self.tr('Start'), self.tr('Bank'), self.tr('End'),
-                               self.tr('Duration'), self.tr('Total Q'), self.tr('Top Q'), self.tr('Meas Q'),
-                               self.tr('Bottom Q'), self.tr('Left Q'), self.tr('Right Q')]
+                          self.tr('Duration'),
+                          self.tr('Total Q') + ' ' + self.tr(self.units['label_Q']),
+                          self.tr('Top Q') + ' ' + self.tr(self.units['label_Q']),
+                          self.tr('Meas Q') + ' ' + self.tr(self.units['label_Q']),
+                          self.tr('Bottom Q') + ' ' + self.tr(self.units['label_Q']),
+                          self.tr('Left Q') + ' ' + self.tr(self.units['label_Q']),
+                          self.tr('Right Q') + ' ' + self.tr(self.units['label_Q'])]
         ncols = len(summary_header)
         nrows = len(self.checked_transects_idx)
         tbl.setRowCount(nrows + 1)
@@ -1394,8 +1416,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.custom_header(tbl, 0, 6, 3, 1, self.tr('Excluded \n Distance ' + self.units['label_L']))
             self.custom_header(tbl, 0, 7, 2, 2, self.tr('Depth'))
             tbl.item(0, 7).setTextAlignment(QtCore.Qt.AlignCenter)
-            self.custom_header(tbl, 1, 7, 1, 1, self.tr('Ref'))
-            self.custom_header(tbl, 1, 8, 1, 1, self.tr('Comp'))
+            self.custom_header(tbl, 2, 7, 1, 1, self.tr('Ref'))
+            self.custom_header(tbl, 2, 8, 1, 1, self.tr('Comp'))
             self.custom_header(tbl, 0, 9, 2, 2, self.tr('Navigation'))
             tbl.item(0, 9).setTextAlignment(QtCore.Qt.AlignCenter)
             self.custom_header(tbl, 2, 9, 1, 1, self.tr('Ref'))
@@ -5609,8 +5631,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             self.extrap_initialized = True
 
-
-
     def extrap_update(self):
 
         if self.idx == len(self.meas.extrap_fit.sel_fit) - 1:
@@ -6183,6 +6203,612 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             self.setTabIcon('tab_extrap', self.meas.qa.extrapolation['status'])
 
+# Edges tab
+# =========
+    def edges_tab(self):
+
+        # Setup data table
+        tbl = self.table_edges
+        table_header = [self.tr('Filename'),
+                        self.tr('Start \n Edge'),
+                        self.tr('Left \n Type'),
+                        self.tr('Left \n Coef.'),
+                        self.tr('Left \n Dist. \n' + self.units['label_L']),
+                        self.tr('Left \n # Ens.'),
+                        self.tr('Left \n # Valid'),
+                        self.tr('Left \n Discharge \n' + self.units['label_Q']),
+                        self.tr('Left \n % Q'),
+                        self.tr('Right \n Type'),
+                        self.tr('Right \n Coef.'),
+                        self.tr('Right \n Dist. \n' + self.units['label_L']),
+                        self.tr('Right \n # Ens.'),
+                        self.tr('Right \n # Valid'),
+                        self.tr('Right \n Discharge \n' + self.units['label_Q']),
+                        self.tr('Right \n % Q')]
+
+        ncols = len(table_header)
+        nrows = len(self.checked_transects_idx)
+        tbl.setRowCount(nrows)
+        tbl.setColumnCount(ncols)
+        tbl.setHorizontalHeaderLabels(table_header)
+        tbl.horizontalHeader().setFont(self.font_bold)
+        tbl.verticalHeader().hide()
+        tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+
+        # Automatically resize rows and columns
+        tbl.resizeColumnsToContents()
+        tbl.resizeRowsToContents()
+
+        if not self.edges_initialized:
+            tbl.cellClicked.connect(self.edges_table_clicked)
+
+        self.idx = 0
+        self.update_edges_table()
+
+        self.edges_graphics()
+
+    def update_edges_table(self):
+
+        with self.wait_cursor():
+            # Set tbl variable
+            tbl = self.table_edges
+
+            # Populate each row
+            for row in range(tbl.rowCount()):
+                # Identify transect associated with the row
+                transect_id = self.checked_transects_idx[row]
+                transect = self.meas.transects[transect_id]
+
+                # File/transect name
+                col = 0
+                item = QtWidgets.QTableWidgetItem(transect.file_name[:-4])
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                tbl.item(row, 0).setFont(self.font_normal)
+
+                # Start Edge
+                col += 1
+                item = transect.start_edge
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Left edge type
+                col += 1
+                item = transect.edges.left.type
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Left edge coefficient
+                col += 1
+                if transect.edges.left.type == 'Triangular':
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('0.3535'))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                elif transect.edges.left.type == 'Rectangular':
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('0.91'))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                elif transect.edges.left.type == 'Custom':
+                    item = '{:1.4f}'.format(transect.edges.left.cust_coef)
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                else:
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Left edge dist
+                col += 1
+                item = '{:4.1f}'.format(transect.edges.left.distance_m * self.units['L'])
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Left edge # ens
+                col += 1
+                item = '{:4.0f}'.format(transect.edges.left.number_ensembles)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Left edge # valid ens
+                col += 1
+                item = '{:4.0f}'.format(len(self.meas.discharge[transect_id].left_idx))
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Left edge discharge
+                col += 1
+                item = '{:6.2f}'.format(self.meas.discharge[transect_id].left * self.units['Q'])
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Left edge discharge %
+                col += 1
+                item = '{:2.2f}'.format((self.meas.discharge[transect_id].left / self.meas.discharge[transect_id].total)
+                                        * 100)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Right edge type
+                col += 1
+                item = transect.edges.right.type
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Right edge coefficient
+                col += 1
+                if transect.edges.right.type == 'Triangular':
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('0.3535'))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                elif transect.edges.right.type == 'Rectangular':
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('0.91'))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                elif transect.edges.right.type == 'Custom':
+                    item = '{:1.4f}'.format(transect.edges.right.cust_coef)
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                else:
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Right edge dist
+                col += 1
+                item = '{:4.1f}'.format(transect.edges.right.distance_m * self.units['L'])
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Right edge # ens
+                col += 1
+                item = '{:4.0f}'.format(transect.edges.right.number_ensembles)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Right edge # valid ens
+                col += 1
+                item = '{:4.0f}'.format(len(self.meas.discharge[transect_id].right_idx))
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Right edge discharge
+                col += 1
+                item = '{:6.2f}'.format(self.meas.discharge[transect_id].right * self.units['Q'])
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Right edge discharge %
+                col += 1
+                item = '{:2.2f}'.format((self.meas.discharge[transect_id].right / self.meas.discharge[transect_id].total)
+                                        * 100)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                tbl.item(self.idx, 0).setFont(self.font_bold)
+
+                # Automatically resize rows and columns
+                tbl.resizeColumnsToContents()
+                tbl.resizeRowsToContents()
+
+    def edges_table_clicked(self, row, col):
+
+        tbl = self.table_edges
+
+        # Show transect
+        if col == 0:
+            with self.wait_cursor():
+                self.idx = row
+                for r in range(tbl.rowCount()):
+                    tbl.item(r, 0).setFont(self.font_normal)
+                tbl.item(self.idx, 0).setFont(self.font_bold)
+
+                self.edges_graphics()
+
+        # Start edge
+        if col == 1:
+            # Initialize dialog
+            start_dialog = StartEdge()
+            if self.meas.transects[self.checked_transects_idx[row]].start_edge == 'Left':
+                start_dialog.rb_left.setChecked(True)
+                start_dialog.rb_right.setChecked(False)
+            else:
+                start_dialog.rb_left.setChecked(False)
+                start_dialog.rb_right.setChecked(True)
+
+            rsp = start_dialog.exec_()
+            # Data entered.
+            with self.wait_cursor():
+                if rsp == QtWidgets.QDialog.Accepted:
+                    if start_dialog.rb_left.isChecked():
+                        self.meas.transects[self.checked_transects_idx[row]].start_edge = 'Left'
+                    else:
+                        self.meas.transects[self.checked_transects_idx[row]].start_edge = 'Right'
+                    s = self.meas.current_settings()
+                    self.meas.apply_settings(s)
+                    self.update_edges_table()
+                    self.edges_graphics()
+                    self.change = True
+                    QtWidgets.QMessageBox.about(self, 'Start Edge Change', 'You changed the start edge, verify that the '
+                                                                           'left and right distances and edge types '
+                                                                           'are correct.')
+
+        # Left edge type and coefficient
+        elif col == 2 or col == 3:
+            # Initialize dialog
+            type_dialog = EdgeType()
+            type_dialog.rb_transect.setChecked(True)
+            if self.meas.transects[self.checked_transects_idx[row]].edges.left.type == 'Triangular':
+                type_dialog.rb_triangular.setChecked(True)
+            elif self.meas.transects[self.checked_transects_idx[row]].edges.left.type == 'Rectangular':
+                type_dialog.rb_rectangular.setChecked(True)
+            elif self.meas.transects[self.checked_transects_idx[row]].edges.left.type == 'Custom':
+                type_dialog.rb_custom.setChecked(True)
+                type_dialog.ed_custom.setText('{:1.4f}'.format(
+                    self.meas.transects[self.checked_transects_idx[row]].edges.left.cust_coef))
+            elif self.meas.transects[self.checked_transects_idx[row]].edges.left.type == 'User Q':
+                type_dialog.rb_user.setChecked(True)
+                type_dialog.ed_q_user.setText('{:6.2f}'.format(self.meas.transects[self.checked_transects_idx[row]].
+                                                        edges.left.user_discharge_cms * self.units['Q']))
+
+            rsp = type_dialog.exec_()
+            # Data entered.
+            with self.wait_cursor():
+                if rsp == QtWidgets.QDialog.Accepted:
+                    if type_dialog.rb_triangular.isChecked():
+                        type = 'Triangular'
+                        cust_coef = None
+                        user_discharge_cms = None
+                    elif type_dialog.rb_rectangular.isChecked():
+                        type = 'Rectangular'
+                        cust_coef = None
+                        user_discharge_cms = None
+                    elif type_dialog.rb_custom.isChecked():
+                        type = 'Custom'
+                        cust_coef = float(type_dialog.ed_custom.text())
+                        user_discharge_cms = None
+                    elif type_dialog.rb_user.isChecked():
+                        type = 'User Q'
+                        cust_coef = None
+                        user_discharge_cms = float(type_dialog.ed_q_user.text()) / self.units['Q']
+
+                    if type_dialog.rb_all.isChecked():
+                        for idx in self.checked_transects_idx:
+                            transect = self.meas.transects[idx]
+                            transect.edges.left.type = type
+                            transect.edges.left.cust_coef = cust_coef
+                            transect.edges.left.user_discharge_cms = user_discharge_cms
+                    else:
+                        self.meas.transects[self.checked_transects_idx[row]].edges.left.type = type
+                        self.meas.transects[self.checked_transects_idx[row]].edges.left.cust_coef = cust_coef
+                        self.meas.transects[self.checked_transects_idx[row]].edges.left.user_discharge_cms = \
+                            user_discharge_cms
+
+                    s = self.meas.current_settings()
+                    self.meas.apply_settings(s)
+                    self.update_edges_table()
+
+        # Left edge distance
+        elif col == 4:
+            # Initialize dialog
+            dist_dialog = EdgeDist()
+            dist_dialog.rb_transect.setChecked(True)
+            dist_dialog.ed_edge_dist.setText('{:5.2f}'.format(self.meas.transects[self.checked_transects_idx[row]].
+                                                              edges.left.distance_m * self.units['L']))
+            rsp = dist_dialog.exec_()
+            # Data entered.
+            with self.wait_cursor():
+                if rsp == QtWidgets.QDialog.Accepted:
+                    dist = float(dist_dialog.ed_edge_dist.text()) / self.units['L']
+                    if dist_dialog.rb_all.isChecked():
+                        for idx in self.checked_transects_idx:
+                            self.meas.transects[idx].edges.left.distance_m = dist
+                    else:
+                        self.meas.transects[self.checked_transects_idx[row]].edges.left.distance_m = dist
+
+                    s = self.meas.current_settings()
+                    self.meas.apply_settings(s)
+                    self.update_edges_table()
+
+        # Left number of ensembles
+        elif col == 5:
+            # Initialize dialog
+            ens_dialog = EdgeEns()
+            ens_dialog.rb_transect.setChecked(True)
+            ens_dialog.ed_edge_ens.setText('{:4.0f}'.format(self.meas.transects[self.checked_transects_idx[row]].
+                                                           edges.left.number_ensembles))
+            rsp = ens_dialog.exec_()
+            # Data entered.
+            with self.wait_cursor():
+                if rsp == QtWidgets.QDialog.Accepted:
+                    num_ens = float(ens_dialog.ed_edge_ens.text())
+                    if ens_dialog.rb_all.isChecked():
+                        for idx in self.checked_transects_idx:
+                            self.meas.transects[idx].edges.left.number_ensembles = num_ens
+                    else:
+                        self.meas.transects[self.checked_transects_idx[row]].edges.left.number_ensembles = num_ens
+
+                    s = self.meas.current_settings()
+                    self.meas.apply_settings(s)
+                    self.update_edges_table()
+                    self.edges_graphics()
+
+        # Right edge type and coefficient
+        elif col == 9 or col == 10:
+            # Initialize dialog
+            type_dialog = EdgeType()
+            type_dialog.rb_transect.setChecked(True)
+            if self.meas.transects[self.checked_transects_idx[row]].edges.right.type == 'Triangular':
+                type_dialog.rb_triangular.setChecked(True)
+            elif self.meas.transects[self.checked_transects_idx[row]].edges.right.type == 'Rectangular':
+                type_dialog.rb_rectangular.setChecked(True)
+            elif self.meas.transects[self.checked_transects_idx[row]].edges.right.type == 'Custom':
+                type_dialog.rb_custom.setChecked(True)
+                type_dialog.ed_custom.setText('{:1.4f}'.format(
+                    self.meas.transects[self.checked_transects_idx[row]].edges.right.cust_coef))
+            elif self.meas.transects[self.checked_transects_idx[row]].edges.right.type == 'User Q':
+                type_dialog.rb_user.setChecked(True)
+                type_dialog.ed_q_user.setText('{:6.2f}'.format(self.meas.transects[self.checked_transects_idx[row]].
+                                                        edges.right.user_discharge_cms * self.units['Q']))
+
+            rsp = type_dialog.exec_()
+            # Data entered.
+            with self.wait_cursor():
+                if rsp == QtWidgets.QDialog.Accepted:
+                    if type_dialog.rb_triangular.isChecked():
+                        type = 'Triangular'
+                        cust_coef = None
+                        user_discharge_cms = None
+                    elif type_dialog.rb_rectangular.isChecked():
+                        type = 'Rectangular'
+                        cust_coef = None
+                        user_discharge_cms = None
+                    elif type_dialog.rb_custom.isChecked():
+                        type = 'Custom'
+                        cust_coef = float(type_dialog.ed_custom.text())
+                        user_discharge_cms = None
+                    elif type_dialog.rb_user.isChecked():
+                        type = 'User Q'
+                        cust_coef = None
+                        user_discharge_cms = float(type_dialog.ed_q_user.text()) / self.units['Q']
+
+                    if type_dialog.rb_all.isChecked():
+                        for idx in self.checked_transects_idx:
+                            transect = self.meas.transects[idx]
+                            transect.edges.right.type = type
+                            transect.edges.right.cust_coef = cust_coef
+                            transect.edges.right.user_discharge_cms = user_discharge_cms
+                    else:
+                        self.meas.transects[self.checked_transects_idx[row]].edges.right.type = type
+                        self.meas.transects[self.checked_transects_idx[row]].edges.right.cust_coef = cust_coef
+                        self.meas.transects[self.checked_transects_idx[row]].edges.right.user_discharge_cms = \
+                            user_discharge_cms
+
+                    s = self.meas.current_settings()
+                    self.meas.apply_settings(s)
+                    self.update_edges_table()
+
+        # Right edge distance
+        elif col == 11:
+            # Initialize dialog
+            dist_dialog = EdgeDist()
+            dist_dialog.rb_transect.setChecked(True)
+            dist_dialog.ed_edge_dist.setText('{:5.2f}'.format(self.meas.transects[self.checked_transects_idx[row]].
+                                                              edges.right.distance_m * self.units['L']))
+            rsp = dist_dialog.exec_()
+            # Data entered.
+            with self.wait_cursor():
+                if rsp == QtWidgets.QDialog.Accepted:
+                    dist = float(dist_dialog.ed_edge_dist.text()) / self.units['L']
+                    if dist_dialog.rb_all.isChecked():
+                        for idx in self.checked_transects_idx:
+                            self.meas.transects[idx].edges.right.distance_m = dist
+                    else:
+                        self.meas.transects[self.checked_transects_idx[row]].edges.right.distance_m = dist
+
+                    s = self.meas.current_settings()
+                    self.meas.apply_settings(s)
+                    self.update_edges_table()
+
+        # Right number of ensembles
+        elif col == 12:
+            # Initialize dialog
+            ens_dialog = EdgeEns()
+            ens_dialog.rb_transect.setChecked(True)
+            ens_dialog.ed_edge_ens.setText('{:4.0f}'.format(self.meas.transects[self.checked_transects_idx[row]].
+                                                           edges.right.number_ensembles))
+            rsp = ens_dialog.exec_()
+            # Data entered.
+            with self.wait_cursor():
+                if rsp == QtWidgets.QDialog.Accepted:
+                    num_ens = float(ens_dialog.ed_edge_ens.text())
+                    if ens_dialog.rb_all.isChecked():
+                        for idx in self.checked_transects_idx:
+                            self.meas.transects[idx].edges.right.number_ensembles = num_ens
+                    else:
+                        self.meas.transects[self.checked_transects_idx[row]].edges.right.number_ensembles = num_ens
+
+                    s = self.meas.current_settings()
+                    self.meas.apply_settings(s)
+                    self.update_edges_table()
+                    self.edges_graphics()
+
+    def edges_graphics(self):
+        self.edge_shiptrack_plots()
+        self.edge_contour_plots()
+
+    def edge_contour_plots(self):
+        transect = self.meas.transects[self.checked_transects_idx[self.idx]]
+
+        # Left edge
+        n_ensembles = transect.edges.left.number_ensembles
+        if transect.start_edge == 'Left':
+            edge_start = True
+        else:
+            edge_start = False
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'left_edge_contour_canvas'):
+            # Create the canvas
+            self.left_edge_contour_canvas = MplCanvas(parent=self.graph_left_contour, width=4, height=4, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_left_contour)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.left_edge_contour_canvas)
+
+        # Initialize the boat speed figure and assign to the canvas
+        self.left_edge_contour_fig = WTContour(canvas=self.left_edge_contour_canvas)
+        # Create the figure with the specified data
+        self.left_edge_contour_fig.create(transect=transect,
+                                          units=self.units,
+                                          n_ensembles=n_ensembles,
+                                          edge_start=edge_start)
+
+        # Set margins and padding for figure
+        self.left_edge_contour_canvas.fig.subplots_adjust(left=0.15, bottom=0.1, right=0.90, top=0.98, wspace=0.1, hspace=0)
+
+
+        # Draw canvas
+        self.left_edge_contour_canvas.draw()
+        
+        # Right edge
+        n_ensembles = transect.edges.right.number_ensembles
+        if transect.start_edge == 'Left':
+            edge_start = False
+        else:
+            edge_start = True
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'right_edge_contour_canvas'):
+            # Create the canvas
+            self.right_edge_contour_canvas = MplCanvas(parent=self.graph_right_contour, width=4, height=4, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_right_contour)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.right_edge_contour_canvas)
+
+        # Initialize the boat speed figure and assign to the canvas
+        self.right_edge_contour_fig = WTContour(canvas=self.right_edge_contour_canvas)
+        # Create the figure with the specified data
+        self.right_edge_contour_fig.create(transect=transect,
+                                          units=self.units,
+                                          n_ensembles=n_ensembles,
+                                          edge_start=edge_start)
+
+        # Set margins and padding for figure
+        self.right_edge_contour_canvas.fig.subplots_adjust(left=0.15, bottom=0.1, right=0.90, top=0.98, wspace=0.1, hspace=0)
+
+        # Draw canvas
+        self.right_edge_contour_canvas.draw()
+
+    def edge_shiptrack_plots(self):
+        transect = self.meas.transects[self.checked_transects_idx[self.idx]]
+
+        # Left edge
+        n_ensembles = transect.edges.left.number_ensembles
+        if transect.start_edge == 'Left':
+            edge_start = True
+        else:
+            edge_start = False
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'left_edge_st_canvas'):
+            # Create the canvas
+            self.left_edge_st_canvas = MplCanvas(parent=self.graph_left_st, width=4, height=4, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_left_st)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.left_edge_st_canvas)
+
+        # Initialize the shiptrack figure and assign to the canvas
+        self.left_edge_st_fig = Shiptrack(canvas=self.left_edge_st_canvas)
+        # Create the figure with the specified data
+        self.left_edge_st_fig.create(transect=transect,
+                                     units=self.units,
+                                     cb=False,
+                                     cb_bt=self.cb_wt_bt,
+                                     cb_gga=self.cb_wt_gga,
+                                     cb_vtg=self.cb_wt_vtg,
+                                     cb_vectors=self.cb_wt_vectors,
+                                     n_ensembles=n_ensembles,
+                                     edge_start=edge_start)
+
+        if transect.w_vel.nav_ref == 'BT':
+            for item in self.left_edge_st_fig.bt:
+                item.set_visible(True)
+        else:
+            for item in self.left_edge_st_fig.bt:
+                item.set_visible(False)
+        # GGA
+        if transect.w_vel.nav_ref == 'GGA':
+            for item in self.left_edge_st_fig.gga:
+                item.set_visible(True)
+        else:
+            for item in self.left_edge_st_fig.gga:
+                item.set_visible(False)
+        # VTG
+        if transect.w_vel.nav_ref == 'VTG':
+            for item in self.left_edge_st_fig.vtg:
+                item.set_visible(True)
+        else:
+            for item in self.left_edge_st_fig.vtg:
+                item.set_visible(False)
+
+        self.left_edge_st_canvas.draw()
+
+        # Right edge
+        n_ensembles = transect.edges.right.number_ensembles
+        if transect.start_edge == 'Left':
+            edge_start = False
+        else:
+            edge_start = True
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'right_edge_st_canvas'):
+            # Create the canvas
+            self.right_edge_st_canvas = MplCanvas(parent=self.graph_right_st, width=4, height=4, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_right_st)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.right_edge_st_canvas)
+
+        # Initialize the shiptrack figure and assign to the canvas
+        self.right_edge_st_fig = Shiptrack(canvas=self.right_edge_st_canvas)
+        # Create the figure with the specified data
+        self.right_edge_st_fig.create(transect=transect,
+                                      units=self.units,
+                                      cb=False,
+                                      cb_bt=self.cb_wt_bt,
+                                      cb_gga=self.cb_wt_gga,
+                                      cb_vtg=self.cb_wt_vtg,
+                                      cb_vectors=self.cb_wt_vectors,
+                                      n_ensembles=n_ensembles,
+                                      edge_start=edge_start)
+
+        if transect.w_vel.nav_ref == 'BT':
+            for item in self.right_edge_st_fig.bt:
+                item.set_visible(True)
+        else:
+            for item in self.right_edge_st_fig.bt:
+                item.set_visible(False)
+        # GGA
+        if transect.w_vel.nav_ref == 'GGA':
+            for item in self.right_edge_st_fig.gga:
+                item.set_visible(True)
+        else:
+            for item in self.right_edge_st_fig.gga:
+                item.set_visible(False)
+        # VTG
+        if transect.w_vel.nav_ref == 'VTG':
+            for item in self.right_edge_st_fig.vtg:
+                item.set_visible(True)
+        else:
+            for item in self.right_edge_st_fig.vtg:
+                item.set_visible(False)
+
+        self.right_edge_st_canvas.draw()
+
 # Split functions
 # ==============
     def split_initialization(self, groupings=None, data=None):
@@ -6368,9 +6994,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Extrapolation
             self.extrap_tab()
 
-        # elif tab_idx == 10:
-        #     # Edges
-        #     self.edges_tab()
+        elif tab_idx == 10:
+            # Edges
+            self.edges_tab()
 
     def update_comments (self, tab_idx=None):
         """Manages the initialization of content for each tab and updates that information as necessary.
@@ -6429,7 +7055,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         #     # Edges
         #     self.edges_comments_messages()
 
-
     def config_gui(self):
 
         self.tab_all.setCurrentIndex(0)
@@ -6464,7 +7089,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.tab_all.setTabEnabled(2, True)
         else:
             self.tab_all.setTabEnabled(2, False)
-
 
 # Command line functions
 # ======================

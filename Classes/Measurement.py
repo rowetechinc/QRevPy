@@ -1126,9 +1126,11 @@ class Measurement(object):
 
                 if transect.depths.vb_depths is not None or transect.depths.ds_depths is not None:
                     settings['depthComposite'] = 'On'
+                    break
                 else:
                     settings['depthComposite'] = 'Off'
-            break
+                    break
+
 
         # Interpolation settings
         settings = self.qrev_default_interpolation_methods(settings)

@@ -59,7 +59,7 @@ class Shiptrack(object):
 
     def create(self, transect, units,
                cb=False, cb_bt=None, cb_gga=None, cb_vtg=None, cb_vectors=None,
-               invalid_bt=None, invalid_gps=None, invalid_wt=None):
+               invalid_bt=None, invalid_gps=None, invalid_wt=None, n_ensembles=None, edge_start=None):
         """Create the axes and lines for the figure.
 
         Parameters
@@ -118,9 +118,19 @@ class Shiptrack(object):
 
         # Plot shiptrack based on bottom track
         ship_data_bt = transect.boat_vel.compute_boat_track(transect, ref='bt_vel')
+        if edge_start is not None:
+            ship_data_bt['track_x_m'] = self.subsection(ship_data_bt['track_x_m'], n_ensembles, edge_start)
+            ship_data_bt['track_y_m'] = self.subsection(ship_data_bt['track_y_m'], n_ensembles, edge_start)
+
         self.bt = self.fig.ax.plot(ship_data_bt['track_x_m'] * units['L'], ship_data_bt['track_y_m'] * units['L'],
                                    color='r',
                                    label='BT')
+
+        if edge_start is not None:
+                if edge_start:
+                    self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][0], ship_data_bt['track_y_m'][0], 'sk')[0])
+                else:
+                    self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][-1], ship_data_bt['track_y_m'][-1], 'sk')[0])
 
         # Plot invalid data points using a symbol to represent what caused the data to be invalid
         if invalid_bt is not None and not np.alltrue(np.isnan(ship_data_bt['track_x_m'])):
@@ -174,9 +184,18 @@ class Shiptrack(object):
         # Plot shiptrack based on vtg, if available
         if transect.boat_vel.vtg_vel is not None:
             ship_data_vtg = transect.boat_vel.compute_boat_track(transect, ref='vtg_vel')
+            if edge_start is not None:
+                ship_data_vtg['track_x_m'] = self.subsection(ship_data_vtg['track_x_m'], n_ensembles, edge_start)
+                ship_data_vtg['track_y_m'] = self.subsection(ship_data_vtg['track_y_m'], n_ensembles, edge_start)
             self.vtg = self.fig.ax.plot(ship_data_vtg['track_x_m'] * units['L'],
                                         ship_data_vtg['track_y_m'] * units['L'],
                                         color='g', label='VTG')
+
+            if edge_start is not None:
+                if edge_start:
+                    self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][0], ship_data_vtg['track_y_m'][0], 'sk')[0])
+                else:
+                    self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][-1], ship_data_vtg['track_y_m'][-1], 'sk')[0])
 
             # Plot invalid data points using a symbol to represent what caused the data to be invalid
             if invalid_gps is not None and not np.alltrue(np.isnan(ship_data_vtg['track_x_m'])):
@@ -208,9 +227,18 @@ class Shiptrack(object):
         # Plot shiptrack based on gga, if available
         if transect.boat_vel.gga_vel is not None:
             ship_data_gga = transect.boat_vel.compute_boat_track(transect, ref='gga_vel')
+            if edge_start is not None:
+                ship_data_gga['track_x_m'] = self.subsection(ship_data_gga['track_x_m'], n_ensembles, edge_start)
+                ship_data_gga['track_y_m'] = self.subsection(ship_data_gga['track_y_m'], n_ensembles, edge_start)
             self.gga = self.fig.ax.plot(ship_data_gga['track_x_m'] * units['L'],
                                         ship_data_gga['track_y_m'] * units['L'],
                                         color='b', label='GGA')
+
+            if edge_start is not None:
+                if edge_start:
+                    self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][0], ship_data_gga['track_y_m'][0], 'sk')[0])
+                else:
+                    self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][-1], ship_data_gga['track_y_m'][-1], 'sk')[0])
 
             # Plot invalid data points using a symbol to represent what caused the data to be invalid
             if invalid_gps is not None and not np.alltrue(np.isnan(ship_data_gga['track_x_m'])):
@@ -264,14 +292,41 @@ class Shiptrack(object):
         max_y = max_y + (max_y - min_y) * 0.1
         min_y = min_y - (max_y - min_y) * 0.1
 
-        self.fig.ax.set_ylim(top=np.ceil(max_y * units['L']), bottom=np.ceil(min_y * units['L']))
-        self.fig.ax.set_xlim(left=np.ceil(min_x * units['L']), right=np.ceil(max_x * units['L']))
+        if n_ensembles is not None:
+            if transect.w_vel.nav_ref == 'BT':
+                max_x = max_x_bt
+                min_x = min_x_bt
+                max_y = max_y_bt
+                min_y = min_y_bt
+            elif transect.w_vel.nav_ref == 'GGA':
+                max_x = max_x_gga
+                min_x = min_x_gga
+                max_y = max_y_gga
+                min_y = min_y_gga
+            elif transect.w_vel.nav_ref == 'VTG':
+                max_x = max_x_vtg
+                min_x = min_x_vtg
+                max_y = max_y_gga
+                min_y = min_y_gga
+            max_x = max_x + (max_x - min_x) * 0.1
+            min_x = min_x - (max_x - min_x) * 0.1
+            max_y = max_y + (max_y - min_y) * 0.1
+            min_y = min_y - (max_y - min_y) * 0.1
+
+            self.fig.ax.set_ylim(top=(max_y * units['L']), bottom=(min_y * units['L']))
+            self.fig.ax.set_xlim(left=(min_x * units['L']), right=(max_x * units['L']))
+        else:
+            self.fig.ax.set_ylim(top=np.ceil(max_y * units['L']), bottom=np.ceil(min_y * units['L']))
+            self.fig.ax.set_xlim(left=np.ceil(min_x * units['L']), right=np.ceil(max_x * units['L']))
 
         # Compute mean water velocity for each ensemble
         u = transect.w_vel.u_processed_mps
         v = transect.w_vel.v_processed_mps
         u_mean = np.nanmean(u, axis=0)
         v_mean = np.nanmean(v, axis=0)
+        if edge_start is not None:
+            u_mean = self.subsection(u_mean, n_ensembles, edge_start)
+            v_mean = self.subsection(v_mean, n_ensembles, edge_start)
 
         # Plot water vectors
         # self.vectors = self.fig.ax.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
@@ -301,14 +356,18 @@ class Shiptrack(object):
                     item.set_visible(False)
             # GGA
             if self.cb_gga.checkState() == QtCore.Qt.Checked:
-                self.gga[0].set_visible(True)
+                for item in self.gga:
+                    item.set_visible(True)
             else:
-                self.gga[0].set_visible(False)
+                for item in self.gga:
+                    item.set_visible(False)
             # VTG
             if self.cb_vtg.checkState() == QtCore.Qt.Checked:
-                self.vtg[0].set_visible(True)
+                for item in self.vtg:
+                    item.set_visible(True)
             else:
-                self.vtg[0].set_visible(False)
+                for item in self.vtg:
+                    item.set_visible(False)
             # Vectors
             if self.cb_vectors.checkState() == QtCore.Qt.Checked:
                 self.vectors.set_visible(True)
@@ -316,6 +375,14 @@ class Shiptrack(object):
                 self.vectors.set_visible(False)
 
         self.canvas.draw()
+
+    @staticmethod
+    def subsection(data, n_ensembles, edge_start):
+        if edge_start:
+            data_out = data[:int(n_ensembles)]
+        else:
+            data_out = data[-int(n_ensembles):]
+        return data_out
 
     def checkbox_control(self, transect):
         """Controls the visibility and checks the status of checkboxes.

@@ -158,15 +158,17 @@ class QComp(object):
         
         # Compute right edge discharge
         if data_in.edges.right.type != 'User Q':
-            self.right = QComp.discharge_edge('right', data_in, top_method, bot_method, exponent)
+            self.right, self.right_idx = QComp.discharge_edge('right', data_in, top_method, bot_method, exponent)
         else:
             self.right = data_in.edges.right.user_discharge_cms
-            
+            self.right_idx = []
+
         # Compute left edge discharge
         if data_in.edges.left.type != 'User Q':
-            self.left = QComp.discharge_edge('left', data_in, top_method, bot_method, exponent)
+            self.left, self.left_idx = QComp.discharge_edge('left', data_in, top_method, bot_method, exponent)
         else:
             self.left = data_in.edges.left.user_discharge_cms
+            self.left_idx = []
             
         # Compute moving-bed correction, if applicable.  Two checks are used to account for the
         # way the meas object is created.
@@ -198,9 +200,9 @@ class QComp(object):
                                                                                  self.bottom, data_in,
                                                                                  moving_bed_data[use_2_correct == True],
                                                                                  delta_t)
-                    else:
-                        # Set a flag to generate a warning
-                        raise ReferenceError('To apply moving-bed correction composite tracks must be turned off.')
+                    # else:
+                    #     # Set a flag to generate a warning
+                    #     raise ReferenceError('To apply moving-bed correction composite tracks must be turned off.')
         # except:
         #     pass
 
@@ -212,8 +214,6 @@ class QComp(object):
             self.total = self.total_uncorrected
         else:
             self.total = self.left + self.right + (self.middle + self.bottom + self.top) * self.correction_factor
-
-
 
     def populate_from_qrev_mat(self, q_in):
         """Populated QComp instance variables with data from QRev Matlab file.
@@ -306,7 +306,6 @@ class QComp(object):
                 q_int = unit_q_int * depth_selected.depth_processed_m[transData.in_transect_idx] \
                     * transData.date_time.ens_duration_sec[transData.in_transect_idx]
                 self.middle_ens[idx] = q_int[idx]
-
 
     @staticmethod
     def group_consecutives(vals):
@@ -818,6 +817,8 @@ class QComp(object):
         -------
         edge_q: float
             Computed edge discharge
+        edge_idx: list
+            List of valid edge ensembles
         """
 
         # Determine what ensembles to use for edge computation.
@@ -844,7 +845,7 @@ class QComp(object):
         if np.isnan(edge_q):
             edge_q = 0
 
-        return edge_q
+        return edge_q, edge_idx
 
     @staticmethod
     def edge_ensembles(edge_loc, transect):

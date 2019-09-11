@@ -592,7 +592,7 @@ class TransectData(object):
             ens_delta_time[idx_time[1:]] = nandiff(ens_time_sec[idx_time])
             
             # Adjust for transects tha last past midnight
-            idx_24hr = np.where(ens_delta_time < 0)[0]
+            idx_24hr = np.where(np.less(ens_delta_time, 0))[0]
             ens_delta_time[idx_24hr] = 24 * 3600 + ens_delta_time[idx_24hr]
             ens_delta_time = ens_delta_time.T
             
