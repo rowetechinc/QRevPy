@@ -953,7 +953,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Setup table
         tbl = self.main_table_summary
         summary_header = [self.tr('Transect'), self.tr('Start'), self.tr('Bank'), self.tr('End'),
-                          self.tr('Duration'),
+                          self.tr('Duration') + self.tr('(sec)'),
                           self.tr('Total Q') + ' ' + self.tr(self.units['label_Q']),
                           self.tr('Top Q') + ' ' + self.tr(self.units['label_Q']),
                           self.tr('Meas Q') + ' ' + self.tr(self.units['label_Q']),
@@ -6742,14 +6742,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if transect.w_vel.nav_ref == 'GGA':
             for item in self.left_edge_st_fig.gga:
                 item.set_visible(True)
-        else:
+        elif transect.boat_vel.gga_vel is not None:
             for item in self.left_edge_st_fig.gga:
                 item.set_visible(False)
         # VTG
         if transect.w_vel.nav_ref == 'VTG':
             for item in self.left_edge_st_fig.vtg:
                 item.set_visible(True)
-        else:
+        elif transect.boat_vel.vtg_vel is not None:
             for item in self.left_edge_st_fig.vtg:
                 item.set_visible(False)
 
@@ -6796,14 +6796,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if transect.w_vel.nav_ref == 'GGA':
             for item in self.right_edge_st_fig.gga:
                 item.set_visible(True)
-        else:
+        elif transect.boat_vel.gga_vel is not None:
             for item in self.right_edge_st_fig.gga:
                 item.set_visible(False)
         # VTG
         if transect.w_vel.nav_ref == 'VTG':
             for item in self.right_edge_st_fig.vtg:
                 item.set_visible(True)
-        else:
+        elif transect.boat_vel.vtg_vel is not None:
             for item in self.right_edge_st_fig.vtg:
                 item.set_visible(False)
 

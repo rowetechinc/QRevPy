@@ -13,7 +13,11 @@ from Classes.Uncertainty import Uncertainty
 from Classes.QAData import QAData
 from MiscLibs.common_functions import cart2pol, pol2cart, rad2azdeg, nans, azdeg2rad
 from Classes.BoatStructure import BoatStructure
+import xml.etree.ElementTree as ET
+from xml.etree.ElementTree import Element, SubElement, tostring
+from xml.dom import minidom
 import datetime
+
 
 
 class Measurement(object):
@@ -557,7 +561,6 @@ class Measurement(object):
                 q = QComp()
                 q.populate_from_qrev_mat(q_data)
                 self.discharge.append(q)
-
 
     @staticmethod
     def set_num_beam_wt_threshold_trdi(mmt_transect):
@@ -1585,5 +1588,777 @@ class Measurement(object):
             ens_time =  meas.transects[idx].date_time.start_serial_time + ens_cum_time
             serial_time = np.append(serial_time, ens_time)
         return data, serial_time
+
+    def xml_output(self, version, file_name):
+        idx = [i for i, char in enumerate(file_name) if char == '\\']
+        channel = ET.Element('Channel', QRevFilename=file_name[(idx[-1] + 1):], QRevVersion=version)
+
+        # (2) SiteInformation Node
+        if self.station_name or self.station_number:
+            site_info = ET.SubElement(channel, 'SiteInformation')
+
+        # (3) StationName Node
+        if self.station_name:
+            ET.SubElement(site_info, 'StationName', type='char').text = self.station_name
+
+        # (3) SiteID Node
+        if self.station_number and int(self.station_number) != 0:
+            ET.SubElement(site_info, 'SiteID', type='char').text = self.station_number
+
+        # (2) QA Node
+        qa = ET.SubElement(channel, 'QA')
+
+        # (3) DiagnosticTestResult Node
+        if self.system_test[0].data:
+            last_test = self.system_test[-1].data
+            failed_idx = last_test.count('FAIL')
+            if failed_idx == 0:
+                test_result = 'Pass'
+            else:
+                test_result = str(failed_idx) + ' Failed'
+        else:
+            test_result = 'None'
+        ET.SubElement(qa, 'DiagnosticTestResult', type='char').text = test_result
+
+        # (3) CompassCalibrationResult Node
+        if self.compass_eval[0].data:
+            last_eval = self.compass_eval[-1]
+            # StreamPro, RR
+            idx = last_eval.data.find('Typical Heading Error: <')
+            if idx == (-1):
+                # Rio Grande
+                idx = last_eval.data.find('>>> Total error:')
+                if idx != (-1):
+                    idx_start = idx + 17
+                    idx_end = idx_start + 10
+                    comp_error = last_eval.data[idx_start:idx_end]
+                else:
+                    comp_error = ''
+            else:
+                # StreamPro, RR
+                idx_start = idx + 24
+                idx_end = idx_start + 10
+                comp_error = last_eval.data[idx_start:idx_end]
+            # Evaluation could not be determined
+            if not comp_error:
+                ET.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'Yes'
+            elif comp_error == '':
+                ET.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'No'
+            else:
+                ET.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'Max ' + comp_error
+        else:
+            if self.compass_cal[0].data:
+                ET.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'Yes'
+            else:
+                ET.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'No'
+
+        # (3) MovingBedTestType Node
+        if not self.mb_tests:
+            ET.SubElement(qa, 'MovingBedTestType', type='char').text = 'None'
+        else:
+            selected_idx = [i for (i, val) in enumerate(self.mb_tests) if val.selected == True]
+            if len(selected_idx) >= 1:
+                selected_idx = selected_idx[0]
+            # mb_tests is a list of objects in MovingBedTests class; this accesses the selected attribute.
+            else:
+                selected_idx = len(self.mb_tests) - 1  # Accesses the last mbt if none selected.
+            ET.SubElement(qa, 'MovingBedTestType', type='char').text = str(self.mb_tests[selected_idx].type)
+
+            # MovingBedTestResult Node
+            moving_bed = self.mb_tests[
+                selected_idx].moving_bed  # Accesses moving_bed attribute of MovingBedTests class.
+        if moving_bed.__class__.__name__ == 'str':
+            idx = moving_bed.find('Yes')
+            if idx == -1:
+                ET.SubElement(qa, 'MovingBedTestResult', type='char').text = 'No'
+            else:
+                ET.SubElement(qa, 'MovingBedTestResult', type='char').text = 'Yes'
+        else:
+            ET.SubElement(qa, 'MovingBedTestResult', type='char').text = 'Unknown'
+
+        # (3) DiagnosticTest and Text Node
+        if self.system_test:
+            test_text = ''
+            for test in self.system_test:
+                test_text += test.data
+            diag_test = ET.SubElement(qa, 'DiagnosticTest')
+            ET.SubElement(diag_test, 'Text', type='char').text = test_text
+
+        # (3) CompassCalibration and Text Node
+        compass_text = ''
+        if self.compass_cal[0].data:
+            for each in self.compass_cal:
+                if self.transects[0].adcp.manufacturer == 'SonTek':
+                    idx = each.data.find('CAL_TIME')
+                    compass_text += each.data[idx:]
+                else:
+                    compass_text += each.data
+
+        if self.compass_eval[0].data:
+            for each in self.compass_eval:
+                if self.transects[0].adcp.manufacturer == 'SonTek':
+                    idx = each.data.find('CAL_TIME')
+                    compass_text += each.data[idx:]
+                else:
+                    compass_text += each.data
+
+        if len(compass_text) > 0:
+            comp_cal = ET.SubElement(qa, 'CompassCalibration')
+            ET.SubElement(comp_cal, 'Text', type='char').text = compass_text
+
+        # (3) MovingBedTest Node
+        if self.mb_tests:
+            for each in self.mb_tests:
+                mbt = ET.SubElement(qa, 'MovingBedTest')
+
+                # (4) Filename Node
+                ET.SubElement(mbt, 'Filename', type='char').text = each.transect.file_name
+
+                # (4) TestType Node
+                ET.SubElement(mbt, 'TestType', type='char').text = each.type
+
+                # (4) Duration Node
+                ET.SubElement(mbt, 'Duration', type='double', unitsCode='sec').text = str(each.duration_sec)
+
+                # (4) PercentInvalidBT Node
+                ET.SubElement(mbt, 'PercentInvalidBT', type='double').text = str(each.percent_invalid_bt)
+
+                # (4) HeadingDifference Node
+                ET.SubElement(mbt, 'HeadingDifference', type='double', unitsCode='deg').text = str(each.compass_diff_deg)
+
+                # (4) MeanFlowDirection Node
+                ET.SubElement(mbt, 'MeanFlowDirection', type='double', unitsCode='deg').text = str(each.flow_dir)
+
+                # (4) MovingBedDirection Node
+                ET.SubElement(mbt, 'MovingBedDirection', type='double', unitsCode='deg').text = str(each.mb_dir)
+
+                # (4) DistanceUpstream Node
+                ET.SubElement(mbt, 'DistanceUpstream', type='double', unitsCode='m').text = str(each.dist_us_m)
+
+                # (4) MeanFlowSpeed Node
+                ET.SubElement(mbt, 'MeanFlowSpeed', type='double', unitsCode='mps').text = str(each.flow_spd_mps)
+
+                # (4) MovingBedSpeed Node
+                ET.SubElement(mbt, 'MovingBedSpeed', type='double', unitsCode='mps').text = str(each.mb_spd_mps)
+
+                # (4) PercentMovingBed Node
+                ET.SubElement(mbt, 'PercentMovingBed', type='double').text = str(each.percent_mb)
+
+                # (4) TestQuality Node
+                ET.SubElement(mbt, 'TestQuality', type='char').text = each.test_quality
+
+                # (4) MovingBedPresent Node
+                ET.SubElement(mbt, 'MovingBedPresent', type='char').text = each.moving_bed
+
+                # (4) UseToCorrect Node
+                if each.use_2_correct:
+                    ET.SubElement(mbt, 'UseToCorrect', type='char').text = 'Yes'
+                else:
+                    ET.SubElement(mbt, 'UseToCorrect', type='char').text = 'No'
+
+                # (4) UserValid Node
+                if each.user_valid:
+                    ET.SubElement(mbt, 'UserValid', type='char').text = 'Yes'
+                else:
+                    ET.SubElement(mbt, 'UserValid', type='char').text = 'No'
+
+                # (4) Message Node
+                message_out = each.messages
+                str_out = ''
+                for message in message_out:
+                    if message_out[0]:
+                        str_out += message
+                    else:
+                        str_out += f'; {message}'
+                ET.SubElement(mbt, 'Message', type='char').text = str_out
+
+        # (3) TemperatureCheck Node
+        temp_check = ET.SubElement(qa, 'TemperatureCheck')
+
+        # (4) VerificationTemperature Node
+        if self.ext_temp_chk['user']:
+            ET.SubElement(temp_check, 'VerificationTemperature', type='double', unitsCode='degC').text = str(
+                self.ext_temp_chk['user'])
+
+        # (4) InstrumentTemperature Node
+        if self.ext_temp_chk['adcp']:
+            ET.SubElement(temp_check, 'InstrumentTemperature', type='double', unitsCode='degC').text = str(
+                self.ext_temp_chk['adcp'])
+
+        # (4) TemperatureChange Node:
+        temp_all = np.array([np.nan])
+        for each in self.transects:
+            # Check for situation where user has entered a constant temperature
+            temperature_selected = getattr(each.sensors.temperature_deg_c, each.sensors.temperature_deg_c.selected)
+            temperature = temperature_selected.data
+            if len(temperature) > 1:
+                # Temperatures for ADCP.
+                temp_all = np.concatenate((temp_all, temperature))
+            else:
+                # User specified constant temperature. Concatenate a matrix of size of internal data with repeated user values.
+                user_arr = np.tile(each.sensors.temperature_deg_c.user.data,
+                                   (np.size(each.sensors.temperature_deg_c.internal.data)))
+                temp_all = np.concatenate((temp_all, user_arr))
+
+        t_range = np.nanmax(temp_all) - np.nanmin(temp_all)
+        ET.SubElement(temp_check, 'TemperatureChange', type='double', unitsCode='degC').text = format(t_range, '.2f')
+
+        # (2) Instrument Node
+        instrument = ET.SubElement(channel, 'Instrument')
+
+        # (3) Manufacturer Node
+        ET.SubElement(instrument, 'Manufacturer', type='char').text = self.transects[0].adcp.manufacturer
+
+        # (3) Model Node
+        ET.SubElement(instrument, 'Model', type='char').text = self.transects[0].adcp.model
+
+        # (3) SerialNumber Node
+        sn = self.transects[0].adcp.serial_num
+        ET.SubElement(instrument, 'SerialNumber', type='char').text = str(sn)
+
+        # (3) FirmwareVersion Node
+        ver = self.transects[0].adcp.firmware
+        ET.SubElement(instrument, 'FirmwareVersion', type='char').text = str(ver)
+
+        # (3) Frequency Node
+        freq = self.transects[0].adcp.frequency_khz
+        if type(freq) == list:
+            freq = "Multi"
+        ET.SubElement(instrument, 'Frequency', type='char', unitsCode='kHz').text = str(freq)
+
+        # (3) BeamAngle Node
+        ang = self.transects[0].adcp.beam_angle_deg
+        ET.SubElement(instrument, 'BeamAngle', type='double', unitsCode='deg').text = str(ang)
+
+        # (3) BlankingDistance Node
+        w_vel = []
+        for each in self.transects:
+            w_vel.append(each.w_vel)
+        blank = []
+        for each in w_vel:
+            blank.append(each.blanking_distance_m)
+        if isinstance(blank[0], float):
+            temp = np.mean(blank)
+            if self.transects[0].w_vel.excluded_dist_m > temp:
+                temp = self.transects[0].w_vel.excluded_dist_m
+        else:
+            temp = self.transects[0].w_vel.excluded_dist_m
+        ET.SubElement(instrument, 'BlankingDistance', type='double', unitsCode='m').text = str(temp)
+
+        # (3) InstrumentConfiguration Node
+        commands = ''
+        for each in self.transects[0].adcp.configuration_commands:
+            commands += each + ', '
+        ET.SubElement(instrument, 'InstrumentConfiguration', type='char').text = commands[0:-2]
+
+        # (2) Processing Node
+        processing = ET.SubElement(channel, 'Processing')
+
+        # (3) SoftwareVersion Node
+        ET.SubElement(processing, 'SoftwareVersion', type='char').text = version
+
+        # (3) Type Node
+        ET.SubElement(processing, 'Type', type='char').text = self.processing
+
+        # (3) AreaComputationMethod Node
+        ET.SubElement(processing, 'AreaComputationMethod', type='char').text = 'Parallel'
+
+        # (3) Navigation Node
+        navigation = ET.SubElement(processing, 'Navigation')
+
+        # (4) Reference Node
+        ET.SubElement(navigation, 'Reference', type='char').text = self.transects[0].w_vel.nav_ref
+
+        # (4) CompositeTrack
+        ET.SubElement(navigation, 'CompositeTrack', type='char').text = self.transects[0].boat_vel.composite
+
+        # (4) MagneticVariation Node
+        mag_var = self.transects[0].sensors.heading_deg.mag_var_deg
+        ET.SubElement(navigation, 'MagneticVariation', type='double', unitsCode='deg').text = str(mag_var)
+
+        # (4) ErrorVelocityFilter Node
+        evf = self.transects[0].boat_vel.d_filter
+        if evf == 'Manual':
+            evf = str(self.transects[0].boat_vel.d_filter_threshold)
+        ET.SubElement(navigation, 'ErrorVelocityFilter', type='char', unitsCode='mps').text = evf
+
+        # (4) VerticalVelocityFilter Node
+        vvf = self.transects[0].boat_vel.w_filter
+        if vvf == 'Manual':
+            vvf = str(self.transects[0].boat_vel.w_filter_threshold)
+        ET.SubElement(navigation, 'VerticalVelocityFilter', type='char', unitsCode='mps').text = vvf
+
+        # (4) OtherFilter Node
+        o_f = self.transects[0].boat_vel.smooth_filter
+        ET.SubElement(navigation, 'OtherFilter', type='char').text = o_f
+
+        # (4) GPSDifferentialQualityFilter Node
+        temp = self.transects[0].boat_vel.gps_diff_qual_filter
+        if temp:
+            if isinstance(temp, int) or isinstance(temp, float):
+                temp = str(temp)
+            ET.SubElement(navigation, 'GPSDifferentialQualityFilter', type='char').text = temp
+
+        # (4) GPSAltitudeFilter Node
+        temp = self.transects[0].boat_vel.gps_altitude_filter
+        if temp:
+            if temp == 'Manual':
+                temp = self.transects[0].boat_vel.gps_altitude_filter_change
+            ET.SubElement(navigation, 'GPSAltitudeFilter', type='char', unitsCode='m').text = str(temp)
+
+        # (4) HDOPChangeFilter
+        temp = self.transects[0].boat_vel.gps_hdop_filter
+        if temp:
+            if temp == 'Manual':
+                temp = self.transects[0].boat_vel.gps_hdop_filter_change
+            ET.SubElement(navigation, 'HDOPChangeFilter', type='char').text = str(temp)
+
+        # (4) HDOPThresholdFilter
+        temp = self.transects[0].boat_vel.gps_hdop_filter
+        if temp:
+            if temp == 'Manual':
+                temp = self.transects[0].boat_vel.gps_hdop_filter_max
+            ET.SubElement(navigation, 'HDOPThresholdFilter', type='char').text = str(temp)
+
+        # (4) InterpolationType Node
+        temp = self.transects[0].boat_vel.interpolate
+        ET.SubElement(navigation, 'InterpolationType', type='char').text = temp
+
+        # (3) Depth Node
+        depth = ET.SubElement(processing, 'Depth')
+
+        # (4) Reference Node
+        if self.transects[0].depths.selected == 'bt_depths':
+            temp = 'BT'
+        if self.transects[0].depths.selected == 'vb_depths':
+            temp = 'VB'
+        if self.transects[0].depths.selected == 'ds_depths':
+            temp = 'DS'
+        ET.SubElement(depth, 'Reference', type='char').text = temp
+
+        # (4) CompositeDepth Node
+        ET.SubElement(depth, 'CompositeDepth', type='char').text = self.transects[0].depths.composite
+
+        # (4) ADCPDepth Node
+        temp = self.transects[0].depths.draft_use_m
+        ET.SubElement(depth, 'ADCPDepth', type='double', unitsCode='m').text = str(temp)
+
+        # (4) ADCPDepthConsistent Node
+        drafts = []
+        for n in self.transects:
+            if n.checked:
+                drafts.append(n.depths.draft_use_m)
+        unique_drafts = set(drafts)
+        num_drafts = len(unique_drafts)
+        if num_drafts > 1:
+            temp = 'No'
+        else:
+            temp = 'Yes'
+        ET.SubElement(depth, 'ADCPDepthConsistent', type='boolean').text = temp
+
+        # (4) FilterType Node
+        temp = self.transects[0].depths.filter_type
+        ET.SubElement(depth, 'FilterType', type='char').text = temp
+
+        # (4) InterpolationType Node
+        temp = self.transects[0].depths.interp_type
+        ET.SubElement(depth, 'InterpolationType', type='char').text = temp
+
+        # (4) AveragingMethod Node
+        temp = self.transects[0].depths.avg_method
+        ET.SubElement(depth, 'AveragingMethod', type='char').text = temp
+
+        # (4) ValidDataMethod Node
+        temp = self.transects[0].depths.valid_data_method
+        ET.SubElement(depth, 'ValidDataMethod', type='char').text = temp
+
+        # (3) WaterTrack Node
+        water_track = ET.SubElement(processing, 'WaterTrack')
+
+        # (4) ExcludedDistance Node
+        temp = self.transects[0].w_vel.excluded_dist_m
+        ET.SubElement(water_track, 'ExcludedDistance', type='char').text = str(temp)
+
+        # (4) BeamFilter Node
+        temp = self.transects[0].w_vel.beam_filter
+        if temp < 0:
+            temp = 'Auto'
+        else:
+            temp = str(temp)
+        ET.SubElement(water_track, 'BeamFilter', type='char').text = temp
+
+        # (4) ErrorVelocityFilter Node
+        temp = self.transects[0].w_vel.d_filter
+        if temp == 'Manual':
+            temp = str(self.transects[0].w_vel.d_filter_threshold)
+        ET.SubElement(water_track, 'ErrorVelocityFilter', type='char', unitsCode='mps').text = temp
+
+        # (4) VerticalVelocityFilter Node
+        temp = self.transects[0].w_vel.w_filter
+        if temp == 'Manual':
+            temp = str(self.transects[0].w_vel.w_filter_threshold)
+        ET.SubElement(water_track, 'VerticalVelocityFilter', type='char', unitsCode='mps').text = temp
+
+        # (4) OtherFilter Node
+        temp = self.transects[0].w_vel.smooth_filter
+        ET.SubElement(water_track, 'OtherFilter', type='char').text = temp
+
+        # (4) SNRFilter Node
+        temp = self.transects[0].w_vel.snr_filter
+        ET.SubElement(water_track, 'SNRFilter', type='char').text = temp
+
+        # (4) CellInterpolation Node
+        temp = self.transects[0].w_vel.interpolate_cells
+        ET.SubElement(water_track, 'CellInterpolation', type='char').text = temp
+
+        # (4) EnsembleInterpolation Node
+        temp = self.transects[0].w_vel.interpolate_ens
+        ET.SubElement(water_track, 'EnsembleInterpolation', type='char').text = temp
+
+        # (3) Edge Node
+        edge = ET.SubElement(processing, 'Edge')
+
+        # (4) RectangularEdgeMethod Node
+        temp = self.transects[0].edges.rec_edge_method
+        ET.SubElement(edge, 'RectangularEdgeMethod', type='char').text = temp
+
+        # (4) VelocityMethod Node
+        temp = self.transects[0].edges.vel_method
+        ET.SubElement(edge, 'VelocityMethod', type='char').text = temp
+
+        # (4) LeftType Node
+        typ = []
+        for n in self.transects:
+            if n.checked:
+                typ.append(n.edges.left.type)
+        unique_type = set(typ)
+        num_types = len(unique_type)
+        if num_types > 1:
+            temp = 'Varies'
+        else:
+            temp = typ[0]
+        ET.SubElement(edge, 'LeftType', type='char').text = temp
+
+        # (4) RightType Node
+        typ = []
+        for n in self.transects:
+            if n.checked:
+                typ.append(n.edges.right.type)
+        unique_type = set(typ)
+        num_types = len(unique_type)
+        if num_types > 1:
+            temp = 'Varies'
+        else:
+            temp = typ[0]
+        ET.SubElement(edge, 'RightType', type='char').text = temp
+
+        # (3) Extrapolation Node
+        extrap = ET.SubElement(processing, 'Extrapolation')
+
+        # (4) TopMethod Node
+        temp = self.transects[0].extrap.top_method
+        ET.SubElement(extrap, 'TopMethod', type='char').text = temp
+
+        # (4) BottomMethod Node
+        temp = self.transects[0].extrap.bottom_method
+        ET.SubElement(extrap, 'BottomMethod', type='char').text = temp
+
+        # (4) Exponent Node
+        temp = self.transects[0].extrap.exponent
+        ET.SubElement(extrap, 'Exponent', type='double').text = str(temp)
+
+        # (3) Sensor Node
+        sensor = ET.SubElement(processing, 'Sensor')
+
+        # (4) TemperatureSource Node
+        temp = []
+        for n in self.transects:
+            if n.checked:
+                # k+=1
+                temp.append(n.sensors.temperature_deg_c.selected)
+        sources = len(set(temp))
+        if sources > 1:
+            temp = 'Varies'
+        else:
+            temp = temp[0]
+        ET.SubElement(sensor, 'TemperatureSource', type='char').text = temp
+
+        # (4) Salinity
+        temp = []
+        for n in self.transects:
+            if n.checked:
+                temp.append(n.sensors.salinity_ppt.selected)
+        sources = len(set(temp))
+        if sources > 1:
+            temp = 'Varies'
+        else:
+            temp = temp[0]
+        if temp == 'internal':
+            temp = 'ADCP'
+        ET.SubElement(sensor, 'Salinity', type='char', unitsCode='ppt').text = temp
+
+        # (4) SpeedofSound Node
+        temp = []
+        for n in self.transects:
+            if n.checked:
+                temp.append(n.sensors.speed_of_sound_mps.selected)
+        sources = len(set(temp))
+        if sources > 1:
+            temp = 'Varies'
+        else:
+            temp = temp[0]
+        if temp == 'internal':
+            temp = 'ADCP'
+        ET.SubElement(sensor, 'SpeedofSound', type='char', unitsCode='mps').text = temp
+
+        # (2) Transect Node
+        other_prop = self.compute_measurement_properties()
+        for n in range(len(self.transects)):
+            if self.transects[n].checked:
+                transect = ET.SubElement(channel, 'Transect')
+
+                # (3) Filename Node
+                temp = self.transects[n].file_name
+                ET.SubElement(transect, 'Filename', type='char').text = temp
+
+                # (3) StartDateTime Node
+                temp = int(self.transects[n].date_time.start_serial_time)
+                temp = datetime.datetime.fromtimestamp(temp).strftime('%m/%d/%Y %H:%M:%S')
+                ET.SubElement(transect, 'StartDateTime', type='char').text = temp
+
+                # (3) EndDateTime Node
+                temp = int(self.transects[n].date_time.end_serial_time)
+                temp = datetime.datetime.fromtimestamp(temp).strftime('%m/%d/%Y %H:%M:%S')
+                ET.SubElement(transect, 'EndDateTime', type='char').text = temp
+
+                # (3) Discharge Node
+                t_q = ET.SubElement(transect, 'Discharge')
+
+                # (4) Top Node
+                temp = self.discharge[n].top
+                ET.SubElement(t_q, 'Top', type='double', unitsCode='cms').text = str(temp)
+
+                # (4) Middle Node
+                temp = self.discharge[n].middle
+                ET.SubElement(t_q, 'Middle', type='double', unitsCode='cms').text = str(temp)
+
+                # (4) Bottom Node
+                temp = self.discharge[n].bottom
+                ET.SubElement(t_q, 'Bottom', type='double', unitsCode='cms').text = str(temp)
+
+                # (4) Left Node
+                temp = self.discharge[n].left
+                ET.SubElement(t_q, 'Left', type='double', unitsCode='cms').text = str(temp)
+
+                # (4) Right Node
+                temp = self.discharge[n].right
+                ET.SubElement(t_q, 'Right', type='double', unitsCode='cms').text = str(temp)
+
+                # (4) Total Node
+                temp = self.discharge[n].total
+                ET.SubElement(t_q, 'Total', type='double', unitsCode='cms').text = str(temp)
+
+                # (4) MovingBedPercentCorrection Node
+                temp = ((self.discharge[n].total / self.discharge[n].total_uncorrected) - 1) * 100
+                ET.SubElement(t_q, 'MovingBedPercentCorrection', type='double').text = str(temp)
+
+                # (3) Edge Node
+                t_edge = ET.SubElement(transect, 'Edge')
+
+                # (4) StartEdge Node
+                temp = self.transects[n].start_edge
+                ET.SubElement(t_edge, 'StartEdge', type='char').text = temp
+
+                # (4) RectangularEdgeMethod Node
+                temp = self.transects[n].rec_edge_method
+                ET.SubElement(t_edge, 'RectangularEdgeMethod', type='char').text = temp
+
+                # (4) VelocityMethod Node
+                temp = self.transects[n].vel_method
+                ET.SubElement(t_edge, 'VelocityMethod', type='char').text = temp
+
+                # (4) LeftType Node
+                temp = self.transects[n].edges.left.type
+                ET.SubElement(t_edge, 'LeftType', type='char').text = temp
+
+                # (4) LeftDistance Node
+                temp = str(self.transects[n].edges.left.distance_m)
+                ET.SubElement(t_edge, 'LeftDistance', type='double', unitsCode='m').text = temp
+
+                # (4) LeftNumberEnsembles
+                temp = str(self.transects[n].edges.left.number_ensembles)
+                ET.SubElement(t_edge, 'LeftNumberEnsembles', type='double').text = temp
+
+                # (4) RightType Node
+                temp = self.transects[n].edges.right.type
+                ET.SubElement(t_edge, 'RightType', type='char').text = temp
+
+                # (4) RightDistance Node
+                temp = str(self.transects[n].edges.right.distance_m)
+                ET.SubElement(t_edge, 'RightDistance', type='double', unitsCode='m').text = temp
+
+                # (4) RightNumberEnsembles Node
+                temp = str(self.transects[n].edges.right.number_ensembles)
+                ET.SubElement(t_edge, 'RightNumberEnsembles', type='double').text = temp
+
+                # (3) Sensor Node
+                t_sensor = ET.SubElement(transect, 'Sensor')
+
+                # (4) TemperatureSource Node
+                temp = self.transects[n].sensors.temperature_deg_c.selected
+                ET.SubElement(t_sensor, 'TemperatureSource', type='double').text = temp
+
+                # (4) MeanTemperature Node
+                dat = getattr(self.transects[n].sensors.temperature_deg_c,
+                              self.transects[n].sensors.temperature_deg_c.selected)
+                temp = np.mean(dat.data)
+                temp = str(temp)
+                ET.SubElement(t_sensor, 'MeanTemperature', type='double', unitsCode='degC').text = temp
+
+                # (3) Other Node
+                t_other = ET.SubElement(transect, 'Other')
+
+                # (4) Duration Node
+                temp = self.transects[n].date_time.transect_duration_sec
+                ET.SubElement(t_other, 'Duration', type='double', unitsCode='sec').text = str(temp)
+#TODO add Width, Area, MeanBoatSpeed, QoverA, CourseMadeGood, MeanFlowDirection, NumberofEnsembles, PercentInvalidBins,
+#TODO continued PercentInvalidEnsembles, MeanPitch, MeanRoll, PitchStdDev, RollStdDev, ADCPDepth
+
+        # (2) ChannelSummary Node
+        summary = ET.SubElement(channel, 'ChannelSummary')
+
+        # (3) Discharge Node
+        s_q = ET.SubElement(summary, 'Discharge')
+#TODO Top, Middle, Bottom, Left, Right, Total, MovingBedPercentCorrection
+
+        # (3) Uncertainty Node
+        s_u = ET.SubElement(summary, 'Uncertainty')
+        uncertainty = self.uncertainty
+
+        # (4) COV Node
+        temp = str(uncertainty.cov)
+        ET.SubElement(s_u, 'COV', type='double').text = temp
+
+        # (4) AutoRandom Node
+        temp = str(uncertainty.cov_95)
+        ET.SubElement(s_u, 'AutoRandom', type='double').text = temp
+
+        # (4) AutoInvalidData Node
+        temp = str(uncertainty.invalid_95)
+        ET.SubElement(s_u, 'AutoInvalidData', type='double').text = temp
+
+        # (4) AutoEdge Node
+        temp = str(uncertainty.edges_95)
+        ET.SubElement(s_u, 'AutoEdges', type='double').text = temp
+
+        # (4) AutoExtrapolation Node
+        temp = str(uncertainty.extrapolation_95)
+        ET.SubElement(s_u, 'AutoExtrapolation', type='double').text = temp
+
+        # (4) AutoMovingBed
+        temp = str(uncertainty.moving_bed_95)
+        ET.SubElement(s_u, 'AutoMovingBed', type='double').text = temp
+
+        # (4) AutoSystematic
+        temp = str(uncertainty.systematic)
+        ET.SubElement(s_u, 'AutoSystematic', type='double').text = temp
+
+        # (4) AutoTotal
+        temp = str(uncertainty.total_95)
+        ET.SubElement(s_u, 'AutoTotal', type='double').text = temp
+
+        # (4) UserRandom Node
+        user_random = str(uncertainty.cov_95_user)
+        if user_random:
+            ET.SubElement(s_u, 'UserRandom', type='double').text = user_random
+
+        # (4) UserInvalidData Node
+        user_invalid = str(uncertainty.invalid_95_user)
+        if user_invalid:
+            ET.SubElement(s_u, 'UserInvalidData', type='double').text = user_invalid
+
+        # (4) UserEdge
+        user_edge = str(uncertainty.edges_95_user)
+        if user_edge:
+            ET.SubElement(s_u, 'UserEdge', type='double').text = user_edge
+
+        # (4) UserExtrapolation
+        user_extrap = str(uncertainty.extrapolation_95_user)
+        if user_extrap:
+            ET.SubElement(s_u, 'UserExtrapolation', type='double').text = user_extrap
+
+        # (4) UserMovingBed
+        user_mb = str(uncertainty.moving_bed_95_user)
+        if user_mb:
+            ET.SubElement(s_u, 'UserMovingBed', type='double').text = user_mb
+
+        # (4) UserSystematic
+        user_systematic = str(uncertainty.systematic_user)
+        if user_systematic:
+            ET.SubElement(s_u, 'UserSystematic', type='double').text = user_systematic
+
+        # (4) UserTotal Node
+        temp = str(uncertainty.total_95_user)
+        ET.SubElement(s_u, 'UserTotal', type='double').text = temp
+
+        # (3) Other Node
+        s_o = ET.SubElement(summary, 'Other')
+
+        # (4) MeanWidth
+        temp = other_prop['width'][-1]
+        ET.SubElement(s_o, 'MeanWidth', type='double', unitsCode='m').text = str(temp)
+
+        # (4) WidthCOV
+        temp = other_prop['width_cov'][-1]
+        ET.SubElement(s_o, 'WidthCOV', type='double').text = str(temp)
+
+        # (4) MeanArea
+        temp = other_prop['area'][-1]
+        ET.SubElement(s_o, 'MeanArea', type='double', unitsCode='sqm').text = str(temp)
+
+        # (4) AreaCOV
+        temp = other_prop['area_cov'][-1]
+        ET.SubElement(s_o, 'AreaCOV', type='double').text = str(temp)
+
+        # (4) MeanBoatSpeed
+        temp = other_prop['avg_boat_speed'][-1]
+        ET.SubElement(s_o, 'MeanBoatSpeed', type='double', unitsCode='mps').text = str(temp)
+
+        # (4) MeanQoverA
+        temp = other_prop['avg_water_speed'][-1]
+        ET.SubElement(s_o, 'MeanQoverA', type='double', unitsCode='mps').text = str(temp)
+
+        # (4) MeanCourseMadeGood
+        temp = other_prop['avg_boat_course'][-1]
+        ET.SubElement(s_o, 'MeanCourseMadeGood', type='double', unitsCode='deg').text = str(temp)
+
+        # (4) MeanFlowDirection
+        temp = other_prop['avg_water_dir'][-1]
+        ET.SubElement(s_o, 'MeanFlowDirection', type='double', unitsCode='deg').text = str(temp)
+
+        # (4) MeanDepth
+        temp = other_prop['avg_depth'][-1]
+        ET.SubElement(s_o, 'MeanDepth', type='double', unitsCode='m').text = str(temp)
+
+        # (4) MaximumDepth
+        temp = other_prop['max_depth'][-1]
+        ET.SubElement(s_o, 'MaximumDepth', type='double', unitsCode='m').text = str(temp)
+
+        # (4) MaximumWaterSpeed
+        temp = other_prop['max_water_speed'][-1]
+        ET.SubElement(s_o, 'MeanArea', type='double', unitsCode='mps').text = str(temp)
+
+        # (4) NumberofTransects
+        temp = len(self.checked_transects(self))
+        ET.SubElement(s_o, 'MeanArea', type='double').text = str(temp)
+
+        # (4) Duration
+        temp =  self.measurement_duration(self)
+        ET.SubElement(s_o, 'MeanArea', type='double', unitsCode='sec').text = str(temp)
+
+
+        output = tostring(channel)
+        print(minidom.parseString(output).toprettyxml())
+
 if __name__ == '__main__':
     pass
