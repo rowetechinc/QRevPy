@@ -400,7 +400,14 @@ class MovingBedTests(object):
             ens_duration = trans_data.date_time.ens_duration_sec[in_transect_idx]
             bt_u = trans_data.boat_vel.bt_vel.u_processed_mps[in_transect_idx]
             bt_v = trans_data.boat_vel.bt_vel.v_processed_mps[in_transect_idx]
-            
+
+            # Use only data with valid bottom track
+            valid_bt = trans_data.boat_vel.bt_vel.valid_data[0, in_transect_idx]
+            wt_u[:, valid_bt == False] = np.nan
+            wt_v[:, valid_bt == False] = np.nan
+            bt_u[valid_bt == False] = np.nan
+            bt_v[valid_bt == False] = np.nan
+
             bin_depth = trans_data.depths.bt_depths.depth_cell_depth_m[:, in_transect_idx]
             trans_select = getattr(trans_data.depths, trans_data.depths.selected)
             depth_ens = trans_select.depth_processed_m[in_transect_idx]

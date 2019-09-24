@@ -45,7 +45,7 @@ class Sensors(object):
         """
 
         # Not provided in RS Matlab file computed from equation used in TRDI BBSS
-        sos = 1449 + 4.6 * temperature - 0.055 * temperature**2 + 0.00029 * temperature**3 \
+        sos = 1449.2 + 4.6 * temperature - 0.055 * temperature**2 + 0.00029 * temperature**3 \
             + (1.34 - 0.01 * temperature) * (salinity - 35)
         return sos
 

@@ -237,6 +237,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             else:
                 Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, checked=self.checked_transects_idx)
             self.config_gui()
+            self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml')
+            QtWidgets.QMessageBox.about(self, "Save", "Files (*_QRev.mat and *_QRev.xml) have been saved.")
 
     def add_comment(self):
         """Add comment triggered by actionComment
@@ -2165,7 +2167,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     if magvar_dialog.rb_all.isChecked():
                         self.meas.change_magvar(magvar=magvar)
                     else:
-                        self.meas.change_magvar( magvar=magvar, transect_idx=self.transects_2_use[row])
+                        self.meas.change_magvar( magvar=magvar, transect_idx=self.checked_transects_idx[row])
 
                     # Update compass tab
                     self.change_table_data(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
@@ -2187,7 +2189,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         if h_offset_dialog.rb_all.isChecked():
                             self.meas.change_h_offset(h_offset=h_offset)
                         else:
-                            self.meas.change_h_offset(h_offset=h_offset, transect_idx=self.transects_2_use[row])
+                            self.meas.change_h_offset(h_offset=h_offset, transect_idx=self.checked_transects_idx[row])
 
                         # Update compass tab
                         self.update_compass_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
@@ -2212,7 +2214,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         if h_source_dialog.rb_all.isChecked():
                             self.meas.change_h_source(h_source=h_source)
                         else:
-                            self.meas.change_h_source(h_source=h_source, transect_idx=self.transects_2_use[row])
+                            self.meas.change_h_source(h_source=h_source, transect_idx=self.checked_transects_idx[row])
 
                         # Update compass tab
                         self.update_compass_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
@@ -2536,7 +2538,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                          temperature=user_temp,
                                          selected=t_source)
                 else:
-                    self.meas.change_sos(transect_idx=self.transects_2_use[row],
+                    self.meas.change_sos(transect_idx=self.checked_transects_idx[row],
                                          parameter='temperatureSrc',
                                          temperature=user_temp,
                                          selected=t_source)
@@ -2562,7 +2564,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     self.meas.change_sos(parameter='salinity',
                                          salinity=salinity)
                 else:
-                    self.meas.change_sos(transect_idx=self.transects_2_use[row],
+                    self.meas.change_sos(transect_idx=self.checked_transects_idx[row],
                                          parameter='salinity',
                                          salinity=salinity)
                 # Update the tempsal tab
@@ -2597,7 +2599,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                          speed=user_sos,
                                          selected=sos_source)
                 else:
-                    self.meas.change_sos(transect_idx=self.transects_2_use[row],
+                    self.meas.change_sos(transect_idx=self.checked_transects_idx[row],
                                          parameter='sosSrc',
                                          speed=user_sos,
                                          selected=sos_source)
@@ -4458,20 +4460,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.cb_depth_vert_cs.setCheckState(QtCore.Qt.Unchecked)
             self.cb_depth_ds_cs.setCheckState(QtCore.Qt.Unchecked)
 
-            # Connect top plot variable checkboxes
-            self.cb_depth_beam1.stateChanged.connect(self.depth_top_plot_change)
-            self.cb_depth_beam2.stateChanged.connect(self.depth_top_plot_change)
-            self.cb_depth_beam3.stateChanged.connect(self.depth_top_plot_change)
-            self.cb_depth_beam4.stateChanged.connect(self.depth_top_plot_change)
-            self.cb_depth_vert.stateChanged.connect(self.depth_top_plot_change)
-            self.cb_depth_ds.stateChanged.connect(self.depth_top_plot_change)
-
-            # Connect bottom plot variable checkboxes
-            self.cb_depth_4beam_cs.stateChanged.connect(self.depth_bottom_plot_change)
-            self.cb_depth_final_cs.stateChanged.connect(self.depth_bottom_plot_change)
-            self.cb_depth_vert_cs.stateChanged.connect(self.depth_bottom_plot_change)
-            self.cb_depth_ds_cs.stateChanged.connect(self.depth_bottom_plot_change)
-
             # Initialize checkbox settings top plot and build depth ref combobox options
             self.cb_depth_beam1.setCheckState(QtCore.Qt.Checked)
             self.cb_depth_beam2.setCheckState(QtCore.Qt.Checked)
@@ -4493,6 +4481,20 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             else:
                 self.cb_depth_ds.setEnabled(False)
                 self.cb_depth_ds_cs.setEnabled(False)
+
+                # Connect top plot variable checkboxes
+                self.cb_depth_beam1.stateChanged.connect(self.depth_top_plot_change)
+                self.cb_depth_beam2.stateChanged.connect(self.depth_top_plot_change)
+                self.cb_depth_beam3.stateChanged.connect(self.depth_top_plot_change)
+                self.cb_depth_beam4.stateChanged.connect(self.depth_top_plot_change)
+                self.cb_depth_vert.stateChanged.connect(self.depth_top_plot_change)
+                self.cb_depth_ds.stateChanged.connect(self.depth_top_plot_change)
+
+                # Connect bottom plot variable checkboxes
+                self.cb_depth_4beam_cs.stateChanged.connect(self.depth_bottom_plot_change)
+                self.cb_depth_final_cs.stateChanged.connect(self.depth_bottom_plot_change)
+                self.cb_depth_vert_cs.stateChanged.connect(self.depth_bottom_plot_change)
+                self.cb_depth_ds_cs.stateChanged.connect(self.depth_bottom_plot_change)
 
             # Connect options
             self.combo_depth_ref.clear()
@@ -6893,6 +6895,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             Python2Matlab.save_matlab_file(self.meas, save_file.full_Name)
         else:
             Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, checked=self.groupings[self.group_idx])
+
+        self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml')
+        QtWidgets.QMessageBox.about(self, "Save", "Files (*_QRev.mat and *_QRev.xml) have been saved.")
 
         # Create a summary of the processed discharges
         discharge = Measurement.mean_discharges(self.meas)

@@ -609,8 +609,9 @@ class TransectData(object):
             start_hour = int(pd0_data.Sensor.time[idx, 0])
             start_min = int(pd0_data.Sensor.time[idx, 1])
             start_sec = int(pd0_data.Sensor.time[idx, 2] + pd0_data.Sensor.time[idx, 3] / 100)
+            start_micro = int(((pd0_data.Sensor.time[idx, 2] + pd0_data.Sensor.time[idx, 3] / 100) - start_sec) * 10**6)
             
-            start_dt = datetime(start_year, start_month, start_day, start_hour, start_min, start_sec)
+            start_dt = datetime(start_year, start_month, start_day, start_hour, start_min, start_sec, start_micro)
             start_serial_time = start_dt.timestamp()
             start_date = datetime.strftime(datetime.fromtimestamp(start_serial_time), '%m/%d/%Y')
             
@@ -626,8 +627,9 @@ class TransectData(object):
             end_hour = int(pd0_data.Sensor.time[idx, 0])
             end_min = int(pd0_data.Sensor.time[idx, 1])
             end_sec = int(pd0_data.Sensor.time[idx, 2] + pd0_data.Sensor.time[idx, 3] / 100)
+            end_micro =int(((pd0_data.Sensor.time[idx, 2] + pd0_data.Sensor.time[idx, 3] / 100) - end_sec) * 10**6)
             
-            end_dt = datetime(end_year, end_month, end_day, end_hour, end_min, end_sec)
+            end_dt = datetime(end_year, end_month, end_day, end_hour, end_min, end_sec, end_micro)
             end_serial_time = end_dt.timestamp()
             
             # Create date/time object
@@ -655,7 +657,8 @@ class TransectData(object):
             Name of SonTek Matlab file not including path.
         """
 
-        self.file_name = file_name
+
+        self.file_name = os.path.basename(file_name)
 
         # ADCP instrument information
         # ---------------------------
@@ -1020,8 +1023,10 @@ class TransectData(object):
             error_str = self.file_name + ' is missing ' + str(number_missing) + ' samples'
             # raise ValueError(error_str)
 
-        start_serial_time = rsdata.System.Time[0] + ((30 * 365) + 7) * 24 * 60 * 60 + 1 + 4 * 60 * 60
-        end_serial_time = rsdata.System.Time[-1] + ((30 * 365) + 7) * 24 * 60 * 60 + 1 + 4 * 60 * 60
+        # start_serial_time = rsdata.System.Time[0] + ((30 * 365) + 7) * 24 * 60 * 60 + 1 + 4 * 60 * 60
+        # end_serial_time = rsdata.System.Time[-1] + ((30 * 365) + 7) * 24 * 60 * 60 + 1 + 4 * 60 * 60
+        start_serial_time = rsdata.System.Time[0] + ((30 * 365) + 7) * 24 * 60 * 60 + 4 * 60 * 60
+        end_serial_time = rsdata.System.Time[-1] + ((30 * 365) + 7) * 24 * 60 * 60  + 4 * 60 * 60
         meas_date = datetime.strftime(datetime.fromtimestamp(start_serial_time), '%m/%d/%Y')
         self.date_time = DateTime()
         self.date_time.populate_data(date_in=meas_date,

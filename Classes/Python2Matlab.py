@@ -36,7 +36,11 @@ class Python2Matlab(object):
 
         # Convert Python data structure to Matlab
         self.matlab_dict['stationName'] = meas_mat.station_name
+        if self.matlab_dict['stationName'] is None:
+            self.matlab_dict['stationName'] = ''
         self.matlab_dict['stationNumber'] = meas_mat.station_number
+        if self.matlab_dict['stationNumber'] is None:
+            self.matlab_dict['stationNumber'] = ''
         self.matlab_dict['processing'] = meas_mat.processing
         self.matlab_dict['extTempChk'] = meas_mat.ext_temp_chk
         self.matlab_dict['initialSettings'] = meas_mat.initial_settings

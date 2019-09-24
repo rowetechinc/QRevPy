@@ -1324,9 +1324,9 @@ class WaterData(object):
         self.v_processed_mps[np.logical_not(valid)] = np.nan
 
         # Find cells with invalid data
-        rows, cols = np.where(np.abs(valid) == 0)
+        valid_cells = np.equal(self.valid_data[6, :, :], valid)
 
-        if len(rows) > 0:
+        if not np.all(valid_cells):
             # Data needed for interpolation
             distance_along_shiptrack = transect.boat_vel.compute_boat_track(transect)['distance_m']
             depth_selected = getattr(transect.depths, transect.depths.selected)

@@ -343,8 +343,8 @@ def abba_idw_interpolation(data_list, valid_data, cells_above_sl, y_centers, y_c
     # Initialize output list
     interpolated_data = [[] for _ in range(len(data_list))]
 
-    valid_cells = np.flatnonzero(valid_data[0, :])
-    if len(valid_cells) > 0:
+    valid_cells = np.equal(cells_above_sl, valid_data)
+    if not np.all(valid_cells):
         # Find neighbors associated with each target
         interpolation_points = find_neighbors(valid_data=valid_data,
                                               cells_above_sl=cells_above_sl,
