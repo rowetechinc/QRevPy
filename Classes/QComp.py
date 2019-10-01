@@ -1565,19 +1565,20 @@ class QComp(object):
                 
         n_mb_tests = len(mb_data)
         n_sta_tests = 0
-        mb_speed = np.array([])
-        near_bed_speed = np.array([])
+        mb_speed = np.array([0])
+        near_bed_speed = np.array([0])
         for n in range(n_mb_tests):
             if (mb_data[n].type == 'Stationary') and mb_data[n].use_2_correct:
                 n_sta_tests += 1
-                mb_speed[n_sta_tests] = mb_data[n].mb_spd_mps
-                near_bed_speed[n_sta_tests] = mb_data.near_bed_speed_mps
+                mb_speed = np.append(mb_speed, mb_data[n].mb_spd_mps)
+                near_bed_speed = np.append(near_bed_speed, mb_data[n].near_bed_speed_mps)
 
         if n_sta_tests > 0:
 
             # Compute linear regression coefficient forcing through zero to relate
             # near-bed velocity to moving-bed velocity
-            corr_coef = np.linalg.solve(near_bed_speed, mb_speed)
+            x = np.vstack([near_bed_speed, np.ones(len(near_bed_speed))]).T
+            corr_coef = np.linalg.solve(x, mb_speed)[0]
 
             # Assing object properties to local variables
             in_transect_idx = trans_data.in_transect_idx

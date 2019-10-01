@@ -5531,6 +5531,11 @@
    <addaction name="actionON"/>
    <addaction name="actionOFF"/>
    <addaction name="separator"/>
+   <addaction name="actionHome"/>
+   <addaction name="actionZoom"/>
+   <addaction name="actionPan"/>
+   <addaction name="actionData_Cursor"/>
+   <addaction name="separator"/>
    <addaction name="actionHelp"/>
   </widget>
   <action name="actionOpen">
@@ -5689,6 +5694,9 @@
    </property>
   </action>
   <action name="actionOFF">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>OFF</string>
    </property>
@@ -5698,6 +5706,66 @@
      <weight>75</weight>
      <bold>true</bold>
     </font>
+   </property>
+  </action>
+  <action name="actionHome">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="dsm.qrc">
+     <normaloff>:/images/24x24/Home.png</normaloff>:/images/24x24/Home.png</iconset>
+   </property>
+   <property name="text">
+    <string>Home</string>
+   </property>
+   <property name="toolTip">
+    <string>Reset zoom / pan</string>
+   </property>
+  </action>
+  <action name="actionZoom">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="dsm.qrc">
+     <normaloff>:/images/images/83.png</normaloff>:/images/images/83.png</iconset>
+   </property>
+   <property name="text">
+    <string>Zoom</string>
+   </property>
+   <property name="toolTip">
+    <string>Zoom rectangle</string>
+   </property>
+  </action>
+  <action name="actionPan">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="dsm.qrc">
+     <normaloff>:/images/24x24/Move.png</normaloff>:/images/24x24/Move.png</iconset>
+   </property>
+   <property name="text">
+    <string>Pan</string>
+   </property>
+   <property name="toolTip">
+    <string>Pan</string>
+   </property>
+  </action>
+  <action name="actionData_Cursor">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="dsm.qrc">
+     <normaloff>:/images/24x24/Info.png</normaloff>:/images/24x24/Info.png</iconset>
+   </property>
+   <property name="text">
+    <string>Data Cursor</string>
+   </property>
+   <property name="toolTip">
+    <string>Data Cursor</string>
    </property>
   </action>
  </widget>

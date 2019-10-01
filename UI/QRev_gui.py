@@ -2,9 +2,10 @@
 
 # Form implementation generated from reading ui file 'QRev_gui.ui'
 #
-# Created by: PyQt5 UI code generator 5.12.2
+# Created by: PyQt5 UI code generator 5.13.1
 #
 # WARNING! All changes made in this file will be lost!
+
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -2947,12 +2948,37 @@ class Ui_MainWindow(object):
         self.actionON.setFont(font)
         self.actionON.setObjectName("actionON")
         self.actionOFF = QtWidgets.QAction(MainWindow)
+        self.actionOFF.setCheckable(False)
         font = QtGui.QFont()
         font.setPointSize(11)
         font.setBold(True)
         font.setWeight(75)
         self.actionOFF.setFont(font)
         self.actionOFF.setObjectName("actionOFF")
+        self.actionHome = QtWidgets.QAction(MainWindow)
+        self.actionHome.setCheckable(False)
+        icon6 = QtGui.QIcon()
+        icon6.addPixmap(QtGui.QPixmap(":/images/24x24/Home.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionHome.setIcon(icon6)
+        self.actionHome.setObjectName("actionHome")
+        self.actionZoom = QtWidgets.QAction(MainWindow)
+        self.actionZoom.setCheckable(True)
+        icon7 = QtGui.QIcon()
+        icon7.addPixmap(QtGui.QPixmap(":/images/images/83.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionZoom.setIcon(icon7)
+        self.actionZoom.setObjectName("actionZoom")
+        self.actionPan = QtWidgets.QAction(MainWindow)
+        self.actionPan.setCheckable(True)
+        icon8 = QtGui.QIcon()
+        icon8.addPixmap(QtGui.QPixmap(":/images/24x24/Move.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionPan.setIcon(icon8)
+        self.actionPan.setObjectName("actionPan")
+        self.actionData_Cursor = QtWidgets.QAction(MainWindow)
+        self.actionData_Cursor.setCheckable(True)
+        icon9 = QtGui.QIcon()
+        icon9.addPixmap(QtGui.QPixmap(":/images/24x24/Info.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionData_Cursor.setIcon(icon9)
+        self.actionData_Cursor.setObjectName("actionData_Cursor")
         self.toolBar.addAction(self.actionOpen)
         self.toolBar.addSeparator()
         self.toolBar.addAction(self.actionSave)
@@ -2973,6 +2999,11 @@ class Ui_MainWindow(object):
         self.toolBar.addAction(self.actionComp_Tracks)
         self.toolBar.addAction(self.actionON)
         self.toolBar.addAction(self.actionOFF)
+        self.toolBar.addSeparator()
+        self.toolBar.addAction(self.actionHome)
+        self.toolBar.addAction(self.actionZoom)
+        self.toolBar.addAction(self.actionPan)
+        self.toolBar.addAction(self.actionData_Cursor)
         self.toolBar.addSeparator()
         self.toolBar.addAction(self.actionHelp)
 
@@ -3249,8 +3280,14 @@ class Ui_MainWindow(object):
         self.actionComp_Tracks.setText(_translate("MainWindow", "Comp Tracks:"))
         self.actionON.setText(_translate("MainWindow", "ON"))
         self.actionOFF.setText(_translate("MainWindow", "OFF"))
-
-
+        self.actionHome.setText(_translate("MainWindow", "Home"))
+        self.actionHome.setToolTip(_translate("MainWindow", "Reset zoom / pan"))
+        self.actionZoom.setText(_translate("MainWindow", "Zoom"))
+        self.actionZoom.setToolTip(_translate("MainWindow", "Zoom rectangle"))
+        self.actionPan.setText(_translate("MainWindow", "Pan"))
+        self.actionPan.setToolTip(_translate("MainWindow", "Pan"))
+        self.actionData_Cursor.setText(_translate("MainWindow", "Data Cursor"))
+        self.actionData_Cursor.setToolTip(_translate("MainWindow", "Data Cursor"))
 import dsm_rc
 
 

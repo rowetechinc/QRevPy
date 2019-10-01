@@ -65,6 +65,7 @@ class BeamDepths(object):
         self.beam4 = None
         self.vb = None
         self.ds = None
+        self.hover_connection = None
 
     def create(self, transect, units,
                cb_beam1=None,
@@ -252,6 +253,12 @@ class BeamDepths(object):
                 self.fig.ax.invert_xaxis()
                 self.fig.ax.set_xlim(right=-1 * x[-1] * 0.02 * units['L'], left=x[-1] * 1.02 * units['L'])
 
+            self.annot = self.fig.ax.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
+                                              bbox=dict(boxstyle="round", fc="w"),
+                                              arrowprops=dict(arrowstyle="->"))
+
+            self.annot.set_visible(False)
+
             self.canvas.draw()
 
     def change(self):
@@ -305,3 +312,94 @@ class BeamDepths(object):
 
         # Draw canvas
         self.canvas.draw()
+
+    def update_annot(self, ind, plt_ref, ref_label):
+
+        # pos = plt_ref.get_offsets()[ind["ind"][0]]
+        pos = plt_ref._xy[ind["ind"][0]]
+        # Shift annotation box left or right depending on which half of the axis the pos x is located and the
+        # direction of x increasing.
+        if plt_ref.axes.viewLim.intervalx[0] < plt_ref.axes.viewLim.intervalx[1]:
+            if pos[0] < (plt_ref.axes.viewLim.intervalx[0] + plt_ref.axes.viewLim.intervalx[1]) / 2:
+                self.annot._x = -20
+            else:
+                self.annot._x = -80
+        else:
+            if pos[0] < (plt_ref.axes.viewLim.intervalx[0] + plt_ref.axes.viewLim.intervalx[1]) / 2:
+                self.annot._x = -80
+            else:
+                self.annot._x = -20
+
+        # Shift annotation box up or down depending on which half of the axis the pos y is located and the
+        # direction of y increasing.
+        if plt_ref.axes.viewLim.intervaly[0] < plt_ref.axes.viewLim.intervaly[1]:
+            if pos[1] > (plt_ref.axes.viewLim.intervaly[0] + plt_ref.axes.viewLim.intervaly[1]) / 2:
+                self.annot._y = -40
+            else:
+                self.annot._y = 20
+        else:
+            if pos[1] > (plt_ref.axes.viewLim.intervaly[0] + plt_ref.axes.viewLim.intervaly[1]) / 2:
+                self.annot._y = 20
+            else:
+                self.annot._y = -40
+        self.annot.xy = pos
+        text = 'x: {:.2f}, {}: {:.2f}'.format(pos[0], ref_label, pos[1])
+        self.annot.set_text(text)
+
+    def hover(self, event):
+        vis = self.annot.get_visible()
+        if event.inaxes == self.fig.ax:
+            cont_beam1 = False
+            cont_beam2 = False
+            cont_beam3 = False
+            cont_beam4 = False
+            cont_vb = False
+            cont_ds = False
+            if self.beam1 is not None:
+                cont_beam1, ind_beam1 = self.beam1[0].contains(event)
+            if self.beam2 is not None:
+                cont_beam2, ind_beam2 = self.beam2[0].contains(event)
+            if self.beam3 is not None:
+                cont_beam3, ind_beam3 = self.beam3[0].contains(event)
+            if self.beam4 is not None:
+                cont_beam4, ind_beam4 = self.beam4[0].contains(event)
+            if self.vb is not None:
+                cont_vb, ind_vb = self.vb[0].contains(event)
+            if self.ds is not None:
+                cont_ds, ind_ds = self.ds[0].contains(event)
+            if cont_beam1 and self.beam1[0].get_visible():
+                self.update_annot(ind_beam1, self.beam1[0], 'B1')
+                self.annot.set_visible(True)
+                self.canvas.draw_idle()
+            elif cont_beam2 and self.beam2[0].get_visible():
+                self.update_annot(ind_beam2, self.beam2[0], 'B2')
+                self.annot.set_visible(True)
+                self.canvas.draw_idle()
+            elif cont_beam3 and self.beam3[0].get_visible():
+                self.update_annot(ind_beam3, self.beam3[0], 'B3')
+                self.annot.set_visible(True)
+                self.canvas.draw_idle()
+            if cont_beam4 and self.beam4[0].get_visible():
+                self.update_annot(ind_beam4, self.beam4[0], 'B4')
+                self.annot.set_visible(True)
+                self.canvas.draw_idle()
+            elif cont_vb and self.vb[0].get_visible():
+                self.update_annot(ind_vb, self.vb[0], 'VB')
+                self.annot.set_visible(True)
+                self.canvas.draw_idle()
+            elif cont_ds and self.ds[0].get_visible():
+                self.update_annot(ind_ds, self.ds[0], 'VTG')
+                self.annot.set_visible(True)
+                self.canvas.draw_idle()
+            else:
+                if vis:
+                    self.annot.set_visible(False)
+                    self.canvas.draw_idle()
+
+    def set_hover_connection(self, setting):
+
+        if setting and self.hover_connection is None:
+            self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
+        elif not setting:
+            self.canvas.mpl_disconnect(self.hover_connection)
+            self.hover_connection = None

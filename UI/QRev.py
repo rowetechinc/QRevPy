@@ -43,6 +43,7 @@ from UI.EdgeDist import EdgeDist
 from UI.EdgeEns import EdgeEns
 from UI.MplCanvas import MplCanvas
 from contextlib import contextmanager
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import time
 import os
 
@@ -96,6 +97,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.actionOFF.triggered.connect(self.comp_tracks_off)
         self.actionON.triggered.connect(self.comp_tracks_on)
         self.actionOptions.triggered.connect(self.qrev_options)
+        self.actionData_Cursor.triggered.connect(self.data_cursor)
+        self.actionHome.triggered.connect(self.home)
+        self.actionZoom.triggered.connect(self.zoom)
+        self.actionPan.triggered.connect(self.pan)
+
+        self.figs = []
+        self.canvases = []
+        self.toolbars = []
 
         # Connect a change in tab to display to the tab manager
         self.tab_all.currentChanged.connect(self.tab_manager)
@@ -3054,16 +3063,17 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                                               QtWidgets.QMessageBox.Ok,
                                                               QtWidgets.QMessageBox.Ok)
 
-            # If changes were made reprocess the measurement
-            if reprocess_measurement:
-                self.meas.compute_discharge()
-                self.meas.uncertainty.compute_uncertainty(self.meas)
-                self.meas.qa.moving_bed_qa(self.meas)
-            self.change = True
-
         # Data to plot
         elif column == 2:
-           self.mb_plots(idx=row)
+            self.mb_plots(idx=row)
+            reprocess_measurement = False
+
+        # If changes were made reprocess the measurement
+        if reprocess_measurement:
+           self.meas.compute_discharge()
+           self.meas.uncertainty.compute_uncertainty(self.meas)
+           self.meas.qa.moving_bed_qa(self.meas)
+        self.change = True
 
         self.update_mb_table()
         # self.mb_plots(idx=0)
@@ -3303,6 +3313,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.bt_plots()
         self.bt_comments_messages()
 
+        # Setup lists for use by graphics controls
+        self.canvases = [self.bt_shiptrack_canvas, self.bt_top_canvas, self.bt_bottom_canvas]
+        self.figs = [self.bt_shiptrack_fig, self.bt_top_fig, self.bt_bottom_fig]
+        self.toolbars = [self.bt_shiptrack_toolbar, self.bt_top_toolbar, self.bt_bottom_toolbar]
+
         if not self.bt_initialized:
             tbl.cellClicked.connect(self.bt_table_clicked)
 
@@ -3468,6 +3483,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.bt_boat_speed()
             self.bt_filter_plots()
 
+            # Update list of figs
+            self.figs = [self.bt_shiptrack_fig, self.bt_top_fig, self.bt_bottom_fig]
+
+            # Reset data cursor to work with new figure
+            if self.actionData_Cursor.isChecked():
+                self.data_cursor()
+
     def bt_shiptrack(self):
         """Creates shiptrack plot for data in transect.
         """
@@ -3482,6 +3504,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.bt_shiptrack_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.bt_shiptrack_toolbar = NavigationToolbar(self.bt_shiptrack_canvas, self)
+            self.bt_shiptrack_toolbar.hide()
 
         # Initialize the shiptrack figure and assign to the canvas
         self.bt_shiptrack_fig = Shiptrack(canvas=self.bt_shiptrack_canvas)
@@ -3512,6 +3537,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.bt_bottom_canvas)
+            self.bt_bottom_toolbar = NavigationToolbar(self.bt_bottom_canvas, self)
+            self.bt_bottom_toolbar.hide()
 
         # Initialize the boat speed figure and assign to the canvas
         self.bt_bottom_fig = BoatSpeed(canvas=self.bt_bottom_canvas)
@@ -3527,13 +3554,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Draw canvas
         self.bt_bottom_canvas.draw()
 
-    @QtCore.pyqtSlot()
-    def bt_radiobutton_control(self):
-
-        with self.wait_cursor():
-            if self.sender().isChecked():
-                self.bt_filter_plots()
-
     def bt_filter_plots(self):
         """Creates plots of filter characteristics.
         """
@@ -3548,6 +3568,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.bt_top_canvas)
+            self.bt_top_toolbar = NavigationToolbar(self.bt_top_canvas, self)
+            self.bt_top_toolbar.hide()
 
         # Initialize the boat speed figure and assign to the canvas
         self.bt_top_fig = BTFilters(canvas=self.bt_top_canvas)
@@ -3566,8 +3588,21 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.bt_top_fig.create(transect=self.transect,
                                    units=self.units, selected='other')
 
+        # Update list of figs
+        self.figs = [self.bt_shiptrack_fig, self.bt_top_fig, self.bt_bottom_fig]
+
+        # Reset data cursor to work with new figure
+        if self.actionData_Cursor.isChecked():
+            self.data_cursor()
         # Draw canvas
         self.bt_top_canvas.draw()
+
+    @QtCore.pyqtSlot()
+    def bt_radiobutton_control(self):
+
+        with self.wait_cursor():
+            if self.sender().isChecked():
+                self.bt_filter_plots()
 
     def bt_table_clicked(self, row, column):
         """Changes plotted data to the transect of the transect clicked.
@@ -3869,6 +3904,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.gps_plots()
         self.gps_comments_messages()
 
+        # Setup lists for use by graphics controls
+        self.canvases = [self.gps_shiptrack_canvas, self.gps_top_canvas, self.gps_bottom_canvas]
+        self.figs = [self.gps_shiptrack_fig, self.gps_top_fig, self.gps_bottom_fig]
+        self.toolbars = [self.gps_shiptrack_toolbar, self.gps_top_toolbar, self.gps_bottom_toolbar]
+
         if not self.gps_initialized:
             tbl.cellClicked.connect(self.gps_table_clicked)
             # Connect plot variable checkboxes
@@ -4072,6 +4112,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.gps_boat_speed()
             self.gps_filter_plots()
 
+            # Update list of figs
+            self.figs = [self.gps_shiptrack_fig, self.gps_top_fig, self.gps_bottom_fig]
+
+            # Reset data cursor to work with new data plot
+            if self.actionData_Cursor.isChecked():
+                self.data_cursor()
+
     def gps_shiptrack(self):
         """Creates shiptrack plot for data in transect.
         """
@@ -4086,6 +4133,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.gps_shiptrack_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.gps_shiptrack_toolbar = NavigationToolbar(self.gps_shiptrack_canvas, self)
+            self.gps_shiptrack_toolbar.hide()
 
         # Initialize the shiptrack figure and assign to the canvas
         self.gps_shiptrack_fig = Shiptrack(canvas=self.gps_shiptrack_canvas)
@@ -4116,6 +4166,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.gps_bottom_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.gps_bottom_toolbar = NavigationToolbar(self.gps_bottom_canvas, self)
+            self.gps_bottom_toolbar.hide()
 
         # Initialize the boat speed figure and assign to the canvas
         self.gps_bottom_fig = BoatSpeed(canvas=self.gps_bottom_canvas)
@@ -4152,6 +4205,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.gps_top_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.gps_top_toolbar = NavigationToolbar(self.gps_top_canvas, self)
+            self.gps_top_toolbar.hide()
+
 
         # Initialize the boat speed figure and assign to the canvas
         self.gps_top_fig = GPSFilters(canvas=self.gps_top_canvas)
@@ -4172,6 +4229,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         elif self.rb_gps_sats.isChecked():
             self.gps_top_fig.create(transect=self.transect,
                                    units=self.units, selected='sats')
+
+        # Update list of figs
+        self.figs = [self.gps_shiptrack_fig, self.gps_top_fig, self.gps_bottom_fig]
+
+        # Reset data cursor to work with new data plot
+        if self.actionData_Cursor.isChecked():
+            self.data_cursor()
 
         # Draw canvas
         self.gps_top_canvas.draw()
@@ -4547,6 +4611,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.depth_plots()
         self.depth_comments_messages()
 
+        # Setup list for use by graphics controls
+        self.canvases = [self.depth_top_canvas, self.depth_bottom_canvas]
+        self.figs = [self.depth_top_fig, self.depth_bottom_fig]
+        self.toolbars = [self.depth_top_toolbar, self.depth_bottom_toolbar]
+
     def update_depth_table(self, old_discharge, new_discharge):
         """Updates the depth table with new or reprocessed data.
 
@@ -4684,6 +4753,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Update plots
             self.depth_top_plot()
             self.depth_bottom_plot()
+            # Update list of figs
+            self.figs = [self.depth_top_fig, self.depth_bottom_fig]
+
+            # Reset data cursor to work with new figure
+            if self.actionData_Cursor.isChecked():
+                self.data_cursor()
 
     def depth_top_plot(self):
         """Creates top plot containing individual beam depths.
@@ -4699,6 +4774,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.depth_top_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.depth_top_toolbar = NavigationToolbar(self.depth_top_canvas, self)
+            self.depth_top_toolbar.hide()
 
         # Initialize the top figure and assign to the canvas
         self.depth_top_fig = BeamDepths(canvas=self.depth_top_canvas)
@@ -4729,6 +4807,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.depth_bottom_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.depth_bottom_toolbar = NavigationToolbar(self.depth_bottom_canvas, self)
+            self.depth_bottom_toolbar.hide()
 
         # Initialize the bottom figure and assign to the canvas
         self.depth_bottom_fig = CrossSection(canvas=self.depth_bottom_canvas)
@@ -6811,6 +6892,49 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         self.right_edge_st_canvas.draw()
 
+#
+# Graphics controls
+# =================
+    def clear_zphd(self):
+        self.actionData_Cursor.setChecked(False)
+        for fig in self.figs:
+            fig.set_hover_connection(False)
+        if self.actionPan.isChecked():
+            self.actionPan.trigger()
+        if self.actionZoom.isChecked():
+            self.actionZoom.trigger()
+
+    def data_cursor(self):
+        if self.actionData_Cursor.isChecked():
+            for fig in self.figs:
+                if self.actionPan.isChecked():
+                    self.actionPan.trigger()
+                if self.actionZoom.isChecked():
+                    self.actionZoom.trigger()
+                self.actionData_Cursor.setChecked(True)
+                fig.set_hover_connection(True)
+        else:
+            for fig in self.figs:
+                fig.set_hover_connection(False)
+
+    def home(self):
+        for tb in self.toolbars:
+            tb.home()
+
+    def zoom(self):
+        for tb in self.toolbars:
+            tb.zoom()
+        self.actionPan.setChecked(False)
+        self.actionData_Cursor.setChecked(False)
+        self.data_cursor()
+
+    def pan(self):
+        for tb in self.toolbars:
+            tb.pan()
+        self.actionZoom.setChecked(False)
+        self.actionData_Cursor.setChecked(False)
+        self.data_cursor()
+
 # Split functions
 # ==============
     def split_initialization(self, groupings=None, data=None):
@@ -6949,6 +7073,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tab_idx: int
             Index of tab clicked by user
         """
+
+        # Clear zoom, pan, home, data_cursor
+        self.clear_zphd()
 
         if tab_idx is None:
             tab_idx = self.current_tab

@@ -56,6 +56,8 @@ class Shiptrack(object):
         self.gga = None
         self.vtg = None
         self.vectors = None
+        self.vector_ref = None
+        self.hover_connection = None
 
     def create(self, transect, units,
                cb=False, cb_bt=None, cb_gga=None, cb_vtg=None, cb_vectors=None,
@@ -322,6 +324,7 @@ class Shiptrack(object):
         # Compute mean water velocity for each ensemble
         u = transect.w_vel.u_processed_mps
         v = transect.w_vel.v_processed_mps
+        self.vector_ref = transect.w_vel.nav_ref
         u_mean = np.nanmean(u, axis=0)
         v_mean = np.nanmean(v, axis=0)
         if edge_start is not None:
@@ -340,6 +343,13 @@ class Shiptrack(object):
             self.vectors.set_visible(False)
         # qk = ax.quiverkey(quiv_plt, 0.9, 0.9, 1, r'$1 \frac{m}{s}$', labelpos='E',
         #                    coordinates='figure')
+
+        # Initialize annotation for data cursor
+        self.annot = self.fig.ax.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
+                            bbox=dict(boxstyle="round", fc="w"),
+                            arrowprops=dict(arrowstyle="->"))
+
+        self.annot.set_visible(False)
 
         self.canvas.draw()
 
@@ -428,3 +438,78 @@ class Shiptrack(object):
             else:
                 control['vtg'] = False
         return control
+
+    def hover(self, event):
+        vis = self.annot.get_visible()
+        if event.inaxes == self.fig.ax:
+            cont_bt = False
+            cont_gga = False
+            cont_vtg = False
+            if self.bt is not None:
+                cont_bt, ind_bt = self.bt[0].contains(event)
+            if self.gga is not None:
+                cont_gga, ind_gga = self.gga[0].contains(event)
+            if self.vtg is not None:
+                cont_vtg, ind_vtg = self.vtg[0].contains(event)
+
+            if cont_bt and self.bt[0].get_visible():
+                self.update_annot(ind_bt, self.bt[0], self.vectors, 'BT')
+                self.annot.set_visible(True)
+                self.canvas.draw_idle()
+            elif cont_gga and self.gga[0].get_visible():
+                self.update_annot(ind_gga, self.gga[0], self.vectors, 'GGA')
+                self.annot.set_visible(True)
+                self.canvas.draw_idle()
+            elif cont_vtg and self.vtg[0].get_visible():
+                self.update_annot(ind_vtg, self.vtg[0], self.vectors, 'VTG')
+                self.annot.set_visible(True)
+                self.canvas.draw_idle()
+            else:
+                if vis:
+                    self.annot.set_visible(False)
+                    self.canvas.draw_idle()
+
+    def set_hover_connection(self, setting):
+
+        if setting and self.hover_connection is None:
+            self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
+        elif not setting:
+            self.canvas.mpl_disconnect(self.hover_connection)
+            self.hover_connection = None
+
+    def update_annot(self, ind, plt_ref, vector_ref, ref_label):
+
+        # pos = plt_ref.get_offsets()[ind["ind"][0]]
+        pos = plt_ref._xy[ind["ind"][0]]
+        # Shift annotation box left or right depending on which half of the axis the pos x is located and the
+        # direction of x increasing.
+        if plt_ref.axes.viewLim.intervalx[0] < plt_ref.axes.viewLim.intervalx[1]:
+            if pos[0] < (plt_ref.axes.viewLim.intervalx[0] + plt_ref.axes.viewLim.intervalx[1]) / 2:
+                self.annot._x = -20
+            else:
+                self.annot._x = -80
+        else:
+            if pos[0] < (plt_ref.axes.viewLim.intervalx[0] + plt_ref.axes.viewLim.intervalx[1]) / 2:
+                self.annot._x = -80
+            else:
+                self.annot._x = -20
+
+        # Shift annotation box up or down depending on which half of the axis the pos y is located and the
+        # direction of y increasing.
+        if plt_ref.axes.viewLim.intervaly[0] < plt_ref.axes.viewLim.intervaly[1]:
+            if pos[1] > (plt_ref.axes.viewLim.intervaly[0] + plt_ref.axes.viewLim.intervaly[1]) / 2:
+                self.annot._y = -40
+            else:
+                self.annot._y = 20
+        else:
+            if pos[1] > (plt_ref.axes.viewLim.intervaly[0] + plt_ref.axes.viewLim.intervaly[1]) / 2:
+                self.annot._y = 20
+            else:
+                self.annot._y = -40
+        self.annot.xy = pos
+        if self.vector_ref == ref_label:
+            v=np.sqrt(vector_ref.U[ind["ind"][0]]**2 + vector_ref.V[ind["ind"][0]]**2)
+            text = '{} x: {:.2f}, y: {:.2f}, \n v: {:.1f}'.format(ref_label, pos[0], pos[1], v)
+        else:
+            text = '{} x: {:.2f}, y: {:.2f}'.format(ref_label, pos[0], pos[1])
+        self.annot.set_text(text)
