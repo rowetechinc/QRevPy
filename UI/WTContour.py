@@ -29,6 +29,7 @@ class WTContour(object):
         self.canvas = canvas
         self.fig = canvas.fig
         self.units = None
+        self.hover_connection = None
 
     def create(self, transect, units, invalid_data=None, n_ensembles=None, edge_start=None):
         """Create the axes and lines for the figure.
@@ -59,7 +60,10 @@ class WTContour(object):
                                                                                     data_type='Processed',
                                                                                     invalid_data=invalid_data,
                                                                                     n_ensembles = n_ensembles,
-                                                                                    edge_start = edge_start)
+                                                                                   edge_start = edge_start)
+        self.x_plt = x_plt
+        self.cell_plt = cell_plt * self.units['L']
+        self.speed_plt = speed_plt * self.units['V']
         # Determine limits for color map
         max_limit = 0
         min_limit = 0
@@ -71,7 +75,7 @@ class WTContour(object):
         cmap.set_under('white')
 
         # Generate color contour
-        c = self.fig.ax.pcolor(x_plt, cell_plt * units['L'], speed_plt * units['V'], cmap=cmap, vmin=min_limit,
+        c = self.fig.ax.pcolormesh(x_plt, cell_plt * units['L'], speed_plt * units['V'], cmap=cmap, vmin=min_limit,
                                 vmax=max_limit)
 
         # Add color bar and axis labels
@@ -92,6 +96,13 @@ class WTContour(object):
         if transect.start_edge == 'Right':
             self.fig.ax.invert_xaxis()
             self.fig.ax.set_xlim(right=ensembles[0] - len(ensembles) * 0.02, left=ensembles[-1] + len(ensembles) * 0.02)
+
+        # Initialize annotation for data cursor
+        self.annot = self.fig.ax.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
+                                          bbox=dict(boxstyle="round", fc="w"),
+                                          arrowprops=dict(arrowstyle="->"))
+
+        self.annot.set_visible(False)
 
         self.canvas.draw()
     @staticmethod
@@ -227,3 +238,72 @@ class WTContour(object):
             cell_plt[j, :] = cell_depth_xpand[n, :] + 0.5 * cell_size_xpand[n, :]
             speed_plt[j, :] = speed_xpand[n, :]
         return x_plt, cell_plt, speed_plt, ensembles, depth
+
+    def hover(self, event):
+        vis = self.annot.get_visible()
+        if event.inaxes == self.fig.ax:
+            cont_fig = False
+            if self.fig is not None:
+                cont_fig, ind_fig = self.fig.contains(event)
+
+            if cont_fig and self.fig.get_visible():
+                col_idx = int(round(event.xdata * 2))
+                vel = None
+                for n, cell in enumerate(self.cell_plt[:, col_idx]):
+                    if event.ydata < cell:
+                        vel = self.speed_plt[n, col_idx]
+                        break
+
+                self.update_annot(event.xdata, event.ydata, vel)
+                self.annot.set_visible(True)
+                self.canvas.draw_idle()
+            else:
+                if vis:
+                    self.annot.set_visible(False)
+                    self.canvas.draw_idle()
+
+    def set_hover_connection(self, setting):
+
+        if setting and self.hover_connection is None:
+            # self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
+            self.hover_connection = self.canvas.mpl_connect('button_press_event', self.hover)
+        elif not setting:
+            self.canvas.mpl_disconnect(self.hover_connection)
+            self.hover_connection = None
+
+    def update_annot(self, x, y, v):
+
+        plt_ref = self.fig
+        # pos = plt_ref.get_offsets()[ind["ind"][0]]
+        pos = [x, y]
+        # Shift annotation box left or right depending on which half of the axis the pos x is located and the
+        # direction of x increasing.
+        if plt_ref.ax.viewLim.intervalx[0] < plt_ref.ax.viewLim.intervalx[1]:
+            if pos[0] < (plt_ref.ax.viewLim.intervalx[0] + plt_ref.ax.viewLim.intervalx[1]) / 2:
+                self.annot._x = -20
+            else:
+                self.annot._x = -80
+        else:
+            if pos[0] < (plt_ref.ax.viewLim.intervalx[0] + plt_ref.ax.viewLim.intervalx[1]) / 2:
+                self.annot._x = -80
+            else:
+                self.annot._x = -20
+
+        # Shift annotation box up or down depending on which half of the axis the pos y is located and the
+        # direction of y increasing.
+        if plt_ref.ax.viewLim.intervaly[0] < plt_ref.ax.viewLim.intervaly[1]:
+            if pos[1] > (plt_ref.ax.viewLim.intervaly[0] + plt_ref.ax.viewLim.intervaly[1]) / 2:
+                self.annot._y = -40
+            else:
+                self.annot._y = 20
+        else:
+            if pos[1] > (plt_ref.ax.viewLim.intervaly[0] + plt_ref.ax.viewLim.intervaly[1]) / 2:
+                self.annot._y = 20
+            else:
+                self.annot._y = -40
+        self.annot.xy = pos
+        if v is not None and v > -999:
+            text = 'x: {:.2f}, y: {:.2f}, \n v: {:.1f}'.format(int(round(x)), y, v)
+        else:
+            text = 'x: {:.2f}, y: {:.2f}'.format(int(round(x)), y)
+        self.annot.set_text(text)

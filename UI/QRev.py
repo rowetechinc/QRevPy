@@ -186,6 +186,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         else:
             self.actionSave.triggered.connect(self.save_measurement)
 
+        self.showMaximized()
 # Toolbar functions
 # =================
     def select_measurement(self):
@@ -5124,6 +5125,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.wt_plots()
         self.wt_comments_messages()
 
+        # Setup list for use by graphics controls
+        self.canvases = [self.wt_shiptrack_canvas, self.wt_top_canvas, self.wt_bottom_canvas]
+        self.figs = [self.wt_shiptrack_fig, self.wt_top_fig, self.wt_bottom_fig]
+        self.toolbars = [self.wt_shiptrack_toolbar, self.wt_top_toolbar, self.wt_bottom_toolbar]
+
     def update_wt_table(self, old_discharge, new_discharge):
         """Updates the bottom track table with new or reprocessed data.
 
@@ -5272,6 +5278,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.wt_water_speed_contour()
             self.wt_filter_plots()
 
+            # Update list of figs
+            self.figs = [self.wt_shiptrack_fig, self.wt_top_fig, self.wt_bottom_fig]
+
+            # Reset data cursor to work with new figure
+            if self.actionData_Cursor.isChecked():
+                self.data_cursor()
+
     def wt_shiptrack(self):
         """Creates shiptrack plot for data in transect.
         """
@@ -5286,6 +5299,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.wt_shiptrack_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.wt_shiptrack_toolbar = NavigationToolbar(self.wt_shiptrack_canvas, self)
+            self.wt_shiptrack_toolbar.hide()
 
         # Initialize the shiptrack figure and assign to the canvas
         self.wt_shiptrack_fig = Shiptrack(canvas=self.wt_shiptrack_canvas)
@@ -5317,6 +5333,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.wt_bottom_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.wt_bottom_toolbar = NavigationToolbar(self.wt_bottom_canvas, self)
+            self.wt_bottom_toolbar.hide()
 
         # Initialize the boat speed figure and assign to the canvas
         self.wt_bottom_fig = WTContour(canvas=self.wt_bottom_canvas)
@@ -5348,6 +5367,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.wt_top_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.wt_top_toolbar = NavigationToolbar(self.wt_top_canvas, self)
+            self.wt_top_toolbar.hide()
 
         if self.rb_wt_contour.isChecked():
             # Initialize the contour plot
@@ -5385,6 +5407,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Draw canvas
         self.wt_top_canvas.draw()
+
+        # Update list of figs
+        self.figs = [self.wt_shiptrack_fig, self.wt_top_fig, self.wt_bottom_fig]
+
+        # Reset data cursor to work with new figure
+        if self.actionData_Cursor.isChecked():
+            self.data_cursor()
 
     def wt_table_clicked(self, row, column):
         """Changes plotted data to the transect of the transect clicked.
@@ -5714,6 +5743,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             self.extrap_initialized = True
 
+        # Setup list for use by graphics controls
+        self.canvases = [self.extrap_canvas]
+        self.figs = [self.extrap_fig]
+        self.toolbars = [self.extrap_toolbar]
+
     def extrap_update(self):
 
         if self.idx == len(self.meas.extrap_fit.sel_fit) - 1:
@@ -6021,6 +6055,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 layout.setContentsMargins(1, 1, 1, 1)
                 # Add the canvas
                 layout.addWidget(self.extrap_canvas)
+                # Initialize hidden toolbar for use by graphics controls
+                self.extrap_toolbar = NavigationToolbar(self.extrap_canvas, self)
+                self.extrap_toolbar.hide()
 
             # Initialize the figure and assign to the canvas
             self.extrap_fig = ExtrapPlot(canvas=self.extrap_canvas)
@@ -6035,6 +6072,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                    cb_trans_fit=self.cb_extrap_trans_fit.isChecked(),
                                    cb_meas_medians=self.cb_extrap_meas_medians.isChecked(),
                                    cb_meas_fit=self.cb_extrap_meas_fit.isChecked())
+
+            # Update list of figs
+            self.figs = [self.extrap_fig]
+
+            # Reset data cursor to work with new figure
+            if self.actionData_Cursor.isChecked():
+                self.data_cursor()
 
             self.extrap_canvas.draw()
 

@@ -30,6 +30,7 @@ class ExtrapPlot(object):
         self.fig = canvas.fig
         self.meas = None
         self.checked = None
+        self.hover_connection = None
 
     def create(self, meas, checked, idx=-1, data_type='Discharge',
                cb_data=True, cb_surface=False,
@@ -144,6 +145,13 @@ class ExtrapPlot(object):
 
             self.fig.ax.set_ylim(top=1, bottom=0)
             self.fig.ax.set_xlim(left=lower, right=upper)
+
+            # Initialize annotation for data cursor
+            self.annot = self.fig.ax.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
+                                              bbox=dict(boxstyle="round", fc="w"),
+                                              arrowprops=dict(arrowstyle="->"))
+
+            self.annot.set_visible(False)
 
             self.canvas.draw()
 
@@ -289,3 +297,64 @@ class ExtrapPlot(object):
         # Plot data
         self.fig.ax.plot(norm_data.unit_normalized[idx], 1 - norm_data.cell_depth_normalized[idx], marker='o',
                          markerfacecolor='g', linestyle='None', markersize=2)
+
+    def hover(self, event):
+        vis = self.annot.get_visible()
+        if event.inaxes == self.fig.ax:
+            cont_fig = False
+            if self.fig is not None:
+                cont_fig, ind_fig = self.fig.contains(event)
+
+            if cont_fig and self.fig.get_visible():
+                self.update_annot(event.xdata, event.ydata)
+                self.annot.set_visible(True)
+                self.canvas.draw_idle()
+            else:
+                if vis:
+                    self.annot.set_visible(False)
+                    self.canvas.draw_idle()
+
+    def set_hover_connection(self, setting):
+
+        if setting and self.hover_connection is None:
+            # self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
+            self.hover_connection = self.canvas.mpl_connect('button_press_event', self.hover)
+        elif not setting:
+            self.canvas.mpl_disconnect(self.hover_connection)
+            self.hover_connection = None
+
+    def update_annot(self, x, y):
+
+        plt_ref = self.fig
+        # pos = plt_ref.get_offsets()[ind["ind"][0]]
+        pos = [x, y]
+        # Shift annotation box left or right depending on which half of the axis the pos x is located and the
+        # direction of x increasing.
+        if plt_ref.ax.viewLim.intervalx[0] < plt_ref.ax.viewLim.intervalx[1]:
+            if pos[0] < (plt_ref.ax.viewLim.intervalx[0] + plt_ref.ax.viewLim.intervalx[1]) / 2:
+                self.annot._x = -20
+            else:
+                self.annot._x = -80
+        else:
+            if pos[0] < (plt_ref.ax.viewLim.intervalx[0] + plt_ref.ax.viewLim.intervalx[1]) / 2:
+                self.annot._x = -80
+            else:
+                self.annot._x = -20
+
+        # Shift annotation box up or down depending on which half of the axis the pos y is located and the
+        # direction of y increasing.
+        if plt_ref.ax.viewLim.intervaly[0] < plt_ref.ax.viewLim.intervaly[1]:
+            if pos[1] > (plt_ref.ax.viewLim.intervaly[0] + plt_ref.ax.viewLim.intervaly[1]) / 2:
+                self.annot._y = -40
+            else:
+                self.annot._y = 20
+        else:
+            if pos[1] > (plt_ref.ax.viewLim.intervaly[0] + plt_ref.ax.viewLim.intervaly[1]) / 2:
+                self.annot._y = 20
+            else:
+                self.annot._y = -40
+        self.annot.xy = pos
+
+        text = 'x: {:.2f}, y: {:.2f}'.format(x, y)
+
+        self.annot.set_text(text)

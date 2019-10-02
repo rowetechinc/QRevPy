@@ -472,7 +472,8 @@ class Shiptrack(object):
     def set_hover_connection(self, setting):
 
         if setting and self.hover_connection is None:
-            self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
+            # self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
+            self.hover_connection = self.canvas.mpl_connect('button_press_event', self.hover)
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)
             self.hover_connection = None
