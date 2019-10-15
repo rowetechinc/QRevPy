@@ -27,6 +27,7 @@ class StationaryGraphs(object):
 
         self.canvas = canvas
         self.fig = canvas.fig
+        self.hover_connection = None
 
     def create(self, mb_test, units):
         """Generates a moving-bed time series and upstream/downstream bottom track plot from stationary moving-bed
@@ -62,8 +63,8 @@ class StationaryGraphs(object):
         if np.any(valid_data):
             invalid_data = np.logical_not(valid_data)
             ensembles = np.arange(1, len(valid_data) + 1)
-            self.fig.axmb.plot(ensembles, mb_test.stationary_mb_vel * units['V'], 'b-')
-            self.fig.axmb.plot(ensembles[invalid_data], mb_test.stationary_mb_vel[invalid_data] * units['V'], 'ro')
+            self.mb = self.fig.axmb.plot(ensembles, mb_test.stationary_mb_vel * units['V'], 'b-')
+            self.mb.append(self.fig.axmb.plot(ensembles[invalid_data], mb_test.stationary_mb_vel[invalid_data] * units['V'], 'ro')[0])
 
             # Generate upstream/cross stream shiptrack
             self.fig.axstud = self.fig.add_subplot(gs[0, 1])
@@ -75,7 +76,22 @@ class StationaryGraphs(object):
             self.fig.axstud.axis('equal')
             self.fig.axstud.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
 
-            self.fig.axstud.plot(mb_test.stationary_cs_track * units['L'], mb_test.stationary_us_track * units['L'], 'r-')
+            self.stud = self.fig.axstud.plot(mb_test.stationary_cs_track * units['L'], mb_test.stationary_us_track * units['L'], 'r-')
+
+            # Initialize annotation for data cursor
+            self.annot_mb = self.fig.axmb.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
+                                              bbox=dict(boxstyle="round", fc="w"),
+                                              arrowprops=dict(arrowstyle="->"))
+
+            self.annot_mb.set_visible(False)
+
+            # Initialize annotation for data cursor
+            self.annot_stud = self.fig.axstud.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
+                                              bbox=dict(boxstyle="round", fc="w"),
+                                              arrowprops=dict(arrowstyle="->"))
+
+            self.annot_stud.set_visible(False)
+
 
             self.canvas.draw()
 
@@ -84,3 +100,74 @@ class StationaryGraphs(object):
         to allow interchangable use.
         """
         pass
+
+    def update_annot(self, ind, plt_ref, annot):
+
+        # pos = plt_ref.get_offsets()[ind["ind"][0]]
+        pos = plt_ref._xy[ind["ind"][0]]
+        # Shift annotation box left or right depending on which half of the axis the pos x is located and the
+        # direction of x increasing.
+        if plt_ref.axes.viewLim.intervalx[0] < plt_ref.axes.viewLim.intervalx[1]:
+            if pos[0] < (plt_ref.axes.viewLim.intervalx[0] + plt_ref.axes.viewLim.intervalx[1]) / 2:
+                annot._x = -20
+            else:
+                annot._x = -80
+        else:
+            if pos[0] < (plt_ref.axes.viewLim.intervalx[0] + plt_ref.axes.viewLim.intervalx[1]) / 2:
+                annot._x = -80
+            else:
+                annot._x = -20
+
+        # Shift annotation box up or down depending on which half of the axis the pos y is located and the
+        # direction of y increasing.
+        if plt_ref.axes.viewLim.intervaly[0] < plt_ref.axes.viewLim.intervaly[1]:
+            if pos[1] > (plt_ref.axes.viewLim.intervaly[0] + plt_ref.axes.viewLim.intervaly[1]) / 2:
+                annot._y = -40
+            else:
+                annot._y = 20
+        else:
+            if pos[1] > (plt_ref.axes.viewLim.intervaly[0] + plt_ref.axes.viewLim.intervaly[1]) / 2:
+                annot._y = 20
+            else:
+                annot._y = -40
+        annot.xy = pos
+        text = 'x: {:.2f}, y: {:.2f}'.format(pos[0], pos[1])
+        annot.set_text(text)
+
+    def hover(self, event):
+        vis_mb = self.annot_mb.get_visible()
+        vis_stud = self.annot_stud.get_visible()
+        if event.inaxes == self.fig.axmb:
+            cont_mb = False
+            if self.mb is not None:
+                cont_mb, ind_mb = self.mb[0].contains(event)
+            if cont_mb and self.mb[0].get_visible():
+                self.update_annot(ind_mb, self.mb[0], self.annot_mb)
+                self.annot_mb.set_visible(True)
+                self.canvas.draw_idle()
+            else:
+                if vis_mb:
+                    self.annot_mb.set_visible(False)
+                    self.canvas.draw_idle()
+        elif event.inaxes == self.fig.axstud:
+            cont_stud = False
+            if self.stud is not None:
+                cont_stud, ind_stud = self.stud[0].contains(event)
+            if cont_stud and self.stud[0].get_visible():
+                self.update_annot(ind_stud, self.stud[0], self.annot_stud)
+                self.annot_stud.set_visible(True)
+                self.canvas.draw_idle()
+            else:
+                if vis_stud:
+                    self.annot_stud.set_visible(False)
+                    self.canvas.draw_idle()
+
+
+    def set_hover_connection(self, setting):
+
+        if setting and self.hover_connection is None:
+            # self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
+            self.hover_connection = self.canvas.mpl_connect('button_press_event', self.hover)
+        elif not setting:
+            self.canvas.mpl_disconnect(self.hover_connection)
+            self.hover_connection = None

@@ -105,6 +105,7 @@ class WTContour(object):
         self.annot.set_visible(False)
 
         self.canvas.draw()
+
     @staticmethod
     def color_contour_data_prep(transect, data_type='Processed', invalid_data=None, n_ensembles=None, edge_start=None):
         """Modifies the selected data from transect into arrays matching the meshgrid format for
@@ -247,7 +248,7 @@ class WTContour(object):
                 cont_fig, ind_fig = self.fig.contains(event)
 
             if cont_fig and self.fig.get_visible():
-                col_idx = int(round(event.xdata * 2))
+                col_idx = (int(round(event.xdata)) - int(round(self.fig.ax.viewLim.x0))) * 2
                 vel = None
                 for n, cell in enumerate(self.cell_plt[:, col_idx]):
                     if event.ydata < cell:

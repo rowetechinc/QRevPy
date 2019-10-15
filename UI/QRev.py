@@ -29,6 +29,9 @@ from UI.ShipTrack import Shiptrack
 from UI.BoatSpeed import BoatSpeed
 from UI.BeamDepths import BeamDepths
 from UI.Draft import Draft
+from UI.TemperatureTS import TemperatureTS
+from UI.HeadingTS import HeadingTS
+from UI.PRTS import PRTS
 from UI.CrossSection import CrossSection
 from UI.StationaryGraphs import StationaryGraphs
 from UI.BTFilters import BTFilters
@@ -1834,6 +1837,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.update_compass_tab(tbl=tbl, old_discharge=self.meas.discharge,
                                 new_discharge=self.meas.discharge, initial=0)
 
+        # Setup list for use by graphics controls
+        self.canvases = [self.heading_canvas, self.pr_canvas]
+        self.figs = [self.heading_fig, self.pr_fig]
+        self.toolbars = [self.heading_toolbar, self.pr_toolbar]
+
         for transect_idx in self.checked_transects_idx:
             if self.meas.transects[transect_idx].sensors.heading_deg.internal.mag_error is not None:
                 self.cb_mag_field.setEnabled(True)
@@ -2161,6 +2169,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.item(row, 0).setCheckState(QtCore.Qt.Checked)
             self.compass_plot()
             self.pr_plot()
+            self.figs = [self.heading_fig, self.pr_fig]
 
         # Magnetic variation
         if column == 1:
@@ -2283,49 +2292,66 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Generates the graph of heading and magnetic change.
         """
 
-        # If figure already exists update it. If not, create it.
-        if hasattr(self, 'heading_mpl'):
-            self.heading_mpl.fig.clear()
-            self.heading_mpl.heading_plot(qrev=self)
-
-        else:
+        if not hasattr(self, 'heading_canvas'):
+            # Create the canvas
+            self.heading_canvas = MplCanvas(self.graph_heading, width=6, height=2, dpi=80)
             # Assign layout to widget to allow auto scaling
             layout = QtWidgets.QVBoxLayout(self.graph_heading)
-
             # Adjust margins of layout to maximize graphic area
             layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.heading_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.heading_toolbar = NavigationToolbar(self.heading_canvas, self)
+            self.heading_toolbar.hide()
 
-            # Create graph
-            self.heading_mpl = Qtmpl(self.graphics_main_timeseries, width=6, height=2, dpi=80)
-            self.heading_mpl.heading_plot(qrev=self)
-            layout.addWidget(self.heading_mpl)
+            # Initialize the temperature figure and assign to the canvas
+        self.heading_fig = HeadingTS(canvas=self.heading_canvas)
+        # Create the figure with the specified data
+        self.heading_fig.create(meas=self.meas,
+                                checked=self.checked_transects_idx,
+                                tbl=self.table_compass_pr,
+                                cb_internal=self.cb_adcp_compass,
+                                cb_external=self.cb_ext_compass,
+                                cb_merror=self.cb_mag_field)
+        if len(self.figs) > 0:
+            self.figs[0] = self.heading_fig
+
+        self.clear_zphd()
 
         # Draw canvas
-        self.heading_mpl.draw()
+        self.heading_canvas.draw()
 
     def pr_plot(self):
         """Generates the graph of heading and magnetic change.
         """
 
-        # If figure already exists update it. If not, create it.
-        if hasattr(self, 'pr_mpl'):
-            self.pr_mpl.fig.clear()
-            self.pr_mpl.pr_plot(qrev=self)
-
-        else:
+        if not hasattr(self, 'pr_canvas'):
+            # Create the canvas
+            self.pr_canvas = MplCanvas(self.graph_pr, width=6, height=2, dpi=80)
             # Assign layout to widget to allow auto scaling
             layout = QtWidgets.QVBoxLayout(self.graph_pr)
-
             # Adjust margins of layout to maximize graphic area
             layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.pr_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.pr_toolbar = NavigationToolbar(self.pr_canvas, self)
+            self.pr_toolbar.hide()
 
-            # Create graph
-            self.pr_mpl = Qtmpl(self.graphics_main_timeseries, width=4, height=2, dpi=80)
-            self.pr_mpl.pr_plot(qrev=self)
-            layout.addWidget(self.pr_mpl)
+            # Initialize the temperature figure and assign to the canvas
+        self.pr_fig = PRTS(canvas=self.pr_canvas)
+        # Create the figure with the specified data
+        self.pr_fig.create(meas=self.meas,
+                           checked=self.checked_transects_idx,
+                           tbl=self.table_compass_pr,
+                           cb_pitch=self.cb_pitch,
+                           cb_roll=self.cb_roll)
+
+        self.clear_zphd()
 
         # Draw canvas
-        self.pr_mpl.draw()
+        self.pr_canvas.draw()
 
 # Temperature & Salinity Tab
 # ==========================
@@ -2378,8 +2404,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.pb_adcp_temp_apply.clicked.connect(self.apply_adcp_temp)
             self.ed_user_temp.textChanged.connect(self.user_temp_changed)
             self.ed_adcp_temp.textChanged.connect(self.adcp_temp_changed)
-
             self.tempsal_initialized = True
+
+        self.canvases = [self.tts_canvas]
+        self.toolbars = [self.tts_toolbar]
+        self.figs = [self.tts_fig]
 
     def update_tempsal_tab(self, tbl, old_discharge, new_discharge):
         """Updates all data displayed on the tempsal tab.
@@ -2646,26 +2675,50 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     def plot_temperature(self):
         """Generates the graph of temperature.
         """
-
-        # If figure already exists update it. If not, create it.
-        if hasattr(self, 'temperature_mpl'):
-            self.temperature_mpl.fig.clear()
-            self.temperature_mpl.temperature_plot(qrev=self)
-
-        else:
+        if not hasattr(self, 'tts_canvas'):
+            # Create the canvas
+            self.tts_canvas = MplCanvas(self.graph_temperature, width=4, height=2, dpi=80)
             # Assign layout to widget to allow auto scaling
             layout = QtWidgets.QVBoxLayout(self.graph_temperature)
-
             # Adjust margins of layout to maximize graphic area
             layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.tts_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.tts_toolbar = NavigationToolbar(self.tts_canvas, self)
+            self.tts_toolbar.hide()
 
-            # Create plot
-            self.temperature_mpl = Qtmpl(self.graphics_main_timeseries, width=4, height=2, dpi=80)
-            self.temperature_mpl.temperature_plot(qrev=self)
-            layout.addWidget(self.temperature_mpl)
+        # Initialize the temperature figure and assign to the canvas
+        self.tts_fig = TemperatureTS(canvas=self.tts_canvas)
+        # Create the figure with the specified data
+        self.tts_fig.create(meas=self.meas,
+                            units=self.units,
+                            rb_f=self.rb_f)
 
         # Draw canvas
-        self.temperature_mpl.draw()
+        self.tts_canvas.draw()
+
+
+
+        # # If figure already exists update it. If not, create it.
+        # if hasattr(self, 'temperature_mpl'):
+        #     self.temperature_mpl.fig.clear()
+        #     self.temperature_mpl.temperature_plot(qrev=self)
+        #
+        # else:
+        #     # Assign layout to widget to allow auto scaling
+        #     layout = QtWidgets.QVBoxLayout(self.graph_temperature)
+        #
+        #     # Adjust margins of layout to maximize graphic area
+        #     layout.setContentsMargins(1, 1, 1, 1)
+        #
+        #     # Create plot
+        #     self.temperature_mpl = Qtmpl(self.graphics_main_timeseries, width=4, height=2, dpi=80)
+        #     self.temperature_mpl.temperature_plot(qrev=self)
+        #     layout.addWidget(self.temperature_mpl)
+        #
+        # # Draw canvas
+        # self.temperature_mpl.draw()
 
     def change_temp_units(self):
         """Updates the display when the user changes the temperature units. Note: changing the units does not
@@ -3109,6 +3162,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.cb_mb_vtg.setEnabled(False)
             self.cb_mb_vectors.setEnabled(False)
 
+        # Setup list for use by graphics controls
+        self.canvases = [self.mb_shiptrack_canvas, self.mb_ts_canvas]
+        self.figs = [self.mb_shiptrack_fig, self.mb_ts_fig]
+        self.toolbars = [self.mb_shiptrack_toolbar, self.mb_ts_toolbar]
+
+        # Reset data cursor to work with new figure
+        if self.actionData_Cursor.isChecked():
+            self.data_cursor()
+
     def mb_shiptrack(self, transect):
         """Creates shiptrack plot for data in transect.
 
@@ -3128,6 +3190,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.mb_shiptrack_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.mb_shiptrack_toolbar = NavigationToolbar(self.mb_shiptrack_canvas, self)
+            self.mb_shiptrack_toolbar.hide()
 
         # Initialize the shiptrack figure and assign to the canvas
         self.mb_shiptrack_fig = Shiptrack(canvas=self.mb_shiptrack_canvas)
@@ -3162,6 +3227,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.mb_ts_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.mb_ts_toolbar = NavigationToolbar(self.mb_ts_canvas, self)
+            self.mb_ts_toolbar.hide()
 
         # Initialize the boat speed figure and assign to the canvas
         self.mb_ts_fig = BoatSpeed(canvas=self.mb_ts_canvas)
@@ -3195,6 +3263,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add canvas
             layout.addWidget(self.mb_ts_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.mb_ts_toolbar = NavigationToolbar(self.mb_ts_canvas, self)
+            self.mb_ts_toolbar.hide()
 
         # Initialize the stationary figure and assign to the canvas
         self.mb_ts_fig = StationaryGraphs(canvas=self.mb_ts_canvas)
@@ -6374,6 +6445,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         self.edges_graphics()
 
+        # Setup list for use by graphics controls
+        self.canvases = [self.left_edge_contour_canvas, self.right_edge_contour_canvas, self.left_edge_st_canvas,
+                         self.right_edge_st_canvas]
+        self.figs = [self.left_edge_contour_fig, self.right_edge_contour_fig, self.left_edge_st_fig,
+                     self.right_edge_st_fig]
+        self.toolbars = [self.left_edge_contour_toolbar, self.right_edge_contour_toolbar, self.left_edge_st_toolbar,
+                         self.right_edge_st_toolbar]
+
     def update_edges_table(self):
 
         with self.wait_cursor():
@@ -6757,6 +6836,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.edge_shiptrack_plots()
         self.edge_contour_plots()
 
+        self.figs = [self.left_edge_contour_fig, self.right_edge_contour_fig, self.left_edge_st_fig,
+                     self.right_edge_st_fig]
+
     def edge_contour_plots(self):
         transect = self.meas.transects[self.checked_transects_idx[self.idx]]
 
@@ -6777,6 +6859,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.left_edge_contour_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.left_edge_contour_toolbar = NavigationToolbar(self.left_edge_contour_canvas, self)
+            self.left_edge_contour_toolbar.hide()
 
         # Initialize the boat speed figure and assign to the canvas
         self.left_edge_contour_fig = WTContour(canvas=self.left_edge_contour_canvas)
@@ -6810,6 +6895,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.right_edge_contour_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.right_edge_contour_toolbar = NavigationToolbar(self.right_edge_contour_canvas, self)
+            self.right_edge_contour_toolbar.hide()
 
         # Initialize the boat speed figure and assign to the canvas
         self.right_edge_contour_fig = WTContour(canvas=self.right_edge_contour_canvas)
@@ -6845,6 +6933,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.left_edge_st_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.left_edge_st_toolbar = NavigationToolbar(self.left_edge_st_canvas, self)
+            self.left_edge_st_toolbar.hide()
 
         # Initialize the shiptrack figure and assign to the canvas
         self.left_edge_st_fig = Shiptrack(canvas=self.left_edge_st_canvas)
@@ -6899,6 +6990,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             layout.setContentsMargins(1, 1, 1, 1)
             # Add the canvas
             layout.addWidget(self.right_edge_st_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.right_edge_st_toolbar = NavigationToolbar(self.right_edge_st_canvas, self)
+            self.right_edge_st_toolbar.hide()
 
         # Initialize the shiptrack figure and assign to the canvas
         self.right_edge_st_fig = Shiptrack(canvas=self.right_edge_st_canvas)
@@ -6936,7 +7030,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         self.right_edge_st_canvas.draw()
 
-#
 # Graphics controls
 # =================
     def clear_zphd(self):
