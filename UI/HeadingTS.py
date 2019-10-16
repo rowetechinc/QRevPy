@@ -15,6 +15,8 @@ class HeadingTS(object):
         Reference to internal compass time series plot
     merror: list
         Reference to magnetic error time series plot
+    row_index: list
+        List of rows from the table that are plotted
     hover_connection: bool
         Switch to allow user to use the data cursor
     """

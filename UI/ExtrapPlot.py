@@ -35,7 +35,7 @@ class ExtrapPlot(object):
     def create(self, meas, checked, idx=-1, data_type='Discharge',
                cb_data=True, cb_surface=False,
                cb_trans_medians=False, cb_trans_fit=False,
-               cb_meas_medians=True, cb_meas_fit=True):
+               cb_meas_medians=True, cb_meas_fit=True, auto=False):
         """Creates figure for extrapolation plot and calls associated methods to added data to the axes.
 
         Parameters
@@ -107,7 +107,7 @@ class ExtrapPlot(object):
 
             # Show measurement fit
             if cb_meas_fit:
-                self.extrap_plot_fit(extrap_fit.sel_fit[-1], -1)
+                self.extrap_plot_fit(extrap_fit.sel_fit[-1], -1, auto)
 
             # Configure axes
             if data_type == 'Discharge':
@@ -233,7 +233,7 @@ class ExtrapPlot(object):
                                  [norm_data.unit_normalized_z[idx], norm_data.unit_normalized_z[idx]],
                                  color=line_color)
 
-    def extrap_plot_fit(self, sel_fit, idx=None):
+    def extrap_plot_fit(self, sel_fit, idx=None, auto=False):
         """Plots the automatic and/or selected fit.
 
         Parameters
@@ -264,6 +264,9 @@ class ExtrapPlot(object):
             else:
                 line_color = 'b'
 
+            # Used by main tab to show both Auto and Selected.
+            if auto:
+                self.fig.ax.plot(sel_fit.u_auto, sel_fit.z_auto, '-g', linewidth=3)
             self.fig.ax.plot(sel_fit.u, sel_fit.z, color=line_color, linewidth=2)
 
     def extrap_plot_data(self, norm_data):

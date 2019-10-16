@@ -9,6 +9,12 @@ class PRTS(object):
     ----------
     canvas: MplCanvas
         Object of MplCanvas a FigureCanvas
+    pitch: list
+        Reference to pitch time series plot
+    roll: list
+        Reference to roll time series plot
+    row_index: list
+        List of rows from the table that are plotted
     hover_connection: bool
         Switch to allow user to use the data cursor
     """

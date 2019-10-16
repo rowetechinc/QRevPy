@@ -32,6 +32,7 @@ from UI.Draft import Draft
 from UI.TemperatureTS import TemperatureTS
 from UI.HeadingTS import HeadingTS
 from UI.PRTS import PRTS
+from UI.DischargeTS import DischargeTS
 from UI.CrossSection import CrossSection
 from UI.StationaryGraphs import StationaryGraphs
 from UI.BTFilters import BTFilters
@@ -474,18 +475,30 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.contour_shiptrack(self.checked_transects_idx[0])
                 self.main_extrap_plot()
                 self.discharge_plot()
+                self.figs = []
 
             # If graphics have been created, update them
             else:
-                if hasattr(self, 'extrap_mpl'):
-                    self.extrap_mpl.fig.clear()
-                    self.extrap_mpl.draw()
-                if hasattr(self, 'middle_mpl'):
-                    self.middle_mpl.fig.clear()
-                    self.middle_mpl.draw()
-                if hasattr(self, 'discharge_mpl'):
-                    self.discharge_mpl.fig.clear()
-                    self.discharge_mpl.draw()
+                if hasattr(self, 'main_extrap_canvas'):
+                    self.main_extrap_fig.clear()
+                    self.main_extrap_canvas.draw()
+                if hasattr(self, 'main_wt_contour_canvas'):
+                    self.main_wt_contour_fig.clear()
+                    self.main_wt_contour_canvas.draw()
+                if hasattr(self, 'main_discharge_canvas'):
+                    self.main_discharge_fig.clear()
+                    self.main_discharge_canvas.draw()
+                if hasattr(self, 'main_shiptrack_canvas'):
+                    self.main_shiptrack_fig.clear()
+                    self.main_shiptrack_canvas.draw()
+
+            # Setup list for use by graphics controls
+            self.canvases = [self.main_shiptrack_canvas, self.main_wt_contour_canvas, self.main_extrap_canvas,
+                             self.main_discharge_canvas]
+            self.figs = [self.main_shiptrack_fig, self.main_wt_contour_fig, self.main_extrap_fig,
+                         self.main_discharge_fig]
+            self.toolbars = [self.main_shiptrack_toolbar, self.main_wt_contour_toolbar, self.main_extrap_toolbar,
+                             self.main_discharge_toolbar]
 
             # Toggles changes indicating the main has been updated
             self.change = False
@@ -765,7 +778,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Determine transect selected
                 transect_id = self.checked_transects_idx[row-1]
-
+                self.clear_zphd()
                 # Update contour and shiptrack plot
                 self.contour_shiptrack(transect_id=transect_id)
 
@@ -778,67 +791,123 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             Index to check transects to identify the transect to be plotted
         """
 
-        # Assign layout to widget to allow auto scaling
-        layout = QtWidgets.QVBoxLayout(self.graphics_main_middle)
-        # Adjust margins of layout to maximize graphic area
-        layout.setContentsMargins(1, 1, 1, 1)
-
         # Get transect data to be plotted
         transect = self.meas.transects[transect_id]
 
-        # If figure already exists update it. If not, create it.
-        if hasattr(self, 'middle_mpl'):
-            self.middle_mpl.fig.clear()
-            self.middle_mpl.contour_shiptrack(transect=transect, units=self.units)
-        else:
-            self.middle_mpl = Qtmpl(self.graphics_main_middle, width=15, height=1, dpi=80)
-            self.middle_mpl.contour_shiptrack(transect=transect, units=self.units)
-            layout.addWidget(self.middle_mpl)
+        self.main_shiptrack(transect=transect)
+        self.main_wt_contour(transect=transect)
+        if len(self.figs) > 0:
+            self.figs = [self.main_shiptrack_fig, self.main_wt_contour_fig, self.main_extrap_fig,
+                         self.main_discharge_fig]
+
+    def main_shiptrack(self, transect):
+        """Creates shiptrack plot for data in transect.
+        """
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'main_shiptrack_canvas'):
+            # Create the canvas
+            self.main_shiptrack_canvas = MplCanvas(parent=self.graphics_shiptrack, width=4, height=4, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graphics_shiptrack)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.main_shiptrack_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.main_shiptrack_toolbar = NavigationToolbar(self.main_shiptrack_canvas, self)
+            self.main_shiptrack_toolbar.hide()
+
+        # Initialize the shiptrack figure and assign to the canvas
+        self.main_shiptrack_fig = Shiptrack(canvas=self.main_shiptrack_canvas)
+        # Create the figure with the specified data
+        self.main_shiptrack_fig.create(transect=transect,
+                                     units=self.units,
+                                     cb=False)
+            # ,
+            #                          invalid_wt=self.invalid_wt)
 
         # Draw canvas
-        self.middle_mpl.draw()
+        self.main_shiptrack_canvas.draw()
+
+    def main_wt_contour(self, transect):
+        """Creates boat speed plot for data in transect.
+        """
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'main_wt_contour_canvas'):
+            # Create the canvas
+            self.main_wt_contour_canvas = MplCanvas(parent=self.graphics_wt_contour, width=12, height=2, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graphics_wt_contour)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.main_wt_contour_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.main_wt_contour_toolbar = NavigationToolbar(self.main_wt_contour_canvas, self)
+            self.main_wt_contour_toolbar.hide()
+
+        # Initialize the boat speed figure and assign to the canvas
+        self.main_wt_contour_fig = WTContour(canvas=self.main_wt_contour_canvas)
+        # Create the figure with the specified data
+        self.main_wt_contour_fig.create(transect=transect,
+                                  units=self.units)
+        self.main_wt_contour_fig.fig.subplots_adjust(left=0.08, bottom=0.2, right=1, top=0.97, wspace=0.02, hspace=0)
+        # Draw canvas
+        self.main_wt_contour_canvas.draw()
 
     def main_extrap_plot(self):
-        """Generates the color contour and shiptrack plot for the main tab.
-        """
+            """Creates extrapolation plot.
+            """
 
-        # Assign layout to widget to allow auto scaling
-        layout = QtWidgets.QVBoxLayout(self.graphics_main_extrap)
-        # Adjust margins of layout to maximize graphic area
-        layout.setContentsMargins(1, 1, 1, 1)
+            # If the canvas has not been previously created, create the canvas and add the widget.
+            if not hasattr(self, 'main_extrap_canvas'):
+                # Create the canvas
+                self.main_extrap_canvas = MplCanvas(parent=self.graphics_main_extrap, width=1, height=4, dpi=80)
+                # Assign layout to widget to allow auto scaling
+                layout = QtWidgets.QVBoxLayout(self.graphics_main_extrap)
+                # Adjust margins of layout to maximize graphic area
+                layout.setContentsMargins(1, 1, 1, 1)
+                # Add the canvas
+                layout.addWidget(self.main_extrap_canvas)
+                # Initialize hidden toolbar for use by graphics controls
+                self.main_extrap_toolbar = NavigationToolbar(self.main_extrap_canvas, self)
+                self.main_extrap_toolbar.hide()
 
-        # If figure already exists update it. If not, create it.
-        if hasattr(self, 'extrap_mpl'):
-            self.extrap_mpl.fig.clear()
-            self.extrap_mpl.extrap_plot(meas=self.meas)
-        else:
-            self.extrap_mpl = Qtmpl(self.graphics_main_extrap, width=1, height=4, dpi=80)
-            self.extrap_mpl.extrap_plot(meas=self.meas)
-            layout.addWidget(self.extrap_mpl)
+            # Initialize the figure and assign to the canvas
+            self.main_extrap_fig = ExtrapPlot(canvas=self.main_extrap_canvas)
+            # Create the figure with the specified data
+            self.main_extrap_fig.create(meas = self.meas,
+                                        checked = self.checked_transects_idx,
+                                        auto=True)
 
-        # Draw canvas
-        self.extrap_mpl.draw()
+            self.main_extrap_canvas.draw()
 
     def discharge_plot(self):
-        """Generates the color contour and shiptrack plot for the main tab.
+        """Generates discharge time series plot for the main tab.
         """
 
-        # Assign layout to widget to allow auto scaling
-        layout = QtWidgets.QVBoxLayout(self.graphics_main_timeseries)
-        # Adjust margins of layout to maximize graphic area
-        layout.setContentsMargins(1, 1, 1, 1)
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if not hasattr(self, 'main_discharge_canvas'):
+            # Create the canvas
+            self.main_discharge_canvas = MplCanvas(parent=self.graphics_main_timeseries, width=4, height=4, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graphics_main_timeseries)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.main_discharge_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.main_discharge_toolbar = NavigationToolbar(self.main_discharge_canvas, self)
+            self.main_discharge_toolbar.hide()
 
-        # If figure already exists update it. If not, create it.
-        if hasattr(self, 'discharge_mpl'):
-            self.discharge_mpl.fig.clear()
-            self.discharge_mpl.discharge_plot(meas=self.meas, checked=self.checked_transects_idx,units=self.units)
-        else:
-            self.discharge_mpl = Qtmpl(self.graphics_main_timeseries, width=4, height=2, dpi=80)
-            self.discharge_mpl.discharge_plot(meas=self.meas, checked=self.checked_transects_idx, units=self.units)
-            layout.addWidget(self.discharge_mpl)
+        # Initialize the figure and assign to the canvas
+        self.main_discharge_fig = DischargeTS(canvas=self.main_discharge_canvas)
+        # Create the figure with the specified data
+        self.main_discharge_fig.create(meas=self.meas, checked=self.checked_transects_idx, units=self.units)
 
-        # Draw canvas
-        self.discharge_mpl.draw()
+        self.main_discharge_canvas.draw()
 
     def messages_tab(self):
         """Update messages tab.

@@ -84,6 +84,10 @@ class Shiptrack(object):
             Boolean array of invalid data based on filters for bottom track
         invalid_gps: np.array(bool)
             Boolean array of invalid data based on filters for gps data
+        n_ensembles: int
+            Number of ensembles to plot. Used in edges tab.
+        edge_start: int
+            Ensemble to start plotting. Used in edges tab.
         """
 
         # Assign and save parameters
