@@ -352,7 +352,69 @@ class WaterData(object):
         # Compute SNR range if SNR data is provided
         if rssi_units_in == 'SNR':
             self.compute_snr_rng()
-            
+
+    def populate_from_qrev_mat(self, transect):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        transect: mat_struct
+            Matlab data structure obtained from sio.loadmat
+        """
+
+        # Data input to this class
+        self.raw_vel_mps = np.moveaxis(transect.wVel.rawVel_mps, 2, 0)
+        self.frequency = transect.wVel.frequency
+        self.orig_coord_sys = transect.wVel.origCoordSys
+        self.orig_nav_ref = transect.wVel.origNavRef
+        self.corr = np.moveaxis(transect.wVel.corr, 2, 0)
+        self.rssi = np.moveaxis(transect.wVel.rssi, 2, 0)
+        self.rssi_units = transect.wVel.rssiUnits
+        self.water_mode = transect.wVel.waterMode
+        self.blanking_distance_m = transect.wVel.blankingDistance_m
+        self.cells_above_sl = transect.wVel.cellsAboveSL.astype(bool)
+        self.cells_above_sl_bt = transect.wVel.cellsAboveSLbt.astype(bool)
+        self.sl_lag_effect_m = transect.wVel.slLagEffect_m
+
+        # Data computed in this class
+        self.u_earth_no_ref_mps = transect.wVel.uEarthNoRef_mps
+        self.v_earth_no_ref_mps = transect.wVel.vEarthNoRef_mps
+        self.u_mps = transect.wVel.u_mps
+        self.v_mps = transect.wVel.v_mps
+        self.u_processed_mps = transect.wVel.uProcessed_mps
+        self.v_processed_mps = transect.wVel.vProcessed_mps
+        self.w_mps = transect.wVel.w_mps
+        self.d_mps = transect.wVel.d_mps
+        self.invalid_index = transect.wVel.invalidIndex
+        if type(transect.wVel.numInvalid) is np.ndarray:
+            self.num_invalid = transect.wVel.numInvalid.tolist()
+        else:
+            self.num_invalid = transect.wVel.numInvalid
+        self.valid_data = np.moveaxis(transect.wVel.validData, 2, 0)
+        self.valid_data = self.valid_data.astype(bool)
+
+        # Settings
+        self.beam_filter = transect.wVel.beamFilter
+        self.d_filter = transect.wVel.dFilter
+        self.d_filter_threshold = transect.wVel.dFilterThreshold
+        self.w_filter = transect.wVel.wFilter
+        self.w_filter_threshold = transect.wVel.wFilterThreshold
+        self.excluded_dist_m = transect.wVel.excludedDist
+        self.smooth_filter = transect.wVel.smoothFilter
+        self.smooth_speed = transect.wVel.smoothSpeed
+        self.smooth_upper_limit = transect.wVel.smoothUpperLimit
+        self.smooth_lower_limit = transect.wVel.smoothLowerLimit
+        self.snr_filter = transect.wVel.snrFilter
+        self.snr_rng = transect.wVel.snrRng
+        self.wt_depth_filter = transect.wVel.wtDepthFilter
+        self.interpolate_ens = transect.wVel.interpolateEns
+        self.interpolate_cells = transect.wVel.interpolateCells
+        self.coord_sys = transect.wVel.coordSys
+        self.nav_ref = transect.wVel.navRef
+        self.sl_cutoff_percent = transect.wVel.slCutoffPer
+        self.sl_cutoff_number = transect.wVel.slCutoffNum
+        self.sl_cutoff_type = transect.wVel.slCutoffType
+
     def change_coord_sys(self, new_coord_sys, sensors, adcp):
         """This function allows the coordinate system to be changed.
 

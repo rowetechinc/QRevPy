@@ -169,6 +169,50 @@ class NormData(object):
         self.unit_normalized = unit_norm
         self.compute_stats(threshold)
 
+    @staticmethod
+    def qrev_mat_in(mat_data):
+        """Processes the Matlab data structure to obtain a list of NormData objects containing transect
+           data from the Matlab data structure.
+
+       Parameters
+       ----------
+       mat_data: mat_struct
+           Matlab data structure obtained from sio.loadmat
+
+       Returns
+       -------
+       norm_data: list
+           List of NormData objects
+       """
+        norm_data = []
+        if hasattr(mat_data, 'normData'):
+            for data in mat_data.normData:
+                temp = NormData()
+                temp.populate_from_qrev_mat(data)
+                norm_data.append(temp)
+        return norm_data
+
+    def populate_from_qrev_mat(self, mat_data):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        mat_data: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+
+        self.file_name = mat_data.fileName
+        self.cell_depth_normalized = mat_data.cellDepthNormalized
+        self.unit_normalized = mat_data.unitNormalized
+        self.unit_normalized_med = mat_data.unitNormalizedMed
+        self.unit_normalized_no = mat_data.unitNormalizedNo
+        self.unit_normalized_z = mat_data.unitNormalizedz
+        self.unit_normalized_25 = mat_data.unitNormalized25
+        self.unit_normalized_75 = mat_data.unitNormalized75
+        self.data_type = mat_data.dataType
+        self.data_extent = mat_data.dataExtent
+        self.valid_data = mat_data.validData - 1
+
     def compute_stats(self, threshold):
         """Computes the statistics for the normalized data.
 

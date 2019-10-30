@@ -304,6 +304,9 @@ class Measurement(object):
                 cc.populate_data(mmt.qaqc['Compass_Calibration_TimeStamp'][n],
                                  mmt.qaqc['Compass_Calibration'][n], 'TCC')
                 self.compass_cal.append(cc)
+        # else:
+        #     cc = PreMeasurement()
+        #     self.compass_cal.append(cc)
             
         # Compass evaluation
         if 'Compass_Evaluation' in mmt.qaqc:
@@ -312,6 +315,9 @@ class Measurement(object):
                 ce.populate_data(mmt.qaqc['Compass_Evaluation_TimeStamp'][n],
                                  mmt.qaqc['Compass_Evaluation'][n], 'TCC')
                 self.compass_eval.append(ce)
+        # else:
+        #     ce = PreMeasurement()
+        #     self.compass_cal.append(ce)
 
         # Check for moving-bed tests
         if len(mmt.mbt_transects) > 0:
@@ -437,6 +443,9 @@ class Measurement(object):
         pathname: str
             Path to discharge transect files.
         """
+        # Compass Evaluation
+        # ce = PreMeasurement()
+        # self.compass_eval.append(ce)
 
         # Compass Calibration
         compass_cal_folder = os.path.join(pathname, 'CompassCal')
@@ -461,6 +470,9 @@ class Measurement(object):
                     cal = PreMeasurement()
                     cal.populate_data(time_stamp, cal_data, 'SCC')
                     self.compass_cal.append(cal)
+        # else:
+        #     cal = PreMeasurement()
+        #     self.compass_cal.append(cal)
 
         # System Test
         system_test_folder = os.path.join(pathname, 'SystemTest')
@@ -529,36 +541,76 @@ class Measurement(object):
 
         # Assign data from meas_struct to associated instance variables
         # in Measurement and associated objects.
-        self.station_name = meas_struct.stationName
-        self.station_number = meas_struct.stationNumber
+        if len(meas_struct.stationName) > 0:
+            self.station_name = meas_struct.stationName
+        if len(meas_struct.stationNumber) > 0:
+            self.station_number = meas_struct.stationNumber
         self.processing = meas_struct.processing
-        self.comments = meas_struct.comments
-        self.user_rating = meas_struct.userRating
-        self.initial_settings = meas_struct.initialSettings
-
-        self.transects = []
-        self.mb_tests = []
-        self.system_tst = []
-        self.compass_cal = []
-        self.compass_eval = []
-        self.ext_temp_chk = {}
-        self.extrap_fit = None
-
-
-        # Discharge
-        self.discharge = []
-        if hasattr(meas_struct.discharge, 'bottom'):
-            # Measurement has discharge data from only one transect
-            bottom = meas_struct.discharge.bottom
-            q = QComp()
-            q.populate_from_qrev_mat(meas_struct.discharge)
-            self.discharge.append(q)
+        if type(meas_struct.comments) == np.ndarray:
+            self.comments = meas_struct.comments.tolist()
         else:
-            # Measurement has discharge data from multiple transects
-            for q_data in meas_struct.discharge:
-                q = QComp()
-                q.populate_from_qrev_mat(q_data)
-                self.discharge.append(q)
+            self.comments = [meas_struct.comments]
+        if hasattr(meas_struct, 'userRating'):
+            self.user_rating = meas_struct.userRating
+        else:
+            self.user_rating = ''
+
+        self.initial_settings = vars(meas_struct.initialSettings)
+        # Update initial settings to agree with Python definitions
+        if self.initial_settings['NavRef'] == 'btVel':
+            self.initial_settings['NavRef'] = 'bt_vel'
+        elif self.initial_settings['NavRef'] == 'ggaVel':
+            self.initial_settings['NavRef'] = 'gga_vel'
+        elif self.initial_settings['NavRef'] == 'vtgVel':
+            self.initial_settings['NavRef'] = 'vtg_vel'
+        if self.initial_settings['WTwtDepthFilter'] == 'Off':
+            self.initial_settings['WTwtDepthFilter'] = False
+        elif self.initial_settings['WTwtDepthFilter'] == 'On':
+            self.initial_settings['WTwtDepthFilter'] = True
+        if type(self.initial_settings['WTsnrFilter']) is np.ndarray:
+            self.initial_settings['WTsnrFilter'] = 'Off'
+        if self.initial_settings['depthReference'] == 'btDepths':
+            self.initial_settings['depthReference'] = 'bt_depths'
+        elif self.initial_settings['depthReference'] == 'vbDepths':
+            self.initial_settings['depthReference'] = 'vb_depths'
+        elif self.initial_settings['depthReference'] == 'ds_Depths':
+            self.initial_settings['depthReference'] = 'ds_depths'
+
+        self.ext_temp_chk = {'user': meas_struct.extTempChk.user,
+                             'units': meas_struct.extTempChk.units,
+                             'adcp': meas_struct.extTempChk.adcp}
+        if type(self.ext_temp_chk['user']) is str:
+            self.ext_temp_chk['user'] = np.nan
+        if type(self.ext_temp_chk['adcp']) is str:
+            self.ext_temp_chk['adcp'] = np.nan
+        if type(self.ext_temp_chk['user']) is np.ndarray:
+            self.ext_temp_chk['user'] = np.nan
+        if type(self.ext_temp_chk['adcp']) is np.ndarray:
+            self.ext_temp_chk['adcp'] = np.nan
+
+        self.system_tst = PreMeasurement.sys_test_qrev_mat_in(meas_struct)
+        # no compass cal compassCal is mat_struct with len(data) = 0
+        if type(meas_struct.compassCal) is np.ndarray:
+            self.compass_cal = PreMeasurement.cc_qrev_mat_in(meas_struct)
+        elif len(meas_struct.compassCal.data) > 0:
+            self.compass_cal = PreMeasurement.cc_qrev_mat_in(meas_struct)
+        else:
+            self.compass_cal = []
+        if type(meas_struct.compassEval) is np.ndarray:
+            self.compass_eval = PreMeasurement.ce_qrev_mat_in(meas_struct)
+        elif len(meas_struct.compassEval.data) > 0:
+            self.compass_eval = PreMeasurement.ce_qrev_mat_in(meas_struct)
+        else:
+            self.compass_eval = []
+        self.transects = TransectData.qrev_mat_in(meas_struct)
+        self.mb_tests = MovingBedTests.qrev_mat_in(meas_struct)
+        self.extrap_fit = ComputeExtrap()
+        self.extrap_fit.populate_from_qrev_mat(meas_struct)
+        self.discharge = QComp.qrev_mat_in(meas_struct)
+        self.uncertainty = Uncertainty()
+        self.uncertainty.populate_from_qrev_mat(meas_struct)
+        self.qa = QAData(meas_struct, compute=False)
+
 
     @staticmethod
     def set_num_beam_wt_threshold_trdi(mmt_transect):
@@ -1621,7 +1673,7 @@ class Measurement(object):
         ET.SubElement(qa, 'DiagnosticTestResult', type='char').text = test_result
 
         # (3) CompassCalibrationResult Node
-        if len(self.compass_eval) > 0:
+        try:
             last_eval = self.compass_eval[-1]
             # StreamPro, RR
             idx = last_eval.data.find('Typical Heading Error: <')
@@ -1648,10 +1700,11 @@ class Measurement(object):
                 ET.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'No'
             else:
                 ET.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'Max ' + comp_error
-        else:
-            if len(self.compass_cal) > 0:
+        except (IndexError, TypeError, AttributeError):
+            try:
+                last_eval = self.compass_eval[-1]
                 ET.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'Yes'
-            else:
+            except (IndexError, TypeError):
                 ET.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'No'
 
         # (3) MovingBedTestType Node
@@ -1686,21 +1739,24 @@ class Measurement(object):
 
         # (3) CompassCalibration and Text Node
         compass_text = ''
-        if len(self.compass_cal) > 0:
+        try:
             for each in self.compass_cal:
                 if self.transects[0].adcp.manufacturer == 'SonTek':
                     idx = each.data.find('CAL_TIME')
                     compass_text += each.data[idx:]
                 else:
                     compass_text += each.data
-
-        if len(self.compass_eval) > 0:
+        except (IndexError, TypeError, AttributeError):
+            pass
+        try:
             for each in self.compass_eval:
                 if self.transects[0].adcp.manufacturer == 'SonTek':
                     idx = each.data.find('CAL_TIME')
                     compass_text += each.data[idx:]
                 else:
                     compass_text += each.data
+        except (IndexError, TypeError, AttributeError):
+            pass
 
         if len(compass_text) > 0:
             comp_cal = ET.SubElement(qa, 'CompassCalibration')
@@ -1817,7 +1873,7 @@ class Measurement(object):
         ET.SubElement(temp_check, 'TemperatureChange', type='double', unitsCode='degC').text = '{:.2f}'.format(t_range)
 
         # (3) QRev_Message Node
-        qa_check_keys = ['bt_vel', 'compass', 'depths', 'edges', 'extrapolation', 'gga_vel', 'moving_bed', 'system_tst',
+        qa_check_keys = ['bt_vel', 'compass', 'depths', 'edges', 'extrapolation', 'gga_vel', 'movingbed', 'system_tst',
                          'temperature', 'transects', 'user', 'vtg_vel', 'w_vel']
 
         # For each qa check retrieve messages
@@ -1883,7 +1939,8 @@ class Measurement(object):
         commands = ''
         if self.transects[0].adcp.configuration_commands is not None:
             for each in self.transects[0].adcp.configuration_commands:
-                commands += each + '  '
+                if type(each) is str:
+                    commands += each + '  '
             ET.SubElement(instrument, 'InstrumentConfiguration', type='char').text = commands
 
         # (2) Processing Node

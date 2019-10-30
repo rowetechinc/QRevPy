@@ -63,6 +63,75 @@ class PreMeasurement(object):
         else:
             error = 'N/A'
         self.result['compass'] = {'error': error}
+
+    @staticmethod
+    def cc_qrev_mat_in(meas_struct):
+        """Processes the Matlab data structure to obtain a list of Premeasurement objects containing compass calibration
+           data from the Matlab data structure.
+
+       Parameters
+       ----------
+       meas_struct: mat_struct
+           Matlab data structure obtained from sio.loadmat
+
+       Returns
+       -------
+       cc: list
+           List of Premeasurement data objects
+       """
+        cc = []
+        if hasattr(meas_struct, 'compassCal'):
+            if type(meas_struct.compassCal) is np.ndarray:
+                for cal in meas_struct.compassCal:
+                    pm = PreMeasurement()
+                    pm.compass_populate_from_qrev_mat(cal)
+                    cc.append(pm)
+            elif len(meas_struct.compassCal.data) > 0:
+                pm = PreMeasurement()
+                pm.compass_populate_from_qrev_mat(meas_struct.compassCal)
+                cc.append(pm)
+
+        return cc
+
+    @staticmethod
+    def ce_qrev_mat_in(meas_struct):
+        """Processes the Matlab data structure to obtain a list of Premeasurement objects containing compass evaluation
+           data from the Matlab data structure.
+
+       Parameters
+       ----------
+       meas_struct: mat_struct
+           Matlab data structure obtained from sio.loadmat
+
+       Returns
+       -------
+       ce: list
+           List of Premeasurement data objects
+       """
+        ce = []
+        if hasattr(meas_struct, 'compassEval'):
+            if type(meas_struct.compassEval) is np.ndarray:
+                for eval in meas_struct.compassEval:
+                    pm = PreMeasurement()
+                    pm.compass_populate_from_qrev_mat(eval)
+                    ce.append(pm)
+            elif len(meas_struct.compassEval.data) > 0:
+                pm = PreMeasurement()
+                pm.compass_populate_from_qrev_mat(meas_struct.compassEval)
+                ce.append(pm)
+        return ce
+
+    def compass_populate_from_qrev_mat(self, data_in):
+        """Populated Premeasurement instance variables with data from QRev Matlab file.
+
+        Parameters
+        ----------
+        data_in: object
+            mat_struct_object containing compass cal/eval data
+        """
+        self.data = data_in.data
+        self.time_stamp = data_in.timeStamp
+        self.result = {'compass': {'error': data_in.result.compass.error}}
             
     def sys_test_read(self):
         """Method for reading the system test data"""
@@ -72,12 +141,102 @@ class PreMeasurement(object):
             num_fails = re.findall('(Fail|FAIL|F A I L)', self.data)
 
             # Store results
-            self.result['n_tests'] = len(num_tests)
-            self.result['n_failed'] = len(num_fails)
+            self.result = {'sysTest': {'n_tests': len(num_tests)}}
+            self.result['sysTest']['n_failed'] = len(num_fails)
         else:
-            self.result['n_tests'] = None
-            self.result['n_failed'] = None
-        
+            self.result = {'sysTest': {'n_tests': None}}
+            self.result['sysTest']['n_failed'] = None
+
+    @staticmethod
+    def sys_test_qrev_mat_in(meas_struct):
+        """Processes the Matlab data structure to obtain a list of Premeasurement objects containing system test data
+           from the Matlab data structure.
+
+           Parameters
+           ----------
+           meas_struct: mat_struct
+               Matlab data structure obtained from sio.loadmat
+
+           Returns
+           -------
+           system_tst: list
+               List of Premeasurement data objects
+           """
+        system_tst = []
+        if hasattr(meas_struct, 'sysTest'):
+            if type(meas_struct.sysTest) == np.ndarray:
+                for test in meas_struct.sysTest:
+                    tst = PreMeasurement()
+                    tst.sys_tst_populate_from_qrev_mat(test)
+                    system_tst.append(tst)
+            elif len(meas_struct.sysTest.data) > 0:
+                tst = PreMeasurement()
+                tst.sys_tst_populate_from_qrev_mat(meas_struct.sysTest)
+                system_tst.append(tst)
+        return system_tst
+
+    def sys_tst_populate_from_qrev_mat(self, test_in):
+        """Populated Premeasurement instance variables with data from QRev Matlab file.
+
+        Parameters
+        ----------
+        test_in: object
+            mat_struct_object containing system test data
+        """
+        try:
+            self.data = test_in.data
+            self.time_stamp = test_in.timeStamp
+            self.result = {'sysTest': {'n_failed': test_in.result.sysTest.nFailed}}
+            self.result['sysTest']['n_tests'] = test_in.result.sysTest.nTests
+
+
+            if hasattr(test_in.result, 'pt3'):
+                data_types = {'corr_table': np.array([]), 'sdc': np.array([]), 'cdc': np.array([]),
+                              'noise_floor': np.array([])}
+                test_types = {'high_wide': data_types.copy(), 'high_narrow': data_types.copy(),
+                              'low_wide': data_types.copy(),
+                              'low_narrow': data_types.copy()}
+                pt3 = {'hard_limit': copy.deepcopy(test_types), 'linear': copy.deepcopy(test_types)}
+                if hasattr(test_in.result.pt3, 'hardLimit'):
+                    if hasattr(test_in.result.pt3.hardLimit, 'hw'):
+                        pt3['hard_limit']['high_wide']['corr_table'] = test_in.result.pt3.hardLimit.hw.corrTable
+                        pt3['hard_limit']['high_wide']['sdc'] = test_in.result.pt3.hardLimit.hw.sdc
+                        pt3['hard_limit']['high_wide']['cdc'] = test_in.result.pt3.hardLimit.hw.cdc
+                        pt3['hard_limit']['high_wide']['noise_floor'] = test_in.result.pt3.hardLimit.hw.noiseFloor
+                    if hasattr(test_in.result.pt3.hardLimit, 'lw'):
+                        pt3['hard_limit']['low_wide']['corr_table'] = test_in.result.pt3.hardLimit.lw.corrTable
+                        pt3['hard_limit']['low_wide']['sdc'] = test_in.result.pt3.hardLimit.lw.sdc
+                        pt3['hard_limit']['low_wide']['cdc'] = test_in.result.pt3.hardLimit.lw.cdc
+                        pt3['hard_limit']['low_wide']['noise_floor'] = test_in.result.pt3.hardLimit.lw.noiseFloor
+                    if hasattr(test_in.result.pt3.hardLimit, 'hn'):
+                        pt3['hard_limit']['high_narrow']['corr_table'] = test_in.result.pt3.hardLimit.hn.corrTable
+                        pt3['hard_limit']['high_narrow']['sdc'] = test_in.result.pt3.hardLimit.hn.sdc
+                        pt3['hard_limit']['high_narrow']['cdc'] = test_in.result.pt3.hardLimit.hn.cdc
+                        pt3['hard_limit']['high_narrow']['noise_floor'] = test_in.result.pt3.hardLimit.hn.noiseFloor
+                    if hasattr(test_in.result.pt3.hardLimit, 'ln'):
+                        pt3['hard_limit']['low_narrow']['corr_table'] = test_in.result.pt3.hardLimit.ln.corrTable
+                        pt3['hard_limit']['low_narrow']['sdc'] = test_in.result.pt3.hardLimit.ln.sdc
+                        pt3['hard_limit']['low_narrow']['cdc'] = test_in.result.pt3.hardLimit.ln.cdc
+                        pt3['hard_limit']['low_narrow']['noise_floor'] = test_in.result.pt3.hardLimit.ln.noiseFloor
+                if hasattr(test_in.result.pt3, 'linear'):
+                    if hasattr(test_in.result.pt3.linear, 'hw'):
+                        pt3['linear']['high_wide']['corr_table'] = test_in.result.pt3.linear.hw.corrTable
+                        pt3['linear']['high_wide']['noise_floor'] = test_in.result.pt3.linear.hw.noiseFloor
+                    if hasattr(test_in.result.pt3.linear, 'lw'):
+                        pt3['linear']['low_wide']['corr_table'] = test_in.result.pt3.linear.lw.corrTable
+                        pt3['linear']['low_wide']['noise_floor'] = test_in.result.pt3.linear.lw.noiseFloor
+                    if hasattr(test_in.result.pt3.linear, 'hn'):
+                        pt3['linear']['high_narrow']['corr_table'] = test_in.result.pt3.linear.hn.corrTable
+                        pt3['linear']['high_narrow']['noise_floor'] = test_in.result.pt3.linear.hn.noiseFloor
+                    if hasattr(test_in.result.pt3.linear, 'ln'):
+                        pt3['linear']['low_narrow']['corr_table'] = test_in.result.pt3.linear.ln.corrTable
+                        pt3['linear']['low_narrow']['noise_floor'] = test_in.result.pt3.linear.ln.noiseFloor
+
+                self.result['pt3'] = pt3
+        except AttributeError:
+            self.result = {'sysTest': {'n_tests': None}}
+            self.result['sysTest']['n_failed'] = None
+
     def pt3_data(self):
         """Method for processing the data in the correlation matrices."""
         try:

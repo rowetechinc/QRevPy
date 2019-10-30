@@ -191,3 +191,10 @@ class TransformationMatrix(object):
             # Note: for M9 this is a 4x4x3 matrix (300,500,1000)
             # Note: for S5 this is a 4x4x2 matrix (3000,1000)
             self.matrix = data_in
+
+    def populate_from_qrev_mat(self, tmatrix):
+        self.matrix = tmatrix.matrix
+        self.source = tmatrix.source
+        # if len(tmatrix.matrix.shape) == 3:
+        #     self.matrix = np.moveaxis(tmatrix.matrix, 0, 2)
+        #     self.source = tmatrix.source

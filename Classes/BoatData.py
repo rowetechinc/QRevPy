@@ -228,6 +228,89 @@ class BoatData(object):
         self.processed_source[np.where(self.valid_data[0, :] == True)] = nav_ref_in
         self.processed_source[np.where(self.valid_data[0, :] == False)] = "INT"
 
+    def populate_from_qrev_mat(self, mat_data):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        mat_data: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+
+        # Variables passed to the constructor
+        self.raw_vel_mps = mat_data.rawVel_mps
+        if type(mat_data.frequency_hz) is np.ndarray:
+            self.frequency_khz = mat_data.frequency_hz
+        elif np.isnan(mat_data.frequency_hz):
+            self.frequency_khz = None
+        else:
+            self.frequency_khz = mat_data.frequency_hz
+        self.orig_coord_sys = mat_data.origCoordSys
+        self.nav_ref = mat_data.navRef
+
+        # Coordinate transformed data
+        self.coord_sys = mat_data.coordSys
+        self.u_mps = mat_data.u_mps
+        self.v_mps = mat_data.v_mps
+        self.w_mps = mat_data.w_mps
+        self.d_mps = mat_data.d_mps
+        self.num_invalid = mat_data.numInvalid
+        self.bottom_mode = mat_data.bottomMode
+
+        # Processed data
+        self.u_processed_mps = mat_data.uProcessed_mps
+        self.v_processed_mps = mat_data.vProcessed_mps
+        self.processed_source = mat_data.processedSource
+
+        # Filter and interpolation properties
+        if type(mat_data.dFilter) is np.ndarray:
+            self.d_filter = None
+        else:
+            self.d_filter = mat_data.dFilter
+        if type(mat_data.dFilterThreshold) is np.ndarray:
+            self.d_filter_threshold = None
+        else:
+            self.d_filter_threshold = mat_data.dFilterThreshold
+        if type(mat_data.wFilter) is np.ndarray:
+            self.w_filter = None
+        else:
+            self.w_filter = mat_data.wFilter
+        if type(mat_data.wFilterThreshold) is np.ndarray:
+            self.w_filter_threshold = None
+        else:
+            self.w_filter_threshold = mat_data.wFilterThreshold
+        if type(mat_data.gpsDiffQualFilter) is np.ndarray:
+            self.gps_diff_qual_filter = None
+        else:
+            self.gps_diff_qual_filter = mat_data.gpsDiffQualFilter
+        if type(mat_data.gpsAltitudeFilter) is np.ndarray:
+            self.gps_altitude_filter = None
+        else:
+            self.gps_altitude_filter = mat_data.gpsAltitudeFilter
+        if type(mat_data.gpsAltitudeFilterChange) is np.ndarray:
+            self.gps_altitude_filter_change = None
+        else:
+            self.gps_altitude_filter_change = mat_data.gpsAltitudeFilterChange
+        if type(mat_data.gpsHDOPFilter) is np.ndarray:
+            self.gps_HDOP_filter = None
+        else:
+            self.gps_HDOP_filter = mat_data.gpsHDOPFilter
+        if type(mat_data.gpsHDOPFilterMax) is np.ndarray:
+            self.gps_HDOP_filter_max = None
+        else:
+            self.gps_HDOP_filter_max = mat_data.gpsHDOPFilterMax
+        if type(mat_data.gpsHDOPFilterChange) is np.ndarray:
+            self.gps_HDOP_filter_change = None
+        else:
+            self.gps_HDOP_filter_change = mat_data.gpsHDOPFilterChange
+        self.smooth_filter = mat_data.smoothFilter
+        self.smooth_speed = mat_data.smoothSpeed
+        self.smooth_upper_limit = mat_data.smoothUpperLimit
+        self.smooth_lower_limit = mat_data.smoothLowerLimit
+        self.interpolate = mat_data.interpolate
+        self.beam_filter = mat_data.beamFilter
+        self.valid_data = mat_data.validData.astype(bool)
+
     def change_coord_sys(self, new_coord_sys, sensors, adcp):
         """This function allows the coordinate system to be changed.
 

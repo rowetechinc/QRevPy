@@ -47,6 +47,23 @@ class EdgeData(object):
         self.user_discharge_cms = user_discharge
         self.cust_coef = coefficient
 
+    def populate_from_qrev_mat(self, mat_data):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        mat_data: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+
+        self.type = mat_data.type
+        self.distance_m = mat_data.dist_m
+        self.number_ensembles = mat_data.numEns2Avg
+        self.user_discharge_cms = mat_data.userQ_cms
+        if len(mat_data.custCoef) > 0:
+            self.cust_coef = mat_data.custCoef
+
+
     def change_property(self, prop, setting):
         """Change edge data property
 

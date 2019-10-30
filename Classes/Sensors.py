@@ -32,6 +32,29 @@ class Sensors(object):
         self.salinity_ppt = SensorStructure()  # Salinity data, object of SensorStructure
         self.speed_of_sound_mps = SensorStructure()  # Speed of sound, object of SensorStructure
 
+    def populate_from_qrev_mat(self, transect):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        transect: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+        if hasattr(transect, 'sensors'):
+            if hasattr(transect.sensors, 'heading_deg'):
+                self.heading_deg.populate_from_qrev_mat(transect.sensors.heading_deg, heading=True)
+            if hasattr(transect.sensors, 'pitch_deg'):
+                self.pitch_deg.populate_from_qrev_mat(transect.sensors.pitch_deg)
+            if hasattr(transect.sensors, 'roll_deg'):
+                self.roll_deg.populate_from_qrev_mat(transect.sensors.roll_deg)
+            if hasattr(transect.sensors, 'salinity_ppt'):
+                self.salinity_ppt.populate_from_qrev_mat(transect.sensors.salinity_ppt)
+            if hasattr(transect.sensors, 'speedOfSound_mps'):
+                self.speed_of_sound_mps.populate_from_qrev_mat(transect.sensors.speedOfSound_mps)
+            if hasattr(transect.sensors, 'temperature_degC'):
+                self.temperature_deg_c.populate_from_qrev_mat(transect.sensors.temperature_degC)
+
+
     @staticmethod
     def speed_of_sound(temperature, salinity):
         """Computes speed of sound from temperature and salinity.

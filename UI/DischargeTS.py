@@ -55,17 +55,23 @@ class DischargeTS(object):
 
         # Set margins and padding for figure
         self.fig.subplots_adjust(left=0.2, bottom=0.15, right=0.98, top=0.98, wspace=0.1, hspace=0)
-        x = []
-        y = []
+        # self.qp = []
         for idx in checked:
+            x = []
+            y = []
+            # x.append([datetime.fromtimestamp(meas.transects[idx].date_time.start_serial_time),
+            #           datetime.fromtimestamp(meas.transects[idx].date_time.end_serial_time)])
             x.append(datetime.fromtimestamp(meas.transects[idx].date_time.start_serial_time))
             x.append(datetime.fromtimestamp(meas.transects[idx].date_time.end_serial_time))
-            x.append(np.nan)
+            # x.append(np.nan)
             # x.append(meas.transects[idx].date_time.start_serial_time)
             # x.append(meas.transects[idx].date_time.end_serial_time)
+
+            # y.append([meas.discharge[idx].total * units['Q'],
+            #           meas.discharge[idx].total * units['Q']])
             y.append(meas.discharge[idx].total * units['Q'])
             y.append(meas.discharge[idx].total * units['Q'])
-            y.append(np.nan)
+            # y.append(np.nan)
 
             # self.qp.append(self.fig.ax.plot([datetime.fromtimestamp(meas.transects[idx].date_time.start_serial_time),
             #                                  datetime.fromtimestamp(meas.transects[idx].date_time.end_serial_time)],
@@ -75,7 +81,10 @@ class DischargeTS(object):
             #                   datetime.fromtimestamp(meas.transects[idx].date_time.end_serial_time)],
             #                  [meas.discharge[idx].total * units['Q'],
             #                   meas.discharge[idx].total * units['Q']], 'k-')
-        self.qp = self.fig.ax.plot(x, y, 'k-')
+            # ym = np.ma.masked_where(np.isnan(y), y)
+            # xm = np.ma.masked_where(np.equal(x, -999), x)
+            self.fig.ax.plot(np.array(x), np.array(y), 'k-')
+        self.qp = self.fig.ax
         # Customize axis
         timeFmt = mdates.DateFormatter('%H:%M:%S')
         self.fig.ax.xaxis.set_major_formatter(timeFmt)
@@ -163,9 +172,12 @@ class DischargeTS(object):
             #         cont, ind = item.contains(event)
             #         if cont:
             #             break
-            cont, ind = self.qp[0].contains(event)
+            for plotted_line in self.qp.lines:
+                cont, ind = plotted_line.contains(event)
+                if cont:
+                    break
             if cont:
-                self.update_annot(ind, self.qp[0])
+                self.update_annot(ind, plotted_line)
                 self.annot.set_visible(True)
                 self.canvas.draw_idle()
             else:

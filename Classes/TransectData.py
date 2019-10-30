@@ -1041,6 +1041,62 @@ class TransectData(object):
         self.depths.composite_depths(transect=self, setting="On")
 
     @staticmethod
+    def qrev_mat_in(meas_struct):
+        """Processes the Matlab data structure to obtain a list of TransectData objects containing transect
+           data from the Matlab data structure.
+
+       Parameters
+       ----------
+       meas_struct: mat_struct
+           Matlab data structure obtained from sio.loadmat
+
+       Returns
+       -------
+       transects: list
+           List of TransectData objects
+       """
+        transects = []
+        if hasattr(meas_struct, 'transects'):
+            if len(meas_struct.transects) > 0:
+                for transect in meas_struct.transects:
+                    trans = TransectData()
+                    trans.populate_from_qrev_mat(transect)
+                    transects.append(trans)
+        return transects
+
+    def populate_from_qrev_mat(self, transect):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        transect: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+
+        self.adcp = InstrumentData()
+        self.adcp.populate_from_qrev_mat(transect)
+        self.file_name = transect.fileName
+        self.w_vel = WaterData()
+        self.w_vel.populate_from_qrev_mat(transect)
+        self.boat_vel = BoatStructure()
+        self.boat_vel.populate_from_qrev_mat(transect)
+        self.gps = GPSData()
+        self.gps.populate_from_qrev_mat(transect)
+        self.sensors = Sensors()
+        self.sensors.populate_from_qrev_mat(transect)
+        self.depths = DepthStructure()
+        self.depths.populate_from_qrev_mat(transect)
+        self.edges = Edges()
+        self.edges.populate_from_qrev_mat(transect)
+        self.extrap = ExtrapData()
+        self.extrap.populate_from_qrev_mat(transect)
+        self.start_edge = transect.startEdge
+        self.date_time = DateTime()
+        self.date_time.populate_from_qrev_mat(transect)
+        self.checked = bool(transect.checked)
+        self.in_transect_idx = transect.inTransectIdx - 1
+
+    @staticmethod
     def compute_cell_data(pd0):
         
         # Number of ensembles

@@ -73,8 +73,8 @@ class HeadingData(object):
         """
         self.original_data = data_in
         self.source = source_in
-        self.mag_var_deg = magvar
-        self.mag_var_orig_deg = magvar
+        self.mag_var_deg = float(magvar)
+        self.mag_var_orig_deg = float(magvar)
         self.align_correction_deg = align
         self.mag_error = mag_error
         if pitch_limit is not None and len(pitch_limit.shape) > 1:
@@ -90,6 +90,27 @@ class HeadingData(object):
         self.data = self.original_data + self.mag_var_deg + self.align_correction_deg
         self.fix_upper_limit()
         self.interp_heading()
+
+    def populate_from_qrev_mat(self, mat_data):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        mat_data: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+        self.data = mat_data.data
+        self.original_data = mat_data.originalData
+        self.source = mat_data.source
+        self.mag_var_deg = float(mat_data.magVar_deg)
+        self.mag_var_orig_deg = float(mat_data.magVarOrig_deg)
+        self.align_correction_deg = mat_data.alignCorrection_deg
+        if len(mat_data.magError) > 0:
+            self.mag_error = mat_data.magError
+        if len(mat_data.pitchLimit) > 0:
+            self.pitch_limit = mat_data.pitchLimit
+        if len(mat_data.rollLimit) > 0:
+            self.roll_limit = mat_data.rollLimit
             
     def set_mag_var(self, mag_var, h_source):
         """Applies a new magvar to the object data.

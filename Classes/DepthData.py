@@ -130,6 +130,48 @@ class DepthData(object):
         # Remove all filters to initialize data
         self.apply_filter('dummy', filter_type='None')
 
+    def populate_from_qrev_mat(self, mat_data):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        mat_data: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+
+        self.depth_orig_m = mat_data.depthOrig_m
+        if len(mat_data.depthBeams_m.shape) < 2:
+            self.depth_beams_m = mat_data.depthBeams_m.reshape(1, -1)
+        else:
+            self.depth_beams_m = mat_data.depthBeams_m
+        self.depth_processed_m = mat_data.depthProcessed_m
+        self.depth_freq_kHz = mat_data.depthFreq_Hz
+        if len(mat_data.depthInvalidIndex) > 0:
+            self.depth_invalid_index = mat_data.depthInvalidIndex
+        else:
+            self.depth_invalid_index = None
+        self.depth_source = mat_data.depthSource
+        self.depth_source_ens = mat_data.depthSourceEns
+        self.draft_orig_m = mat_data.draftOrig_m
+        self.draft_use_m = mat_data.draftUse_m
+        self.depth_cell_depth_orig_m = mat_data.depthCellDepthOrig_m
+        self.depth_cell_depth_m = mat_data.depthCellDepth_m
+        self.depth_cell_size_orig_m = mat_data.depthCellSizeOrig_m
+        self.depth_cell_size_m = mat_data.depthCellSize_m
+        self.smooth_depth = mat_data.smoothDepth
+        self.smooth_upper_limit = mat_data.smoothUpperLimit
+        self.smooth_lower_limit = mat_data.smoothLowerLimit
+        self.avg_method = mat_data.avgMethod
+        self.filter_type = mat_data.filterType
+        self.interp_type = mat_data.interpType
+        self.valid_data_method = mat_data.validDataMethod
+        self.valid_data = mat_data.validData.astype(bool)
+        if len(mat_data.validBeams.shape) < 2:
+            self.valid_beams = mat_data.validBeams.reshape(1, -1)
+        else:
+            self.valid_beams = mat_data.validBeams
+        self.valid_beams = self.valid_beams.astype(bool)
+
     def change_draft(self, draft):
         """Changes the draft for object
         
@@ -235,7 +277,7 @@ class DepthData(object):
             method = self.interp_type
             
         # Apply selected interpolation
-        
+        self.interp_type = method
         # No filtering
         if method == 'None':
             self.interpolate_none()

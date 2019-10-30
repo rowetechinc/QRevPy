@@ -24,7 +24,7 @@ class QAData(object):
         Dictionary of quality assurance checks on compass calibration and evaluations
     temperature: dict
         Dictionary of quality assurance checks on temperature comparions and variation
-    moving_bed: dict
+    movingbed: dict
         Dictionary of quality assurance checks on moving-bed tests
     user: dict
         Dictionary of quality assurance checks on user input data
@@ -42,7 +42,7 @@ class QAData(object):
         Dictionary of quality assurance checks on edges
     """
     
-    def __init__(self, meas):
+    def __init__(self, meas, compute=True):
         """Checks the measurement for all quality assurance issues.
 
         Parameters
@@ -62,7 +62,7 @@ class QAData(object):
         self.system_tst = dict()
         self.compass = dict()
         self.temperature = dict()
-        self.moving_bed = dict()
+        self.movingbed = dict()
         self.user = dict()
         self.depths = dict()
         self.bt_vel = dict()
@@ -72,18 +72,125 @@ class QAData(object):
         self.extrapolation = dict()
         self.edges = dict()
 
-        # Apply QA checks
-        self.transects_qa(meas)
-        self.system_tst_qa(meas)
-        self.compass_qa(meas)
-        self.temperature_qa(meas)
-        self.moving_bed_qa(meas)
-        self.user_qa(meas)
-        self.depths_qa(meas)
-        self.boat_qa(meas)
-        self.water_qa(meas)
-        self.extrapolation_qa(meas)
-        self.edges_qa(meas)
+        if compute:
+            # Apply QA checks
+            self.transects_qa(meas)
+            self.system_tst_qa(meas)
+            self.compass_qa(meas)
+            self.temperature_qa(meas)
+            self.moving_bed_qa(meas)
+            self.user_qa(meas)
+            self.depths_qa(meas)
+            self.boat_qa(meas)
+            self.water_qa(meas)
+            self.extrapolation_qa(meas)
+            self.edges_qa(meas)
+        else:
+            self.populate_from_qrev_mat(meas)
+
+    def populate_from_qrev_mat(self, meas_struct):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        meas_struct: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+        if hasattr(meas_struct, 'qa'):
+            # Set default thresholds
+            self.q_run_threshold_caution = meas_struct.qa.qRunThresholdCaution
+            self.q_run_threshold_warning = meas_struct.qa.qRunThresholdWarning
+            self.q_total_threshold_caution = meas_struct.qa.qTotalThresholdCaution
+            self.q_total_threshold_warning = meas_struct.qa.qTotalThresholdWarning
+
+            # Initialize instance variables
+            self.transects = dict()
+            self.transects['duration'] = meas_struct.qa.transects.duration
+            self.transects['messages'] = self.make_list(meas_struct.qa.transects.messages)
+            self.transects['number'] = meas_struct.qa.transects.number
+            self.transects['recip'] = meas_struct.qa.transects.recip
+            self.transects['sign'] = meas_struct.qa.transects.sign
+            self.transects['status'] = meas_struct.qa.transects.status
+            self.transects['uncertainty'] = meas_struct.qa.transects.uncertainty
+            self.system_tst = dict()
+            self.system_tst['messages'] = self.make_list(meas_struct.qa.systemTest.messages)
+            self.system_tst['status'] = meas_struct.qa.systemTest.status
+            self.compass = dict()
+            self.compass['messages'] = self.make_list(meas_struct.qa.compass.messages)
+            self.compass['status'] = meas_struct.qa.compass.status
+            self.compass['status1'] = meas_struct.qa.compass.status1
+            self.compass['status2'] = meas_struct.qa.compass.status2
+            self.compass['magvar'] = meas_struct.qa.compass.magvar
+            if hasattr(meas_struct.qa.compass, 'magvarIdx'):
+                self.compass['magvar_idx'] = meas_struct.qa.compass.magvarIdx
+            if hasattr(meas_struct.qa.compass, 'magErrorIdx'):
+                self.compass['mag_error_idx'] = meas_struct.qa.compass.magErrorIdx
+            self.temperature = dict()
+            self.temperature['messages'] = self.make_list(meas_struct.qa.temperature.messages)
+            self.temperature['status'] = meas_struct.qa.temperature.status
+            self.movingbed = dict()
+            self.movingbed['messages'] = self.make_list(meas_struct.qa.movingbed.messages)
+            self.movingbed['status'] = meas_struct.qa.movingbed.status
+            self.movingbed['code'] = meas_struct.qa.movingbed.code
+            self.user = dict()
+            self.user['messages'] = self.make_list(meas_struct.qa.user.messages)
+            self.user['sta_name'] = bool(meas_struct.qa.user.staName)
+            self.user['sta_number'] = bool(meas_struct.qa.user.staNumber)
+            self.user['status'] = meas_struct.qa.user.status
+            self.depths = self.create_qa_dict(meas_struct.qa.depths)
+            self.bt_vel = self.create_qa_dict(meas_struct.qa.btVel)
+            self.gga_vel = self.create_qa_dict(meas_struct.qa.ggaVel)
+            self.vtg_vel = self.create_qa_dict(meas_struct.qa.vtgVel)
+            self.w_vel = self.create_qa_dict(meas_struct.qa.wVel)
+            self.extrapolation = dict()
+            self.extrapolation['messages'] = self.make_list(meas_struct.qa.extrapolation.messages)
+            self.extrapolation['status'] = meas_struct.qa.extrapolation.status
+            self.edges = dict()
+            self.edges['messages'] = self.make_list(meas_struct.qa.edges.messages)
+            self.edges['status'] = meas_struct.qa.edges.status
+            self.edges['left_q'] = meas_struct.qa.edges.leftQ
+            self.edges['right_q'] = meas_struct.qa.edges.rightQ
+            self.edges['left_sign'] = meas_struct.qa.edges.leftSign
+            self.edges['right_sign'] = meas_struct.qa.edges.rightSign
+            self.edges['right_dist_moved_idx'] = meas_struct.qa.edges.rightDistMovedIdx
+            self.edges['left_dist_moved_idx'] = meas_struct.qa.edges.leftDistMovedIdx
+            self.edges['left_zero'] = meas_struct.qa.edges.leftzero
+            self.edges['right_zero'] = meas_struct.qa.edges.rightzero
+            self.edges['left_type'] = meas_struct.qa.edges.leftType
+            self.edges['right_type'] = meas_struct.qa.edges.rightType
+
+    @staticmethod
+    def create_qa_dict(mat_data):
+        qa_dict = dict()
+        qa_dict['messages'] = QAData.make_list(mat_data.messages)
+        qa_dict['all_invalid'] = mat_data.allInvalid.astype(bool)
+        qa_dict['q_max_run_caution'] = mat_data.qRunCaution.astype(bool)
+        qa_dict['q_max_run_warning'] = mat_data.qRunWarning.astype(bool)
+        qa_dict['q_total_caution'] = mat_data.qTotalCaution.astype(bool)
+        qa_dict['q_total_warning'] = mat_data.qTotalWarning.astype(bool)
+        qa_dict['status'] = mat_data.status
+        try:
+            qa_dict['q_max_run'] = mat_data.qMaxRun
+            qa_dict['q_total'] = mat_data.qTotal
+        except AttributeError:
+            qa_dict['q_max_run'] = np.tile(np.nan, (len(mat_data.allInvalid), 6))
+            qa_dict['q_total'] = np.tile(np.nan, (len(mat_data.allInvalid), 6))
+        return qa_dict
+
+    @staticmethod
+    def make_list(array_in):
+        if array_in.size > 3:
+            list_out = array_in.tolist()
+        else:
+            temp = array_in.tolist()
+            if len(temp) > 0:
+                internal_list = []
+                for item in temp:
+                    internal_list.append(item)
+                list_out = [internal_list]
+            else:
+                list_out = []
+        return list_out
 
     def transects_qa(self, meas):
         """Apply quality checks to transects
@@ -250,7 +357,7 @@ class QAData(object):
                                     if np.sum(np.sum(all_lag_check)) + np.sum(lag_7_check) > 1:
                                         pt3_fail = True
 
-                    if test.result['n_failed'] is not None and test.result['n_failed'] > 0:
+                    if test.result['sysTest']['n_failed'] is not None and test.result['sysTest']['n_failed'] > 0:
                         num_tests_with_failure += 1
 
             if pt3_fail:
@@ -294,7 +401,8 @@ class QAData(object):
         self.compass['status1'] = 'good'
         self.compass['status2'] = 'good'
         self.compass['magvar'] = 0
-        self.compass['magvar_idx'] = 0
+        self.compass['magvar_idx'] = []
+        self.compass['mag_error_idx'] = []
 
         if len(heading) > 1 and np.any(np.not_equal(heading, 0)):
             # ADCP has a compass
@@ -318,7 +426,7 @@ class QAData(object):
                 # Determine the ADCP manufacturer
                 if meas.transects[checked.index(True)].adcp.manufacturer == 'SonTek':
                     # SonTek ADCP
-                    if not meas.compass_cal:
+                    if len(meas.compass_cal) == 0:
                         # No compass calibration
                         self.compass['status1'] = 'warning'
                         self.compass['messages'].append(['COMPASS: No compass calibration;', 1, 4])
@@ -334,9 +442,9 @@ class QAData(object):
 
                 elif meas.transects[checked.index(True)].adcp.manufacturer == 'TRDI':
                     # TRDI ADCP
-                    if not meas.compass_cal:
+                    if len(meas.compass_cal) == 0:
                         # No compass calibration
-                        if not meas.compass_eval:
+                        if meas.compass_eval[-1].data is None:
                             # No calibration or evaluation
                             self.compass['status1'] = 'warning'
                             self.compass['messages'].append(['COMPASS: No compass calibration or evaluation;', 1, 4])
@@ -346,7 +454,7 @@ class QAData(object):
                             self.compass['messages'].append(['Compass: No compass calibration;', 2, 4])
                     else:
                         # Compass was calibrated
-                        if not meas.compass_eval:
+                        if len(meas.compass_eval) == 0:
                             # No compass evaluation
                             self.compass['status1'] = 'caution'
                             self.compass['messages'].append(['Compass: No compass evaluation;', 2, 4])
@@ -362,7 +470,7 @@ class QAData(object):
                                 self.compass['status1'] = 'good'
             else:
                 # Compass not required
-                if (not meas.compass_cal) and (not meas.compass_eval):
+                if len(meas.compass_cal) == 0 and len(meas.compass_eval) == 0:
                     # No compass calibration or evaluation
                     self.compass['status1'] = 'default'
                 else:
@@ -442,19 +550,19 @@ class QAData(object):
                     self.compass['magvar_idx'] = magvar.index(0)
 
             # Check pitch mean
-            if np.any(np.asarray(pitch_mean) > 8):
+            if np.any(np.asarray(np.abs(pitch_mean)) > 8):
                 self.compass['status2'] = 'warning'
                 self.compass['messages'].append(['PITCH: One or more transects have a mean pitch > 8 deg;', 1, 4])
-            elif np.any(np.asarray(pitch_mean) > 4):
+            elif np.any(np.asarray(np.abs(pitch_mean)) > 4):
                 if self.compass['status2'] == 'good':
                     self.compass['status2'] = 'caution'
                 self.compass['messages'].append(['Pitch: One or more transects have a mean pitch > 4 deg;', 2, 4])
 
             # Check roll mean
-            if np.any(np.asarray(roll_mean) > 8):
+            if np.any(np.asarray(np.abs(roll_mean)) > 8):
                 self.compass['status2'] = 'warning'
                 self.compass['messages'].append(['ROLL: One or more transects have a mean roll > 8 deg;', 1, 4])
-            elif np.any(np.asarray(roll_mean) > 4):
+            elif np.any(np.asarray(np.abs(roll_mean)) > 4):
                 if self.compass['status2'] == 'good':
                     self.compass['status2'] = 'caution'
                 self.compass['messages'].append(['Roll: One or more transects have a mean roll > 4 deg;', 2, 4])
@@ -488,6 +596,7 @@ class QAData(object):
                         ['Compass: One or more transects have roll exceeding calibration limits;', 2, 4])
 
                 # Check if magnetic error was exceeded
+                self.compass['mag_error_idx'] = mag_error_exceeded
                 if any(mag_error_exceeded):
                     if self.compass['status2'] == 'good':
                         self.compass['status2'] = 'caution'
@@ -593,15 +702,15 @@ class QAData(object):
             Object of class Measurement
         """
 
-        self.moving_bed['messages'] = []
-        self.moving_bed['code'] = 0
+        self.movingbed['messages'] = []
+        self.movingbed['code'] = 0
 
         # Are there moving-bed tests?
         if len(meas.mb_tests) < 1:
             # No moving-bed test
-            self.moving_bed['messages'].append(['MOVING-BED TEST: No moving bed test;', 1, 6])
-            self.moving_bed['status'] = 'warning'
-            self.moving_bed['code'] = 3
+            self.movingbed['messages'].append(['MOVING-BED TEST: No moving bed test;', 1, 6])
+            self.movingbed['status'] = 'warning'
+            self.movingbed['code'] = 3
 
         else:
             # Moving-bed tests available
@@ -634,31 +743,31 @@ class QAData(object):
 
             if not any(user_valid_test):
                 # No valid test according to user
-                self.moving_bed['messages'].append(['MOVING-BED TEST: No valid moving-bed test based on user input;',
-                                                    1, 6])
-                self.moving_bed['status'] = 'warning'
-                self.moving_bed['code'] = 3
+                self.movingbed['messages'].append(['MOVING-BED TEST: No valid moving-bed test based on user input;',
+                                                   1, 6])
+                self.movingbed['status'] = 'warning'
+                self.movingbed['code'] = 3
             else:
                 # Check for duplicate valid moving-bed tests
                 if len(np.unique(file_names)) < len(file_names):
-                    self.moving_bed['messages'].append([
+                    self.movingbed['messages'].append([
                         'MOVING-BED TEST: Duplicate moving-bed test files marked valid;', 1, 6])
-                    self.moving_bed['status'] = 'warning'
-                    self.moving_bed['code'] = 3
+                    self.movingbed['status'] = 'warning'
+                    self.movingbed['code'] = 3
 
-            if self.moving_bed['code'] == 0:
+            if self.movingbed['code'] == 0:
                 # Check test quality
                 if len(test_quality) > 0 and sum(np.array(test_quality) == 'Good') > 0:
-                    self.moving_bed['status'] = 'good'
-                    self.moving_bed['code'] = 1
+                    self.movingbed['status'] = 'good'
+                    self.movingbed['code'] = 1
 
                     # Check if there is a moving-bed
                     if 'Yes' in mb:
                         # Moving-bed present
-                        self.moving_bed['messages'].append(
+                        self.movingbed['messages'].append(
                             ['Moving-Bed Test: A moving-bed is present, use GPS or moving-bed correction;', 2, 6])
-                        self.moving_bed['code'] = 2
-                        self.moving_bed['status'] = 'caution'
+                        self.movingbed['code'] = 2
+                        self.movingbed['status'] = 'caution'
 
                         # Check for test type
                         if sum(np.array(mb_test_type) == 'Stationary'):
@@ -673,39 +782,39 @@ class QAData(object):
                                             gps.append(True)
                                 if not all(gps):
                                     # GPS not available for all selected transects
-                                    self.moving_bed['messages'].append([
+                                    self.movingbed['messages'].append([
                                         'Moving-Bed Test: '
                                         + 'Less than 3 stationary tests available for moving-bed correction;',
                                         2, 6])
 
                 elif len(test_quality) > 0 and sum(np.array(test_quality) == 'Warnings') > 0:
                     # Quality check has warnings
-                    self.moving_bed['messages'].append(['Moving-Bed Test: The moving-bed test(s) has warnings, '
-                                                        + 'please review tests to determine validity;', 2, 6])
-                    self.moving_bed['status'] = 'caution'
-                    self.moving_bed['code'] = 2
+                    self.movingbed['messages'].append(['Moving-Bed Test: The moving-bed test(s) has warnings, '
+                                                       + 'please review tests to determine validity;', 2, 6])
+                    self.movingbed['status'] = 'caution'
+                    self.movingbed['code'] = 2
 
                 elif len(test_quality) > 0 and sum(np.array(test_quality) == 'Manual') > 0:
                     # Manual override used
-                    self.moving_bed['messages'].append(['MOVING-BED TEST: '
-                                                        + 'The user has manually forced the use of some tests;', 1, 6])
-                    self.moving_bed['status'] = 'warning'
-                    self.moving_bed['code'] = 3
+                    self.movingbed['messages'].append(['MOVING-BED TEST: '
+                                                       + 'The user has manually forced the use of some tests;', 1, 6])
+                    self.movingbed['status'] = 'warning'
+                    self.movingbed['code'] = 3
 
                 else:
                     # Test has critical errors
-                    self.moving_bed['messages'].append(['MOVING-BED TEST: The moving-bed test(s) have critical errors '
-                                                        + 'and will not be used;', 1, 6])
-                    self.moving_bed['status'] = 'warning'
-                    self.moving_bed['code'] = 3
+                    self.movingbed['messages'].append(['MOVING-BED TEST: The moving-bed test(s) have critical errors '
+                                                       + 'and will not be used;', 1, 6])
+                    self.movingbed['status'] = 'warning'
+                    self.movingbed['code'] = 3
 
                 # Check multiple loops for consistency
                 if len(np.unique(loop)) > 1:
-                    self.moving_bed['messages'].append(['Moving-Bed Test: Results of valid loops are not consistent, '
-                                                        + 'review moving-bed tests;', 2, 6])
-                    if self.moving_bed['code'] < 3:
-                        self.moving_bed['code'] = 2
-                        self.moving_bed['status'] = 'caution'
+                    self.movingbed['messages'].append(['Moving-Bed Test: Results of valid loops are not consistent, '
+                                                       + 'review moving-bed tests;', 2, 6])
+                    if self.movingbed['code'] < 3:
+                        self.movingbed['code'] = 2
+                        self.movingbed['status'] = 'caution'
 
     def user_qa(self, meas):
         """Apply quality checks to user input data.
@@ -747,9 +856,9 @@ class QAData(object):
         self.depths['q_total'] = np.tile(np.nan, n_transects)
         self.depths['q_max_run'] = np.tile(np.nan, n_transects)
         self.depths['q_total_caution'] = np.tile(False, n_transects)
-        self.depths['q_run_caution'] = np.tile(False, n_transects)
+        self.depths['q_max_run_caution'] = np.tile(False, n_transects)
         self.depths['q_total_warning'] = np.tile(False, n_transects)
-        self.depths['q_run_warning'] = np.tile(False, n_transects)
+        self.depths['q_max_run_warning'] = np.tile(False, n_transects)
         self.depths['all_invalid'] = np.tile(False, n_transects)
         self.depths['messages'] = []
         self.depths['status'] = 'good'
@@ -794,14 +903,14 @@ class QAData(object):
 
                 # Apply interpolated discharge run thresholds
                 if q_max_run_percent > self.q_run_threshold_warning:
-                    self.depths['q_run_warning'][n] = True
+                    self.depths['q_max_run_warning'][n] = True
                 elif q_max_run_percent > self.q_run_threshold_caution:
-                    self.depths['q_run_caution'][n] = True
+                    self.depths['q_max_run_caution'][n] = True
 
         if checked:
 
             # Create array of all unique draft values
-            draft_check = np.unique(np.round(drafts, 3))
+            draft_check = np.unique(np.round(drafts, 2))
 
             # Check draft consistency
             if len(draft_check) > 1:
@@ -816,11 +925,11 @@ class QAData(object):
                 self.depths['messages'].append(['DEPTH: Transducer depth is too shallow, likely 0;', 1, 10])
 
             # Check consecutive interpolated discharge criteria
-            if np.any(self.depths['q_run_warning']):
+            if np.any(self.depths['q_max_run_warning']):
                 self.depths['messages'].append(['DEPTH: Int. Q for consecutive invalid ensembles exceeds '
                                                 + '%2.0f % self.q_run_threshold_warning' + '%;', 1, 10])
                 self.depths['status'] = 'warning'
-            elif np.any(self.depths['q_run_caution']):
+            elif np.any(self.depths['q_max_run_caution']):
                 self.depths['messages'].append(['Depth: Int. Q for consecutive invalid ensembles exceeds '
                                                 + '%2.0f % self.q_run_threshold_caution' + '%;', 2, 10])
                 self.depths['status'] = 'caution'
@@ -966,7 +1075,7 @@ class QAData(object):
                             'Int. Q for invalid ensembles in a transect exceeds ' +
                             '%3.1f' % self.q_total_threshold_warning + '%;', 1, module_code])
                     status_switch = 2
-                elif boat['q_max_run_caution'][:, dt_filter[1]].any():
+                elif boat['q_total_caution'][:, dt_filter[1]].any():
                     if dt_key is 'BT':
                         module_code = 7
                     else:
@@ -1204,97 +1313,97 @@ class QAData(object):
             left_q_percent = (np.nanmean(left_q) / np.nanmean(total_q)) * 100
             if np.abs(left_q_percent) > 5:
                 self.edges['status'] = 'caution'
-                self.edges['messages'].append(['Edges: Left edge Q is greater than 5%;', 2, 13])
+                self.edges['messages'].append(['Edges: Left edge Q is greater than 5%;', 1, 13])
                 self.edges['left_q'] = 1
 
-                # Check right edge q > 5%
-                self.edges['right_q'] = 0
-                right_q_percent = (np.nanmean(right_q) / np.nanmean(total_q)) * 100
-                if np.abs(right_q_percent) > 5:
-                    self.edges['status'] = 'caution'
-                    self.edges['messages'].append(['Edges: Right edge Q is greater than 5%;', 2, 13])
-                    self.edges['right_q'] = 1
+            # Check right edge q > 5%
+            self.edges['right_q'] = 0
+            right_q_percent = (np.nanmean(right_q) / np.nanmean(total_q)) * 100
+            if np.abs(right_q_percent) > 5:
+                self.edges['status'] = 'caution'
+                self.edges['messages'].append(['Edges: Right edge Q is greater than 5%;', 1, 13])
+                self.edges['right_q'] = 1
 
-                # Check for consistent sign
-                q_positive = []
-                self.edges['left_sign'] = 0
-                for q in left_q:
-                    if q >= 0:
-                        q_positive.append(True)
-                    else:
-                        q_positive.append(False)
-                if len(np.unique(q_positive)) > 1 and left_q_percent > 0.5:
-                    self.edges['status'] = 'caution'
-                    self.edges['messages'].append(['Edges: Sign of left edge Q is not consistent;', 2, 13])
-                    self.edges['left_sign'] = 1
+            # Check for consistent sign
+            q_positive = []
+            self.edges['left_sign'] = 0
+            for q in left_q:
+                if q >= 0:
+                    q_positive.append(True)
+                else:
+                    q_positive.append(False)
+            if len(np.unique(q_positive)) > 1 and left_q_percent > 0.5:
+                self.edges['status'] = 'caution'
+                self.edges['messages'].append(['Edges: Sign of left edge Q is not consistent;', 2, 13])
+                self.edges['left_sign'] = 1
 
-                q_positive = []
-                self.edges['right_sign'] = 0
-                for q in right_q:
-                    if q >= 0:
-                        q_positive.append(True)
-                    else:
-                        q_positive.append(False)
-                if len(np.unique(q_positive)) > 1 and right_q_percent > 0.5:
-                    self.edges['status'] = 'caution'
-                    self.edges['messages'].append(['Edges: Sign of right edge Q is not consistent;', 2, 13])
-                    self.edges['right_sign'] = 1
+            q_positive = []
+            self.edges['right_sign'] = 0
+            for q in right_q:
+                if q >= 0:
+                    q_positive.append(True)
+                else:
+                    q_positive.append(False)
+            if len(np.unique(q_positive)) > 1 and right_q_percent > 0.5:
+                self.edges['status'] = 'caution'
+                self.edges['messages'].append(['Edges: Sign of right edge Q is not consistent;', 2, 13])
+                self.edges['right_sign'] = 1
 
-                # Check distance moved
-                dmg_5_percent = 0.05 * np.nanmean(dist_made_good)
-                avg_right_edge_dist = np.nanmean(edge_dist_right)
-                right_threshold = np.nanmin([dmg_5_percent, avg_right_edge_dist])
-                self.edges['right_dist_moved_idx'] = np.where(dist_moved_right > right_threshold)[0]
-                if np.any(self.edges['right_dist_moved_idx']):
-                    self.edges['status'] = 'caution'
-                    self.edges['messages'].append(['Edges: Excessive boat movement in right edge ensembles;', 2, 13])
+            # Check distance moved
+            dmg_5_percent = 0.05 * np.nanmean(dist_made_good)
+            avg_right_edge_dist = np.nanmean(edge_dist_right)
+            right_threshold = np.nanmin([dmg_5_percent, avg_right_edge_dist])
+            self.edges['right_dist_moved_idx'] = np.where(dist_moved_right > right_threshold)[0]
+            if len(self.edges['right_dist_moved_idx']) > 0:
+                self.edges['status'] = 'caution'
+                self.edges['messages'].append(['Edges: Excessive boat movement in right edge ensembles;', 2, 13])
 
-                avg_left_edge_dist = np.nanmean(edge_dist_left)
-                left_threshold = np.nanmin([dmg_5_percent, avg_left_edge_dist])
-                self.edges['left_dist_moved_idx'] = np.where(dist_moved_left > left_threshold)[0]
-                if np.any(self.edges['left_dist_moved_idx']):
-                    self.edges['status'] = 'caution'
-                    self.edges['messages'].append(['Edges: Excessive boat movement in left edge ensembles;', 2, 13])
+            avg_left_edge_dist = np.nanmean(edge_dist_left)
+            left_threshold = np.nanmin([dmg_5_percent, avg_left_edge_dist])
+            self.edges['left_dist_moved_idx'] = np.where(dist_moved_left > left_threshold)[0]
+            if len(self.edges['left_dist_moved_idx']) > 0:
+                self.edges['status'] = 'caution'
+                self.edges['messages'].append(['Edges: Excessive boat movement in left edge ensembles;', 2, 13])
 
-                # Check for edge ensembles marked invalid due to excluded distance
-                for transect in meas.transects:
-                    if transect.checked:
-                        ens_sum_excluded_data = np.nansum(transect.w_vel.valid_data[6, :, :], 0)
-                        cells_above_sl = np.nansum(transect.w_vel.cells_above_sl, 0)
-                        ens_excluded_data = np.not_equal(ens_sum_excluded_data, cells_above_sl)
-                        if any(ens_excluded_data):
-                            self.edges['status'] = 'caution'
-                            self.edges['messages'].append(['Edges: The excluded distance caused invalid ensembles '
-                                                           + 'in an edge, check edge distance;', 2, 13])
-                            break
+            # Check for edge ensembles marked invalid due to excluded distance
+            for transect in meas.transects:
+                if transect.checked:
+                    ens_sum_excluded_data = np.nansum(transect.w_vel.valid_data[6, :, :], 0)
+                    cells_above_sl = np.nansum(transect.w_vel.cells_above_sl, 0)
+                    ens_excluded_data = np.not_equal(ens_sum_excluded_data, cells_above_sl)
+                    if any(ens_excluded_data):
+                        self.edges['status'] = 'caution'
+                        self.edges['messages'].append(['Edges: The excluded distance caused invalid ensembles '
+                                                       + 'in an edge, check edge distance;', 2, 13])
+                        break
 
-                # Check edges for zero discharge
-                self.edges['left_zero'] = 0
-                left_zero_idx = np.where(left_q == 0)[0]
-                if left_zero_idx:
-                    self.edges['status'] = 'warning'
-                    self.edges['messages'].append(['EDGES: Left edge has zero Q;', 1, 13])
-                    self.edges['left_zero'] = 2
+            # Check edges for zero discharge
+            self.edges['left_zero'] = 0
+            left_zero_idx = np.where(np.round(left_q, 4) == 0)[0]
+            if len(left_zero_idx) > 0:
+                self.edges['status'] = 'warning'
+                self.edges['messages'].append(['EDGES: Left edge has zero Q;', 1, 13])
+                self.edges['left_zero'] = 2
 
-                self.edges['right_zero'] = 0
-                right_zero_idx = np.where(right_q == 0)[0]
-                if right_zero_idx:
-                    self.edges['status'] = 'warning'
-                    self.edges['messages'].append(['EDGES: Right edge has zero Q;', 1, 13])
-                    self.edges['right_zero'] = 2
+            self.edges['right_zero'] = 0
+            right_zero_idx = np.where(np.round(right_q, 4) == 0)[0]
+            if len(right_zero_idx) > 0:
+                self.edges['status'] = 'warning'
+                self.edges['messages'].append(['EDGES: Right edge has zero Q;', 1, 13])
+                self.edges['right_zero'] = 2
 
-                # Check consistent edge type
-                self.edges['left_type'] = 0
-                if len(np.unique(left_type)) > 1:
-                    self.edges['status'] = 'warning'
-                    self.edges['messages'].append(['EDGES: Left edge type is not consistent;', 1, 13])
-                    self.edges['left_type'] = 2
+            # Check consistent edge type
+            self.edges['left_type'] = 0
+            if len(np.unique(left_type)) > 1:
+                self.edges['status'] = 'warning'
+                self.edges['messages'].append(['EDGES: Left edge type is not consistent;', 1, 13])
+                self.edges['left_type'] = 2
 
-                self.edges['right_type'] = 0
-                if len(np.unique(right_type)) > 1:
-                    self.edges['status'] = 'warning'
-                    self.edges['messages'].append(['EDGES: Right edge type is not consistent;', 1, 13])
-                    self.edges['right_type'] = 2
+            self.edges['right_type'] = 0
+            if len(np.unique(right_type)) > 1:
+                self.edges['status'] = 'warning'
+                self.edges['messages'].append(['EDGES: Right edge type is not consistent;', 1, 13])
+                self.edges['right_type'] = 2
         else:
             self.edges['status'] = 'inactive'
 

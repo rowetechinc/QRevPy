@@ -54,7 +54,24 @@ class ExtrapData(object):
         self.bot_method = bot
         self.exponent_orig = float(exp)
         self.exponent = float(exp)
-        
+
+    def populate_from_qrev_mat(self, transect):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        transect: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+
+        if hasattr(transect, 'extrap'):
+            self.top_method_orig = transect.extrap.topMethodOrig
+            self.bot_method_orig = transect.extrap.botMethodOrig
+            self.exponent_orig = transect.extrap.exponentOrig
+            self.top_method = transect.extrap.topMethod
+            self.bot_method = transect.extrap.botMethod
+            self.exponent = transect.extrap.exponent
+
     def set_extrap_data(self, top, bot, exp):
         """Store new extrapolation settings
 

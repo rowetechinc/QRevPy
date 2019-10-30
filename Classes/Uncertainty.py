@@ -107,6 +107,37 @@ class Uncertainty(object):
         # Estimate the total measurement uncertainty
         self.estimate_total_uncertainty()
 
+    def populate_from_qrev_mat(self, meas_struct):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        meas_struct: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+        if hasattr(meas_struct, 'uncertainty'):
+            self.cov = meas_struct.uncertainty.cov
+            self.cov_95 = meas_struct.uncertainty.cov95
+            self.invalid_95 = meas_struct.uncertainty.invalid95
+            self.edges_95 = meas_struct.uncertainty.edges95
+            self.extrapolation_95 = meas_struct.uncertainty.extrapolation95
+            self.moving_bed_95 = meas_struct.uncertainty.movingBed95
+            self.systematic = meas_struct.uncertainty.systematic
+            self.total_95 = meas_struct.uncertainty.total95
+            if len(meas_struct.uncertainty.cov95User) > 0:
+                self.cov_95_user = meas_struct.uncertainty.cov95User
+            if len(meas_struct.uncertainty.invalid95User) > 0:
+                self.invalid_95_user = meas_struct.uncertainty.invalid95User
+            if len(meas_struct.uncertainty.edges95User) > 0:
+                self.edges_95_user = meas_struct.uncertainty.edges95User
+            if len(meas_struct.uncertainty.extrapolation95User) >0:
+                self.extrapolation_95_user = meas_struct.uncertainty.extrapolation95User
+            if len(meas_struct.uncertainty.movingBed95User) > 0:
+                self.moving_bed_95_user = meas_struct.uncertainty.movingBed95User
+            if len(meas_struct.uncertainty.systematicUser) > 0:
+                self.systematic_user = meas_struct.uncertainty.systematicUser
+            self.total_95_user = meas_struct.uncertainty.total95User
+
     def estimate_total_uncertainty(self):
         """Compute the uncertainty of the measurement using the automatically computed uncertainties and
         user overrides.
@@ -345,9 +376,9 @@ class Uncertainty(object):
                     moving_bed_bool = []
                     for result in moving_bed:
                         if result is 'Yes':
-                            moving_bed_bool = True
+                            moving_bed_bool.append(True)
                         else:
-                            moving_bed_bool = False
+                            moving_bed_bool.append(False)
                     valid_moving_bed = np.logical_and(quality, np.asarray(moving_bed_bool))
                     if np.any(valid_moving_bed):
                         # Check to see that a correction was used

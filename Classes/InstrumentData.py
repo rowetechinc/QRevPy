@@ -207,3 +207,31 @@ class InstrumentData(object):
         self.t_matrix = TransformationMatrix()
         self.t_matrix.populate_data('SonTek', data_in=rs.Transformation_Matrices.Matrix)
         self.configuration_commands = None
+
+    def populate_from_qrev_mat(self, transect):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+       ----------
+       transect: mat_struct
+           Matlab data structure obtained from sio.loadmat
+       """
+
+        self.serial_num = transect.adcp.serialNum
+        self.manufacturer = transect.adcp.manufacturer
+        self.model = transect.adcp.model
+        self.firmware = transect.adcp.firmware
+        self.frequency_khz = transect.adcp.frequency_hz
+        self.beam_angle_deg = transect.adcp.beamAngle_deg
+        self.beam_pattern = transect.adcp.beamPattern
+        self.t_matrix = TransformationMatrix()
+        self.t_matrix.populate_from_qrev_mat(transect.adcp.tMatrix)
+        if len(transect.adcp.configurationCommands) > 0:
+            self.configuration_commands = []
+            for command in transect.adcp.configurationCommands:
+                if type(command) == str:
+                    self.configuration_commands.append(command)
+            self.configuration_commands = np.array(self.configuration_commands)
+
+        else:
+            self.configuration_commands = None

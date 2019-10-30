@@ -261,7 +261,68 @@ class GPSData(object):
         # If vtg data exist compute velocity
         if np.sum(np.sum(np.isnan(raw_vtg_speed) == False)) > 0:
             self.process_vtg()
-        
+
+
+    def populate_from_qrev_mat(self, transect):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        transect: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+
+        if hasattr(transect, 'gps'):
+            if hasattr(transect.gps, 'diffQualEns'):
+
+                # Raw properties
+                self.raw_gga_lat_deg = transect.gps.rawGGALat_deg
+                self.raw_gga_lon_deg = transect.gps.rawGGALon_deg
+                self.raw_gga_altitude_m = transect.gps.rawGGAAltitude_m
+                self.raw_gga_differential = transect.gps.rawGGADifferential
+                self.raw_gga_hdop = transect.gps.rawGGAHDOP
+                self.raw_gga_utc = transect.gps.rawGGAUTC
+                self.raw_gga_serial_time = transect.gps.rawGGASerialTime
+                self.raw_gga_num_sats = transect.gps.rawGGANumSats
+                self.raw_vtg_course_deg = transect.gps.rawVTGCourse_deg
+                self.raw_vtg_speed_mps = transect.gps.rawVTGSpeed_mps
+                self.raw_vtg_delta_time = transect.gps.rawVTGDeltaTime
+                self.raw_vtg_mode_indicator = transect.gps.rawVTGModeIndicator
+                self.raw_gga_delta_time = transect.gps.rawGGADeltaTime
+
+                # Manufacturer assigned ensemble values
+                self.ext_gga_lat_deg = transect.gps.extGGALat_deg
+                self.ext_gga_lon_deg = transect.gps.extGGALon_deg
+                self.ext_gga_altitude_m = transect.gps.extGGAAltitude_m
+                self.ext_gga_differential = transect.gps.extGGADifferential
+                self.ext_gga_hdop = transect.gps.extGGAHDOP
+                self.ext_gga_utc = transect.gps.extGGAUTC
+                self.ext_gga_serial_time = transect.gps.extGGASerialTime
+                self.ext_gga_num_sats = transect.gps.extGGANumSats
+                self.ext_vtg_course_deg = transect.gps.extVTGCourse_deg
+                self.ext_vtg_speed_mps = transect.gps.extVTGSpeed_mps
+
+                # User specification
+                self.gga_position_method = transect.gps.ggaPositionMethod
+                self.gga_velocity_method = transect.gps.ggaVelocityMethod
+                self.vtg_velocity_method = transect.gps.vtgVelocityMethod
+
+                # Computed properties for ensembles
+                self.gga_lat_ens_deg = transect.gps.ggaLatEns_deg
+                self.gga_lon_ens_deg = transect.gps.ggaLonEns_deg
+                self.utm_ens_m = transect.gps.UTMEns_m
+                self.gga_velocity_ens_mps = transect.gps.ggaVelocityEns_mps
+                self.gga_serial_time_ens = transect.gps.ggaSerialTimeEns
+                self.vtg_velocity_ens_mps = transect.gps.vtgVelocityEns_mps
+                if len(transect.gps.perGoodEns) > 0:
+                    self.per_good_ens = transect.gps.perGoodEns
+                else:
+                    self.per_good_ens = None
+                self.hdop_ens = transect.gps.hdopEns
+                self.num_sats_ens = transect.gps.numSatsEns
+                self.altitude_ens_m = transect.gps.altitudeEns_m
+                self.diff_qual_ens = transect.gps.diffQualEns
+
     def process_gga(self, p_setting=None, v_setting=None):
         """Computes boat velocity from gga data.
 

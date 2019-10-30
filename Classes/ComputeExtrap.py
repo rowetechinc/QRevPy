@@ -56,7 +56,26 @@ class ComputeExtrap(object):
         if compute_sensitivity:
             self.q_sensitivity = ExtrapQSensitivity()
             self.q_sensitivity.populate_data(transects=transects, extrap_fits=self.sel_fit)
-            
+
+    def populate_from_qrev_mat(self, meas_struct):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        meas_struct: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+
+        if hasattr(meas_struct, 'extrapFit'):
+            self.threshold = meas_struct.extrapFit.threshold
+            self.subsection = meas_struct.extrapFit.subsection
+            self.fit_method = meas_struct.extrapFit.fitMethod
+            self.norm_data = NormData.qrev_mat_in(meas_struct.extrapFit)
+            self.sel_fit = SelectFit.qrev_mat_in(meas_struct.extrapFit)
+            self.q_sensitivity = ExtrapQSensitivity()
+            self.q_sensitivity.populate_from_qrev_mat(meas_struct.extrapFit)
+            self.messages = meas_struct.extrapFit.messages
+
     def process_profiles(self, transects, data_type):
         """Function that coordinates the fitting process.
 

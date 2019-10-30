@@ -130,6 +130,37 @@ class ExtrapQSensitivity(object):
 
         self.compute_percent_diff(extrap_fits=extrap_fits, transects=transects)
 
+    def populate_from_qrev_mat(self, mat_data):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        mat_data: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+
+        if hasattr(mat_data, 'qSensitivity'):
+            self.q_pp_mean = mat_data.qSensitivity.qPPmean
+            self.q_pp_opt_mean = mat_data.qSensitivity.qPPoptmean
+            self.q_cns_mean = mat_data.qSensitivity.qCNSmean
+            self.q_cns_opt_mean = mat_data.qSensitivity.qCNSoptmean
+            self.q_3p_ns_mean = mat_data.qSensitivity.q3pNSmean
+            self.q_3p_ns_opt_mean = mat_data.qSensitivity.q3pNSoptmean
+            self.q_pp_per_diff = mat_data.qSensitivity.qPPperdiff
+            self.q_pp_opt_per_diff = mat_data.qSensitivity.qPPoptperdiff
+            self.q_cns_per_diff = mat_data.qSensitivity.qCNSperdiff
+            self.q_cns_opt_per_diff = mat_data.qSensitivity.qCNSoptperdiff
+            self.q_3p_ns_per_diff = mat_data.qSensitivity.q3pNSperdiff
+            self.q_3p_ns_opt_per_diff = mat_data.qSensitivity.q3pNSoptperdiff
+            self.pp_exp = mat_data.qSensitivity.ppExponent
+            self.ns_exp = mat_data.qSensitivity.nsExponent
+            if len(mat_data.qSensitivity.manTop) > 0:
+                self.man_top = mat_data.qSensitivity.manTop
+                self.man_bot = mat_data.qSensitivity.manBot
+                self.man_exp = mat_data.qSensitivity.manExp
+                self.q_man_mean = mat_data.qSensitivity.qManmean
+                self.q_man_per_diff = mat_data.qSensitivity.qManperdiff
+
     def compute_percent_diff(self, extrap_fits, transects=None):
         """Computes the percent difference for each of the extrapolation options as compared to selected method.
 

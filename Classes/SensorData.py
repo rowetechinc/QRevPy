@@ -32,6 +32,18 @@ class SensorData(object):
         self.data = data_in
         self.data_orig = data_in
         self.source = source_in
+
+    def populate_from_qrev_mat(self, mat_data):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        mat_data: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+        self.data = mat_data.data
+        self.data_orig = mat_data.dataOrig
+        self.source = mat_data.source
         
     def change_data(self, data_in):
         """Change data to be applied in computations.

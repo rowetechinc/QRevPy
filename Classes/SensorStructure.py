@@ -1,3 +1,7 @@
+from Classes.HeadingData import HeadingData
+from Classes.SensorData import SensorData
+import numpy as np
+
 class SensorStructure(object):
     """Class to store sensor data from various sources.
 
@@ -20,6 +24,37 @@ class SensorStructure(object):
         self.internal = None  # Contains the data from the internal sensor
         self.external = None  # Contains the data from an external sensor
         self.user = None  # Contains user supplied value
+
+    def populate_from_qrev_mat(self, mat_data, heading=False):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        mat_data: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+        if not heading:
+            if not type(mat_data.external) is np.ndarray:
+                self.external = SensorData()
+                self.external.populate_from_qrev_mat(mat_data.external)
+            if not type(mat_data.internal) is np.ndarray:
+                self.internal = SensorData()
+                self.internal.populate_from_qrev_mat(mat_data.internal)
+            if not type(mat_data.user) is np.ndarray:
+                self.user = SensorData()
+                self.user.populate_from_qrev_mat(mat_data.user)
+            self.selected = mat_data.selected
+        else:
+            if not type(mat_data.external) is np.ndarray:
+                self.external = HeadingData()
+                self.external.populate_from_qrev_mat(mat_data.external)
+            if not type(mat_data.internal) is np.ndarray:
+                self.internal = HeadingData()
+                self.internal.populate_from_qrev_mat(mat_data.internal)
+            if not type(mat_data.user) is np.ndarray:
+                self.user = HeadingData()
+                self.user.populate_from_qrev_mat(mat_data.user)
+            self.selected = mat_data.selected
         
     def set_selected(self, selected_name):
         """Set the selected source for the specified object

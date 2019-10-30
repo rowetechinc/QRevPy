@@ -1,21 +1,25 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
-from Classes.stickysettings import StickySettings as SSet
 from PyQt5.QtCore import pyqtSignal, QRegExp
-
-import UI.QRev_gui as QRev_gui
+import numpy as np
 import sys
 import threading
 import copy
-from UI.selectFile import OpenMeasurementDialog, SaveMeasurementDialog
+from datetime import datetime
+from contextlib import contextmanager
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+import time
+import os
+
+from MiscLibs.common_functions import units_conversion, convert_temperature
+
+from Classes.stickysettings import StickySettings as SSet
 from Classes.Measurement import Measurement
-from Classes.QComp import QComp
 from Classes.Python2Matlab import Python2Matlab
 from Classes.Sensors import Sensors
 from Classes.MovingBedTests import MovingBedTests
-import numpy as np
-from UI.Qtmpl import Qtmpl
-from MiscLibs.common_functions import units_conversion, convert_temperature
-from datetime import datetime
+
+import UI.QRev_gui as QRev_gui
+from UI.selectFile import OpenMeasurementDialog, SaveMeasurementDialog
 from UI.Comment import Comment
 from UI.Transects2Use import Transects2Use
 from UI.Options import Options
@@ -46,10 +50,6 @@ from UI.EdgeType import EdgeType
 from UI.EdgeDist import EdgeDist
 from UI.EdgeEns import EdgeEns
 from UI.MplCanvas import MplCanvas
-from contextlib import contextmanager
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-import time
-import os
 
 
 class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
@@ -918,7 +918,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl = self.main_message_table
         tbl.clear()
         main_message_header = [self.tr('Status'), self.tr('Message')]
-        qa_check_keys = ['bt_vel', 'compass', 'depths', 'edges', 'extrapolation', 'gga_vel', 'moving_bed', 'system_tst',
+        qa_check_keys = ['bt_vel', 'compass', 'depths', 'edges', 'extrapolation', 'gga_vel', 'movingbed', 'system_tst',
                          'temperature', 'transects', 'user', 'vtg_vel', 'w_vel']
 
         # For each qa check retrieve messages and set tab icon based on the status
@@ -948,7 +948,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Populate table
         for row, message in enumerate(messages):
             tbl.setItem(row, 1, QtWidgets.QTableWidgetItem(message[0]))
-            if message[1] == 1:
+            if int(message[1]) == 1:
                 tbl.item(row, 1).setFont(self.font_bold)
                 item_warning = QtWidgets.QTableWidgetItem(self.icon_warning, '')
                 tbl.setItem(row, 0, item_warning)
@@ -983,7 +983,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             if gga_status == 'warning' or vtg_status == 'warning':
                 status = 'warning'
             tab = 'tab_gps'
-        elif key == 'moving_bed':
+        elif key == 'movingbed':
             tab = 'tab_mbt'
         elif key == 'system_tst':
             tab = 'tab_systest'
@@ -1350,7 +1350,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             num_tests_with_failure = 0
             for test in self.meas.system_tst:
                 if hasattr(test, 'result'):
-                    if test.result['n_failed'] is not None and test.result['n_failed'] > 0:
+                    if test.result['sysTest']['n_failed'] is not None and test.result['sysTest']['n_failed'] > 0:
                         num_tests_with_failure += 1
             tbl.setItem(0, 3, QtWidgets.QTableWidgetItem('{:2.0f}'.format(num_tests_with_failure)))
             tbl.item(0, 3).setFlags(QtCore.Qt.ItemIsEnabled)
@@ -1359,7 +1359,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.setItem(1, 0, QtWidgets.QTableWidgetItem(self.tr('Compass Calibration: ')))
             tbl.item(1, 0).setFlags(QtCore.Qt.ItemIsEnabled)
             tbl.item(1, 0).setFont(self.font_bold)
-            if not self.meas.compass_cal:
+            if len(self.meas.compass_cal) == 0:
                 tbl.setItem(1, 1, QtWidgets.QTableWidgetItem(self.tr('No')))
             else:
                 tbl.setItem(1, 1, QtWidgets.QTableWidgetItem(self.tr('Yes')))
@@ -1369,10 +1369,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.setItem(1, 2, QtWidgets.QTableWidgetItem(self.tr('Compass Evaluation: ')))
             tbl.item(1, 2).setFlags(QtCore.Qt.ItemIsEnabled)
             tbl.item(1, 2).setFont(self.font_bold)
-            if not self.meas.compass_eval:
+            if len(self.meas.compass_eval) == 0:
                 tbl.setItem(1, 3, QtWidgets.QTableWidgetItem(self.tr('No')))
             else:
-                tbl.setItem(1, 3, QtWidgets.QTableWidgetItem('{:3.1f}'.format(self.meas.compass_cal[-1].result['compass']['error'])))
+                tbl.setItem(1, 3, QtWidgets.QTableWidgetItem('{:3.1f}'.format(self.meas.compass_eval[-1].result['compass']['error'])))
             tbl.item(1, 3).setFlags(QtCore.Qt.ItemIsEnabled)
 
             # Moving-Bed Test
@@ -1785,12 +1785,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Number of subtests run
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:2.0f}'.format(test.result['n_tests'])))
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:2.0f}'.format(test.result['sysTest']['n_tests'])))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Number of subtests failed
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:2.0f}'.format(test.result['n_failed'])))
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:2.0f}'.format(test.result['sysTest']['n_failed'])))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Status of PT3 tests
@@ -1971,6 +1971,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tblc.resizeColumnsToContents()
             tblc.resizeRowsToContents()
 
+
         # Setup evaluation table
         tble = self.table_compass_eval
 
@@ -2012,6 +2013,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             tble.resizeColumnsToContents()
             tble.resizeRowsToContents()
+
+        if tble.rowCount() == 0 and tblc.rowCount() == 0:
+            self.display_compass_result.clear()
 
     def compass_comments_messages(self):
         """Displays the messages associated with the compass, pitch, and roll and any comments provided by the user.
@@ -3088,7 +3092,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.meas.mb_tests = MovingBedTests.auto_use_2_correct(
                 moving_bed_tests=self.meas.mb_tests,
                 boat_ref=self.meas.transects[self.checked_transects_idx[0]].w_vel.nav_ref)
-            self.meas.qa.moving_bed_qa(self.meas)
+            self.meas.qa.movingbed_qa(self.meas)
             self.change = True
 
         # Use to correct, manual override
@@ -3195,7 +3199,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if reprocess_measurement:
            self.meas.compute_discharge()
            self.meas.uncertainty.compute_uncertainty(self.meas)
-           self.meas.qa.moving_bed_qa(self.meas)
+           self.meas.qa.movingbed_qa(self.meas)
         self.change = True
 
         self.update_mb_table()
@@ -3224,21 +3228,20 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.mb_boat_speed(transect=self.meas.mb_tests[idx].transect)
             else:
                 self.stationary(mb_test=self.meas.mb_tests[idx])
+
+            # Setup list for use by graphics controls
+            self.canvases = [self.mb_shiptrack_canvas, self.mb_ts_canvas]
+            self.figs = [self.mb_shiptrack_fig, self.mb_ts_fig]
+            self.toolbars = [self.mb_shiptrack_toolbar, self.mb_ts_toolbar]
+            # Reset data cursor to work with new figure
+            if self.actionData_Cursor.isChecked():
+                self.data_cursor()
         else:
             # Disable user checkboxes if no tests are available
             self.cb_mb_bt.setEnabled(False)
             self.cb_mb_gga.setEnabled(False)
             self.cb_mb_vtg.setEnabled(False)
             self.cb_mb_vectors.setEnabled(False)
-
-        # Setup list for use by graphics controls
-        self.canvases = [self.mb_shiptrack_canvas, self.mb_ts_canvas]
-        self.figs = [self.mb_shiptrack_fig, self.mb_ts_fig]
-        self.toolbars = [self.mb_shiptrack_toolbar, self.mb_ts_toolbar]
-
-        # Reset data cursor to work with new figure
-        if self.actionData_Cursor.isChecked():
-            self.data_cursor()
 
     def mb_shiptrack(self, transect):
         """Creates shiptrack plot for data in transect.
@@ -3373,12 +3376,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Display each message on a new line
             self.display_mb_messages.moveCursor(QtGui.QTextCursor.Start)
-            for message in self.meas.qa.moving_bed['messages']:
+            for message in self.meas.qa.movingbed['messages']:
                 self.display_mb_messages.textCursor().insertText(message[0])
                 self.display_mb_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_mb_messages.textCursor().insertBlock()
 
-            self.setTabIcon('tab_mbt', self.meas.qa.moving_bed['status'])
+            self.setTabIcon('tab_mbt', self.meas.qa.movingbed['status'])
 
 # Bottom track tab
 # ================
@@ -4650,6 +4653,43 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
+        # Transect selected for display
+        self.transect = self.meas.transects[self.checked_transects_idx[0]]
+        depth_ref_selected = self.transect.depths.selected
+        depth_composite = self.transect.depths.composite
+
+        # Set depth reference
+        if depth_ref_selected == 'bt_depths':
+            if depth_composite == 'On':
+                self.combo_depth_ref.setCurrentIndex(1)
+            else:
+                self.combo_depth_ref.setCurrentIndex(0)
+        elif depth_ref_selected == 'vb_depths':
+            if depth_composite == 'On':
+                self.combo_depth_ref.setCurrentIndex(3)
+            else:
+                self.combo_depth_ref.setCurrentIndex(2)
+        elif depth_ref_selected == 'ds_depths':
+            if depth_composite == 'On':
+                self.combo_depth_ref.setCurrentIndex(5)
+            else:
+                self.combo_depth_ref.setCurrentIndex(4)
+
+        # Set depth average method
+        depths_selected = getattr(self.meas.transects[self.checked_transects_idx[0]].depths, depth_ref_selected)
+        if depths_selected.avg_method == 'IDW':
+            self.combo_depth_avg.setCurrentIndex(0)
+        else:
+            self.combo_depth_avg.setCurrentIndex(1)
+
+        # Set depth filter method
+        if depths_selected.filter_type == 'Smooth':
+            self.combo_depth_filter.setCurrentIndex(1)
+        elif depths_selected.filter_type == 'TRDI':
+            self.combo_depth_filter.setCurrentIndex(2)
+        else:
+            self.combo_depth_filter.setCurrentIndex(0)
+
         if not self.depth_initialized:
             tbl.cellClicked.connect(self.depth_table_clicked)
 
@@ -4709,43 +4749,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.combo_depth_filter.currentIndexChanged[str].connect(self.change_filter)
 
             self.depth_initialized = True
-
-        # Transect selected for display
-        self.transect = self.meas.transects[self.checked_transects_idx[0]]
-        depth_ref_selected = self.transect.depths.selected
-        depth_composite = self.transect.depths.composite
-
-        # Set depth reference
-        if depth_ref_selected == 'bt_depths':
-            if depth_composite == 'On':
-                self.combo_depth_ref.setCurrentIndex(1)
-            else:
-                self.combo_depth_ref.setCurrentIndex(0)
-        elif depth_ref_selected == 'vb_depths':
-            if depth_composite == 'On':
-                self.combo_depth_ref.setCurrentIndex(3)
-            else:
-                self.combo_depth_ref.setCurrentIndex(2)
-        elif depth_ref_selected == 'ds_depths':
-            if depth_composite == 'On':
-                self.combo_depth_ref.setCurrentIndex(5)
-            else:
-                self.combo_depth_ref.setCurrentIndex(4)
-
-        # Set depth average method
-        depths_selected = getattr(self.meas.transects[self.checked_transects_idx[0]].depths, depth_ref_selected)
-        if depths_selected.avg_method == 'IDW':
-            self.combo_depth_avg.setCurrentIndex(0)
-        else:
-            self.combo_depth_avg.setCurrentIndex(1)
-
-        # Set depth filter method
-        if depths_selected.filter_type == 'Smooth':
-            self.combo_depth_filter.setCurrentIndex(1)
-        elif depths_selected.filter_type == 'TRDI':
-            self.combo_depth_filter.setCurrentIndex(2)
-        else:
-            self.combo_depth_filter.setCurrentIndex(0)
 
         # Display content
         self.update_depth_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
@@ -6658,6 +6661,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # Automatically resize rows and columns
                 tbl.resizeColumnsToContents()
                 tbl.resizeRowsToContents()
+        self.edge_comments_messages()
 
     def edges_table_clicked(self, row, col):
 
@@ -7099,6 +7103,31 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         self.right_edge_st_canvas.draw()
 
+    def edge_comments_messages(self):
+        """Displays comments and messages associated with bottom track filters in Messages tab.
+        """
+
+        # Clear comments and messages
+        self.display_edges_comments.clear()
+        self.display_edges_messages.clear()
+
+        if hasattr(self, 'meas'):
+            # Display each comment on a new line
+            self.display_edges_comments.moveCursor(QtGui.QTextCursor.Start)
+            for comment in self.meas.comments:
+                self.display_edges_comments.textCursor().insertText(comment)
+                self.display_edges_comments.moveCursor(QtGui.QTextCursor.End)
+                self.display_edges_comments.textCursor().insertBlock()
+
+            # Display each message on a new line
+            self.display_edges_messages.moveCursor(QtGui.QTextCursor.Start)
+            for message in self.meas.qa.edges['messages']:
+                self.display_edges_messages.textCursor().insertText(message[0])
+                self.display_edges_messages.moveCursor(QtGui.QTextCursor.End)
+                self.display_edges_messages.textCursor().insertBlock()
+
+            self.setTabIcon('tab_edges', self.meas.qa.edges['status'])
+
 # Graphics controls
 # =================
     def clear_zphd(self):
@@ -7247,6 +7276,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             for idx in range(len(self.meas.transects)):
                 q_trans = {'transect_id': idx,
                            'transect_file': self.meas.transects[idx].file_name[:-4],
+                           'xml_file': save_file.full_Name[:-4] + '.xml',
                            'start_serial_time': self.meas.transects[idx].date_time.start_serial_time,
                            'end_serial_time': self.meas.transects[idx].date_time.end_serial_time,
                            'duration': self.meas.transects[idx].date_time.transect_duration_sec,

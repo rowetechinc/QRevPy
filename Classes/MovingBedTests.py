@@ -76,9 +76,9 @@ class MovingBedTests(object):
         self.selected = None  # Selected valid moving-bed test to use for correction or determine moving-bed condition
         self.messages = None  # Cell array of warning and error messages based on data processing
         self.near_bed_speed_mps = np.nan  # Mean near-bed water speed for test in mps
-        self.stationary_us_track = np.nan  # Upstream component of the bottom track referenced ship track
-        self.stationary_cs_track = np.nan  # Cross=stream component of the bottom track referenced ship track
-        self.stationary_mb_vel = np.nan  # Moving-bed velocity by ensemble
+        self.stationary_us_track = np.array([])  # Upstream component of the bottom track referenced ship track
+        self.stationary_cs_track = np.array([]) # Cross=stream component of the bottom track referenced ship track
+        self.stationary_mb_vel = np.array([])  # Moving-bed velocity by ensemble
         
     def populate_data(self, source, file=None, test_type=None):
         """Process and store moving-bed test data.
@@ -100,6 +100,7 @@ class MovingBedTests(object):
         
         # Convert to earth coordinates and set the navigation reference to BT
         # for both boat and water data
+        self.transect.boat_vel.bt_vel.apply_interpolation(transect=self.transect, interpolation_method='Linear')
         self.transect.change_coord_sys(new_coord_sys='Earth')
         self.transect.change_nav_reference(update=True, new_nav_ref='BT')
             
@@ -115,6 +116,101 @@ class MovingBedTests(object):
             self.stationary_test()
         else:
             raise ValueError('Invalid moving-bed test identifier specified.')
+
+    @staticmethod
+    def qrev_mat_in(meas_struct):
+        """Processes the Matlab data structure to obtain a list of TransectData objects containing transect
+           data from the Matlab data structure.
+
+       Parameters
+       ----------
+       meas_struct: mat_struct
+           Matlab data structure obtained from sio.loadmat
+
+       Returns
+       -------
+       mb_tests: list
+           List of MovingBedTests objects
+       """
+
+        mb_tests = []
+        if hasattr(meas_struct, 'mbTests'):
+            try:
+                if type(meas_struct.mbTests) == np.ndarray:
+                    for test in meas_struct.mbTests:
+                        temp = MovingBedTests()
+                        temp.populate_from_qrev_mat(test)
+                        mb_tests.append(temp)
+                else:
+                    temp = MovingBedTests()
+                    temp.populate_from_qrev_mat(meas_struct.mbTests)
+                    mb_tests.append(temp)
+            except TypeError:
+                pass
+        return mb_tests
+
+    def populate_from_qrev_mat(self, mat_data):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        mat_data: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+
+        self.type = mat_data.type
+        self.transect = TransectData()
+        self.transect.populate_from_qrev_mat(mat_data.transect)
+        self.duration_sec = mat_data.duration_sec
+        self.percent_invalid_bt = mat_data.percentInvalidBT
+        if type (mat_data.compassDiff_deg) is float:
+            self.compass_diff_deg = mat_data.compassDiff_deg
+        else:
+            self.compass_diff_deg = self.make_list(mat_data.compassDiff_deg)
+        if type(mat_data.flowDir_deg) is float:
+            self.flow_dir = mat_data.flowDir_deg
+        else:
+            self.flow_dir = self.make_list(mat_data.flowDir_deg)
+        if type(mat_data.mbDir_deg) is float:
+            self.mb_dir = mat_data.mbDir_deg
+        else:
+            self.mb_dir = self.make_list(mat_data.mbDir_deg)
+        self.dist_us_m = mat_data.distUS_m
+        self.flow_spd_mps = mat_data.flowSpd_mps
+        self.mb_spd_mps = mat_data.mbSpd_mps
+        self.percent_mb = mat_data.percentMB
+        self.moving_bed = mat_data.movingBed
+        self.user_valid = bool(mat_data.userValid)
+        self.test_quality = mat_data.testQuality
+        self.use_2_correct = bool(mat_data.use2Correct)
+        self.selected = bool(mat_data.selected)
+        if type(mat_data.messages) == np.ndarray:
+            self.messages = mat_data.messages.tolist()
+        else:
+            self.messages = mat_data.messages
+        if type(mat_data.nearBedSpeed_mps) is np.ndarray:
+            self.near_bed_speed_mps = np.nan
+        else:
+            self.near_bed_speed_mps = mat_data.nearBedSpeed_mps
+        self.stationary_us_track = mat_data.stationaryUSTrack
+        self.stationary_cs_track = mat_data.stationaryCSTrack
+        self.stationary_mb_vel = mat_data.stationaryMBVel
+
+
+    @staticmethod
+    def make_list(array_in):
+        if array_in.size > 3:
+            list_out = array_in.tolist()
+        else:
+            temp = array_in.tolist()
+            if len(temp) > 0:
+                internal_list = []
+                for item in temp:
+                    internal_list.append(item)
+                list_out = [internal_list]
+            else:
+                list_out = []
+        return list_out
 
     def mb_trdi(self, transect, test_type):
         """Function to create object properties for TRDI moving-bed tests

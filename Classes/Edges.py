@@ -36,6 +36,25 @@ class Edges(object):
         self.rec_edge_method = rec_edge_method
         self.vel_method = vel_method
 
+    def populate_from_qrev_mat(self, transect):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        transect: mat_struct
+           Matlab data structure obtained from sio.loadmat
+       """
+
+        if hasattr(transect, 'edges'):
+            if hasattr(transect.edges, 'left'):
+                self.left = EdgeData()
+                self.left.populate_from_qrev_mat(transect.edges.left)
+            if hasattr(transect.edges, 'right'):
+                self.right = EdgeData()
+                self.right.populate_from_qrev_mat(transect.edges.right)
+            self.rec_edge_method = transect.edges.recEdgeMethod
+            self.vel_method = transect.edges.velMethod
+
     def change_property(self, prop, setting, edge=None):
         """Change edge property
         

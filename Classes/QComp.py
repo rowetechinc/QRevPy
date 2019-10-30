@@ -215,6 +215,36 @@ class QComp(object):
         else:
             self.total = self.left + self.right + (self.middle + self.bottom + self.top) * self.correction_factor
 
+    @staticmethod
+    def qrev_mat_in(meas_struct):
+        """Processes the Matlab data structure to obtain a list of QComp objects containing the discharge data from the
+        Matlab data structure.
+
+        Parameters
+        ----------
+        meas_struct: mat_struct
+            Matlab data structure obtained from sio.loadmat
+
+        Returns
+        -------
+        discharge: list
+            List of QComp data objects
+        """
+
+        discharge = []
+        if hasattr(meas_struct.discharge, 'bottom'):
+            # Measurement has discharge data from only one transect
+            q = QComp()
+            q.populate_from_qrev_mat(meas_struct.discharge)
+            discharge.append(q)
+        else:
+            # Measurement has discharge data from multiple transects
+            for q_data in meas_struct.discharge:
+                q = QComp()
+                q.populate_from_qrev_mat(q_data)
+                discharge.append(q)
+        return discharge
+
     def populate_from_qrev_mat(self, q_in):
         """Populated QComp instance variables with data from QRev Matlab file.
 
@@ -223,7 +253,6 @@ class QComp(object):
         q_in: object
             mat_struct_object containing QComp class data
         """
-
         self.top = q_in.top
         self.middle = q_in.middle
         self.bottom = q_in.bottom

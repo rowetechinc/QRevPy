@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.io as sio
 import copy as copy
+from Classes.PreMeasurement import PreMeasurement
 
 
 class Python2Matlab(object):
@@ -47,20 +48,23 @@ class Python2Matlab(object):
         self.matlab_dict['comments'] = self.comment2struct(meas_mat.comments)
         self.matlab_dict['compassCal'] = self.listobj2struct(meas_mat.compass_cal, py_2_mat_dict)
         self.matlab_dict['compassEval'] = self.listobj2struct(meas_mat.compass_eval, py_2_mat_dict)
+        self.matlab_dict['sysTest'] = self.listobj2struct(meas_mat.system_tst, py_2_mat_dict)
         discharge = np.copy(meas_mat.discharge)
         discharge_sel = [discharge[i] for i in checked_idx]
         self.matlab_dict['discharge'] = self.listobj2struct(discharge_sel, py_2_mat_dict)
-        self.matlab_dict['sysTest'] = self.listobj2struct(meas_mat.system_tst, py_2_mat_dict)
         transects = np.copy(meas_mat.transects)
         transects_sel = [transects[i] for i in checked_idx]
         self.matlab_dict['transects'] = self.listobj2struct(transects_sel, py_2_mat_dict)
         extrap = copy.deepcopy(meas_mat.extrap_fit)
-        sel_fit = [extrap.sel_fit[i] for i in checked_idx_meas]
-        norm_data = [extrap.norm_data[i] for i in checked_idx_meas]
-        extrap.sel_fit = sel_fit
-        extrap.norm_data = norm_data
+        # sel_fit = [extrap.sel_fit[i] for i in checked_idx_meas]
+        # norm_data = [extrap.norm_data[i] for i in checked_idx_meas]
+        # extrap.sel_fit = sel_fit
+        # extrap.norm_data = norm_data
         self.matlab_dict['extrapFit'] = self.listobj2struct([extrap], py_2_mat_dict)
-        mbTests = self.listobj2struct(meas_mat.mb_tests, py_2_mat_dict)
+        if type(meas_mat.mb_tests) == list:
+            mbTests = self.listobj2struct(meas_mat.mb_tests, py_2_mat_dict)
+        else:
+            mbTests = self.obj2dict(meas_mat.mb_tests, py_2_mat_dict)
         if len(mbTests) == 0:
             mbTests = np.array([])
         self.matlab_dict['mbTests'] = mbTests
@@ -142,9 +146,11 @@ class Python2Matlab(object):
             # If a list contains a str variable, such as messages, convert the string to an array
             if type(dict_in[key]) is list:
                 for line in range(len(dict_in[key])):
-                    for col in range(len(dict_in[key][line])):
-                        if type(dict_in[key][line][col]) is str:
-                            dict_in[key][line][col] = np.array([list(dict_in[key][line][col])])
+                    if type(line) == str:
+                        for col in range(len(dict_in[key][line])):
+                            if type(dict_in[key][line][col]) is str:
+                                dict_in[key][line][col] = np.array([list(dict_in[key][line][col])])
+
 
             # Change key if needed
             if new_key_dict is not None and key in new_key_dict:
@@ -508,7 +514,28 @@ class Python2Matlab(object):
                          'w_vel': 'wVel',
                          'water_mode': 'waterMode',
                          'wt_depth_filter': 'wtDepthFilter',
-                         'z_auto': 'zAuto'}
+                         'z_auto': 'zAuto',
+                         'all_invalid': 'allInvalid',
+                         'q_max_run': 'qMaxRun',
+                         'q_max_run_caution': 'qRunCaution',
+                         'q_max_run_warning': 'qRunWarning',
+                         'q_total': 'qTotal',
+                         'q_total_caution': 'qTotalCaution',
+                         'q_total_warning': 'qTotalWarning',
+                         'sta_name': 'staName',
+                         'sta_number': 'staNumber',
+                         'left_q': 'leftQ',
+                         'right_q': 'rightQ',
+                         'left_sign': 'leftSign',
+                         'right_sign': 'rightSign',
+                         'right_dist_moved_idx': 'rightDistMovedIdx',
+                         'left_dist_moved_idx': 'leftDistMovedIdx',
+                         'left_zero': 'leftzero',
+                         'right_zero': 'rightzero',
+                         'left_type': 'leftType',
+                         'right_type': 'rightType',
+                         'magvar_idx': 'magvarIdx',
+                         'mag_error_idx': 'magErrorIdx'}
         return py_2_mat_dict
 
     @staticmethod
@@ -582,15 +609,18 @@ class Python2Matlab(object):
             transect.w_vel.corr = np.moveaxis(transect.w_vel.corr, 0, 2)
             transect.w_vel.rssi = np.moveaxis(transect.w_vel.rssi, 0, 2)
             transect.w_vel.valid_data = np.moveaxis(transect.w_vel.valid_data, 0, 2)
+            if len(transect.adcp.t_matrix.matrix.shape) == 3:
+                transect.adcp.t_matrix.matrix = np.moveaxis(transect.adcp.t_matrix.matrix, 2, 0)
 
             # Adjust 2-D array to be row based
             if transect.adcp.configuration_commands is not None:
                 transect.adcp.configuration_commands = transect.adcp.configuration_commands.reshape(-1, 1)
 
             # Adjust serial time to Matlab convention
-            time_correction = (60 * 60 * 24) + 719528.833334606
-            transect.date_time.start_serial_time = transect.date_time.start_serial_time / time_correction
-            transect.date_time.end_serial_time = transect.date_time.end_serial_time / time_correction
+            time_correction = 719528.8333333337
+            seconds_day = (60 * 60 * 24)
+            transect.date_time.start_serial_time = (transect.date_time.start_serial_time / seconds_day) + time_correction
+            transect.date_time.end_serial_time = (transect.date_time.end_serial_time / seconds_day) + time_correction
 
         # Adjust 1-D array to be row based
         for fit in meas_mat.extrap_fit.sel_fit:
@@ -598,6 +628,38 @@ class Python2Matlab(object):
             fit.u_auto = fit.u_auto.reshape(-1, 1)
             fit.z = fit.z.reshape(-1, 1)
             fit.z_auto = fit.z_auto.reshape(-1, 1)
+
+        # Adjust norm_data indices from 0 base to 1 base
+        for dat in meas_mat.extrap_fit.norm_data:
+            dat.valid_data = dat.valid_data + 1
+
+        # If system tests, compass calibrations, or compass evaluations don't exist create empty objects
+        if len(meas_mat.system_tst) == 0:
+            meas_mat.system_tst = [PreMeasurement()]
+        if len(meas_mat.compass_eval) == 0:
+            meas_mat.compass_eval = [PreMeasurement()]
+        if len(meas_mat.compass_cal) == 0:
+            meas_mat.compass_cal = [PreMeasurement()]
+
+        # Adjust ensemble indexing for 1 base indexing
+        if len(meas_mat.mb_tests) > 0:
+            for test in meas_mat.mb_tests:
+                test.transect.in_transect_idx = test.transect.in_transect_idx + 1
+
+        # If only one moving-bed test change from list to MovingBedTest object
+        if len(meas_mat.mb_tests) == 1:
+            meas_mat.mb_tests = meas_mat.mb_tests[0]
+            # Convert message to cell array for Matlab
+            if len(meas_mat.mb_tests.messages) > 0:
+                meas_mat.mb_tests.messages = np.array(meas_mat.mb_tests.messages).astype(np.object)
+
+
+
+        # Fix user and adcp temperature for QRev Matlab
+        if np.isnan(meas_mat.ext_temp_chk['user']):
+            meas_mat.ext_temp_chk['user'] = ''
+        if np.isnan(meas_mat.ext_temp_chk['adcp']):
+            meas_mat.ext_temp_chk['adcp'] = ''
 
         return meas_mat
 

@@ -54,5 +54,23 @@ class DateTime(object):
         self.date = date_in
         self.start_serial_time = start_in
         self.end_serial_time = end_in
-        self.transect_duration_sec = end_in - start_in
-        self.ens_duration_sec = ens_dur_in
+        self.transect_duration_sec = float(end_in - start_in)
+        self.ens_duration_sec = ens_dur_in.astype(float)
+
+    def populate_from_qrev_mat(self, transect):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        transect: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+
+        if hasattr(transect, 'dateTime'):
+            time_correction = 719528.8333333337
+            seconds_day = (60 * 60 * 24)
+            self.date = transect.dateTime.date
+            self.start_serial_time = (transect.dateTime.startSerialTime - time_correction) * seconds_day
+            self.end_serial_time = (transect.dateTime.endSerialTime - time_correction) * seconds_day
+            self.transect_duration_sec = float(transect.dateTime.transectDuration_sec)
+            self.ens_duration_sec = transect.dateTime.ensDuration_sec.astype(float)

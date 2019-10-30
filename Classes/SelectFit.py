@@ -1,5 +1,4 @@
 import numpy as np
-import statsmodels.api as sm
 from Classes.FitData import FitData
 
 
@@ -156,12 +155,18 @@ class SelectFit(object):
                 y = normalized.unit_normalized_med[valid_data[:4]]
                 #             x = sm.add_constant(x)
                 x = normalized.unit_normalized_z[valid_data[:4]]
-                x = sm.add_constant(x)
-                lin_fit = sm.OLS(y, x)
-                result = lin_fit.fit()
-                dsmfitr2 = 1 - (np.sum(result.resid ** 2) / np.mean(np.abs(result.resid)))
-                self.top_fit_r2 = dsmfitr2
-                self.top_r2 = result.rsquared
+                # x = sm.add_constant(x)
+                # lin_fit = sm.OLS(y, x)
+                # result = lin_fit.fit()
+                # dsmfitr2 = 1 - (np.sum(result.resid ** 2) / np.mean(np.abs(result.resid)))
+                # self.top_fit_r2 = dsmfitr2
+                # self.top_r2 = result.rsquared
+
+                coeffs = np.polyfit(x, y, 1)
+                resid = y - (coeffs[0]*x + coeffs[1])
+                corr = np.corrcoef(x, y)[0,1]
+                dsmfitr2 = 1 - (np.sum(resid ** 2) / np.mean(np.abs(resid)))
+                self.top_r2 = corr**2
 
                 # Evaluate overall fit
                 # If the optimized power fit does not have an r^2 better than 0.8 or if the optimized
@@ -186,7 +191,7 @@ class SelectFit(object):
 
                 # Compute the difference at the water surface between a linear fit of the top 4 measured cells
                 # and the best selected power fit of the whole profile
-                self.top_max_diff = ppobj.u[-1] - np.sum(result.params)
+                self.top_max_diff = ppobj.u[-1] - np.sum(coeffs)
 
                 # Evaluate the difference at the bottom between power using the whole profile and power using
                 # only the bottom third
@@ -194,8 +199,8 @@ class SelectFit(object):
                 ns_fd.populate_data(normalized, 'Constant', 'No Slip', 'Optimize')
                 self.ns_exponent = ns_fd.exponent
                 self.bot_r2 = ns_fd.r_squared
-                self.bot_diff = ppobj.u[np.round(ppobj.z, 2) == 0.1] \
-                    - ns_fd.u[np.round(ns_fd.z, 2) == 0.1]
+                self.bot_diff = ppobj.u[np.round(ppobj.z, 2) == 0.1][0] \
+                    - ns_fd.u[np.round(ns_fd.z, 2) == 0.1][0]
 
                 # Begin automatic selection logic
                 # -----------------------------------
@@ -317,3 +322,61 @@ class SelectFit(object):
         self.coef = update_fd.coef
         self.exp_method = update_fd.exp_method
         self.residuals = update_fd.residuals
+
+    @staticmethod
+    def qrev_mat_in(mat_data):
+        """Processes the Matlab data structure to obtain a list of NormData objects containing transect
+           data from the Matlab data structure.
+
+       Parameters
+       ----------
+       mat_data: mat_struct
+           Matlab data structure obtained from sio.loadmat
+
+       Returns
+       -------
+       norm_data: list
+           List of NormData objects
+       """
+        fit_data = []
+        if hasattr(mat_data, 'selFit'):
+            for n, data in enumerate(mat_data.selFit):
+                temp = SelectFit()
+                temp.populate_from_qrev_mat(data, mat_data.normData[n])
+                fit_data.append(temp)
+        return fit_data
+
+    def populate_from_qrev_mat(self, mat_data, norm_data):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        mat_data: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+
+        self.fit_method = mat_data.fitMethod
+        self.top_method = mat_data.topMethod
+        self.bot_method = mat_data.botMethod
+        self.exponent = mat_data.exponent
+        self.exp_method = mat_data.expMethod
+        self.u = mat_data.u
+        self.u_auto = mat_data.uAuto
+        self.z = mat_data.z
+        self.z_auto = mat_data.zAuto
+        self.residuals = mat_data.residuals
+        self.coef = mat_data.coef
+        self.bot_method_auto = mat_data.botMethodAuto
+        self.top_method_auto = mat_data.topMethodAuto
+        self.exponent_auto = mat_data.exponentAuto
+        self.top_fit_r2 = mat_data.topfitr2
+        self.top_max_diff = mat_data.topmaxdiff
+        self.bot_diff = mat_data.botdiff
+        self.bot_r2 = mat_data.botrsqr
+        self.fit_r2 = mat_data.fitrsqr
+        self.ns_exponent = mat_data.nsexponent
+        self.pp_exponent = mat_data.ppexponent
+        self.top_r2 = mat_data.topr2
+        self.rsqr = mat_data.rsqr
+        self.exponent_95_ci = mat_data.exponent95confint
+        self.data_type = norm_data.dataType

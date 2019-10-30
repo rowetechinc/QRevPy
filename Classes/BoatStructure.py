@@ -325,7 +325,8 @@ class BoatStructure(object):
 
             # Use only interpolations for bt
             if self.bt_vel is not None:
-                self.bt_vel.apply_interpolation(transect=transect, interpolation_method='Linear')
+                self.bt_vel.apply_interpolation(transect=transect,
+                                                interpolation_method=transect.boat_vel.bt_vel.interpolate)
                 comp_source = np.tile(np.nan, self.bt_vel.u_processed_mps.shape)
                 comp_source[self.bt_vel.valid_data[0, :]] = 1
                 comp_source[np.logical_and(np.isnan(comp_source), (np.isnan(self.bt_vel.u_processed_mps) == False))] = 0
@@ -336,7 +337,8 @@ class BoatStructure(object):
 
             # Use only interpolations for gga
             if self.gga_vel is not None:
-                self.gga_vel.apply_interpolation(transect=transect, interpolation_method='Linear')
+                self.gga_vel.apply_interpolation(transect=transect,
+                                                 interpolation_method=transect.boat_vel.gga_vel.interpolate)
                 comp_source = np.tile(np.nan, self.gga_vel.u_processed_mps.shape)
                 comp_source[self.gga_vel.valid_data[0, :]] = 2
                 comp_source[np.logical_and(np.isnan(comp_source), (np.isnan(self.gga_vel.u_processed_mps) == False))] = 0
@@ -347,7 +349,8 @@ class BoatStructure(object):
 
             # Use only interpolations for vtg
             if self.vtg_vel is not None:
-                self.vtg_vel.apply_interpolation(transect=transect, interpolation_method='Linear')
+                self.vtg_vel.apply_interpolation(transect=transect,
+                                                 interpolation_method=transect.boat_vel.vtg_vel.interpolate)
                 comp_source = np.tile(np.nan, self.vtg_vel.u_processed_mps.shape)
                 comp_source[self.vtg_vel.valid_data[0, :]] = 3
                 comp_source[np.logical_and(np.isnan(comp_source), (np.isnan(self.vtg_vel.u_processed_mps) == False))] = 0
@@ -355,7 +358,6 @@ class BoatStructure(object):
                 self.vtg_vel.apply_composite(u_composite=self.vtg_vel.u_processed_mps,
                                              v_composite=self.vtg_vel.v_processed_mps,
                                              composite_source=comp_source)
-
 
     @staticmethod
     def compute_boat_track(transect, ref=None):
@@ -402,3 +404,33 @@ class BoatStructure(object):
             boat_track['dmg_m'] = np.sqrt(track_x ** 2 + track_y ** 2)
 
         return boat_track
+
+    def populate_from_qrev_mat(self, transect):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        transect: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+
+        if hasattr(transect, 'boatVel'):
+            if hasattr(transect.boatVel, 'btVel'):
+                if hasattr(transect.boatVel.btVel, 'u_mps'):
+                    self.bt_vel = BoatData()
+                    self.bt_vel.populate_from_qrev_mat(transect.boatVel.btVel)
+            if hasattr(transect.boatVel, 'ggaVel'):
+                if hasattr(transect.boatVel.ggaVel, 'u_mps'):
+                    self.gga_vel = BoatData()
+                    self.gga_vel.populate_from_qrev_mat(transect.boatVel.ggaVel)
+            if hasattr(transect.boatVel, 'vtgVel'):
+                if hasattr(transect.boatVel.vtgVel, 'u_mps'):
+                    self.vtg_vel = BoatData()
+                    self.vtg_vel.populate_from_qrev_mat(transect.boatVel.vtgVel)
+
+            if transect.boatVel.selected == 'btVel':
+                self.selected = 'bt_vel'
+            elif transect.boatVel.selected == 'ggaVel':
+                self.selected = 'gga_vel'
+            elif transect.boatVel.selected == 'vtgVel':
+                self.selected = 'vtg_vel'

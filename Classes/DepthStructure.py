@@ -59,6 +59,42 @@ class DepthStructure(object):
             self.ds_depths = DepthData()
             self.ds_depths.populate_data(depth_in, source_in, freq_in, draft_in, cell_depth_in, cell_size_in)
 
+    def populate_from_qrev_mat(self, transect):
+        """Populates the object using data from previously saved QRev Matlab file.
+
+        Parameters
+        ----------
+        transect: mat_struct
+           Matlab data structure obtained from sio.loadmat
+        """
+        if hasattr(transect, 'depths'):
+
+            try:
+                self.bt_depths = DepthData()
+                self.bt_depths.populate_from_qrev_mat(transect.depths.btDepths)
+            except AttributeError:
+                self.bt_depths = None
+
+            try:
+                self.vb_depths = DepthData()
+                self.vb_depths.populate_from_qrev_mat(transect.depths.vbDepths)
+            except AttributeError:
+                self.vb_depths = None
+
+            try:
+                self.ds_depths = DepthData()
+                self.ds_depths.populate_from_qrev_mat(transect.depths.dsDepths)
+            except AttributeError:
+                self.ds_depths = None
+
+            if transect.depths.selected == 'btDepths':
+                self.selected = 'bt_depths'
+            elif transect.depths.selected == 'vbDepths':
+                self.selected = 'vb_depths'
+            elif transect.depths.selected == 'dsDepths':
+                self.selected = 'ds_depths'
+            self.composite = transect.depths.composite
+
     def composite_depths(self, transect, setting="Off"):
         """Depth composite is based on the following assumptions
         
