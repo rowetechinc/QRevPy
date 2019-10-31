@@ -238,6 +238,9 @@ class WTContour(object):
             x_plt[j, :] = x_xpand[n, :]
             cell_plt[j, :] = cell_depth_xpand[n, :] + 0.5 * cell_size_xpand[n, :]
             speed_plt[j, :] = speed_xpand[n, :]
+        cell_plt[np.isnan(cell_plt)] = 0
+        speed_plt[np.isnan(speed_plt)] = -999
+        x_plt[np.isnan(x_plt)] == 0
         return x_plt, cell_plt, speed_plt, ensembles, depth
 
     def hover(self, event):

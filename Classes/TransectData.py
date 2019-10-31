@@ -856,7 +856,7 @@ class TransectData(object):
                                           freq_in=None,
                                           coord_sys_in='Earth',
                                           nav_ref_in='VTG')
-        ref = None
+        ref = 'BT'
         if rsdata.Setup.trackReference == 1:
             ref = 'BT'
         elif rsdata.Setup.trackReference == 2:
@@ -1796,13 +1796,20 @@ def allocate_transects(mmt, transect_type='Q', checked=False):
     if transect_type == 'Q':
         # Identify discharge transect files to load
         if checked:
-            file_names = [transect.Files[0] for transect in mmt.transects if transect.Checked == 1]
+            file_names = []
+            file_idx = []
+            for idx, transect in enumerate(mmt.transects):
+                if transect.Checked == 1:
+                    file_names.append(transect.Files[0])
+                    file_idx.append(idx)
+            # file_names = [transect.Files[0] for transect in mmt.transects if transect.Checked == 1]
         else:
             file_names = [transect.Files[0] for transect in mmt.transects]
-
+            file_idx = list(range(0, len(file_names)))
     elif transect_type == 'MB':
         file_names = [transect.Files[0] for transect in mmt.mbt_transects]
-    
+        file_idx = list(range(0, len(file_names)))
+
     # Determine if any files are missing
     valid_files = []
     valid_indices = []
@@ -1810,7 +1817,7 @@ def allocate_transects(mmt, transect_type='Q', checked=False):
         fullname = os.path.join(mmt.path, name)
         if os.path.exists(fullname):
             valid_files.append(fullname)
-            valid_indices.append(index)
+            valid_indices.append(file_idx[index])
 
     # Multi-thread for Pd0 files
     # -------------------------

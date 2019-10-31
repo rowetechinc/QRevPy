@@ -446,6 +446,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.ed_site_name.editingFinished.connect(self.update_site_name)
                 self.ed_site_number.editingFinished.connect(self.update_site_number)
                 self.table_premeas.cellClicked.connect(self.settings_table_row_adjust)
+                self.table_settings.cellClicked.connect(self.select_transect_from_settings)
 
                 # Main tab has been initialized
                 self.main_initialized = True
@@ -755,6 +756,32 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
+
+    def select_transect_from_settings(self, row, column):
+        """Update contour and shiptrack plots based on transect selected in main_summary_table.
+        """
+
+        # Transect column was selected
+        if column == 0 and row > 0:
+            with self.wait_cursor():
+
+                # Set all files to normal font
+                nrows = len(self.checked_transects_idx)
+                for nrow in range(1, nrows+1):
+                    self.main_table_summary.item(nrow, 0).setFont(self.font_normal)
+                    self.main_table_details.item(nrow, 0).setFont(self.font_normal)
+                    self.table_settings.item(nrow + 2, 0).setFont(self.font_normal)
+
+                # Set selected file to bold font
+                self.main_table_summary.item(row - 2, 0).setFont(self.font_bold)
+                self.main_table_details.item(row - 2, 0).setFont(self.font_bold)
+                self.table_settings.item(row, 0).setFont(self.font_bold)
+
+                # Determine transect selected
+                transect_id = self.checked_transects_idx[row-3]
+                self.clear_zphd()
+                # Update contour and shiptrack plot
+                self.contour_shiptrack(transect_id=transect_id)
 
     def select_transect(self, row, column):
         """Update contour and shiptrack plots based on transect selected in main_summary_table.
@@ -7324,6 +7351,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # If data has changed update main tab display
                 self.update_main()
             else:
+                # Setup list for use by graphics controls
+                self.canvases = [self.main_shiptrack_canvas, self.main_wt_contour_canvas, self.main_extrap_canvas,
+                                 self.main_discharge_canvas]
+                self.figs = [self.main_shiptrack_fig, self.main_wt_contour_fig, self.main_extrap_fig,
+                             self.main_discharge_fig]
+                self.toolbars = [self.main_shiptrack_toolbar, self.main_wt_contour_toolbar, self.main_extrap_toolbar,
+                                 self.main_discharge_toolbar]
                 self.tab_main.show()
 
         elif tab_idx == 1:

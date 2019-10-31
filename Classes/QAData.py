@@ -444,7 +444,7 @@ class QAData(object):
                     # TRDI ADCP
                     if len(meas.compass_cal) == 0:
                         # No compass calibration
-                        if meas.compass_eval[-1].data is None:
+                        if len(meas.compass_eval) == 0:
                             # No calibration or evaluation
                             self.compass['status1'] = 'warning'
                             self.compass['messages'].append(['COMPASS: No compass calibration or evaluation;', 1, 4])

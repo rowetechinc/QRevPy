@@ -229,10 +229,18 @@ class Measurement(object):
             self.set_depth_screening_trdi(mmt.transects[0])
 
         # Determine reference used in WR2 if available
+        reference = 'BT'
         if 'Reference' in mmt.site_info.keys():
             reference = mmt.site_info['Reference']
-        else:
-            reference = "BT"
+            if reference == 'BT':
+                target = 'bt_vel'
+            elif reference == 'GGA':
+                target = 'gga_vel'
+            elif reference == 'VTG':
+                target = 'vtg_vel'
+            for transect in self.transects:
+                if getattr(transect.boat_vel, target) is None:
+                    reference = 'BT'
 
         # Convert to earth coordinates
         for transect_idx, transect in enumerate(self.transects):
@@ -610,7 +618,6 @@ class Measurement(object):
         self.uncertainty = Uncertainty()
         self.uncertainty.populate_from_qrev_mat(meas_struct)
         self.qa = QAData(meas_struct, compute=False)
-
 
     @staticmethod
     def set_num_beam_wt_threshold_trdi(mmt_transect):
@@ -1505,8 +1512,8 @@ class Measurement(object):
                 u_boat = boat_selected.u_processed_mps[in_transect_idx]
                 v_boat = boat_selected.v_processed_mps[in_transect_idx]
             else:
-                u_boat = nans(transect.boat_vel.bt_vel.u_processed_mps[in_transect_idx])
-                v_boat = nans(transect.boat_vel.bt_vel.v_processed_mps[in_transect_idx])
+                u_boat = nans(transect.boat_vel.bt_vel.u_processed_mps[in_transect_idx].shape)
+                v_boat = nans(transect.boat_vel.bt_vel.v_processed_mps[in_transect_idx].shape)
 
             if np.logical_not(np.all(np.isnan(boat_track['track_x_m']))):
 
