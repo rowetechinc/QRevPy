@@ -132,7 +132,7 @@ class Shiptrack(object):
                                    color='r',
                                    label='BT')
 
-        if edge_start is not None:
+        if edge_start is not None and not np.alltrue(np.isnan(ship_data_bt['track_x_m'])):
                 if edge_start:
                     self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][0], ship_data_bt['track_y_m'][0], 'sk')[0])
                 else:
@@ -319,21 +319,29 @@ class Shiptrack(object):
             max_y = max_y + (max_y - min_y) * 0.1
             min_y = min_y - (max_y - min_y) * 0.1
 
-            self.fig.ax.set_ylim(top=(max_y * units['L']), bottom=(min_y * units['L']))
-            self.fig.ax.set_xlim(left=(min_x * units['L']), right=(max_x * units['L']))
+            if np.logical_not(np.any(np.isnan(np.array([max_x, min_x, max_y, min_y])))):
+                self.fig.ax.set_ylim(top=(max_y * units['L']), bottom=(min_y * units['L']))
+                self.fig.ax.set_xlim(left=(min_x * units['L']), right=(max_x * units['L']))
         else:
-            self.fig.ax.set_ylim(top=np.ceil(max_y * units['L']), bottom=np.ceil(min_y * units['L']))
-            self.fig.ax.set_xlim(left=np.ceil(min_x * units['L']), right=np.ceil(max_x * units['L']))
+            if np.logical_not(np.any(np.isnan(np.array([max_x, min_x, max_y, min_y])))):
+                self.fig.ax.set_ylim(top=np.ceil(max_y * units['L']), bottom=np.ceil(min_y * units['L']))
+                self.fig.ax.set_xlim(left=np.ceil(min_x * units['L']), right=np.ceil(max_x * units['L']))
 
         # Compute mean water velocity for each ensemble
-        u = transect.w_vel.u_processed_mps
-        v = transect.w_vel.v_processed_mps
+        u = np.copy(transect.w_vel.u_processed_mps)
+        v = np.copy(transect.w_vel.v_processed_mps)
         self.vector_ref = transect.w_vel.nav_ref
-        u_mean = np.nanmean(u, axis=0)
-        v_mean = np.nanmean(v, axis=0)
+
         if edge_start is not None:
+            u[np.logical_not(transect.w_vel.valid_data[0,:,:])] = np.nan
+            v[np.logical_not(transect.w_vel.valid_data[0,:,:])] = np.nan
+            u_mean = np.nanmean(u, axis=0)
+            v_mean = np.nanmean(v, axis=0)
             u_mean = self.subsection(u_mean, n_ensembles, edge_start)
             v_mean = self.subsection(v_mean, n_ensembles, edge_start)
+        else:
+            u_mean = np.nanmean(u, axis=0)
+            v_mean = np.nanmean(v, axis=0)
 
         # Plot water vectors
         # self.vectors = self.fig.ax.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
@@ -392,10 +400,15 @@ class Shiptrack(object):
 
     @staticmethod
     def subsection(data, n_ensembles, edge_start):
-        if edge_start:
-            data_out = data[:int(n_ensembles)]
+
+        data_out = np.nan
+        if np.all(np.isnan(data)):
+            data_out = data
         else:
-            data_out = data[-int(n_ensembles):]
+            if edge_start:
+                data_out = data[:int(n_ensembles)]
+            else:
+                data_out = data[-int(n_ensembles):]
         return data_out
 
     def checkbox_control(self, transect):

@@ -622,7 +622,7 @@ class QComp(object):
         """
 
         # Get data from transect object
-        valid_data1 = transect.w_vel.valid_data[0, :, :]
+        valid_data1 = np.copy(transect.w_vel.valid_data[0, :, :])
         valid_data2 = np.isnan(xprod) == False
         valid_data = valid_data1 * valid_data2
         trans_select = getattr(transect.depths, transect.depths.selected)
@@ -797,7 +797,7 @@ class QComp(object):
 
         # Identify valid data
         in_transect_idx = transect.in_transect_idx
-        valid_data1 = transect.w_vel.valid_data[0, :, in_transect_idx].T
+        valid_data1 = np.copy(transect.w_vel.valid_data[0, :, in_transect_idx].T)
         valid_data2 = np.isnan(x_prod) == False
         valid_data = valid_data1 * valid_data2
 
@@ -1000,7 +1000,7 @@ class QComp(object):
         y_vel = transect.w_vel.v_processed_mps[:, edge_idx]
 
         # Use only valid data
-        valid = transect.w_vel.valid_data[0, :, edge_idx].T
+        valid = np.copy(transect.w_vel.valid_data[0, :, edge_idx].T)
         x_vel[np.logical_not(valid)] = np.nan
         y_vel[np.logical_not(valid)] = np.nan
 
@@ -1096,7 +1096,7 @@ class QComp(object):
         # Assign water velocity to local variables
         x_vel = transect.w_vel.u_processed_mps[:, edge_idx]
         y_vel = transect.w_vel.v_processed_mps[:, edge_idx]
-        valid_vel_ens = np.nansum(transect.w_vel.valid_data[:, edge_idx, 0])
+        valid_vel_ens = np.nansum(transect.w_vel.valid_data[0, :, edge_idx])
 
         # Filter edge data
         # According to SonTek the RSL code does recognize that edge samples
@@ -1327,7 +1327,7 @@ class QComp(object):
         y_vel = transect.w_vel.v_processed_mps[:, edge_idx]
 
         # Use only valid data
-        valid = transect.w_vel.valid_data[:, edge_idx, 1].astype(int)
+        valid = transect.w_vel.valid_data[0, :, edge_idx].astype(int)
         valid[valid == 0] = np.nan
         x_vel = x_vel * valid
         y_vel = y_vel * valid

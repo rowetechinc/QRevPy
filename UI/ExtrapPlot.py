@@ -126,9 +126,12 @@ class ExtrapPlot(object):
             min_avg_all = []
             max_avg_all = []
             for data in extrap_fit.norm_data:
-                min_avg_all.append(np.nanmin(data.unit_normalized_25[data.valid_data]))
-                max_avg_all.append(np.nanmax(data.unit_normalized_75[data.valid_data]))
-
+                if np.any(np.logical_not(np.isnan(data.unit_normalized))):
+                    min_avg_all.append(np.nanmin(data.unit_normalized_25[data.valid_data]))
+                    max_avg_all.append(np.nanmax(data.unit_normalized_75[data.valid_data]))
+                else:
+                    min_avg_all.append(np.nan)
+                    max_avg_all.append(np.nan)
             min_avg = np.nanmin(min_avg_all)
             max_avg = np.nanmax(max_avg_all)
 

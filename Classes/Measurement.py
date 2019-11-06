@@ -2237,7 +2237,7 @@ class Measurement(object):
         if len(values) > 1:
             temp = 'Varies'
         else:
-            temp = values[0]
+            temp = '{:2.1f}'.format(values[0])
         ET.SubElement(sensor, 'Salinity', type='char', unitsCode='ppt').text = temp
 
         # (4) SpeedofSound Node

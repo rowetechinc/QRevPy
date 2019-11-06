@@ -353,7 +353,7 @@ class DepthData(object):
             else:
                 self.valid_data[nvalid < 2] = False
         else:
-            self.valid_data = self.valid_beams
+            self.valid_data = self.valid_beams[0,:]
             
     def filter_none(self):
         """Applies no filter to depth data. Removes filter if one was applied."""

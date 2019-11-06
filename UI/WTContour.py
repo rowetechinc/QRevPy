@@ -56,19 +56,28 @@ class WTContour(object):
         # Set margins and padding for figure
         self.fig.subplots_adjust(left=0.08, bottom=0.2, right=1, top=0.97, wspace=0.1, hspace=0)
 
-        x_plt, cell_plt, speed_plt, ensembles, depth = self.color_contour_data_prep(transect=transect,
-                                                                                    data_type='Processed',
-                                                                                    invalid_data=invalid_data,
-                                                                                    n_ensembles = n_ensembles,
-                                                                                   edge_start = edge_start)
+        if edge_start is None:
+            x_plt, cell_plt, speed_plt, ensembles, depth = self.color_contour_data_prep(transect=transect,
+                                                                                        data_type='Processed',
+                                                                                        invalid_data=invalid_data,
+                                                                                        n_ensembles = n_ensembles,
+                                                                                       edge_start = edge_start)
+        else:
+            x_plt, cell_plt, speed_plt, ensembles, depth = self.color_contour_data_prep(transect=transect,
+                                                                                        data_type='Raw',
+                                                                                        invalid_data=invalid_data,
+                                                                                        n_ensembles=n_ensembles,
+                                                                                        edge_start=edge_start)
         self.x_plt = x_plt
         self.cell_plt = cell_plt * self.units['L']
         self.speed_plt = speed_plt * self.units['V']
         # Determine limits for color map
         max_limit = 0
         min_limit = 0
-        if np.sum(np.logical_not(np.isnan(speed_plt))) > 0:
+        if np.sum(speed_plt[speed_plt > -900]) > 0:
             max_limit = np.percentile(speed_plt * units['V'], 99)
+        else:
+            max_limit = 1
 
         # Create color map
         cmap = cm.get_cmap('viridis')

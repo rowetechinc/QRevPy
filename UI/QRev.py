@@ -4680,43 +4680,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
-        # Transect selected for display
-        self.transect = self.meas.transects[self.checked_transects_idx[0]]
-        depth_ref_selected = self.transect.depths.selected
-        depth_composite = self.transect.depths.composite
-
-        # Set depth reference
-        if depth_ref_selected == 'bt_depths':
-            if depth_composite == 'On':
-                self.combo_depth_ref.setCurrentIndex(1)
-            else:
-                self.combo_depth_ref.setCurrentIndex(0)
-        elif depth_ref_selected == 'vb_depths':
-            if depth_composite == 'On':
-                self.combo_depth_ref.setCurrentIndex(3)
-            else:
-                self.combo_depth_ref.setCurrentIndex(2)
-        elif depth_ref_selected == 'ds_depths':
-            if depth_composite == 'On':
-                self.combo_depth_ref.setCurrentIndex(5)
-            else:
-                self.combo_depth_ref.setCurrentIndex(4)
-
-        # Set depth average method
-        depths_selected = getattr(self.meas.transects[self.checked_transects_idx[0]].depths, depth_ref_selected)
-        if depths_selected.avg_method == 'IDW':
-            self.combo_depth_avg.setCurrentIndex(0)
-        else:
-            self.combo_depth_avg.setCurrentIndex(1)
-
-        # Set depth filter method
-        if depths_selected.filter_type == 'Smooth':
-            self.combo_depth_filter.setCurrentIndex(1)
-        elif depths_selected.filter_type == 'TRDI':
-            self.combo_depth_filter.setCurrentIndex(2)
-        else:
-            self.combo_depth_filter.setCurrentIndex(0)
-
         if not self.depth_initialized:
             tbl.cellClicked.connect(self.depth_table_clicked)
 
@@ -4776,6 +4739,45 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.combo_depth_filter.currentIndexChanged[str].connect(self.change_filter)
 
             self.depth_initialized = True
+
+        # Transect selected for display
+        self.transect = self.meas.transects[self.checked_transects_idx[0]]
+        depth_ref_selected = self.transect.depths.selected
+        depth_composite = self.transect.depths.composite
+
+        # Set depth reference
+        if depth_ref_selected == 'bt_depths':
+            if depth_composite == 'On':
+                self.combo_depth_ref.setCurrentIndex(1)
+            else:
+                self.combo_depth_ref.setCurrentIndex(0)
+        elif depth_ref_selected == 'vb_depths':
+            if depth_composite == 'On':
+                self.combo_depth_ref.setCurrentIndex(3)
+            else:
+                self.combo_depth_ref.setCurrentIndex(2)
+        elif depth_ref_selected == 'ds_depths':
+            if depth_composite == 'On':
+                self.combo_depth_ref.setCurrentIndex(5)
+            else:
+                self.combo_depth_ref.setCurrentIndex(4)
+
+        # Set depth average method
+        depths_selected = getattr(self.meas.transects[self.checked_transects_idx[0]].depths, depth_ref_selected)
+        if depths_selected.avg_method == 'IDW':
+            self.combo_depth_avg.setCurrentIndex(0)
+        else:
+            self.combo_depth_avg.setCurrentIndex(1)
+
+        # Set depth filter method
+        if depths_selected.filter_type == 'Smooth':
+            self.combo_depth_filter.setCurrentIndex(1)
+        elif depths_selected.filter_type == 'TRDI':
+            self.combo_depth_filter.setCurrentIndex(2)
+        else:
+            self.combo_depth_filter.setCurrentIndex(0)
+
+
 
         # Display content
         self.update_depth_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
@@ -5549,8 +5551,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             depth_valid = getattr(self.transect.depths, self.transect.depths.selected).valid_data
             boat_valid = getattr(self.transect.boat_vel, self.transect.boat_vel.selected).valid_data[0, :]
             invalid_ens = np.logical_not(np.logical_and(depth_valid, boat_valid))
-            valid_data = self.transect.w_vel.valid_data[0, :, :]
-            valid_data[:, invalid_ens] = False
+            valid_data = np.copy(self.transect.w_vel.valid_data[0, :, :])
+            valid_data[:, invalid_ens[0]] = False
             # Create the figure with the specified data
             self.wt_top_fig.create(transect=self.transect,
                                       units=self.units,
@@ -6613,7 +6615,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Left edge # valid ens
                 col += 1
-                item = '{:4.0f}'.format(len(self.meas.discharge[transect_id].left_idx))
+                valid_ens = np.nansum(self.meas.transects[transect_id].w_vel.valid_data
+                                      [0, :, self.meas.discharge[transect_id].left_idx], 1) > 0
+
+                item = '{:4.0f}'.format(np.nansum(valid_ens))
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -6666,7 +6671,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Right edge # valid ens
                 col += 1
-                item = '{:4.0f}'.format(len(self.meas.discharge[transect_id].right_idx))
+                valid_ens = np.nansum(self.meas.transects[transect_id].w_vel.valid_data
+                                      [0, :, self.meas.discharge[transect_id].right_idx], 1) > 0
+
+                item = '{:4.0f}'.format(np.nansum(valid_ens))
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -6968,6 +6976,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Create the figure with the specified data
         self.left_edge_contour_fig.create(transect=transect,
                                           units=self.units,
+                                          invalid_data=np.logical_not(transect.w_vel.valid_data[0,:,:]),
                                           n_ensembles=n_ensembles,
                                           edge_start=edge_start)
 
@@ -7004,6 +7013,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Create the figure with the specified data
         self.right_edge_contour_fig.create(transect=transect,
                                           units=self.units,
+                                          invalid_data=np.logical_not(transect.w_vel.valid_data[0,:,:]),
                                           n_ensembles=n_ensembles,
                                           edge_start=edge_start)
 
@@ -7291,7 +7301,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
              'start_serial_time': self.meas.transects[self.groupings[self.group_idx][0]].date_time.start_serial_time,
              'end_serial_time': self.meas.transects[self.groupings[self.group_idx][-1]].date_time.end_serial_time,
              'processed_discharge': discharge['total_mean'],
-             'rating': rating}
+             'rating': rating,
+             'xml_file': save_file.full_Name[:-4] + '.xml'}
         self.processed_data.append(q)
 
         # Load next pairing
@@ -7303,7 +7314,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             for idx in range(len(self.meas.transects)):
                 q_trans = {'transect_id': idx,
                            'transect_file': self.meas.transects[idx].file_name[:-4],
-                           'xml_file': save_file.full_Name[:-4] + '.xml',
                            'start_serial_time': self.meas.transects[idx].date_time.start_serial_time,
                            'end_serial_time': self.meas.transects[idx].date_time.end_serial_time,
                            'duration': self.meas.transects[idx].date_time.transect_duration_sec,

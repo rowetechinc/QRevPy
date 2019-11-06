@@ -1741,7 +1741,7 @@ class TransectData(object):
         else:
             valid_nav = np.tile(False, in_transect_idx.shape[0])
 
-        valid_wt = transect.w_vel.valid_data[0, :, in_transect_idx]
+        valid_wt = np.copy(transect.w_vel.valid_data[0, :, in_transect_idx])
         valid_wt_ens = np.any(valid_wt, 1)
 
         # Determine valid depths
