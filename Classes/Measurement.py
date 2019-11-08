@@ -2266,12 +2266,12 @@ class Measurement(object):
 
                 # (3) StartDateTime Node
                 temp = int(self.transects[n].date_time.start_serial_time)
-                temp = datetime.datetime.fromtimestamp(temp).strftime('%m/%d/%Y %H:%M:%S')
+                temp = datetime.datetime.utcfromtimestamp(temp).strftime('%m/%d/%Y %H:%M:%S')
                 ET.SubElement(transect, 'StartDateTime', type='char').text = temp
 
                 # (3) EndDateTime Node
                 temp = int(self.transects[n].date_time.end_serial_time)
-                temp = datetime.datetime.fromtimestamp(temp).strftime('%m/%d/%Y %H:%M:%S')
+                temp = datetime.datetime.utcfromtimestamp(temp).strftime('%m/%d/%Y %H:%M:%S')
                 ET.SubElement(transect, 'EndDateTime', type='char').text = temp
 
                 # (3) Discharge Node

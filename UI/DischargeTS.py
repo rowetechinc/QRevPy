@@ -61,8 +61,8 @@ class DischargeTS(object):
             y = []
             # x.append([datetime.fromtimestamp(meas.transects[idx].date_time.start_serial_time),
             #           datetime.fromtimestamp(meas.transects[idx].date_time.end_serial_time)])
-            x.append(datetime.fromtimestamp(meas.transects[idx].date_time.start_serial_time))
-            x.append(datetime.fromtimestamp(meas.transects[idx].date_time.end_serial_time))
+            x.append(datetime.utcfromtimestamp(meas.transects[idx].date_time.start_serial_time))
+            x.append(datetime.utcfromtimestamp(meas.transects[idx].date_time.end_serial_time))
             # x.append(np.nan)
             # x.append(meas.transects[idx].date_time.start_serial_time)
             # x.append(meas.transects[idx].date_time.end_serial_time)

@@ -46,6 +46,9 @@ class TemperatureTS(object):
             Radio button control for F or C units
         """
 
+        # Clear the plot
+        self.fig.clear()
+
         # Configure axis
         self.fig.ax = self.fig.add_subplot(1, 1, 1)
 
@@ -56,7 +59,7 @@ class TemperatureTS(object):
         # Create list from time stamps
         time_stamp = []
         for t in serial_time:
-            time_stamp.append(datetime.fromtimestamp(t))
+            time_stamp.append(datetime.utcfromtimestamp(t))
 
         # Set label to display correct units
         y_label = self.canvas.tr('Degrees C')

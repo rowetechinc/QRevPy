@@ -1386,7 +1386,7 @@ class WaterData(object):
         self.v_processed_mps[np.logical_not(valid)] = np.nan
 
         # Find cells with invalid data
-        valid_cells = np.equal(self.valid_data[6, :, :], valid)
+        valid_cells = np.equal(self.valid_data[0, :, :], valid)
 
         if not np.all(valid_cells):
             # Data needed for interpolation

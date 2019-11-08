@@ -1092,7 +1092,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Transect start time
                 col += 1
-                tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.fromtimestamp(
+                tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.utcfromtimestamp(
                     self.meas.transects[transect_id].date_time.start_serial_time), '%H:%M:%S')))
                 tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -1103,7 +1103,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Transect end time
                 col += 1
-                tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.fromtimestamp(
+                tbl.setItem(row + 1, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.utcfromtimestamp(
                     self.meas.transects[transect_id].date_time.end_serial_time), '%H:%M:%S')))
                 tbl.item(row + 1, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -2578,7 +2578,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             col += 1
             sos = getattr(self.meas.transects[transect_id].sensors.speed_of_sound_mps,
                            self.meas.transects[transect_id].sensors.speed_of_sound_mps.selected)
-            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(np.nanmean(sos.data))))
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(np.nanmean(sos.data) * self.units['V'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
             # Discharge before changes
@@ -6540,6 +6540,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         if not self.edges_initialized:
             tbl.cellClicked.connect(self.edges_table_clicked)
+            self.edges_initialized = True
 
         self.idx = 0
         self.update_edges_table()

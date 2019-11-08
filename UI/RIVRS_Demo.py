@@ -96,7 +96,7 @@ class RIVRS_Demo(QtWidgets.QMainWindow, wRIVRS_Demo.Ui_RIVRS_Demo):
 
             # Transect start time
             col += 1
-            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.fromtimestamp(
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.utcfromtimestamp(
                 self.meas.transects[transect_id].date_time.start_serial_time), '%H:%M:%S')))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -107,7 +107,7 @@ class RIVRS_Demo(QtWidgets.QMainWindow, wRIVRS_Demo.Ui_RIVRS_Demo):
 
             # Transect end time
             col += 1
-            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.fromtimestamp(
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.utcfromtimestamp(
                 self.meas.transects[transect_id].date_time.end_serial_time), '%H:%M:%S')))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -169,7 +169,7 @@ class RIVRS_Demo(QtWidgets.QMainWindow, wRIVRS_Demo.Ui_RIVRS_Demo):
 
             # Transect start time
             col += 1
-            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.fromtimestamp(
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.utcfromtimestamp(
                 transect['start_serial_time']), '%H:%M:%S')))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -180,7 +180,7 @@ class RIVRS_Demo(QtWidgets.QMainWindow, wRIVRS_Demo.Ui_RIVRS_Demo):
 
             # Transect end time
             col += 1
-            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.fromtimestamp(
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.utcfromtimestamp(
                 transect['end_serial_time']), '%H:%M:%S')))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -250,13 +250,13 @@ class RIVRS_Demo(QtWidgets.QMainWindow, wRIVRS_Demo.Ui_RIVRS_Demo):
 
             # Transect start time
             col += 1
-            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.fromtimestamp(
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.utcfromtimestamp(
                 data[row]['start_serial_time']), '%H:%M:%S')))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
             # Transect end time
             col += 1
-            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.fromtimestamp(
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.utcfromtimestamp(
                 data[row]['end_serial_time']), '%H:%M:%S')))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 

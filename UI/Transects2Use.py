@@ -68,14 +68,14 @@ class Transects2Use(QtWidgets.QDialog, wTransects2Use.Ui_Transects2Use):
             tbl.setItem(row, col, checked)
             # tbl.setItem(row, col, QtWidgets.QTableWidgetItem(parent.meas.transects[transect_id].file_name[:-4]))
             col += 1
-            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.fromtimestamp(
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.utcfromtimestamp(
                 parent.meas.transects[transect_id].date_time.start_serial_time), '%H:%M:%S')))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(parent.meas.transects[transect_id].start_edge[0]))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
-            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.fromtimestamp(
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.utcfromtimestamp(
                 parent.meas.transects[transect_id].date_time.end_serial_time), '%H:%M:%S')))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1

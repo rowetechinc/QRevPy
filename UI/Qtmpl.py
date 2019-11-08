@@ -433,8 +433,8 @@ class Qtmpl(FigureCanvas):
         self.fig.subplots_adjust(left=0.2, bottom=0.15, right=0.98, top=0.98, wspace=0.1, hspace=0)
 
         for idx in checked:
-            self.fig.axq.plot([datetime.fromtimestamp(meas.transects[idx].date_time.start_serial_time),
-                               datetime.fromtimestamp(meas.transects[idx].date_time.end_serial_time)],
+            self.fig.axq.plot([datetime.utcfromtimestamp(meas.transects[idx].date_time.start_serial_time),
+                               datetime.utcfromtimestamp(meas.transects[idx].date_time.end_serial_time)],
                               [meas.discharge[idx].total * units['Q'], meas.discharge[idx].total * units['Q']],'k-')
 
         # Customize axis
@@ -553,7 +553,7 @@ class Qtmpl(FigureCanvas):
 
         time_stamp = []
         for t in serial_time:
-            time_stamp.append(datetime.fromtimestamp(t))
+            time_stamp.append(datetime.utcfromtimestamp(t))
 
         y_label = qrev.tr('Degrees C')
         if qrev.rb_f.isChecked():
