@@ -7384,12 +7384,21 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             except AttributeError:
                 pass
 
-        self.edi_results = Measurement.compute_edi(self.meas, selected_idx, percents)
+        if np.abs(self.meas.discharge[selected_idx].total) > 0:
+            self.edi_results = Measurement.compute_edi(self.meas, selected_idx, percents)
 
-        self.edi_update_table()
+            self.edi_update_table()
 
-        if self.cb_edi_topoquad.checkState() == QtCore.Qt.Checked:
-            self.create_topoquad_file()
+            if self.cb_edi_topoquad.checkState() == QtCore.Qt.Checked:
+                self.create_topoquad_file()
+
+        else:
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Critical)
+            msg.setText("Error")
+            msg.setInformativeText('The selected transect has no discharge')
+            msg.setWindowTitle("Error")
+            msg.exec_()
 
     def create_topoquad_file(self):
 

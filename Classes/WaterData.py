@@ -1391,23 +1391,24 @@ class WaterData(object):
         if not np.all(valid_cells):
             # Data needed for interpolation
             distance_along_shiptrack = transect.boat_vel.compute_boat_track(transect)['distance_m']
-            depth_selected = getattr(transect.depths, transect.depths.selected)
+            if type(distance_along_shiptrack) is np.ndarray:
+                depth_selected = getattr(transect.depths, transect.depths.selected)
 
-            # Interpolate values for  invalid cells with from neighboring data
-            interpolated_data = abba_idw_interpolation(data_list=[self.u_processed_mps, self.v_processed_mps],
-                                                       valid_data=valid,
-                                                       cells_above_sl=self.valid_data[6, :, :],
-                                                       y_centers=depth_selected.depth_cell_depth_m,
-                                                       y_cell_size=depth_selected.depth_cell_size_m,
-                                                       y_normalize=depth_selected.depth_processed_m,
-                                                       x_shiptrack=distance_along_shiptrack)
+                # Interpolate values for  invalid cells with from neighboring data
+                interpolated_data = abba_idw_interpolation(data_list=[self.u_processed_mps, self.v_processed_mps],
+                                                           valid_data=valid,
+                                                           cells_above_sl=self.valid_data[6, :, :],
+                                                           y_centers=depth_selected.depth_cell_depth_m,
+                                                           y_cell_size=depth_selected.depth_cell_size_m,
+                                                           y_normalize=depth_selected.depth_processed_m,
+                                                           x_shiptrack=distance_along_shiptrack)
 
-            # Compute interpolated to measured ratios and apply filter criteria
-            for n in range(len(interpolated_data[0])):
-                self.u_processed_mps[interpolated_data[0][n][0]] = \
-                    interpolated_data[0][n][1]
-                self.v_processed_mps[interpolated_data[1][n][0]] = \
-                    interpolated_data[1][n][1]
+                # Compute interpolated to measured ratios and apply filter criteria
+                for n in range(len(interpolated_data[0])):
+                    self.u_processed_mps[interpolated_data[0][n][0]] = \
+                        interpolated_data[0][n][1]
+                    self.v_processed_mps[interpolated_data[1][n][0]] = \
+                        interpolated_data[1][n][1]
 
     def interpolate_ens_next(self):
         """Applies data from the next valid ensemble for ensembles with invalid water velocities."""
