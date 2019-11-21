@@ -217,7 +217,7 @@ class InstrumentData(object):
            Matlab data structure obtained from sio.loadmat
        """
 
-        self.serial_num = transect.adcp.serialNum
+        self.serial_num = str(transect.adcp.serialNum)
         self.manufacturer = transect.adcp.manufacturer
         self.model = transect.adcp.model
         self.firmware = transect.adcp.firmware

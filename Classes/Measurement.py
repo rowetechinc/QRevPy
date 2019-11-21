@@ -1318,6 +1318,73 @@ class Measurement(object):
             self.discharge.append(q)
 
     @staticmethod
+    def compute_edi(meas, selected_idx, percents):
+        transect = meas.transects[selected_idx]
+        discharge = meas.discharge[selected_idx]
+        percents.sort()
+
+        # Compute cumulative discharge
+        q_cum = np.nancumsum(discharge.middle_ens + discharge.top_ens + discharge.bottom_ens)
+
+        # Adjust for moving-bed conditions
+        q_cum = q_cum * discharge.correction_factor
+
+        # Adjust q for starting edge
+        if transect.start_edge == 'Left':
+            q_cum = q_cum + discharge.left
+            q_cum[-1] = q_cum[-1] + discharge.right
+            start_dist = transect.edges.left.distance_m
+        else:
+            q_cum = q_cum + discharge.right
+            q_cum[-1] = q_cum[-1] + discharge.left
+            start_dist = transect.edges.right.distance_m
+
+        # Determine ensemble at each percent
+        ensembles = []
+        q_target = []
+        for percent in percents:
+            q_target.append(q_cum[-1] * percent / 100)
+            if q_target[-1] > 0:
+                ensembles.append(np.where(q_cum > q_target[-1])[0][0])
+            if q_target[-1] < 0:
+                ensembles.append(np.where(q_cum < q_target[-1])[0][0])
+
+        # Compute distance from start bank
+        boat_vel_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
+        track_x = np.nancumsum(boat_vel_selected.u_processed_mps[transect.in_transect_idx] * \
+                  transect.date_time.ens_duration_sec[transect.in_transect_idx])
+        track_y = np.nancumsum(boat_vel_selected.v_processed_mps[transect.in_transect_idx] * \
+                  transect.date_time.ens_duration_sec[transect.in_transect_idx])
+
+        dist = np.sqrt(track_x ** 2 + track_y ** 2) + start_dist
+        n_pts_in_avg = int(len(q_cum) * 0.01)
+        depth_selected = getattr(transect.depths, transect.depths.selected)
+        q_actual = []
+        distance = []
+        lat = []
+        lon = []
+        depth = []
+        velocity = []
+
+        for ensemble in ensembles:
+            q_actual.append(q_cum[ensemble])
+            distance.append(dist[ensemble])
+            try:
+                lat.append(transect.gps.gga_lat_ens_deg[ensemble])
+                lon.append(transect.gps.gga_lon_ens_deg[ensemble])
+            except ValueError:
+                lat.append('')
+                lon.append('')
+            depth.append(depth_selected.depth_processed_m[ensemble])
+            u = np.nanmean(transect.w_vel.u_processed_mps[:, ensemble - n_pts_in_avg : ensemble + n_pts_in_avg + 1], 1)
+            v = np.nanmean(transect.w_vel.v_processed_mps[:, ensemble - n_pts_in_avg : ensemble + n_pts_in_avg + 1], 1)
+            velocity.append(np.sqrt(np.nanmean(u)**2 + np.nanmean(v)**2))
+
+        edi_results = {'percent': percents, 'target_q': q_target, 'actual_q': q_actual, 'distance': distance,
+                       'depth': depth, 'velocity': velocity, 'lat': lat, 'lon': lon}
+        return edi_results
+
+    @staticmethod
     def qrev_default_interpolation_methods(settings):
         """Adds QRev default interpolation settings to existing settings data structure
 
@@ -1661,8 +1728,10 @@ class Measurement(object):
                 ET.SubElement(site_info, 'StationName', type='char').text = self.station_name
 
             # (3) SiteID Node
-            if self.station_number and int(self.station_number) != 0:
+            if type(self.station_number) is str:
                 ET.SubElement(site_info, 'SiteID', type='char').text = self.station_number
+            else:
+                ET.SubElement(site_info, 'SiteID', type='char').text = str(self.station_number)
 
         # (2) QA Node
         qa = ET.SubElement(channel, 'QA')

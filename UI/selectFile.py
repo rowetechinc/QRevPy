@@ -213,7 +213,7 @@ class SaveMeasurementDialog(QtWidgets.QDialog):
         # self.setupUi(self)
 
         # Create settings object which contains the default folder
-        settings = SSet('TestSettings')
+        settings = SSet(parent.settingsFile)
 
         # Get the current folder setting.
         folder = self.defaultFolder(settings)

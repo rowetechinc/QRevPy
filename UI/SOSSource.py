@@ -20,7 +20,7 @@ class SOSSource(QtWidgets.QDialog, wSOSSource.Ui_sos_source):
             self.rb_internal.setChecked(True)
         else:
             self.rb_user.setChecked(True)
-            self.ed_sos_user.setText('{:6.1f}'.format(sos))
+            self.ed_sos_user.setText('{:6.1f}'.format(sos * units['V']))
         self.rb_user.toggled.connect(self.user)
         self.rb_internal.toggled.connect(self.internal)
         # self.ed_sos_user.editingFinished.connect(self.user_entered)

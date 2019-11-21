@@ -82,7 +82,7 @@ class HeadingTS(object):
                     # Plot External Heading
                     heading = np.copy(meas.transects[checked[row]].sensors.heading_deg.external.data)
                     if meas.transects[checked[row]].start_edge == 'Right':
-                        np.flip(heading)
+                        heading = np.flip(heading)
                     self.external.append(self.fig.axh.plot(heading, 'b-')[0])
                 else:
                     self.external = None
@@ -91,7 +91,7 @@ class HeadingTS(object):
                     # Plot magnetic field change
                     mag_chng = np.copy(meas.transects[checked[row]].sensors.heading_deg.internal.mag_error)
                     if meas.transects[checked[row]].start_edge == 'Right':
-                        np.flip(mag_chng)
+                        mag_chng = np.flip(mag_chng)
                     self.merror.append(self.fig.axm.plot(mag_chng, 'k-')[0])
                 else:
                     self.merror = None

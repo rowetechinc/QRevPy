@@ -123,17 +123,12 @@ class ExtrapPlot(object):
                 label.set_fontsize(10)
 
             # Scale axes
-            min_avg_all = []
-            max_avg_all = []
-            for data in extrap_fit.norm_data:
-                if np.any(np.logical_not(np.isnan(data.unit_normalized))):
-                    min_avg_all.append(np.nanmin(data.unit_normalized_25[data.valid_data]))
-                    max_avg_all.append(np.nanmax(data.unit_normalized_75[data.valid_data]))
-                else:
-                    min_avg_all.append(np.nan)
-                    max_avg_all.append(np.nan)
-            min_avg = np.nanmin(min_avg_all)
-            max_avg = np.nanmax(max_avg_all)
+            if np.any(np.logical_not(np.isnan(extrap_fit.norm_data[idx].unit_normalized))):
+                min_avg = np.nanmin(extrap_fit.norm_data[idx].unit_normalized_25[extrap_fit.norm_data[idx].valid_data])
+                max_avg = np.nanmax(extrap_fit.norm_data[idx].unit_normalized_75[extrap_fit.norm_data[idx].valid_data])
+            else:
+                min_avg = np.nan
+                max_avg = np.nan
 
             if min_avg > 0 and max_avg > 0:
                 min_avg = 0

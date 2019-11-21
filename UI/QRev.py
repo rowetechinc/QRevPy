@@ -119,7 +119,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Disable toolbar icons until data are loaded
         self.actionSave.setDisabled(True)
         self.actionComment.setDisabled(True)
-        self.actionEDI.setDisabled(True)
         self.actionCheck.setDisabled(True)
 
         # Configure bold and normal fonts
@@ -242,7 +241,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Save measurement in Matlab format.
         """
         # Create default file name
-        save_file = SaveMeasurementDialog()
+        save_file = SaveMeasurementDialog(parent=self)
 
         if len(save_file.full_Name) > 0:
             # Save data in Matlab format
@@ -2730,7 +2729,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     sos_source = 'internal'
                 elif sos_source_dialog.rb_user.isChecked():
                     sos_source = 'user'
-                    user_sos = float(sos_source_dialog.ed_sos_user.text())
+                    user_sos = float(sos_source_dialog.ed_sos_user.text()) / self.units['V']
 
                 # Apply change to all or only selected transect based on user input
                 if sos_source_dialog.rb_all.isChecked():
@@ -3119,7 +3118,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.meas.mb_tests = MovingBedTests.auto_use_2_correct(
                 moving_bed_tests=self.meas.mb_tests,
                 boat_ref=self.meas.transects[self.checked_transects_idx[0]].w_vel.nav_ref)
-            self.meas.qa.movingbed_qa(self.meas)
+            self.meas.qa.moving_bed_qa(self.meas)
             self.change = True
 
         # Use to correct, manual override
@@ -3226,7 +3225,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if reprocess_measurement:
            self.meas.compute_discharge()
            self.meas.uncertainty.compute_uncertainty(self.meas)
-           self.meas.qa.movingbed_qa(self.meas)
+           self.meas.qa.moving_bed_qa(self.meas)
         self.change = True
 
         self.update_mb_table()
@@ -7166,6 +7165,250 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             self.setTabIcon('tab_edges', self.meas.qa.edges['status'])
 
+# EDI tab
+# =======
+    def edi_tab(self):
+
+        # Setup transect selection table
+        tbl = self.tbl_edi_transect
+        units = self.units
+        summary_header = [self.tr('Select Transect'), self.tr('Start'), self.tr('Bank'),
+                          self.tr('End'), self.tr('Duration (sec)'), self.tr('Total Q' + self.units['label_Q']),
+                          self.tr('Top Q' + self.units['label_Q']),
+                          self.tr('Meas Q' + self.units['label_Q']),
+                          self.tr('Bottom Q' + self.units['label_Q']),
+                          self.tr('Left Q' + self.units['label_Q']),
+                          self.tr('Right Q' + self.units['label_Q'])]
+        ncols = len(summary_header)
+        nrows = len(self.checked_transects_idx)
+        tbl.setRowCount(nrows)
+        tbl.setColumnCount(ncols)
+        tbl.setHorizontalHeaderLabels(summary_header)
+        header_font = QtGui.QFont()
+        header_font.setBold(True)
+        header_font.setPointSize(14)
+        tbl.horizontalHeader().setFont(header_font)
+        tbl.verticalHeader().hide()
+        tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+
+        # Add transect data
+        for row in range(nrows):
+            col = 0
+            transect_id = row
+            # checked = QtWidgets.QTableWidgetItem('')
+            # checked.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+            # if self.meas.transects[row].checked:
+            #     checked.setCheckState(QtCore.Qt.Checked)
+            # else:
+            #     checked.setCheckState(QtCore.Qt.Unchecked)
+            # checked.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+            # tbl.setItem(row, col, checked)
+            # col += 1
+
+            checked = QtWidgets.QTableWidgetItem(self.meas.transects[transect_id].file_name[:-4])
+            checked.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+            checked.setCheckState(QtCore.Qt.Unchecked)
+            tbl.setItem(row, col, checked)
+            # tbl.setItem(row, col, QtWidgets.QTableWidgetItem(self.meas.transects[transect_id].file_name[:-4]))
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.utcfromtimestamp(
+                self.meas.transects[transect_id].date_time.start_serial_time), '%H:%M:%S')))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(self.meas.transects[transect_id].start_edge[0]))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.utcfromtimestamp(
+                self.meas.transects[transect_id].date_time.end_serial_time), '%H:%M:%S')))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:5.1f}'.format(
+                self.meas.transects[transect_id].date_time.transect_duration_sec)))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:8.2f}'.format(self.meas.discharge[transect_id].total
+                                                                              * units['Q'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(self.meas.discharge[transect_id].top
+                                                                              * units['Q'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(self.meas.discharge[transect_id].middle
+                                                                              * units['Q'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(self.meas.discharge[transect_id].bottom
+                                                                              * units['Q'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(self.meas.discharge[transect_id].left
+                                                                              * units['Q'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:7.2f}'.format(self.meas.discharge[transect_id].right
+                                                                              * units['Q'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+        tbl.resizeColumnsToContents()
+        tbl.resizeRowsToContents()
+
+        # Setup EDI table
+        tbl_edi = self.tbl_edi_results
+        self.txt_edi_offset.setText(self.tr('Zero Distance Offset' + self.units['label_L']))
+        edi_header = [self.tr('Percent Q'),
+                          self.tr('Target Q ' + self.units['label_Q']),
+                          self.tr('Actual Q ' + self.units['label_Q']),
+                          self.tr('Distance ' + self.units['label_L']),
+                          self.tr('Depth ' + self.units['label_L']),
+                          self.tr('Velocity ' + self.units['label_L']),
+                          self.tr('Latitude (D M.M)'),
+                          self.tr('Longitude (D M.M)')]
+        ncols = len(edi_header)
+        nrows = 5
+        tbl_edi.setRowCount(nrows)
+        tbl_edi.setColumnCount(ncols)
+        tbl_edi.setHorizontalHeaderLabels(edi_header)
+        header_font = QtGui.QFont()
+        header_font.setBold(True)
+        header_font.setPointSize(14)
+        tbl_edi.horizontalHeader().setFont(header_font)
+        tbl_edi.verticalHeader().hide()
+        # tbl_edi.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+
+        tbl_edi.setItem(0, 0, QtWidgets.QTableWidgetItem('10'))
+        # tbl_edi.item(0, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+        tbl_edi.setItem(1, 0, QtWidgets.QTableWidgetItem('30'))
+        # tbl_edi.item(1, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+        tbl_edi.setItem(2, 0, QtWidgets.QTableWidgetItem('50'))
+        # tbl_edi.item(2, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+        tbl_edi.setItem(3, 0, QtWidgets.QTableWidgetItem('70'))
+        # tbl_edi.item(3, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+        tbl_edi.setItem(4, 0, QtWidgets.QTableWidgetItem('90'))
+        # tbl_edi.item(4, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+        for row in range(tbl_edi.rowCount()):
+            for col in range(1,7):
+                tbl_edi.setItem(row, col, QtWidgets.QTableWidgetItem(' '))
+                tbl_edi.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+        tbl_edi.resizeColumnsToContents()
+        tbl_edi.resizeRowsToContents()
+
+        # Setup button connections
+        tbl.cellClicked.connect(self.edi_select_transect)
+        self.pb_edi_add_row.clicked.connect(self.edi_add_row)
+        self.pb_edi_compute.clicked.connect(self.edi_compute)
+        self.pb_edi_compute.setEnabled(False)
+
+    def edi_select_transect(self, row, col):
+        if col == 0:
+            for r in range(self.tbl_edi_transect.rowCount()):
+                if r == row:
+                    self.tbl_edi_transect.item(r, col).setCheckState(QtCore.Qt.Checked)
+                else:
+                    self.tbl_edi_transect.item(r, col).setCheckState(QtCore.Qt.Unchecked)
+            if self.meas.transects[self.checked_transects_idx[row]].start_edge[0] == 'R':
+                self.txt_edi_bank.setText('From Right Bank')
+            else:
+                self.txt_edi_bank.setText('From Left Bank')
+            self.pb_edi_compute.setEnabled(True)
+
+    def edi_add_row(self):
+        rowPosition = self.tbl_edi_results.rowCount()
+        self.tbl_edi_results.insertRow(rowPosition)
+        for col in range(1, 7):
+            self.tbl_edi_results.setItem(rowPosition, col, QtWidgets.QTableWidgetItem(' '))
+            self.tbl_edi_results.item(rowPosition, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+    def edi_update_table(self):
+        tbl = self.tbl_edi_results
+
+        for row in range(tbl.rowCount()):
+            col = 0
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:2.0f}'.format(self.edi_results['percent'][row])))
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:6.2f}'.format(self.edi_results['target_q'][row] * self.units['Q'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:6.2f}'.format(self.edi_results['actual_q'][row] * self.units['Q'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:6.1f}'.format(self.edi_results['distance'][row] * self.units['L'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.1f}'.format(self.edi_results['depth'][row] * self.units['L'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:4.1f}'.format(self.edi_results['velocity'][row] * self.units['L'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            if type(self.edi_results['lat'][row]) is np.float64:
+                latd = int(self.edi_results['lat'][row])
+                latm = np.abs((self.edi_results['lat'][row] - latd) * 60)
+                lond = int(self.edi_results['lon'][row])
+                lonm = np.abs((self.edi_results['lon'][row] - lond) * 60)
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:3.0f} {:3.7f}'.format(latd, latm)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:3.0f} {:3.7f}'.format(lond, lonm)))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            else:
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+    def edi_compute(self):
+
+        # Selected transect
+        for row in range(self.tbl_edi_transect.rowCount()):
+            if self.tbl_edi_transect.item(row, 0).checkState() == QtCore.Qt.Checked:
+                selected_idx = self.checked_transects_idx[row]
+                break
+
+        # Specified percentages
+        percents = []
+        for row in range(self.tbl_edi_results.rowCount()):
+            try:
+                percent = float(self.tbl_edi_results.item(row, 0).text())
+                percents.append(percent)
+            except AttributeError:
+                pass
+
+        self.edi_results = Measurement.compute_edi(self.meas, selected_idx, percents)
+
+        self.edi_update_table()
+
+        if self.cb_edi_topoquad.checkState() == QtCore.Qt.Checked:
+            self.create_topoquad_file()
+
+    def create_topoquad_file(self):
+
+        text, okPressed = QtWidgets.QInputDialog.getText(self, 'TopoQuad File', 'Enter filename (no suffix)for TopoQuad file:',
+                                               QtWidgets.QLineEdit.Normal, 'edi_topoquad')
+        if okPressed and text != '':
+            filename = text + '.txt'
+            fullname = os.path.join(self.sticky_settings.get('Folder'), filename)
+            with open(fullname, 'w') as outfile:
+                outfile.write('BEGIN SYMBOL \n')
+                for n in range(len(self.edi_results['lat'])):
+                    outfile.write('{:15.10f}, {:15.10f}, Yellow Dot\n'.
+                                  format(self.edi_results['lat'][n], self.edi_results['lon'][n]))
+                outfile.write('END')
+        else:
+            error_dialog = QtWidgets.QErrorMessage()
+            error_dialog.showMessage('Invalid output filename. TopoQuad file not created.')
+
+
 # Graphics controls
 # =================
     def clear_zphd(self):
@@ -7285,7 +7528,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     rating = 'Poor'
 
         # Create default file name
-        save_file = SaveMeasurementDialog()
+        save_file = SaveMeasurementDialog(parent=self)
 
         # Save data in Matlab format
         if self.save_all:
@@ -7410,6 +7653,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         elif tab_idx == 10:
             # Edges
             self.edges_tab()
+
+        elif tab_idx == 11:
+            # EDI
+            self.edi_tab()
 
     def update_comments (self, tab_idx=None):
         """Manages the initialization of content for each tab and updates that information as necessary.

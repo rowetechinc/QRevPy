@@ -1603,12 +1603,12 @@ class TransectData(object):
             if selected == 'internal':
                 self.update_sos()
             elif selected == 'user':
-                if self.sensors.speed_of_sound_mps.user is not None:
-                    self.sensors.speed_of_sound_mps.set_selected(selected_name=selected)
-                    self.update_sos()
-                else:
+                # if self.sensors.speed_of_sound_mps.user is None:
+                #     self.sensors.speed_of_sound_mps.set_selected(selected_name=selected)
+                #     self.update_sos()
+                # else:
                     # self.sensors.speed_of_sound_mps.set_selected(selected_name=selected)
-                    self.update_sos(speed=speed, selected='user', source='Manual Input')
+                self.update_sos(speed=speed, selected='user', source='Manual Input')
 
     def update_sos(self, selected=None, source=None, speed=None):
         """Sets a new specified speed of sound.
@@ -1630,16 +1630,6 @@ class TransectData(object):
         old_sos = sos_selected.data
         new_sos = None
 
-        # If called with no input set source to internal and determine whether computed or calculated based on
-        # availability of user supplied temperature or salinity
-        if selected is None and source is None:
-            self.sensors.speed_of_sound_mps.set_selected('internal')
-            # If temperature or salinity is set by the user the speed of sound is computed otherwise it is consider
-            # calculated by the ADCP.
-            if (self.sensors.temperature_deg_c.selected == 'user') or (self.sensors.salinity_ppt.selected == 'user'):
-                self.sensors.speed_of_sound_mps.internal.set_source('Computed')
-            else:
-                self.sensors.speed_of_sound_mps.internal.set_source('Calculated')
 
         # If source is set to calculated, the selected is set to internal and the original data from the ADCP is used
         # elif selected == 'internal' and source == 'Calculated':
@@ -1658,11 +1648,21 @@ class TransectData(object):
         #         self.sensors.speed_of_sound_mps.internal.set_source('Calculated')
 
         # Manual input for speed of sound
-        elif selected == 'user' and source == 'Manual Input':
+        if selected == 'user' and source == 'Manual Input':
             self.sensors.speed_of_sound_mps.set_selected(selected_name=selected)
             self.sensors.speed_of_sound_mps.user = SensorData()
             self.sensors.speed_of_sound_mps.user.populate_data(speed, source)
 
+        # If called with no input set source to internal and determine whether computed or calculated based on
+        # availability of user supplied temperature or salinity
+        elif selected is None and source is None:
+            self.sensors.speed_of_sound_mps.set_selected('internal')
+            # If temperature or salinity is set by the user the speed of sound is computed otherwise it is consider
+            # calculated by the ADCP.
+            if (self.sensors.temperature_deg_c.selected == 'user') or (self.sensors.salinity_ppt.selected == 'user'):
+                self.sensors.speed_of_sound_mps.internal.set_source('Computed')
+            else:
+                self.sensors.speed_of_sound_mps.internal.set_source('Calculated')
 
         # Determine new speed of sound
         if self.sensors.speed_of_sound_mps.selected == 'internal':
