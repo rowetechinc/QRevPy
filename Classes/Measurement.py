@@ -1319,8 +1319,23 @@ class Measurement(object):
 
     @staticmethod
     def compute_edi(meas, selected_idx, percents):
+        """Computes the locations and vertical properties for the user selected transect and
+        flow percentages.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        selected_idx: int
+            Index of selected transect
+        percents: list
+            List of selected flow percents
+        """
+
+        # Get transect and discharge data
         transect = meas.transects[selected_idx]
         discharge = meas.discharge[selected_idx]
+        # Sort the percents in ascending order
         percents.sort()
 
         # Compute cumulative discharge
@@ -1357,6 +1372,8 @@ class Measurement(object):
                   transect.date_time.ens_duration_sec[transect.in_transect_idx])
 
         dist = np.sqrt(track_x ** 2 + track_y ** 2) + start_dist
+
+        # Initialize variables for computing vertical data
         n_pts_in_avg = int(len(q_cum) * 0.01)
         depth_selected = getattr(transect.depths, transect.depths.selected)
         q_actual = []
@@ -1366,9 +1383,11 @@ class Measurement(object):
         depth = []
         velocity = []
 
+        # Compute data for each vertical
         for ensemble in ensembles:
             q_actual.append(q_cum[ensemble])
             distance.append(dist[ensemble])
+            # Report lat and lon if available
             try:
                 lat.append(transect.gps.gga_lat_ens_deg[ensemble])
                 lon.append(transect.gps.gga_lon_ens_deg[ensemble])
@@ -1376,10 +1395,13 @@ class Measurement(object):
                 lat.append('')
                 lon.append('')
             depth.append(depth_selected.depth_processed_m[ensemble])
+            # The velocity is an average velocity for ensembles +/- 1% of the total ensembles
+            # about the selected ensemble
             u = np.nanmean(transect.w_vel.u_processed_mps[:, ensemble - n_pts_in_avg : ensemble + n_pts_in_avg + 1], 1)
             v = np.nanmean(transect.w_vel.v_processed_mps[:, ensemble - n_pts_in_avg : ensemble + n_pts_in_avg + 1], 1)
             velocity.append(np.sqrt(np.nanmean(u)**2 + np.nanmean(v)**2))
 
+        # Save computed results in a dictionary
         edi_results = {'percent': percents, 'target_q': q_target, 'actual_q': q_actual, 'distance': distance,
                        'depth': depth, 'velocity': velocity, 'lat': lat, 'lon': lon}
         return edi_results

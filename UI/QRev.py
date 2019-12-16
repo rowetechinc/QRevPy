@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import time
 import os
+import shutil
 
 from MiscLibs.common_functions import units_conversion, convert_temperature
 
@@ -190,6 +191,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.actionSave.triggered.connect(self.save_measurement)
 
         self.showMaximized()
+
 # Toolbar functions
 # =================
     def select_measurement(self):
@@ -251,6 +253,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, checked=self.checked_transects_idx)
             self.config_gui()
             self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml')
+
+            # Save stylesheet in measurement folder
+            if self.save_stylesheet:
+                stylesheet_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'QRevStylesheet.xsl')
+                meas_folder, _ = os.path.split(save_file.full_Name)
+                shutil.copy2(stylesheet_file, meas_folder)
+
             QtWidgets.QMessageBox.about(self, "Save", "Files (*_QRev.mat and *_QRev.xml) have been saved.")
 
     def add_comment(self):
@@ -342,24 +351,26 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Change composite tracks setting to On and update measurement and display.
         """
         with self.wait_cursor():
-            for test in self.meas.mb_tests:
-                if test.selected:
-                    if test.moving_bed == 'Yes' and \
-                        self.meas.transects[self.checked_transects_idx[0]].w_vel.nav_ref == 'BT':
-                        QtWidgets.QMessageBox.about(self, 'Composite Tracks Message',
-                                                    'A moving-bed condition exists and BT is the current reference,'
-                                                    'composite tracks cannot be used in this situation.')
-                    else:
-
-                        # Get all current settings
-                        settings = Measurement.current_settings(self.meas)
-                        # Change CompTracks to selected setting
-                        settings['CompTracks'] = 'On'
-                        # Update measurement and GUI
-                        Measurement.apply_settings(self.meas, settings)
-                        self.update_toolbar_composite_tracks()
-                        self.change = True
-                        self.tab_manager()
+            composite = True
+            if len(self.meas.mb_tests) > 0:
+                for test in self.meas.mb_tests:
+                    if test.selected:
+                        if test.moving_bed == 'Yes' and \
+                            self.meas.transects[self.checked_transects_idx[0]].w_vel.nav_ref == 'BT':
+                            QtWidgets.QMessageBox.about(self, 'Composite Tracks Message',
+                                                        'A moving-bed condition exists and BT is the current reference,'
+                                                        'composite tracks cannot be used in this situation.')
+                            composite = False
+            if composite:
+                # Get all current settings
+                settings = Measurement.current_settings(self.meas)
+                # Change CompTracks to selected setting
+                settings['CompTracks'] = 'On'
+                # Update measurement and GUI
+                Measurement.apply_settings(self.meas, settings)
+                self.update_toolbar_composite_tracks()
+                self.change = True
+                self.tab_manager()
 
     def comp_tracks_off(self):
         """Change composite tracks setting to Off and update measurement and display.
@@ -427,7 +438,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 if options.cb_stylesheet.isChecked():
                     self.save_stylesheet = True
                 else:
-                    self.save_all = False
+                    self.save_stylesheet = False
 
                 # Update tabs
                 self.tab_manager()
@@ -2538,7 +2549,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Temperature source
             col += 1
             item = 'Internal (ADCP)'
-            if self.meas.transects[transect_id].sensors.speed_of_sound_mps.selected == 'user':
+            if self.meas.transects[transect_id].sensors.temperature_deg_c.selected == 'user':
                 item = 'User'
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
@@ -2664,9 +2675,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             if t_source_entered:
                 # Assign data based on change made by user
                 old_discharge = copy.deepcopy(self.meas.discharge)
-                if t_source_dialog.rb_internal:
+                if t_source_dialog.rb_internal.isChecked():
                     t_source = 'internal'
-                elif t_source_dialog.rb_user:
+                elif t_source_dialog.rb_user.isChecked():
                     t_source = 'user'
                     user_temp = float(t_source_dialog.ed_user_temp.text())
 
@@ -3124,6 +3135,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Use to correct, manual override
         if column == 1:
             quality = tbl.item(row, 14).text()
+            # Identify a moving-bed condition
+
+            moving_bed_idx = []
+            for n, test in enumerate(self.meas.mb_tests):
+                if test.selected:
+                    if test.moving_bed == 'Yes':
+                        moving_bed_idx.append(n)
 
             if quality == 'Manual':
                 # Cancel Manual
@@ -3134,7 +3152,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.meas.mb_tests[row].test_quality = "Errors"
                 self.meas.mb_tests = MovingBedTests.auto_use_2_correct(
                     moving_bed_tests=self.meas.mb_tests,
-                    boat_ref=self.meas.transects[self.checked_transects_idx[0].w_vel.nav_ref])
+                    boat_ref=self.meas.transects[self.checked_transects_idx[0]].w_vel.nav_ref)
 
             elif quality == 'Errors':
                 # Manual override
@@ -3156,56 +3174,57 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     self.meas.mb_tests[row].test_quality = "Manual"
                     self.meas.mb_tests = MovingBedTests.auto_use_2_correct(
                         moving_bed_tests=self.meas.mb_tests,
-                        boat_ref=self.meas.transects[self.checked_transects_idx[0].w_vel.nav_ref])
+                        boat_ref=self.meas.transects[self.checked_transects_idx[0]].w_vel.nav_ref)
                 else:
                     # tbl.item(row, 1).setCheckState(QtCore.Qt.Unchecked)
                     reprocess_measurement = False
 
-            elif tbl.item(row, 13).text() == 'Yes':
-                if tbl.item(row, 1).checkState() == QtCore.Qt.Checked:
-                    # tbl.item(row, 1).setCheckState(QtCore.Qt.Unchecked)
-                    self.meas.mb_tests[row].use_2_correct = False
-                    self.add_comment()
-                else:
-                    # Apply setting
-                    # tbl.item(row, 1).setCheckState(QtCore.Qt.Checked)
-                    self.meas.mb_tests[row].use_2_correct = True
-
-                    # Check to make sure the selected test are of the same type
-                    test_type = []
-                    test_quality = []
-                    for test in self.meas.mb_tests:
-                        if test.selected:
-                            test_type.append(test.type)
-                            test_quality = test.test_quality
-                    unique_types = set(test_type)
-                    if len(unique_types) == 1:
-
-                        # Check for errors
-                        if 'Errors' not in test_quality:
-
-                            # Multiple loops not allowed
-                            if test_type == 'Loop' and len(test_type) > 1:
-                                self.meas.mb_tests[row].use_2_correct == False
-                                reprocess_measurement = False
-                                # tbl.item(row, 1).setCheckState(QtCore.Qt.Unchecked)
-                                user_warning = QtWidgets.QMessageBox.question(self, 'Multiple Loop Test Warning',
-                                                                              'Only one loop can be applied. '
-                                                                              'Select the best loop.',
-                                                                              QtWidgets.QMessageBox.Ok,
-                                                                              QtWidgets.QMessageBox.Ok)
-
-
+            elif len(moving_bed_idx) > 0:
+                if row in moving_bed_idx:
+                    if tbl.item(row, 1).checkState() == QtCore.Qt.Checked:
+                        # tbl.item(row, 1).setCheckState(QtCore.Qt.Unchecked)
+                        self.meas.mb_tests[row].use_2_correct = False
+                        self.add_comment()
                     else:
-                        # Mixing of stationary and loop tests are not allowed
-                        self.meas.mb_tests[row].use_2_correct == False
-                        reprocess_measurement = False
-                        user_warning = QtWidgets.QMessageBox.question(self, 'Mixed Moving-Bed Test Warning',
-                                                                      'Application of mixed moving-bed test types is '
-                                                                      'not allowed. Select only one loop or one or '
-                                                                      'more stationary test.',
-                                                                      QtWidgets.QMessageBox.Ok,
-                                                                      QtWidgets.QMessageBox.Ok)
+                        # Apply setting
+                        # tbl.item(row, 1).setCheckState(QtCore.Qt.Checked)
+                        self.meas.mb_tests[row].use_2_correct = True
+
+                        # Check to make sure the selected test are of the same type
+                        test_type = []
+                        test_quality = []
+                        for test in self.meas.mb_tests:
+                            if test.selected:
+                                test_type.append(test.type)
+                                test_quality = test.test_quality
+                        unique_types = set(test_type)
+                        if len(unique_types) == 1:
+
+                            # Check for errors
+                            if 'Errors' not in test_quality:
+
+                                # Multiple loops not allowed
+                                if test_type == 'Loop' and len(test_type) > 1:
+                                    self.meas.mb_tests[row].use_2_correct == False
+                                    reprocess_measurement = False
+                                    # tbl.item(row, 1).setCheckState(QtCore.Qt.Unchecked)
+                                    user_warning = QtWidgets.QMessageBox.question(self, 'Multiple Loop Test Warning',
+                                                                                  'Only one loop can be applied. '
+                                                                                  'Select the best loop.',
+                                                                                  QtWidgets.QMessageBox.Ok,
+                                                                                  QtWidgets.QMessageBox.Ok)
+
+
+                        else:
+                            # Mixing of stationary and loop tests are not allowed
+                            self.meas.mb_tests[row].use_2_correct == False
+                            reprocess_measurement = False
+                            user_warning = QtWidgets.QMessageBox.question(self, 'Mixed Moving-Bed Test Warning',
+                                                                          'Application of mixed moving-bed test types is '
+                                                                          'not allowed. Select only one loop or one or '
+                                                                          'more stationary test.',
+                                                                          QtWidgets.QMessageBox.Ok,
+                                                                          QtWidgets.QMessageBox.Ok)
 
             else:
                 # No moving-bed, so no moving-bed correction is applied
@@ -6701,7 +6720,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     def edges_table_clicked(self, row, col):
 
         tbl = self.table_edges
-
+        self.change = True
         # Show transect
         if col == 0:
             with self.wait_cursor():
@@ -7168,6 +7187,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 # EDI tab
 # =======
     def edi_tab(self):
+        """Initializes the EDI tab."""
 
         # Setup transect selection table
         tbl = self.tbl_edi_transect
@@ -7195,21 +7215,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         for row in range(nrows):
             col = 0
             transect_id = row
-            # checked = QtWidgets.QTableWidgetItem('')
-            # checked.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
-            # if self.meas.transects[row].checked:
-            #     checked.setCheckState(QtCore.Qt.Checked)
-            # else:
-            #     checked.setCheckState(QtCore.Qt.Unchecked)
-            # checked.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
-            # tbl.setItem(row, col, checked)
-            # col += 1
 
             checked = QtWidgets.QTableWidgetItem(self.meas.transects[transect_id].file_name[:-4])
             checked.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
             checked.setCheckState(QtCore.Qt.Unchecked)
             tbl.setItem(row, col, checked)
-            # tbl.setItem(row, col, QtWidgets.QTableWidgetItem(self.meas.transects[transect_id].file_name[:-4]))
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(datetime.strftime(datetime.utcfromtimestamp(
                 self.meas.transects[transect_id].date_time.start_serial_time), '%H:%M:%S')))
@@ -7274,18 +7284,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         header_font.setPointSize(14)
         tbl_edi.horizontalHeader().setFont(header_font)
         tbl_edi.verticalHeader().hide()
-        # tbl_edi.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
 
         tbl_edi.setItem(0, 0, QtWidgets.QTableWidgetItem('10'))
-        # tbl_edi.item(0, 0).setFlags(QtCore.Qt.ItemIsEnabled)
         tbl_edi.setItem(1, 0, QtWidgets.QTableWidgetItem('30'))
-        # tbl_edi.item(1, 0).setFlags(QtCore.Qt.ItemIsEnabled)
         tbl_edi.setItem(2, 0, QtWidgets.QTableWidgetItem('50'))
-        # tbl_edi.item(2, 0).setFlags(QtCore.Qt.ItemIsEnabled)
         tbl_edi.setItem(3, 0, QtWidgets.QTableWidgetItem('70'))
-        # tbl_edi.item(3, 0).setFlags(QtCore.Qt.ItemIsEnabled)
         tbl_edi.setItem(4, 0, QtWidgets.QTableWidgetItem('90'))
-        # tbl_edi.item(4, 0).setFlags(QtCore.Qt.ItemIsEnabled)
+
+        # Configure table so first column is the only editable column
         for row in range(tbl_edi.rowCount()):
             for col in range(1,7):
                 tbl_edi.setItem(row, col, QtWidgets.QTableWidgetItem(' '))
@@ -7294,35 +7300,56 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl_edi.resizeColumnsToContents()
         tbl_edi.resizeRowsToContents()
 
-        # Setup button connections
+        # Setup connections to other methods
         tbl.cellClicked.connect(self.edi_select_transect)
         self.pb_edi_add_row.clicked.connect(self.edi_add_row)
         self.pb_edi_compute.clicked.connect(self.edi_compute)
         self.pb_edi_compute.setEnabled(False)
 
     def edi_select_transect(self, row, col):
+        """Handles checkbox so only one box can be checked.
+        Updates the GUI to reflect the start bank  of the transect selected
+
+        Parameters
+        ----------
+        row: int
+            Row clicked by user
+        column: int
+            Column clicked by user
+        """
+
+        # Checkbox control
         if col == 0:
+            # Ensures only one box can be checked
             for r in range(self.tbl_edi_transect.rowCount()):
                 if r == row:
                     self.tbl_edi_transect.item(r, col).setCheckState(QtCore.Qt.Checked)
                 else:
                     self.tbl_edi_transect.item(r, col).setCheckState(QtCore.Qt.Unchecked)
+            # Update the GUI to reflect the start bank of the selected transect
             if self.meas.transects[self.checked_transects_idx[row]].start_edge[0] == 'R':
                 self.txt_edi_bank.setText('From Right Bank')
             else:
                 self.txt_edi_bank.setText('From Left Bank')
+            # After a transect is selected enable the compute button in the GUI
             self.pb_edi_compute.setEnabled(True)
 
     def edi_add_row(self):
+        """Allows the user to add a row to the results table so that more than 5 verticals
+        can be defined."""
         rowPosition = self.tbl_edi_results.rowCount()
         self.tbl_edi_results.insertRow(rowPosition)
+        # Allow editing of first column only
         for col in range(1, 7):
             self.tbl_edi_results.setItem(rowPosition, col, QtWidgets.QTableWidgetItem(' '))
             self.tbl_edi_results.item(rowPosition, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
     def edi_update_table(self):
-        tbl = self.tbl_edi_results
+        """Updates the results table with the computed data.
+        """
 
+        tbl = self.tbl_edi_results
+        # Add data to table
         for row in range(tbl.rowCount()):
             col = 0
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:2.0f}'.format(self.edi_results['percent'][row])))
@@ -7335,8 +7362,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 '{:6.2f}'.format(self.edi_results['actual_q'][row] * self.units['Q'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
+            # Code to handle either blank or user supplied data
+            try:
+                offset = float(self.edi_offset.text())
+            except ValueError:
+                offset = 0
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
-                '{:6.1f}'.format(self.edi_results['distance'][row] * self.units['L'])))
+                '{:6.1f}'.format((self.edi_results['distance'][row]* self.units['L']) + offset)))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
@@ -7346,6 +7378,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
                 '{:4.1f}'.format(self.edi_results['velocity'][row] * self.units['L'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            # Convert lat and lon for decimal degrees to degrees and decimal minutes
             if type(self.edi_results['lat'][row]) is np.float64:
                 latd = int(self.edi_results['lat'][row])
                 latm = np.abs((self.edi_results['lat'][row] - latd) * 60)
@@ -7368,14 +7401,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
     def edi_compute(self):
+        """Coordinates the computation of the EDI results.
+        """
 
-        # Selected transect
+        # Find selected transect index
         for row in range(self.tbl_edi_transect.rowCount()):
             if self.tbl_edi_transect.item(row, 0).checkState() == QtCore.Qt.Checked:
                 selected_idx = self.checked_transects_idx[row]
                 break
 
-        # Specified percentages
+        # Find specified percentages
         percents = []
         for row in range(self.tbl_edi_results.rowCount()):
             try:
@@ -7384,15 +7419,17 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             except AttributeError:
                 pass
 
+        # If the selected transect has computed discharge compute EDI results
         if np.abs(self.meas.discharge[selected_idx].total) > 0:
+            # Compute EDI results
             self.edi_results = Measurement.compute_edi(self.meas, selected_idx, percents)
-
+            # Update EDI results table
             self.edi_update_table()
-
+            # Create topoquad file is requested
             if self.cb_edi_topoquad.checkState() == QtCore.Qt.Checked:
                 self.create_topoquad_file()
-
         else:
+            # Display message to user
             msg = QtWidgets.QMessageBox()
             msg.setIcon(QtWidgets.QMessageBox.Critical)
             msg.setText("Error")
@@ -7401,9 +7438,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             msg.exec_()
 
     def create_topoquad_file(self):
+        """Create an ASCII file that can be loaded into TopoQuads to mark the EDI locations
+        with a yellow dot.
+        """
 
+        # Get user defined filename
         text, okPressed = QtWidgets.QInputDialog.getText(self, 'TopoQuad File', 'Enter filename (no suffix)for TopoQuad file:',
                                                QtWidgets.QLineEdit.Normal, 'edi_topoquad')
+        # Create and save file to folder containing measurement data
         if okPressed and text != '':
             filename = text + '.txt'
             fullname = os.path.join(self.sticky_settings.get('Folder'), filename)
@@ -7414,6 +7456,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                   format(self.edi_results['lat'][n], self.edi_results['lon'][n]))
                 outfile.write('END')
         else:
+            # Report error to user
             error_dialog = QtWidgets.QErrorMessage()
             error_dialog.showMessage('Invalid output filename. TopoQuad file not created.')
 

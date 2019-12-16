@@ -365,8 +365,8 @@ class TransectData(object):
             vtg_method = 'Mindt'
             
             # If valid gps data exist, process the data
-            if (np.sum(np.sum(np.abs(raw_gga_lat))) > 0) \
-                    or (np.sum(np.sum(np.abs(raw_vtg_speed))) > 0):
+            if (np.nansum(np.nansum(np.abs(raw_gga_lat))) > 0) \
+                    or (np.nansum(np.nansum(np.abs(raw_vtg_speed))) > 0):
                 
                 # Process raw GPS data
                 self.gps = GPSData()
@@ -1564,13 +1564,16 @@ class TransectData(object):
         """
 
         if parameter == 'temperatureSrc':
-            # If a user temperature has not been stored use the mean temperature as the user temperature
-            if selected == 'user' and self.sensors.temperature_deg_c.user is None:
-                temperature_selected = getattr(self.sensors.temperature_deg_c, 'selected')
-                adcp_temp = temperature_selected.data
-                temperature = np.tile(np.nanmean(adcp_temp), adcp_temp.shape)
-                self.sensors.temperature_deg_c.user.change_data(data_in=temperature)
+
+            temperature_internal = getattr(self.sensors.temperature_deg_c, 'internal')
+            if selected == 'user':
+                if self.sensors.temperature_deg_c.user is None:
+                    self.sensors.temperature_deg_c.user = SensorData()
+                ens_temperature = np.tile(temperature, temperature_internal.data.shape)
+
+                self.sensors.temperature_deg_c.user.change_data(data_in=ens_temperature)
                 self.sensors.temperature_deg_c.user.set_source(source_in='Manual Input')
+
             # Set the temperature data to the selected source
             self.sensors.temperature_deg_c.set_selected(selected_name=selected)
             # Update the speed of sound

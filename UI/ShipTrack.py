@@ -241,10 +241,13 @@ class Shiptrack(object):
                                         color='b', label='GGA')
 
             if edge_start is not None:
-                if edge_start:
-                    self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][0], ship_data_gga['track_y_m'][0], 'sk')[0])
-                else:
-                    self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][-1], ship_data_gga['track_y_m'][-1], 'sk')[0])
+                try:
+                    if edge_start:
+                        self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][0], ship_data_gga['track_y_m'][0], 'sk')[0])
+                    else:
+                        self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][-1], ship_data_gga['track_y_m'][-1], 'sk')[0])
+                except TypeError:
+                    pass
 
             # Plot invalid data points using a symbol to represent what caused the data to be invalid
             if invalid_gps is not None and not np.alltrue(np.isnan(ship_data_gga['track_x_m'])):

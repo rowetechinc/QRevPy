@@ -68,7 +68,7 @@ class PRTS(object):
                     # Plot pitch
                     pitch = np.copy(meas.transects[checked[row]].sensors.pitch_deg.internal.data)
                     if meas.transects[checked[row]].start_edge == 'Right':
-                        np.flip(pitch)
+                        pitch = np.flip(pitch)
                     self.pitch.append(self.fig.ax.plot(pitch, 'r-')[0])
                 else:
                     self.pitch = None
@@ -77,7 +77,7 @@ class PRTS(object):
                     # Plot roll
                     roll = np.copy(meas.transects[checked[row]].sensors.roll_deg.internal.data)
                     if meas.transects[checked[row]].start_edge == 'Right':
-                        np.flip(roll)
+                        roll = np.flip(roll)
                     self.roll.append(self.fig.ax.plot(roll, 'b-')[0])
                 else:
                     self.roll = None

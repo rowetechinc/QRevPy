@@ -644,12 +644,12 @@ class QAData(object):
             check[0] = 3
             self.temperature['messages'].append(['TEMPERATURE: Temperature range is '
                                                 + '{:3.1f}'.format(temp_range)
-                                                + 'degrees C which is greater than 2 degrees;', 1, 5])
+                                                + ' degrees C which is greater than 2 degrees;', 1, 5])
         elif temp_range > 1:
             check[0] = 2
             self.temperature['messages'].append(['TEMPERATURE: Temperature range is '
                                                  + '{:3.1f}'.format(temp_range)
-                                                 + 'degrees C which is greater than 1 degrees;', 2, 5])
+                                                 + ' degrees C which is greater than 1 degrees;', 2, 5])
         else:
             check[0] = 1
 

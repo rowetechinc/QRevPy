@@ -5534,11 +5534,14 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="lineEdit">
+             <widget class="QLineEdit" name="edi_offset">
               <property name="font">
                <font>
                 <pointsize>14</pointsize>
                </font>
+              </property>
+              <property name="inputMethodHints">
+               <set>Qt::ImhDigitsOnly</set>
               </property>
              </widget>
             </item>

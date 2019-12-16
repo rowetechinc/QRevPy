@@ -2143,24 +2143,21 @@ class Gps2(object):
         self.heading_deg = np.full([n_ensembles, 20], np.nan)
         self.h_true_indicator = [x[:] for x in [[''] * 20] * n_ensembles]
 
-        if wr2:
-            self.gga_velE_mps = nans(n_ensembles)
-            self.gga_velN_mps = nans(n_ensembles)
-            self.vtg_velE_mps = nans(n_ensembles)
-            self.vtg_velN_mps = nans(n_ensembles)
+        # if wr2:
+        self.gga_velE_mps = nans(n_ensembles)
+        self.gga_velN_mps = nans(n_ensembles)
+        self.vtg_velE_mps = nans(n_ensembles)
+        self.vtg_velN_mps = nans(n_ensembles)
 
     def gga_expand(self, n_ensembles, i_ens):
         self.gga_delta_time = np.concatenate(
             (self.gga_delta_time, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.gga_header[i_ens].append('')
         self.utc = np.concatenate(
             (self.utc, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
         self.lat_deg = np.concatenate(
             (self.lat_deg, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.lat_ref[i_ens].append('')
         self.lon_deg = np.concatenate(
             (self.lon_deg, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.lon_ref[i_ens].append('')
         self.corr_qual = np.concatenate(
             (self.corr_qual, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
         self.num_sats = np.concatenate(
@@ -2169,54 +2166,61 @@ class Gps2(object):
             (self.hdop, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
         self.alt = np.concatenate(
             (self.alt, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.alt_unit[i_ens].append('')
         self.geoid = np.concatenate(
             (self.geoid, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.geoid_unit[i_ens].append('')
         self.d_gps_age = np.concatenate(
             (self.d_gps_age, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
         self.ref_stat_id = np.concatenate(
             (self.ref_stat_id, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
+        for ens in range(n_ensembles):
+            self.gga_header[ens].append('')
+            self.geoid_unit[ens].append('')
+            self.alt_unit[ens].append('')
+            self.lon_ref[ens].append('')
+            self.lat_ref[ens].append('')
 
     def vtg_expand(self, n_ensembles, i_ens):
         self.vtg_delta_time = np.concatenate(
             (self.vtg_delta_time, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.vtg_header[i_ens].append('')
         self.course_true = np.concatenate(
             (self.course_true, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.true_indicator[i_ens].append('')
         self.course_mag = np.concatenate(
             (self.course_mag, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.mag_indicator[i_ens].append('')
         self.speed_knots = np.concatenate(
             (self.speed_knots, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.knots_indicator[i_ens].append('')
         self.speed_kph = np.concatenate(
             (self.speed_kph, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.kph_indicator[i_ens].append('')
-        self.mode_indicator[i_ens].append('')
+        for ens in range(n_ensembles):
+            self.kph_indicator[ens].append('')
+            self.mode_indicator[ens].append('')
+            self.vtg_header[ens].append('')
+            self.true_indicator[ens].append('')
+            self.mag_indicator[ens].append('')
+            self.knots_indicator[ens].append('')
 
     def dbt_expand(self, n_ensembles, i_ens):
         self.dbt_delta_time = np.concatenate(
             (self.dbt_delta_time, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.dbt_header[i_ens].append('')
         self.depth_ft = np.concatenate(
             (self.depth_ft, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.ft_indicator[i_ens].append('')
         self.depth_m = np.concatenate(
             (self.depth_m, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.m_indicator[i_ens].append('')
         self.depth_fath = np.concatenate(
             (self.depth_fath, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.fath_indicator[i_ens].append('')
+        for ens in range(n_ensembles):
+            self.fath_indicator[ens].append('')
+            self.dbt_header[ens].append('')
+            self.ft_indicator[ens].append('')
+            self.m_indicator[ens].append('')
 
     def hdt_expand(self, n_ensembles, i_ens):
         self.hdt_delta_time = np.concatenate(
             (self.hdt_delta_time, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.hdt_header[i_ens].append('')
         self.heading_deg = np.concatenate(
             (self.heading_deg, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
-        self.h_true_indicator[i_ens].append('')
+        for ens in range(n_ensembles):
+            self.h_true_indicator[ens].append('')
+            self.hdt_header[ens].append('')
 
 
 class Nmea(object):
