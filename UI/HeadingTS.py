@@ -74,7 +74,8 @@ class HeadingTS(object):
                     heading = np.copy(meas.transects[checked[row]].sensors.heading_deg.internal.data)
                     if meas.transects[checked[row]].start_edge == 'Right':
                         heading = np.flip(heading)
-                    self.internal.append(self.fig.axh.plot(heading, 'r-')[0])
+                    ensembles = range(1, len(heading) + 1)
+                    self.internal.append(self.fig.axh.plot(ensembles, heading, 'r-')[0])
                 else:
                     self.internal = None
 
@@ -83,7 +84,8 @@ class HeadingTS(object):
                     heading = np.copy(meas.transects[checked[row]].sensors.heading_deg.external.data)
                     if meas.transects[checked[row]].start_edge == 'Right':
                         heading = np.flip(heading)
-                    self.external.append(self.fig.axh.plot(heading, 'b-')[0])
+                    ensembles = range(1, len(heading) + 1)
+                    self.external.append(self.fig.axh.plot(ensembles, heading, 'b-')[0])
                 else:
                     self.external = None
 
@@ -92,7 +94,8 @@ class HeadingTS(object):
                     mag_chng = np.copy(meas.transects[checked[row]].sensors.heading_deg.internal.mag_error)
                     if meas.transects[checked[row]].start_edge == 'Right':
                         mag_chng = np.flip(mag_chng)
-                    self.merror.append(self.fig.axm.plot(mag_chng, 'k-')[0])
+                    ensembles = range(1, len(mag_chng) + 1)
+                    self.merror.append(self.fig.axm.plot(ensembles, mag_chng, 'k-')[0])
                 else:
                     self.merror = None
 

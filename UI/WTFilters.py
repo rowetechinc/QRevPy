@@ -227,7 +227,7 @@ class WTFilters(object):
             cont_error = False
             cont_vert = False
             cont_speed = False
-            cont_srn = False
+            cont_snr = False
             if self.beam is not None:
                 cont_beam, ind_beam = self.beam[0].contains(event)
             elif self.error is not None:
@@ -252,7 +252,7 @@ class WTFilters(object):
                 self.annot.set_visible(True)
                 self.canvas.draw_idle()
             elif cont_speed:
-                self.update_annot(ind_speed, self.speed[0])
+                self.update_annot(ind_other, self.speed[0])
                 self.annot.set_visible(True)
                 self.canvas.draw_idle()
             elif cont_snr:

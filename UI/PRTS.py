@@ -61,6 +61,7 @@ class PRTS(object):
         self.pitch = []
         self.roll = []
         self.row_index = []
+
         for row in range(len(checked)):
             if tbl.item(row, 0).checkState() == QtCore.Qt.Checked:
                 self.row_index.append(row)
@@ -69,7 +70,8 @@ class PRTS(object):
                     pitch = np.copy(meas.transects[checked[row]].sensors.pitch_deg.internal.data)
                     if meas.transects[checked[row]].start_edge == 'Right':
                         pitch = np.flip(pitch)
-                    self.pitch.append(self.fig.ax.plot(pitch, 'r-')[0])
+                    ensembles = range(1, len(pitch) + 1)
+                    self.pitch.append(self.fig.ax.plot(ensembles, pitch, 'r-')[0])
                 else:
                     self.pitch = None
 
@@ -78,7 +80,8 @@ class PRTS(object):
                     roll = np.copy(meas.transects[checked[row]].sensors.roll_deg.internal.data)
                     if meas.transects[checked[row]].start_edge == 'Right':
                         roll = np.flip(roll)
-                    self.roll.append(self.fig.ax.plot(roll, 'b-')[0])
+                    ensembles = range(1, len(roll) + 1)
+                    self.roll.append(self.fig.ax.plot(ensembles, roll, 'b-')[0])
                 else:
                     self.roll = None
 

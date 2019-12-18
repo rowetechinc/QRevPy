@@ -7,11 +7,12 @@ The cell size and thus the y-coordinate of a cell can change from cell to cell o
 The interpolation algorithm searches for the nearest valid cell above, below, before, and after
 the cell to be interpolated. All cells before and after that lie completely within the target cell are
 determined to be neighbors. If the target cell lies completely with in a larger cell before or after the
-target that larger cell is consider a neighbor.
+target that larger cell is consider a neighbor. Bathymetry is honored by checking to see if the depth of the streambed
+of the cell before or after is greater than the bottom of the target cell. When searching before or after, if the
+streambed is encountered before a valid cell then no valid cell is used in that direction.
 
 The methods provide the flexibility to determine neighbors based on either a raw vertical location
-or a normalized location. To use a normalized location the y_normalize variable must contain the
-divisor for each x location of the raw vertical locations (each column of y-coordinate).
+or a normalized location. To use a normalized location set normalize to True.
 
 For efficiency the data_list can contain multiple types of data that lie on the same x-y locations.
 This allows multiple interpolations without having to recompute neighbors and distances.
@@ -26,8 +27,9 @@ interpolated_data = abba_idw_interpolation(data_list = [u_processed_mps, v_proce
                                            cells_above_sl = cells_above_sl
                                            y_centers = depth_cell_depth_m
                                            y_cell_size = depth_cell_size_m
-                                           y_normalize = depth_processed_m
-                                           x_shiptrack = distance_along_shiptrack)
+                                           y_depth = depth_processed_m
+                                           x_shiptrack = distance_along_shiptrack,
+                                           normalize = True)
 
 interpolated_u_values = interpolated_data[0]
 interpolated_v_values = interpolated_data[1]
@@ -36,7 +38,7 @@ interpolated_v_values = interpolated_data[1]
 import numpy as np
 
 
-def find_neighbors(valid_data, cells_above_sl, y_cell_centers, y_cell_size, y_normalize=[]):
+def find_neighbors(valid_data, cells_above_sl, y_cell_centers, y_cell_size, y_depth, normalize=False):
     """ Finds the nearest valid cells above, below, before, and after each invalid cell. The before and after
     Cells must have data in the same y range as the invalid cell.
 
@@ -50,8 +52,11 @@ def find_neighbors(valid_data, cells_above_sl, y_cell_centers, y_cell_size, y_no
         Y coordinate corresponding to the center of the data cells
     y_cell_size: np.array(float)
         Size of each cell in the y-direction
-    y_normalize: np.array(float)
-        1-D array containing values that will be used to normalize the data for identifying neighbors
+    y_depth: np.array(float)
+        1-D array containing values that will be used to normalize the data and specifying the lower boundary for
+        identifying neighbors
+    normalize: bool
+        Boolean indicating if normalized data should be used
 
     Returns
     -------
@@ -62,11 +67,12 @@ def find_neighbors(valid_data, cells_above_sl, y_cell_centers, y_cell_size, y_no
     # Compute cell extents
     y_top = y_cell_centers - 0.5 * y_cell_size
     y_bottom = y_cell_centers + 0.5 * y_cell_size
+    y_bottom_actual = y_cell_centers + 0.5 * y_cell_size
     y_centers = y_cell_centers
-    if len(y_normalize) > 0:
-        y_top = np.round(y_top / y_normalize, 3)
-        y_bottom = np.round(y_bottom / y_normalize, 3)
-        y_centers = np.round(y_cell_centers / y_normalize, 3)
+    if normalize:
+        y_top = np.round(y_top / y_depth, 3)
+        y_bottom = np.round(y_bottom / y_depth, 3)
+        y_centers = np.round(y_cell_centers / y_depth, 3)
 
     # ID cells above side lobe with invalid data
     valid_data_float = valid_data.astype(float)
@@ -100,10 +106,10 @@ def find_neighbors(valid_data, cells_above_sl, y_cell_centers, y_cell_size, y_no
         y_match = np.logical_and(y_match, valid_data)
 
         # Identify indices of cells before and after target
-        before = find_before(target, y_match)
+        before = find_before(target, y_match, y_depth, y_bottom_actual)
         if before:
             points = points + before
-        after = find_after(target, y_match)
+        after = find_after(target, y_match, y_depth, y_bottom_actual)
         if after:
             points = points + after
 
@@ -173,7 +179,7 @@ def find_below(target, valid_data):
     return below_idx
 
 
-def find_before(target, y_match):
+def find_before(target, y_match, y_depth, y_bottom):
     """ Finds the nearest ensemble before the target that has valid cells within the vertical range of the target
 
     Parameters
@@ -182,6 +188,11 @@ def find_before(target, y_match):
         Indices of target cell
     y_match: np.array(logical)
         2-D array of all cells that are within the vertical range of the target cell
+    y_depth: np.array(float)
+        1-D array containing values that will be used to normalize the data and specifying the lower boundary for
+        identifying neighbors
+    y_bottom: np.array(float)
+        Bottom depth of each cell
 
     Returns
     -------
@@ -193,9 +204,20 @@ def find_before(target, y_match):
     # Initialize ensemble counter
     before_ens = target[1] - 1
 
-    # Loop until an ensemble is found that has valid data within the vertical range of the target
-    while before_ens > 0 and not np.any(y_match[:, before_ens]):
-        before_ens = before_ens - 1
+    # Loop until an ensemble is found that has valid data within the vertical range of the target while honoring
+    # the bathymetry. If the streambed is encountered while searching for a previously valid ensemble then
+    # it is determined that there is no available valid data before the target that can be used.
+    found = False
+    # while before_ens > 0 and not np.any(y_match[:, before_ens]):
+    #     before_ens = before_ens - 1
+    while (before_ens >= 0) and not found:
+        if y_bottom[target] < y_depth[before_ens] and np.any(y_match[:, before_ens]):
+            found = True
+        elif y_bottom[target] > y_depth[before_ens]:
+            before_ens = -999
+            found = True
+        else:
+            before_ens = before_ens - 1
 
     # Find and store the indices all cells from the identified ensemble
     # that are within the vertical range of the target
@@ -210,7 +232,7 @@ def find_before(target, y_match):
     return before_idx
 
 
-def find_after(target, y_match):
+def find_after(target, y_match, y_depth, y_bottom):
     """ Finds the nearest ensemble after the target that has valid cells within the vertical range of the target
 
     Parameters
@@ -219,7 +241,11 @@ def find_after(target, y_match):
         Indices of target cell
     y_match: np.array(logical)
         2-D array of all cells that are within the vertical range of the target cell
-
+    y_depth: np.array(float)
+        1-D array containing values that will be used to normalize the data and specifying the lower boundary for
+        identifying neighbors
+    y_bottom: np.array(float)
+        Bottom depth of each cell
     Returns
     -------
     after_idx: list
@@ -230,13 +256,24 @@ def find_after(target, y_match):
     # Initialize ensemble counter
     after_ens = target[1] + 1
 
-    # Loop until an ensemble is found that has valid data within the vertical range of the target
-    while after_ens <= y_match.shape[1]-1 and not np.any(y_match[:, after_ens]):
-        after_ens = after_ens + 1
+    # Loop until an ensemble is found that has valid data within the vertical range of the target while honoring
+    # the bathymetry. If the streambed is encountered while searching for a next valid ensemble then
+    # it is determined that there is no available valid data after the target that can be used.
+    found = False
+    # while after_ens <= y_match.shape[1]-1 and not np.any(y_match[:, after_ens]):
+    #     after_ens = after_ens + 1
+    while (after_ens <= y_match.shape[1] - 1) and not found:
+        if (y_bottom[target] < y_depth[after_ens]) and np.any(y_match[:, after_ens]):
+            found = True
+        elif y_bottom[target] > y_depth[after_ens]:
+            after_ens = -999
+            found = True
+        else:
+            after_ens = after_ens + 1
 
     # Find and store the indices all cells from the identified ensemble
     # that are within the vertical range of the target
-    if after_ens <= y_match.shape[1]-1:
+    if (after_ens <= y_match.shape[1]-1) and (after_ens > 0):
         rows = np.where(y_match[:, after_ens])[0]
         after_idx = []
         for row in rows:
@@ -313,7 +350,8 @@ def idw_interpolation(data, neighbor_indices, distances):
     return interpolated_value
 
 
-def abba_idw_interpolation(data_list, valid_data, cells_above_sl, y_centers, y_cell_size, y_normalize, x_shiptrack):
+def abba_idw_interpolation(data_list, valid_data, cells_above_sl, y_centers, y_cell_size, y_depth,
+                           x_shiptrack, normalize):
     """ Interpolates values for invalid cells using the neighboring cells above, below, before, and after and
     and inverse distance averaging.
 
@@ -329,10 +367,13 @@ def abba_idw_interpolation(data_list, valid_data, cells_above_sl, y_centers, y_c
         Y coordinate corresponding to the center of the data cells
     y_cell_size: np.array(float)
         Size of each cell in the y-direction
-    y_normalize: np.array(float)
-        1-D array containing values that will be used to normalize the data for identifying neighbors
+    y_depth: np.array(float)
+        1-D array containing values that will be used to normalize the data and specifying the lower boundary for
+        identifying neighbors
     x_shiptrack: np.array(float)
         X coordinate of cumulative shiptrack
+    normalize: bool
+        Boolean value specifying whether data should be normalized or not.
 
     Returns
     -------
@@ -350,7 +391,8 @@ def abba_idw_interpolation(data_list, valid_data, cells_above_sl, y_centers, y_c
                                               cells_above_sl=cells_above_sl,
                                               y_cell_centers=y_centers,
                                               y_cell_size=y_cell_size,
-                                              y_normalize=y_normalize)
+                                              y_depth=y_depth,
+                                              normalize=normalize)
 
         # Process each target
         for point in interpolation_points:

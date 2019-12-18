@@ -68,7 +68,7 @@ class WTContour(object):
                                                                                         invalid_data=invalid_data,
                                                                                         n_ensembles=n_ensembles,
                                                                                         edge_start=edge_start)
-        self.x_plt = x_plt
+        self.x_plt = x_plt + 1
         self.cell_plt = cell_plt * self.units['L']
         self.speed_plt = speed_plt * self.units['V']
         # Determine limits for color map
@@ -84,7 +84,7 @@ class WTContour(object):
         cmap.set_under('white')
 
         # Generate color contour
-        c = self.fig.ax.pcolormesh(x_plt, cell_plt * units['L'], speed_plt * units['V'], cmap=cmap, vmin=min_limit,
+        c = self.fig.ax.pcolormesh(self.x_plt, self.cell_plt, self.speed_plt, cmap=cmap, vmin=min_limit,
                                 vmax=max_limit)
 
         # Add color bar and axis labels
@@ -94,7 +94,7 @@ class WTContour(object):
         cb.ax.tick_params(labelsize=12)
         # self.fig.ax.set_title(self.canvas.tr('Water Speed ') + units['label_V'])
         self.fig.ax.invert_yaxis()
-        self.fig.ax.plot(ensembles, depth * units['L'], color='k')
+        self.fig.ax.plot(ensembles+1, depth * units['L'], color='k')
         self.fig.ax.set_xlabel(self.canvas.tr('Ensembles'))
         self.fig.ax.set_ylabel(self.canvas.tr('Depth ') + units['label_L'])
         self.fig.ax.xaxis.label.set_fontsize(12)
@@ -260,7 +260,8 @@ class WTContour(object):
                 cont_fig, ind_fig = self.fig.contains(event)
 
             if cont_fig and self.fig.get_visible():
-                col_idx = (int(round(event.xdata)) - int(round(self.fig.ax.viewLim.x0))) * 2
+                # col_idx = (int(round(event.xdata)) - int(round(self.fig.ax.viewLim.x0))) * 2
+                col_idx = (int(round(event.xdata)) * 2) - 1
                 vel = None
                 for n, cell in enumerate(self.cell_plt[:, col_idx]):
                     if event.ydata < cell:
