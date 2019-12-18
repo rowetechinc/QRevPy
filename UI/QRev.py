@@ -2881,7 +2881,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             if self.rb_f.isChecked():
                 temp = convert_temperature(temp, 'F', 'C')
         else:
-            temp = []
+            temp = np.nan
 
         # Update the measurement with the new ADCP temperature
         self.meas.ext_temp_chk['adcp'] = temp
@@ -6352,22 +6352,34 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     def change_subsection(self):
         """Allows the user to change the subsectioning and then updates the data and display.
         """
-
+        self.ed_extrap_subsection.editingFinished.disconnect(self.change_subsection)
         # If data entered.
         with self.wait_cursor():
-            sub_list = self.ed_extrap_subsection.text().split(':')
-            subsection = []
-            subsection.append(float(sub_list[0]))
-            subsection.append(float(sub_list[1]))
-            if np.abs(subsection[0] - self.meas.extrap_fit.subsection[0]) > 0.0001\
-                    or np.abs(subsection[1] - self.meas.extrap_fit.subsection[1]) > 0.0001:
-                if subsection[0] >= 0 and subsection[0] <= 100 and subsection[1] > subsection[0] and subsection[1] <= 100:
-                    self.meas.extrap_fit.change_extents(transects=self.meas.transects,
-                                                          data_type=self.meas.extrap_fit.sel_fit[-1].data_type,
-                                                          extents=subsection)
-                    self.extrap_update()
-                else:
-                    self.ed_extrap_subsection.setText('{:3.0f}:{:3.0f}'.format(self.meas.extrap_fit.subsection))
+            try:
+                sub_list = self.ed_extrap_subsection.text().split(':')
+                subsection = []
+                subsection.append(float(sub_list[0]))
+                subsection.append(float(sub_list[1]))
+                if np.abs(subsection[0] - self.meas.extrap_fit.subsection[0]) > 0.0001\
+                        or np.abs(subsection[1] - self.meas.extrap_fit.subsection[1]) > 0.0001:
+                    if subsection[0] >= 0 and subsection[0] <= 100 and subsection[1] > subsection[0] and subsection[1] <= 100:
+                        self.meas.extrap_fit.change_extents(transects=self.meas.transects,
+                                                              data_type=self.meas.extrap_fit.sel_fit[-1].data_type,
+                                                              extents=subsection)
+                        self.extrap_update()
+                    else:
+                        self.ed_extrap_subsection.setText('{:3.0f}:{:3.0f}'.format(self.meas.extrap_fit.subsection))
+            except (IndexError, TypeError):
+                msg = QtWidgets.QMessageBox()
+                msg.setIcon(QtWidgets.QMessageBox.Critical)
+                msg.setText("Error")
+                msg.setInformativeText('Subsectioning requires data entry as two numbers '
+                                       'separated by a colon (example: 10:90) where the '
+                                       'first number is larger than the second')
+                msg.setWindowTitle("Error")
+                msg.exec_()
+
+        self.ed_extrap_subsection.editingFinished.connect(self.change_subsection)
 
     @QtCore.pyqtSlot(str)
     def change_data_type(self, text):
