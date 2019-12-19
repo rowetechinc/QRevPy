@@ -235,6 +235,17 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 
                 # Determine if external heading is included in the data
                 self.h_external_valid = Measurement.h_external_valid(self.meas)
+                self.main_initialized = False
+                self.systest_initialized = False
+                self.compass_pr_initialized = False
+                self.tempsal_initialized = False
+                self.mb_initialized = False
+                self.bt_initialized = False
+                self.gps_initialized = False
+                self.depth_initialized = False
+                self.wt_initialized = False
+                self.extrap_initialized = False
+                self.edges_initialized = False
                 self.config_gui()
                 self.change = True
                 self.tab_manager(tab_idx=0)
@@ -4724,6 +4735,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 depth_ref_options.append('Comp 4-Beam Preferred')
                 depth_ref_options.append('Vertical')
                 depth_ref_options.append('Comp Vertical Preferred')
+                self.cb_depth_vert.setEnabled(True)
+                self.cb_depth_vert_cs.setEnabled(True)
             else:
                 self.cb_depth_vert.setEnabled(False)
                 self.cb_depth_vert_cs.setEnabled(False)
@@ -4731,6 +4744,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.cb_depth_ds.setCheckState(QtCore.Qt.Checked)
                 depth_ref_options.append('Depth Sounder')
                 depth_ref_options.append('Comp DS Preferred')
+                self.cb_depth_ds.setEnabled(True)
+                self.cb_depth_ds_cs.setEnabled(True)
             else:
                 self.cb_depth_ds.setEnabled(False)
                 self.cb_depth_ds_cs.setEnabled(False)
@@ -5041,6 +5056,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             draft_entered = draft_dialog.exec_()
             # If data entered.
             with self.wait_cursor():
+                # Save discharge from previous settings
+                old_discharge = copy.deepcopy(self.meas.discharge)
                 if draft_entered:
                     draft = float(draft_dialog.ed_draft.text())
                     draft = draft / self.units['L']
@@ -5051,8 +5068,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         self.meas.change_draft(draft=draft, transect_idx=self.checked_transects_idx[row])
 
                     # Update depth tab
-                    s = self.meas.current_settings()
-                    self.update_depth_tab(s)
+                    # Update table
+                    self.update_depth_table(old_discharge=old_discharge, new_discharge=self.meas.discharge)
+
+                    # Update plots
+                    self.depth_plots()
+
+                    self.depth_comments_messages()
+                    self.change = True
         self.table_depth.blockSignals(False)
 
     def update_depth_tab(self, s):

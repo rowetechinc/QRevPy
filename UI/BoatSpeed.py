@@ -262,12 +262,12 @@ class BoatSpeed(object):
             # GGA
             if self.cb_gga.checkState() == QtCore.Qt.Checked:
                 self.gga[0].set_visible(True)
-            else:
+            elif self.gga is not None:
                 self.gga[0].set_visible(False)
             # VTG
             if self.cb_vtg.checkState() == QtCore.Qt.Checked:
                 self.vtg[0].set_visible(True)
-            else:
+            elif self.vtg is not None:
                 self.vtg[0].set_visible(False)
 
             # Draw canvas

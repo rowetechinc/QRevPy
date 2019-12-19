@@ -141,7 +141,7 @@ class MovingBedTests(object):
                         temp = MovingBedTests()
                         temp.populate_from_qrev_mat(test)
                         mb_tests.append(temp)
-                else:
+                elif not np.isnan(meas_struct.mbTests):
                     temp = MovingBedTests()
                     temp.populate_from_qrev_mat(meas_struct.mbTests)
                     mb_tests.append(temp)

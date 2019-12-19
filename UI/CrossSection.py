@@ -154,7 +154,7 @@ class CrossSection(object):
                 if cb_vert_cs.checkState() == QtCore.Qt.Checked:
                     for item in self.vb_cs:
                         item.set_visible(True)
-                else:
+                elif self.vb_cs is not None:
                     for item in self.vb_cs:
                         item.set_visible(False)
 
@@ -162,7 +162,7 @@ class CrossSection(object):
                 if cb_ds_cs.checkState() == QtCore.Qt.Checked:
                     for item in self.ds_cs:
                         item.set_visible(True)
-                else:
+                elif self.ds_cs is not None:
                     for item in self.ds_cs:
                         item.set_visible(False)
 

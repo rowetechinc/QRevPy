@@ -120,7 +120,8 @@ class QAData(object):
             self.compass['status'] = meas_struct.qa.compass.status
             self.compass['status1'] = meas_struct.qa.compass.status1
             self.compass['status2'] = meas_struct.qa.compass.status2
-            self.compass['magvar'] = meas_struct.qa.compass.magvar
+            if hasattr(meas_struct.qa.compass, 'magvar'):
+                self.compass['magvar'] = meas_struct.qa.compass.magvar
             if hasattr(meas_struct.qa.compass, 'magvarIdx'):
                 self.compass['magvar_idx'] = meas_struct.qa.compass.magvarIdx
             if hasattr(meas_struct.qa.compass, 'magErrorIdx'):
@@ -163,7 +164,8 @@ class QAData(object):
     def create_qa_dict(mat_data):
         qa_dict = dict()
         qa_dict['messages'] = QAData.make_list(mat_data.messages)
-        qa_dict['all_invalid'] = mat_data.allInvalid.astype(bool)
+        if hasattr(mat_data, 'allInvalid'):
+            qa_dict['all_invalid'] = mat_data.allInvalid.astype(bool)
         qa_dict['q_max_run_caution'] = mat_data.qRunCaution.astype(bool)
         qa_dict['q_max_run_warning'] = mat_data.qRunWarning.astype(bool)
         qa_dict['q_total_caution'] = mat_data.qTotalCaution.astype(bool)
@@ -173,8 +175,8 @@ class QAData(object):
             qa_dict['q_max_run'] = mat_data.qMaxRun
             qa_dict['q_total'] = mat_data.qTotal
         except AttributeError:
-            qa_dict['q_max_run'] = np.tile(np.nan, (len(mat_data.allInvalid), 6))
-            qa_dict['q_total'] = np.tile(np.nan, (len(mat_data.allInvalid), 6))
+            qa_dict['q_max_run'] = np.tile(np.nan, (len(mat_data.qRunCaution), 6))
+            qa_dict['q_total'] = np.tile(np.nan, (len(mat_data.qRunCaution), 6))
         return qa_dict
 
     @staticmethod

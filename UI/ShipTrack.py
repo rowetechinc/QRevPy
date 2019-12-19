@@ -383,14 +383,14 @@ class Shiptrack(object):
             if self.cb_gga.checkState() == QtCore.Qt.Checked:
                 for item in self.gga:
                     item.set_visible(True)
-            else:
+            elif self.gga is not None:
                 for item in self.gga:
                     item.set_visible(False)
             # VTG
             if self.cb_vtg.checkState() == QtCore.Qt.Checked:
                 for item in self.vtg:
                     item.set_visible(True)
-            else:
+            elif self.vtg is not None:
                 for item in self.vtg:
                     item.set_visible(False)
             # Vectors
