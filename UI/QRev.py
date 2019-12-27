@@ -225,7 +225,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # Load QRev data
                 elif select.type == 'QRev':
                     # Show QRev filename in GUI header
-                    self.setWindowTitle(self.QRev_version + ': ' + select.fullName[0])
+                    self.setWindowTitle(self.QRev_version + ': ' + select.fullName)
                     self.meas = Measurement(in_file=select.fullName, source='QRev')
                 else:
                     print('Cancel')
@@ -1957,6 +1957,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
 
         # Update table, graphs, messages, and comments
+        for transect_idx in self.checked_transects_idx:
+            if self.meas.transects[transect_idx].sensors.heading_deg.internal.mag_error is not None:
+                self.cb_mag_field.setEnabled(True)
+                self.cb_mag_field.setChecked(True)
+                break
+        for transect_idx in self.checked_transects_idx:
+            if self.meas.transects[transect_idx].sensors.heading_deg.external is not None:
+                self.cb_ext_compass.setEnabled(True)
+                break
+
         self.update_compass_tab(tbl=tbl, old_discharge=self.meas.discharge,
                                 new_discharge=self.meas.discharge,
                                 initial=self.transect_row)
@@ -1966,14 +1976,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.figs = [self.heading_fig, self.pr_fig]
         self.toolbars = [self.heading_toolbar, self.pr_toolbar]
 
-        for transect_idx in self.checked_transects_idx:
-            if self.meas.transects[transect_idx].sensors.heading_deg.internal.mag_error is not None:
-                self.cb_mag_field.setEnabled(True)
-                break
-        for transect_idx in self.checked_transects_idx:
-            if self.meas.transects[transect_idx].sensors.heading_deg.external is not None:
-                self.cb_ext_compass.setEnabled(True)
-                break
+
 
         # Initialize the calibration/evaluation tab
         self.compass_cal_eval(idx_eval=0)
@@ -5597,7 +5600,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Initialize the boat speed figure and assign to the canvas
         self.wt_bottom_fig = WTContour(canvas=self.wt_bottom_canvas)
         # Create the figure with the specified data
-        self.wt_bottom_fig.create(transect=self.transect,
+        self.wt_max_limit = self.wt_bottom_fig.create(transect=self.transect,
                                   units=self.units)
 
         # Draw canvas
@@ -5640,8 +5643,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             valid_data[:, invalid_ens[0]] = False
             # Create the figure with the specified data
             self.wt_top_fig.create(transect=self.transect,
-                                      units=self.units,
-                                      invalid_data=np.logical_not(self.transect.w_vel.valid_data[0, :, :]))
+                                   units=self.units,
+                                   invalid_data=np.logical_not(self.transect.w_vel.valid_data[0, :, :]),
+                                   max_limit=self.wt_max_limit)
         else:
             # Initialize the wt filters plot
             self.wt_top_fig = WTFilters(canvas=self.wt_top_canvas)

@@ -31,7 +31,7 @@ class WTContour(object):
         self.units = None
         self.hover_connection = None
 
-    def create(self, transect, units, invalid_data=None, n_ensembles=None, edge_start=None):
+    def create(self, transect, units, invalid_data=None, n_ensembles=None, edge_start=None, max_limit=0):
         """Create the axes and lines for the figure.
 
         Parameters
@@ -72,12 +72,13 @@ class WTContour(object):
         self.cell_plt = cell_plt * self.units['L']
         self.speed_plt = speed_plt * self.units['V']
         # Determine limits for color map
-        max_limit = 0
+
         min_limit = 0
-        if np.sum(speed_plt[speed_plt > -900]) > 0:
-            max_limit = np.percentile(speed_plt[speed_plt > -900] * units['V'], 99)
-        else:
-            max_limit = 1
+        if max_limit == 0:
+            if np.sum(speed_plt[speed_plt > -900]) > 0:
+                max_limit = np.percentile(speed_plt[speed_plt > -900] * units['V'], 99)
+            else:
+                max_limit = 1
 
         # Create color map
         cmap = cm.get_cmap('viridis')
@@ -114,6 +115,8 @@ class WTContour(object):
         self.annot.set_visible(False)
 
         self.canvas.draw()
+
+        return max_limit
 
     @staticmethod
     def color_contour_data_prep(transect, data_type='Processed', invalid_data=None, n_ensembles=None, edge_start=None):
