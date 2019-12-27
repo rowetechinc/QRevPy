@@ -13,7 +13,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1257, 674)
+        MainWindow.resize(1228, 674)
         palette = QtGui.QPalette()
         brush = QtGui.QBrush(QtGui.QColor(0, 0, 255))
         brush.setStyle(QtCore.Qt.SolidPattern)
@@ -3069,6 +3069,11 @@ class Ui_MainWindow(object):
         icon9.addPixmap(QtGui.QPixmap(":/images/24x24/Info.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionData_Cursor.setIcon(icon9)
         self.actionData_Cursor.setObjectName("actionData_Cursor")
+        self.actionGoogle_Earth = QtWidgets.QAction(MainWindow)
+        icon10 = QtGui.QIcon()
+        icon10.addPixmap(QtGui.QPixmap(":/images/24x24/Globe.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionGoogle_Earth.setIcon(icon10)
+        self.actionGoogle_Earth.setObjectName("actionGoogle_Earth")
         self.toolBar.addAction(self.actionOpen)
         self.toolBar.addSeparator()
         self.toolBar.addAction(self.actionSave)
@@ -3093,8 +3098,9 @@ class Ui_MainWindow(object):
         self.toolBar.addAction(self.actionPan)
         self.toolBar.addAction(self.actionData_Cursor)
         self.toolBar.addSeparator()
-        self.toolBar.addAction(self.actionHelp)
+        self.toolBar.addAction(self.actionGoogle_Earth)
         self.toolBar.addSeparator()
+        self.toolBar.addAction(self.actionHelp)
         self.toolBar.addSeparator()
 
         self.retranslateUi(MainWindow)
@@ -3384,6 +3390,8 @@ class Ui_MainWindow(object):
         self.actionPan.setToolTip(_translate("MainWindow", "Pan"))
         self.actionData_Cursor.setText(_translate("MainWindow", "Data Cursor"))
         self.actionData_Cursor.setToolTip(_translate("MainWindow", "Data Cursor"))
+        self.actionGoogle_Earth.setText(_translate("MainWindow", "Google Earth"))
+        self.actionGoogle_Earth.setToolTip(_translate("MainWindow", "Plot to Google Earth"))
 import dsm_rc
 
 

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1257</width>
+    <width>1228</width>
     <height>674</height>
    </rect>
   </property>
@@ -5723,8 +5723,9 @@
    <addaction name="actionPan"/>
    <addaction name="actionData_Cursor"/>
    <addaction name="separator"/>
-   <addaction name="actionHelp"/>
+   <addaction name="actionGoogle_Earth"/>
    <addaction name="separator"/>
+   <addaction name="actionHelp"/>
    <addaction name="separator"/>
   </widget>
   <action name="actionOpen">
@@ -5943,6 +5944,18 @@
    </property>
    <property name="toolTip">
     <string>Data Cursor</string>
+   </property>
+  </action>
+  <action name="actionGoogle_Earth">
+   <property name="icon">
+    <iconset resource="dsm.qrc">
+     <normaloff>:/images/24x24/Globe.png</normaloff>:/images/24x24/Globe.png</iconset>
+   </property>
+   <property name="text">
+    <string>Google Earth</string>
+   </property>
+   <property name="toolTip">
+    <string>Plot to Google Earth</string>
    </property>
   </action>
  </widget>

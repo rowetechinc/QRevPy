@@ -10,6 +10,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 import time
 import os
 import shutil
+import simplekml
 
 from MiscLibs.common_functions import units_conversion, convert_temperature
 
@@ -106,6 +107,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.actionHome.triggered.connect(self.home)
         self.actionZoom.triggered.connect(self.zoom)
         self.actionPan.triggered.connect(self.pan)
+        self.actionGoogle_Earth.triggered.connect(self.plot_google_earth)
 
         self.figs = []
         self.canvases = []
@@ -455,7 +457,24 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # Update tabs
                 self.tab_manager()
 
-# Main tab
+    def plot_google_earth(self):
+        """Creates line plots of transects in Google Earth using GGA coordinates.
+        """
+        kml = simplekml.Kml(open=1)
+        for transect_idx in self.checked_transects_idx:
+            lon = self.meas.transects[transect_idx].gps.gga_lon_ens_deg
+            lon = lon[np.logical_not(np.isnan(lon))]
+            lat = self.meas.transects[transect_idx].gps.gga_lat_ens_deg
+            lat = lat[np.logical_not(np.isnan(lat))]
+            line_name = self.meas.transects[transect_idx].file_name[:-4]
+            lon_lat = tuple(zip(lon, lat))
+            linestring = kml.newlinestring(name=line_name, coords=lon_lat)
+
+        fullname = os.path.join(self.sticky_settings.get('Folder'),
+                                 datetime.today().strftime('%Y%m%d_%H%M%S_QRev.kml'))
+        kml.save(fullname)
+        os.startfile(fullname)
+    # Main tab
 # ========
     def update_main(self):
         """Update Gui
@@ -2997,7 +3016,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Display content
         self.update_mb_table()
-        self.mb_plots(idx=self.mb_transect_row)
+        self.mb_plots(idx=0)
         self.mb_comments_messages()
 
         if not self.mb_initialized:
@@ -4825,6 +4844,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         depth_composite = self.transect.depths.composite
 
         # Set depth reference
+        self.combo_depth_ref.blockSignals(True)
         if depth_ref_selected == 'bt_depths':
             if depth_composite == 'On':
                 self.combo_depth_ref.setCurrentIndex(1)
@@ -4840,23 +4860,27 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.combo_depth_ref.setCurrentIndex(5)
             else:
                 self.combo_depth_ref.setCurrentIndex(4)
+        self.combo_depth_ref.blockSignals(False)
 
         # Set depth average method
         depths_selected = getattr(self.meas.transects[self.checked_transects_idx[self.transect_row]].depths,
                                   depth_ref_selected)
+        self.combo_depth_avg.blockSignals(True)
         if depths_selected.avg_method == 'IDW':
             self.combo_depth_avg.setCurrentIndex(0)
         else:
             self.combo_depth_avg.setCurrentIndex(1)
+        self.combo_depth_avg.blockSignals(False)
 
         # Set depth filter method
+        self.combo_depth_filter.blockSignals(True)
         if depths_selected.filter_type == 'Smooth':
             self.combo_depth_filter.setCurrentIndex(1)
         elif depths_selected.filter_type == 'TRDI':
             self.combo_depth_filter.setCurrentIndex(2)
         else:
             self.combo_depth_filter.setCurrentIndex(0)
-
+        self.combo_depth_filter.blockSignals(False)
 
 
         # Display content
@@ -5348,6 +5372,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             self.wt_initialized = True
 
+
         # Transect selected for display
         self.transect = self.meas.transects[self.checked_transects_idx[self.transect_row]]
         self.update_wt_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
@@ -5375,10 +5400,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.combo_wt_vert_velocity.setCurrentIndex(index)
 
         # Set smooth filter from transect data
+        self.combo_wt_snr.blockSignals(True)
         if self.transect.w_vel.snr_filter == 'Auto':
             self.combo_wt_snr.setCurrentIndex(0)
         elif self.transect.w_vel.snr_filter == 'Off':
             self.combo_wt_snr.setCurrentIndex(1)
+        self.combo_wt_snr.blockSignals(False)
 
         # Display content
 
@@ -7896,6 +7923,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.actionVTG.setEnabled(False)
         self.actionON.setEnabled(False)
         self.actionOFF.setEnabled(False)
+        self.actionGoogle_Earth.setEnabled(False)
         for idx in self.checked_transects_idx:
             if self.meas.transects[idx].boat_vel.gga_vel is not None:
                 self.tab_all.setTabEnabled(6, True)
@@ -7903,6 +7931,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.actionVTG.setEnabled(True)
                 self.actionON.setEnabled(True)
                 self.actionOFF.setEnabled(True)
+                self.actionGoogle_Earth.setEnabled(True)
                 break
 
         # Configure tabs for the presence or absence of a compass

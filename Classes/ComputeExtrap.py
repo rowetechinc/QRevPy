@@ -74,7 +74,7 @@ class ComputeExtrap(object):
             self.sel_fit = SelectFit.qrev_mat_in(meas_struct.extrapFit)
             self.q_sensitivity = ExtrapQSensitivity()
             self.q_sensitivity.populate_from_qrev_mat(meas_struct.extrapFit)
-            self.messages = meas_struct.extrapFit.messages
+            self.messages = meas_struct.extrapFit.messages.tolist()
 
     def process_profiles(self, transects, data_type):
         """Function that coordinates the fitting process.

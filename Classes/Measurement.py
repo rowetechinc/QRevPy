@@ -620,6 +620,21 @@ class Measurement(object):
         self.extrap_fit = ComputeExtrap()
         self.extrap_fit.populate_from_qrev_mat(meas_struct)
         self.discharge = QComp.qrev_mat_in(meas_struct)
+        for n in range(len(self.transects)):
+            if len(self.discharge[n].left_idx) == 0:
+                edge_q, self.discharge[n].left_idx = self.discharge[n].discharge_edge('left',
+                                                                                      self.transects[n],
+                                                                                      top_method=None,
+                                                                                      bot_method=None,
+                                                                                      exponent=None)
+            if len(self.discharge[n].right_idx) == 0:
+                edge_q, self.discharge[n].right_idx = self.discharge[n].discharge_edge('right',
+                                                                                       self.transects[n],
+                                                                                       top_method=None,
+                                                                                       bot_method=None,
+                                                                                       exponent=None)
+            if type(self.discharge[n].correction_factor) is list:
+                self.discharge[n].correction_factor = self.discharge[n].total / self.discharge[n].total_uncorrected
         self.uncertainty = Uncertainty()
         self.uncertainty.populate_from_qrev_mat(meas_struct)
         self.qa = QAData(meas_struct, compute=False)
