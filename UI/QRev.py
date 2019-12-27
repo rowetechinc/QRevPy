@@ -248,6 +248,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.edges_initialized = False
                 self.config_gui()
                 self.change = True
+                self.transect_row = 0
                 self.tab_manager(tab_idx=0)
 
     def save_measurement(self):
@@ -494,7 +495,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Setup and create graphs
             if len(self.checked_transects_idx) > 0:
-                self.contour_shiptrack(self.checked_transects_idx[0])
+                self.contour_shiptrack(self.checked_transects_idx[self.transect_row])
                 self.main_extrap_plot()
                 self.discharge_plot()
                 self.figs = []
@@ -796,6 +797,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # Set selected file to bold font
                 self.main_table_summary.item(row - 2, 0).setFont(self.font_bold)
                 self.main_table_details.item(row - 2, 0).setFont(self.font_bold)
+                self.transect_row = row - 2
                 self.table_settings.item(row, 0).setFont(self.font_bold)
 
                 # Determine transect selected
@@ -823,6 +825,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.main_table_summary.item(row, 0).setFont(self.font_bold)
                 self.main_table_details.item(row, 0).setFont(self.font_bold)
                 self.table_settings.item(row + 2, 0).setFont(self.font_bold)
+                self.transect_row = row-1
 
                 # Determine transect selected
                 transect_id = self.checked_transects_idx[row-1]
@@ -1232,7 +1235,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             for col in range(ncols):
                 tbl.item(0, col).setFont(self.font_bold)
 
-            tbl.item(1, 0).setFont(self.font_bold)
+            tbl.item(self.transect_row + 1, 0).setFont(self.font_bold)
+            tbl.scrollToItem(tbl.item(self.transect_row + 1, 0))
 
             tbl.resizeColumnsToContents()
             tbl.resizeRowsToContents()
@@ -1355,7 +1359,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 if col != 4:
                     tbl.item(0, col).setFont(self.font_bold)
 
-            tbl.item(1, 0).setFont(self.font_bold)
+            tbl.item(self.transect_row + 1, 0).setFont(self.font_bold)
+            tbl.scrollToItem(tbl.item(self.transect_row + 1, 0))
 
             tbl.resizeColumnsToContents()
             tbl.resizeRowsToContents()
@@ -1662,7 +1667,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.resizeColumnsToContents()
                 tbl.resizeRowsToContents()
 
-                tbl.item(3, 0).setFont(self.font_bold)
+                tbl.item(self.transect_row + 3, 0).setFont(self.font_bold)
+                tbl.scrollToItem(tbl.item(self.transect_row + 3, 0))
 
     def settings_table_row_adjust(self, row, col):
         """Allows proper selection of transect to display from the settings table which has custom header rows.
@@ -1952,7 +1958,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Update table, graphs, messages, and comments
         self.update_compass_tab(tbl=tbl, old_discharge=self.meas.discharge,
-                                new_discharge=self.meas.discharge, initial=0)
+                                new_discharge=self.meas.discharge,
+                                initial=self.transect_row)
 
         # Setup list for use by graphics controls
         self.canvases = [self.heading_canvas, self.pr_canvas]
@@ -1974,6 +1981,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if not self.compass_pr_initialized:
             # Connect table
             tbl.cellClicked.connect(self.compass_table_clicked)
+            tbl.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+            tbl.customContextMenuRequested.connect(self.compass_table_right_click)
             # Connect plot variable checkboxes
             self.cb_adcp_compass.stateChanged.connect(self.compass_plot)
             self.cb_ext_compass.stateChanged.connect(self.compass_plot)
@@ -2181,14 +2190,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(per_change)))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-                # Automatically resize rows and columns
-                tbl.resizeColumnsToContents()
-                tbl.resizeRowsToContents()
-
-                # If initial is specified uncheck all rows and check the row specified by initial
+                # If initial is specified uncheck all rows
                 if initial is not None:
                     tbl.item(row, 0).setCheckState(QtCore.Qt.Unchecked)
-                    tbl.item(initial, 0).setCheckState(QtCore.Qt.Checked)
+
+            # Check the row specified by initial
+            tbl.item(initial, 0).setCheckState(QtCore.Qt.Checked)
+
+            # Automatically resize rows and columns
+            tbl.resizeColumnsToContents()
+            tbl.resizeRowsToContents()
 
             # Update graphics, comments, and messages
             self.compass_plot()
@@ -2268,6 +2279,32 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.pr_plot()
             self.compass_comments_messages()
 
+    @QtCore.pyqtSlot(QtCore.QPoint)
+    def compass_table_right_click(self, pos):
+        """Manages actions caused by the user right clicking in selected columns of the table.
+
+        Parameters
+        ==========
+        row: int
+            row in table clicked by user
+        column: int
+            column in table clicked by user
+        """
+
+        tbl = self.table_compass_pr
+        cell = tbl.itemAt(pos)
+        column = cell.column()
+        row = cell.row()
+        # Change transects plotted
+        if column == 0:
+            if tbl.item(row, 0).checkState() == QtCore.Qt.Checked:
+                tbl.item(row, 0).setCheckState(QtCore.Qt.Unchecked)
+            else:
+                tbl.item(row, 0).setCheckState(QtCore.Qt.Checked)
+            self.compass_plot()
+            self.pr_plot()
+            self.figs = [self.heading_fig, self.pr_fig]
+
     @QtCore.pyqtSlot(int, int)
     def compass_table_clicked(self, row, column):
         """Manages actions caused by the user clicking in selected columns of the table.
@@ -2284,10 +2321,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Change transects plotted
         if column == 0:
-            if tbl.item(row, 0).checkState() == QtCore.Qt.Checked:
-                tbl.item(row, 0).setCheckState(QtCore.Qt.Unchecked)
-            else:
-                tbl.item(row, 0).setCheckState(QtCore.Qt.Checked)
+            for nrow in range(tbl.rowCount()):
+                tbl.item(nrow, 0).setCheckState(QtCore.Qt.Unchecked)
+            self.transect_row = row
+            tbl.item(row, 0).setCheckState(QtCore.Qt.Checked)
+            tbl.scrollToItem(tbl.item(self.transect_row, 0))
+
             self.compass_plot()
             self.pr_plot()
             self.figs = [self.heading_fig, self.pr_fig]
@@ -2359,6 +2398,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         # Update compass tab
                         self.update_compass_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
                         self.change = True
+
+        self.tab_compass_2_data.setFocus()
 
     def select_calibration(self, row, column):
         """Displays selected compass calibration.
@@ -2953,7 +2994,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Display content
         self.update_mb_table()
-        self.mb_plots(idx=0)
+        self.mb_plots(idx=self.mb_transect_row)
         self.mb_comments_messages()
 
         if not self.mb_initialized:
@@ -3248,6 +3289,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Data to plot
         elif column == 2:
+            self.mb_transect_row = row
             self.mb_plots(idx=row)
             reprocess_measurement = False
 
@@ -3481,7 +3523,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.cb_bt_vectors.setCheckState(QtCore.Qt.Checked)
 
         # Transect selected for display
-        self.transect = self.meas.transects[self.checked_transects_idx[0]]
+        self.transect = self.meas.transects[self.checked_transects_idx[self.transect_row]]
 
         # Set beam filter from transect data
         if self.transect.boat_vel.bt_vel.beam_filter < 0:
@@ -3508,7 +3550,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.combo_bt_other.setCurrentIndex(1)
 
         # Display content
-        self.idx = 0
         self.update_bt_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
         self.bt_plots()
         self.bt_comments_messages()
@@ -3653,7 +3694,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
             # Set selected file to bold font
-            tbl.item(self.idx, 0).setFont(self.font_bold)
+            tbl.item(self.transect_row, 0).setFont(self.font_bold)
+            tbl.scrollToItem(tbl.item(self.transect_row, 0))
 
             tbl.resizeColumnsToContents()
             tbl.resizeRowsToContents()
@@ -3671,10 +3713,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.table_bt.item(nrow, 0).setFont(self.font_normal)
 
             # Set selected file to bold font
-            self.table_bt.item(self.idx, 0).setFont(self.font_bold)
+            self.table_bt.item(self.transect_row, 0).setFont(self.font_bold)
 
             # Determine transect selected
-            transect_id = self.checked_transects_idx[self.idx]
+            transect_id = self.checked_transects_idx[self.transect_row]
             self.transect = self.meas.transects[transect_id]
             self.invalid_bt = np.logical_not(self.transect.boat_vel.bt_vel.valid_data)
 
@@ -3816,8 +3858,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
 
         if column == 0:
-            self.idx = row
+            self.transect_row = row
             self.bt_plots()
+            self.tab_bt_2_data.setFocus()
 
     @QtCore.pyqtSlot()
     def bt_plot_change(self):
@@ -4071,7 +4114,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.cb_gps_vectors.setCheckState(QtCore.Qt.Checked)
 
         # Transect selected for display
-        self.transect = self.meas.transects[self.checked_transects_idx[0]]
+        self.transect = self.meas.transects[self.checked_transects_idx[self.transect_row]]
 
         # Set gps quality filter
         if self.transect.boat_vel.gga_vel.gps_diff_qual_filter == 1:
@@ -4099,7 +4142,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.combo_gps_other.setCurrentIndex(1)
 
         # Display content
-        self.idx = 0
         self.update_gps_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
         self.gps_plots()
         self.gps_comments_messages()
@@ -4277,10 +4319,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.table_gps.item(row, 0).setFont(self.font_normal)
 
             # Set selected file to bold font
-            self.table_gps.item(self.idx, 0).setFont(self.font_bold)
+            self.table_gps.item(self.transect_row, 0).setFont(self.font_bold)
 
             tbl.resizeColumnsToContents()
             tbl.resizeRowsToContents()
+            tbl.scrollToItem(tbl.item(self.transect_row, 0))
 
             self.gps_comments_messages()
 
@@ -4298,7 +4341,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             nrows = len(self.checked_transects_idx)
 
             # Determine transect selected
-            transect_id = self.checked_transects_idx[self.idx]
+            transect_id = self.checked_transects_idx[self.transect_row]
             self.transect = self.meas.transects[transect_id]
             self.invalid_gps = np.logical_not(self.transect.boat_vel.gga_vel.valid_data)
 
@@ -4306,7 +4349,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.table_gps.item(row, 0).setFont(self.font_normal)
 
             # Set selected file to bold font
-            self.table_gps.item(self.idx, 0).setFont(self.font_bold)
+            self.table_gps.item(self.transect_row, 0).setFont(self.font_bold)
             # Update plots
             self.gps_shiptrack()
             self.gps_boat_speed()
@@ -4452,8 +4495,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
 
         if column == 0:
-            self.idx = row
+            self.transect_row = row
             self.gps_plots()
+            self.tab_gps_2_data.setFocus()
 
     @QtCore.pyqtSlot()
     def gps_plot_change(self):
@@ -4683,7 +4727,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Setup data table
         tbl = self.table_depth
-        self.idx = 0
         table_header = [self.tr('Filename'),
                         self.tr('Draft \n' + self.units['label_L']),
                         self.tr('Number or \n Ensembles'),
@@ -4730,7 +4773,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.cb_depth_beam3.setCheckState(QtCore.Qt.Checked)
             self.cb_depth_beam4.setCheckState(QtCore.Qt.Checked)
             depth_ref_options = ['4-Beam Avg']
-            if self.meas.transects[self.checked_transects_idx[0]].depths.vb_depths is not None:
+            if self.meas.transects[self.checked_transects_idx[self.transect_row]].depths.vb_depths is not None:
                 self.cb_depth_vert.setCheckState(QtCore.Qt.Checked)
                 depth_ref_options.append('Comp 4-Beam Preferred')
                 depth_ref_options.append('Vertical')
@@ -4740,7 +4783,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             else:
                 self.cb_depth_vert.setEnabled(False)
                 self.cb_depth_vert_cs.setEnabled(False)
-            if self.meas.transects[self.checked_transects_idx[0]].depths.ds_depths is not None:
+            if self.meas.transects[self.checked_transects_idx[self.transect_row]].depths.ds_depths is not None:
                 self.cb_depth_ds.setCheckState(QtCore.Qt.Checked)
                 depth_ref_options.append('Depth Sounder')
                 depth_ref_options.append('Comp DS Preferred')
@@ -4774,7 +4817,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.depth_initialized = True
 
         # Transect selected for display
-        self.transect = self.meas.transects[self.checked_transects_idx[0]]
+        self.transect = self.meas.transects[self.checked_transects_idx[self.transect_row]]
         depth_ref_selected = self.transect.depths.selected
         depth_composite = self.transect.depths.composite
 
@@ -4796,7 +4839,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.combo_depth_ref.setCurrentIndex(4)
 
         # Set depth average method
-        depths_selected = getattr(self.meas.transects[self.checked_transects_idx[0]].depths, depth_ref_selected)
+        depths_selected = getattr(self.meas.transects[self.checked_transects_idx[self.transect_row]].depths,
+                                  depth_ref_selected)
         if depths_selected.avg_method == 'IDW':
             self.combo_depth_avg.setCurrentIndex(0)
         else:
@@ -4933,8 +4977,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.item(row, 0).setFont(self.font_normal)
 
             # Set selected file to bold font
-            tbl.item(self.idx, 0).setFont(self.font_bold)
-
+            tbl.item(self.transect_row, 0).setFont(self.font_bold)
+            tbl.scrollToItem(tbl.item(self.transect_row, 0))
             tbl.resizeColumnsToContents()
             tbl.resizeRowsToContents()
 
@@ -4947,14 +4991,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             nrows = len(self.checked_transects_idx)
 
             # Determine transect selected
-            transect_id = self.checked_transects_idx[self.idx]
+            transect_id = self.checked_transects_idx[self.transect_row]
             self.transect = self.meas.transects[transect_id]
 
             for row in range(nrows):
                 self.table_depth.item(row, 0).setFont(self.font_normal)
 
             # Set selected file to bold font
-            self.table_depth.item(self.idx, 0).setFont(self.font_bold)
+            self.table_depth.item(self.transect_row, 0).setFont(self.font_bold)
 
             # Update plots
             self.depth_top_plot()
@@ -5045,7 +5089,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.table_depth.blockSignals(True)
         # Change transect plotted
         if column == 0:
-            self.idx = row
+            self.transect_row = row
             self.depth_plots()
 
         # Change draft
@@ -5077,6 +5121,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     self.depth_comments_messages()
                     self.change = True
         self.table_depth.blockSignals(False)
+        self.tab_depth_2_data.setFocus()
 
     def update_depth_tab(self, s):
         """Updates the depth tab (table and graphics) after a change to settings has been made.
@@ -5256,7 +5301,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.cb_wt_bt.setCheckState(QtCore.Qt.Checked)
         self.cb_wt_gga.setCheckState(QtCore.Qt.Unchecked)
         self.cb_wt_vtg.setCheckState(QtCore.Qt.Unchecked)
-        selected = self.meas.transects[self.checked_transects_idx[0]].boat_vel.selected
+        selected = self.meas.transects[self.checked_transects_idx[self.transect_row]].boat_vel.selected
         if selected == 'gga_vel':
             self.cb_wt_gga.setCheckState(QtCore.Qt.Checked)
         elif selected == 'vtg_vel':
@@ -5301,8 +5346,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.wt_initialized = True
 
         # Transect selected for display
-        self.transect = self.meas.transects[self.checked_transects_idx[0]]
-        self.idx = 0
+        self.transect = self.meas.transects[self.checked_transects_idx[self.transect_row]]
         self.update_wt_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
 
         # Set beam filter from transect data
@@ -5461,8 +5505,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
             # Set selected file to bold font
-            tbl.item(self.idx, 0).setFont(self.font_bold)
-
+            tbl.item(self.transect_row, 0).setFont(self.font_bold)
+            tbl.scrollToItem(tbl.item(self.transect_row, 0))
             tbl.resizeColumnsToContents()
             tbl.resizeRowsToContents()
 
@@ -5479,10 +5523,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.table_wt.item(nrow, 0).setFont(self.font_normal)
 
             # Set selected file to bold font
-            self.table_wt.item(self.idx, 0).setFont(self.font_bold)
+            self.table_wt.item(self.transect_row, 0).setFont(self.font_bold)
 
             # Determine transect selected
-            transect_id = self.checked_transects_idx[self.idx]
+            transect_id = self.checked_transects_idx[self.transect_row]
             self.transect = self.meas.transects[transect_id]
             self.invalid_wt = np.logical_not(self.transect.w_vel.valid_data)
 
@@ -5640,8 +5684,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
 
         if column == 0:
-            self.idx = row
+            self.transect_row = row
             self.wt_plots()
+            self.tab_wt_2_data.setFocus()
 
     @QtCore.pyqtSlot()
     def wt_plot_change(self):
@@ -6595,7 +6640,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.cellClicked.connect(self.edges_table_clicked)
             self.edges_initialized = True
 
-        self.idx = 0
         self.update_edges_table()
 
         self.edges_graphics()
@@ -6745,11 +6789,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-                tbl.item(self.idx, 0).setFont(self.font_bold)
+            tbl.item(self.transect_row, 0).setFont(self.font_bold)
+            tbl.scrollToItem(tbl.item(self.transect_row, 0))
 
-                # Automatically resize rows and columns
-                tbl.resizeColumnsToContents()
-                tbl.resizeRowsToContents()
+            # Automatically resize rows and columns
+            tbl.resizeColumnsToContents()
+            tbl.resizeRowsToContents()
         self.edge_comments_messages()
 
     def edges_table_clicked(self, row, col):
@@ -6759,10 +6804,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Show transect
         if col == 0:
             with self.wait_cursor():
-                self.idx = row
+                self.transect_row = row
                 for r in range(tbl.rowCount()):
                     tbl.item(r, 0).setFont(self.font_normal)
-                tbl.item(self.idx, 0).setFont(self.font_bold)
+                tbl.item(self.transect_row, 0).setFont(self.font_bold)
 
                 self.edges_graphics()
 
@@ -6994,6 +7039,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     self.update_edges_table()
                     self.edges_graphics()
 
+        self.tab_edges_2_data.setFocus()
+
     def edges_graphics(self):
         self.edge_shiptrack_plots()
         self.edge_contour_plots()
@@ -7002,7 +7049,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                      self.right_edge_st_fig]
 
     def edge_contour_plots(self):
-        transect = self.meas.transects[self.checked_transects_idx[self.idx]]
+        transect = self.meas.transects[self.checked_transects_idx[self.transect_row]]
 
         # Left edge
         n_ensembles = transect.edges.left.number_ensembles
@@ -7078,7 +7125,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.right_edge_contour_canvas.draw()
 
     def edge_shiptrack_plots(self):
-        transect = self.meas.transects[self.checked_transects_idx[self.idx]]
+        transect = self.meas.transects[self.checked_transects_idx[self.transect_row]]
 
         # Left edge
         n_ensembles = transect.edges.left.number_ensembles
@@ -7661,6 +7708,34 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
 # Support functions
 # =================
+    def keyPressEvent(self, e):
+        if self.current_tab != 4:
+            if e.key() == QtCore.Qt.Key_Up:
+                if self.transect_row - 1 < 0:
+                    self.transect_row = len(self.checked_transects_idx) - 1
+                else:
+                    self.transect_row -= 1
+
+            elif e.key() == QtCore.Qt.Key_Down:
+                if self.transect_row + 1 > len(self.checked_transects_idx) - 1:
+                    self.transect_row = 0
+                else:
+                    self.transect_row += 1
+        # else:
+        #     if e.key() == QtCore.Qt.Key_Up:
+        #         if self.mb_transect_row - 1 < 0:
+        #             self.mb_transect_row = len(self.meas.mb_tests) - 1
+        #         else:
+        #             self.mb_transect_row -= 1
+        #
+        #     elif e.key() == QtCore.Qt.Key_Down:
+        #         if self.mb_transect_row + 1 > len(self.meas.mb_tests) - 1:
+        #             self.mb_transect_row = 0
+        #         else:
+        #             self.mb_transect_row += 1
+        self.change = True
+        self.tab_manager()
+
     @contextmanager
     def wait_cursor(self):
         try:

@@ -558,6 +558,11 @@ class Measurement(object):
             self.comments = meas_struct.comments.tolist()
         else:
             self.comments = [meas_struct.comments]
+        # Check to make sure all comments are str
+        for n, comment in enumerate(self.comments):
+            if type(comment) is np.ndarray:
+                # Using comment =... didn't work but self.comments[n] does
+                self.comments[2] = np.array2string(comment)
         if hasattr(meas_struct, 'userRating'):
             self.user_rating = meas_struct.userRating
         else:

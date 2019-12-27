@@ -146,7 +146,7 @@ class BeamDepths(object):
             self.beam2.append(self.fig.ax.plot(x[invalid_beams[1, :]] * units['L'],
                                                beam_depths[1, invalid_beams[1, :]] * units['L'],
                                                color='#005500',
-                                               linestyle='-',
+                                               linestyle='',
                                                marker='$O$')[0])
 
             self.beam3 = self.fig.ax.plot(x * units['L'],
@@ -155,7 +155,7 @@ class BeamDepths(object):
             self.beam3.append(self.fig.ax.plot(x[invalid_beams[2, :]] * units['L'],
                                                beam_depths[2, invalid_beams[2, :]] * units['L'],
                                                'b',
-                                               linestyle='-',
+                                               linestyle='',
                                                marker='$O$')[0])
 
             self.beam4 = self.fig.ax.plot(x * units['L'],
