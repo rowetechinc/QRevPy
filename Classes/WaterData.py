@@ -167,11 +167,12 @@ class WaterData(object):
         self.sl_cutoff_percent = None
         self.sl_cutoff_number = None
         self.sl_cutoff_type = None
+        self.sl_cutoff_m = None
 
     def populate_data(self, vel_in, freq_in, coord_sys_in, nav_ref_in, rssi_in, rssi_units_in,
                       excluded_dist_in, cells_above_sl_in, sl_cutoff_per_in, sl_cutoff_num_in,
                       sl_cutoff_type_in, sl_lag_effect_in, wm_in, blank_in, corr_in=None,
-                      surface_vel_in=None, surface_rssi_in=None, surface_corr_in=None,
+                      surface_vel_in=None, surface_rssi_in=None, surface_corr_in=None, sl_cutoff_m=None,
                       surface_num_cells_in=0):
         
         """Populates the variables with input, computed, or default values.
@@ -217,6 +218,8 @@ class WaterData(object):
             Surface velocity correlations for RiverRay, RiverPro, RioPro. Optional.
         surface_num_cells_in: np.array(float)
             Number of surface cells in each ensemble for RiverRay, RiverPro, RioPro. Optional.
+        sl_cutoff_m: np.array(float)
+            Depth in meters of side lobe cutoff to center of cells.
         """
 
         # Set object properties from input data standard for all ADCPs
@@ -289,6 +292,7 @@ class WaterData(object):
         self.sl_cutoff_number = sl_cutoff_num_in
         self.sl_cutoff_type = sl_cutoff_type_in
         self.sl_lag_effect_m = sl_lag_effect_in
+        self.sl_cutoff_m=sl_cutoff_m
         
         # Set filter defaults to no filtering and no interruption
         self.beam_filter = 3
@@ -1012,11 +1016,11 @@ class WaterData(object):
             for n in range(len(interpolated_data[0])):
                 u_ratio = (temp.u_mps[interpolated_data[0][n][0]] / interpolated_data[0][n][1]) - 1
                 v_ratio = (temp.v_mps[interpolated_data[1][n][0]] / interpolated_data[1][n][1]) - 1
-                if np.abs(u_ratio) < 0.5 or np.abs(v_ratio) < 0.5:
+                if np.abs(u_ratio) < 0.5 and np.abs(v_ratio) < 0.5:
                     valid_bool[interpolated_data[0][n][0]] = True
                 else:
                     valid_bool[interpolated_data[0][n][0]] = False
-                n += 1
+                # n += 1
 
             # Update object with filter results
             self.valid_data[5, :, :] = valid_bool

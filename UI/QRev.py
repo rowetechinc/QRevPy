@@ -474,7 +474,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                  datetime.today().strftime('%Y%m%d_%H%M%S_QRev.kml'))
         kml.save(fullname)
         os.startfile(fullname)
-    # Main tab
+
+# Main tab
 # ========
     def update_main(self):
         """Update Gui
@@ -2340,7 +2341,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
 
         tbl = self.table_compass_pr
-
         # Change transects plotted
         if column == 0:
             for nrow in range(tbl.rowCount()):
@@ -2420,7 +2420,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         # Update compass tab
                         self.update_compass_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
                         self.change = True
-
         self.tab_compass_2_data.setFocus()
 
     def select_calibration(self, row, column):
@@ -7935,7 +7934,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 break
 
         # Configure tabs for the presence or absence of a compass
-        if np.any(self.checked_transects_idx):
+        if len(self.checked_transects_idx) > 0:
             heading = np.unique(self.meas.transects[self.checked_transects_idx[0]].sensors.heading_deg.internal.data)
         else:
             heading = np.array([0])

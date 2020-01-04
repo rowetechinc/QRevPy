@@ -116,12 +116,12 @@ class TransectData(object):
                                          cell_size_in=cell_size_all_m)
             
             # Compute cells above side lobe
-            cells_above_sl = TransectData.side_lobe_cutoff(depths=self.depths.bt_depths.depth_orig_m,
-                                                           draft=self.depths.bt_depths.draft_orig_m,
-                                                           cell_depth=self.depths.bt_depths.depth_cell_depth_m,
-                                                           sl_lag_effect=sl_lag_effect_m,
-                                                           slc_type='Percent',
-                                                           value=1-sl_cutoff_per / 100)
+            cells_above_sl, sl_cutoff_m = TransectData.side_lobe_cutoff(depths=self.depths.bt_depths.depth_orig_m,
+                                                                        draft=self.depths.bt_depths.draft_orig_m,
+                                                                        cell_depth=self.depths.bt_depths.depth_cell_depth_m,
+                                                                        sl_lag_effect=sl_lag_effect_m,
+                                                                        slc_type='Percent',
+                                                                        value=1-sl_cutoff_per / 100)
             
             # Check for the presence of vertical beam data
             if np.nanmax(np.nanmax(pd0_data.Sensor.vert_beam_status)) > 0:
@@ -253,6 +253,7 @@ class TransectData(object):
                                          sl_cutoff_num_in=0,
                                          sl_cutoff_type_in='Percent',
                                          sl_lag_effect_in=sl_lag_effect_m,
+                                         sl_cutoff_m=sl_cutoff_m,
                                          wm_in=pd0_data.Cfg.wm[0],
                                          blank_in=pd0_data.Cfg.wf_cm[0] / 100,
                                          corr_in=pd0_data.Wt.corr,
@@ -276,6 +277,7 @@ class TransectData(object):
                                          sl_cutoff_num_in=0,
                                          sl_cutoff_type_in='Percent',
                                          sl_lag_effect_in=sl_lag_effect_m,
+                                         sl_cutoff_m=sl_cutoff_m,
                                          wm_in=pd0_data.Cfg.wm[0],
                                          blank_in=pd0_data.Cfg.wf_cm[0] / 100,
                                          corr_in=pd0_data.Wt.corr)
@@ -767,12 +769,12 @@ class TransectData(object):
         else:
             sl_lag_effect_m = np.copy(self.depths.bt_depths.depth_cell_depth_m[0, :])
         sl_cutoff_type = 'Percent'
-        cells_above_sl = TransectData.side_lobe_cutoff(depths=self.depths.bt_depths.depth_orig_m,
-                                                       draft=self.depths.bt_depths.draft_orig_m,
-                                                       cell_depth=self.depths.bt_depths.depth_cell_depth_m,
-                                                       sl_lag_effect=sl_lag_effect_m,
-                                                       slc_type=sl_cutoff_type,
-                                                       value=1 - sl_cutoff_percent / 100)
+        cells_above_sl, sl_cutoff_m = TransectData.side_lobe_cutoff(depths=self.depths.bt_depths.depth_orig_m,
+                                                                    draft=self.depths.bt_depths.draft_orig_m,
+                                                                    cell_depth=self.depths.bt_depths.depth_cell_depth_m,
+                                                                    sl_lag_effect=sl_lag_effect_m,
+                                                                    slc_type=sl_cutoff_type,
+                                                                    value=1 - sl_cutoff_percent / 100)
         # Determine water mode
         corr_nan = np.isnan(corr)
         number_of_nan = np.count_nonzero(corr_nan)
@@ -802,6 +804,7 @@ class TransectData(object):
                                  sl_cutoff_num_in=sl_cutoff_number,
                                  sl_cutoff_type_in=sl_cutoff_type,
                                  sl_lag_effect_in=sl_lag_effect_m,
+                                 sl_cutoff_m=sl_cutoff_m,
                                  wm_in=wm,
                                  blank_in=excluded_distance,
                                  corr_in=corr)
@@ -1236,7 +1239,7 @@ class TransectData(object):
         else:
             self.sensors.heading_deg.internal.set_mag_var(magvar, 'internal')
         
-        self.update_water()
+        # self.update_water()
         
     def change_offset(self, h_offset):
         """Change the heading offset (alignment correction). Only affects external heading.
@@ -1336,7 +1339,7 @@ class TransectData(object):
         
         # Compute boolean side lobe cutoff matrix
         cells_above_sl = np.less(cell_depth, cutoff)
-        return cells_above_sl
+        return cells_above_sl, cutoff
         
     def boat_interpolations(self, update, target, method=None):
         """Coordinates boat velocity interpolations.

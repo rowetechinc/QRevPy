@@ -1001,7 +1001,7 @@ class BoatData(object):
                             v_ratio = 1
 
                         # If 3-beam differs from 4-beam by more than 50% mark it invalid
-                        if (np.abs(u_ratio) > 0.5) or (np.abs(v_ratio) > 0.5):
+                        if (np.abs(u_ratio) > 0.5) and (np.abs(v_ratio) > 0.5):
                             self.valid_data[5, idx[m]] = False
                         else:
                             self.valid_data[5, idx[m]] = True
