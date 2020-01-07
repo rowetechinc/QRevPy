@@ -327,7 +327,7 @@
                 <item>
                  <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,5,1,2">
                   <item>
-                   <widget class="QLabel" name="label">
+                   <widget class="QLabel" name="label_site_name">
                     <property name="frameShape">
                      <enum>QFrame::NoFrame</enum>
                     </property>
@@ -340,7 +340,7 @@
                    <widget class="QLineEdit" name="ed_site_name"/>
                   </item>
                   <item>
-                   <widget class="QLabel" name="label_2">
+                   <widget class="QLabel" name="label_site_number">
                     <property name="text">
                      <string>Site Number:</string>
                     </property>
@@ -5785,7 +5785,7 @@
   <action name="actionCheck">
    <property name="icon">
     <iconset resource="dsm.qrc">
-     <normaloff>:/images/24x24/Red mark.png</normaloff>:/images/24x24/Red mark.png</iconset>
+     <normaloff>:/images/24x24/check-mark-green.png</normaloff>:/images/24x24/check-mark-green.png</iconset>
    </property>
    <property name="text">
     <string>Check/Uncheck</string>

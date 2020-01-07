@@ -405,6 +405,12 @@ class QAData(object):
         self.compass['magvar'] = 0
         self.compass['magvar_idx'] = []
         self.compass['mag_error_idx'] = []
+        self.compass['pitch_mean_warning_idx'] = []
+        self.compass['pitch_mean_caution_idx'] = []
+        self.compass['pitch_std_caution_idx'] = []
+        self.compass['roll_mean_warning_idx'] = []
+        self.compass['roll_mean_caution_idx'] = []
+        self.compass['roll_std_caution_idx'] = []
 
         if len(heading) > 1 and np.any(np.not_equal(heading, 0)):
             # ADCP has a compass
@@ -488,7 +494,7 @@ class QAData(object):
             roll_mean = []
             roll_std = []
             roll_exceeded = []
-            for transect in meas.transects:
+            for n, transect in enumerate(meas.transects):
                 if transect.checked:
                     heading_source_selected = getattr(
                         transect.sensors.heading_deg, transect.sensors.heading_deg.selected)
@@ -503,7 +509,8 @@ class QAData(object):
                     roll_std.append(np.nanstd(roll_source_selected.data, ddof=1))
 
                     # SonTek G3 compass provides pitch, roll, and magnetic error parameters that can be checked
-                    if meas.transects[checked.index(True)].adcp.manufacturer == 'SonTek':
+                    # if meas.transects[checked.index(True)].adcp.manufacturer == 'SonTek':
+                    if transect.adcp.manufacturer == 'SonTek':
                         if heading_source_selected.pitch_limit is not None:
                             # Check for bug in SonTek data where pitch and roll was n x 3 use n x 1
                             if len(pitch_source_selected.data.shape) == 1:
@@ -555,31 +562,39 @@ class QAData(object):
             if np.any(np.asarray(np.abs(pitch_mean)) > 8):
                 self.compass['status2'] = 'warning'
                 self.compass['messages'].append(['PITCH: One or more transects have a mean pitch > 8 deg;', 1, 4])
+                self.compass['pitch_mean_warning_idx'] = np.where(np.abs(pitch_mean) > 8)[0]
+
             elif np.any(np.asarray(np.abs(pitch_mean)) > 4):
                 if self.compass['status2'] == 'good':
                     self.compass['status2'] = 'caution'
                 self.compass['messages'].append(['Pitch: One or more transects have a mean pitch > 4 deg;', 2, 4])
+                self.compass['pitch_mean_caution_idx'] = np.where(np.abs(pitch_mean) > 4)[0]
 
             # Check roll mean
             if np.any(np.asarray(np.abs(roll_mean)) > 8):
                 self.compass['status2'] = 'warning'
                 self.compass['messages'].append(['ROLL: One or more transects have a mean roll > 8 deg;', 1, 4])
+                self.compass['roll_mean_warning_idx'] = np.where(np.abs(roll_mean) > 8)[0]
+
             elif np.any(np.asarray(np.abs(roll_mean)) > 4):
                 if self.compass['status2'] == 'good':
                     self.compass['status2'] = 'caution'
                 self.compass['messages'].append(['Roll: One or more transects have a mean roll > 4 deg;', 2, 4])
+                self.compass['roll_mean_caution_idx'] = np.where(np.abs(roll_mean) > 4)[0]
 
             # Check pitch standard deviation
             if np.any(np.asarray(pitch_std) > 5):
                 if self.compass['status2'] == 'good':
                     self.compass['status2'] = 'caution'
                 self.compass['messages'].append(['Pitch: One or more transects have a pitch std dev > 5 deg;', 2, 4])
+                self.compass['pitch_std_caution_idx'] = np.where(np.abs(pitch_std) > 5)[0]
 
             # Check roll standard deviation
             if np.any(np.asarray(roll_std) > 5):
                 if self.compass['status2'] == 'good':
                     self.compass['status2'] = 'caution'
                 self.compass['messages'].append(['Roll: One or more transects have a roll std dev > 5 deg;', 2, 4])
+                self.compass['roll_std_caution_idx'] = np.where(np.abs(roll_std) > 5)[0]
 
             # Additional checks for SonTek G3 compass
             if meas.transects[checked.index(True)].adcp.manufacturer == 'SonTek':
@@ -842,7 +857,7 @@ class QAData(object):
         if meas.station_number is None or len(meas.station_number.strip()) < 1:
             self.user['messages'].append(['Site Info: Station number not entered;', 2, 2])
             self.user['status'] = 'caution'
-            self.user['sta_name'] = True
+            self.user['sta_number'] = True
 
     def depths_qa(self, meas):
         """Apply quality checks to depth data.
@@ -972,7 +987,7 @@ class QAData(object):
                              'filter': [('All: ', 0), ('Original: ', 1), ('DGPS: ', 2),
                                         ('Altitude: ', 3), ('Other: ', 4), ('HDOP: ', 5)]},
                      'VTG': {'class': 'vtg_vel', 'warning': 'VTG-', 'caution': 'vtg-',
-                             'filter': [('All: ', 0), ('Original: ', 1), ('HDOP: ', 5)]}}
+                             'filter': [('All: ', 0), ('Original: ', 1), ('Other: ', 4), ('HDOP: ', 5)]}}
 
         for dt_key, dt_value in data_type.items():
             boat = getattr(self, dt_value['class'])
