@@ -637,7 +637,7 @@ class Measurement(object):
                 self.discharge[n].correction_factor = self.discharge[n].total / self.discharge[n].total_uncorrected
         self.uncertainty = Uncertainty()
         self.uncertainty.populate_from_qrev_mat(meas_struct)
-        self.qa = QAData(meas_struct, compute=False)
+        self.qa = QAData(self, mat_struct=meas_struct, compute=False)
 
     @staticmethod
     def set_num_beam_wt_threshold_trdi(mmt_transect):

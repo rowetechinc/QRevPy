@@ -96,9 +96,9 @@ class WTContour(object):
         # self.fig.ax.set_title(self.canvas.tr('Water Speed ') + units['label_V'])
         self.fig.ax.invert_yaxis()
         self.fig.ax.plot(ensembles+1, depth * units['L'], color='k')
-        if transect.w_vel.sl_cutoff_m is not None:
-            self.fig.ax.plot(ensembles+1, transect.w_vel.sl_cutoff_m * units['L'], color='r')
-        self.fig.ax.plot(ensembles+1, transect.depths.bt_depths.depth_cell_depth_m[0,:] * units['L'], color='r')
+        # if transect.w_vel.sl_cutoff_m is not None:
+        #     self.fig.ax.plot(ensembles+1, transect.w_vel.sl_cutoff_m * units['L'], color='r')
+        # self.fig.ax.plot(ensembles+1, transect.depths.bt_depths.depth_cell_depth_m[0,:] * units['L'], color='r')
         self.fig.ax.set_xlabel(self.canvas.tr('Ensembles'))
         self.fig.ax.set_ylabel(self.canvas.tr('Depth ') + units['label_L'])
         self.fig.ax.xaxis.label.set_fontsize(12)

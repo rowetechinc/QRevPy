@@ -108,7 +108,7 @@ class Shiptrack(object):
         self.fig.ax = self.fig.add_subplot(1, 1, 1)
 
         # Set margins and padding for figure
-        self.fig.subplots_adjust(left=0.18, bottom=0.1, right=0.98, top=0.98, wspace=0.1, hspace=0)
+        self.fig.subplots_adjust(left=0.18, bottom=0.18, right=0.98, top=0.98, wspace=0.1, hspace=0)
         self.fig.ax.xaxis.label.set_fontsize(12)
         self.fig.ax.yaxis.label.set_fontsize(12)
 

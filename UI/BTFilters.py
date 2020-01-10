@@ -148,8 +148,23 @@ class BTFilters(object):
                                                    'ko', linestyle='')[0])
             else:
                 self.other = self.fig.ax.plot(ensembles, speed * units['V'], 'r-')
-
             self.fig.ax.set_ylabel(self.canvas.tr('Speed' + self.units['label_V']))
+
+        elif selected == 'source':
+            # Plot boat velocity source
+            if transect.boat_vel.selected == 'gga_vel':
+                boat_selected = transect.boat_vel.gga_vel
+            elif transect.boat_vel.selected == 'vtg_vel':
+                boat_selected = transect.boat_vel.gga_vel
+            else:
+                boat_selected = transect.boat_vel.bt_vel
+            source = boat_selected.processed_source
+            # Plot dummy data to establish consistent order of y axis
+            self.source = self.fig.ax.plot([-10, -10, -10, -10, -10], ['INV', 'INT', 'BT', 'GGA', 'VTG'], 'w-')
+            self.source = self.fig.ax.plot(ensembles, source, 'b.')
+            self.fig.ax.set_ylabel(self.canvas.tr('Boat Velocity Source'))
+            self.fig.ax.set_yticks(['INV', 'INT', 'BT', 'GGA', 'VTG'])
+
         self.fig.ax.set_xlim(left=-1 * ensembles[-1] * 0.02, right=ensembles[-1] * 1.02)
 
         if transect.start_edge == 'Right':

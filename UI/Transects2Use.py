@@ -21,16 +21,31 @@ class Transects2Use(QtWidgets.QDialog, wTransects2Use.Ui_Transects2Use):
         super(Transects2Use, self).__init__(parent)
         self.setupUi(self)
         # self.checked_transects_idx = parent.checked_transects_idx
-        # self.meas = parent.meas
+        self.parent = parent
 
-        self.summary_table(parent)
+        self.summary_table()
+        self.pb_check_all.clicked.connect(self.check_all)
+        self.pb_uncheck_all.clicked.connect(self.uncheck_all)
 
-    def summary_table(self, parent):
+
+    def check_all(self):
+        for transect in self.parent.meas.transects:
+            transect.checked = True
+        self.summary_table()
+
+    def uncheck_all(self):
+        for transect in self.parent.meas.transects:
+            transect.checked = False
+        self.summary_table()
+
+    def summary_table(self):
         """Create and populate main summary table.
         """
         # Setup table
+        parent = self.parent
         tbl = self.tableSelect
         units = parent.units
+
         summary_header = [parent.tr('Select Transect'), parent.tr('Start'), parent.tr('Bank'),
                           parent.tr('End'), parent.tr('Duration'), parent.tr('Total Q'), parent.tr('Top Q'),
                           parent.tr('Meas Q'), parent.tr('Bottom Q'), parent.tr('Left Q'), parent.tr('Right Q')]

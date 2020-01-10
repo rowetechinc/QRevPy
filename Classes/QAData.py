@@ -42,7 +42,7 @@ class QAData(object):
         Dictionary of quality assurance checks on edges
     """
     
-    def __init__(self, meas, compute=True):
+    def __init__(self, meas, mat_struct=None, compute=True):
         """Checks the measurement for all quality assurance issues.
 
         Parameters
@@ -86,9 +86,9 @@ class QAData(object):
             self.extrapolation_qa(meas)
             self.edges_qa(meas)
         else:
-            self.populate_from_qrev_mat(meas)
+            self.populate_from_qrev_mat(meas, mat_struct)
 
-    def populate_from_qrev_mat(self, meas_struct):
+    def populate_from_qrev_mat(self, meas, meas_struct):
         """Populates the object using data from previously saved QRev Matlab file.
 
         Parameters
@@ -96,6 +96,8 @@ class QAData(object):
         meas_struct: mat_struct
            Matlab data structure obtained from sio.loadmat
         """
+
+        new_qa = QAData(meas)
         if hasattr(meas_struct, 'qa'):
             # Set default thresholds
             self.q_run_threshold_caution = meas_struct.qa.qRunThresholdCaution
@@ -120,12 +122,50 @@ class QAData(object):
             self.compass['status'] = meas_struct.qa.compass.status
             self.compass['status1'] = meas_struct.qa.compass.status1
             self.compass['status2'] = meas_struct.qa.compass.status2
+
             if hasattr(meas_struct.qa.compass, 'magvar'):
                 self.compass['magvar'] = meas_struct.qa.compass.magvar
+            else:
+                self.compass['magvar'] = new_qa.compass['magvar']
+
             if hasattr(meas_struct.qa.compass, 'magvarIdx'):
                 self.compass['magvar_idx'] = meas_struct.qa.compass.magvarIdx
-            if hasattr(meas_struct.qa.compass, 'magErrorIdx'):
-                self.compass['mag_error_idx'] = meas_struct.qa.compass.magErrorIdx
+            else:
+                self.compass['magvar_idx'] = new_qa.compass['magvar_idx']
+
+            # Changed mag_error_idx from bool to int array in QRevPy
+            self.compass['mag_error_idx'] = new_qa.compass['mag_error_idx']
+
+            if hasattr(meas_struct.qa.compass, 'pitchMeanWarningIdx'):
+                self.compass['pitch_mean_warning_idx'] = meas_struct.qa.compass.pitchMeanWarningIdx
+            else:
+                self.compass['pitch_mean_warning_idx'] = new_qa.compass['pitch_mean_warning_idx']
+
+            if hasattr(meas_struct.qa.compass, 'rollMeanWarningIdx'):
+                self.compass['roll_mean_warning_idx'] = meas_struct.qa.compass.rollMeanWarningIdx
+            else:
+                self.compass['roll_mean_warning_idx'] = new_qa.compass['roll_mean_warning_idx']
+
+            if hasattr(meas_struct.qa.compass, 'pitchMeanCautionIdx'):
+                self.compass['pitch_mean_caution_idx'] = meas_struct.qa.compass.pitchMeanCautionIdx
+            else:
+                self.compass['pitch_mean_caution_idx'] = new_qa.compass['pitch_mean_caution_idx']
+
+            if hasattr(meas_struct.qa.compass, 'rollMeanCautionIdx'):
+                self.compass['roll_mean_caution_idx'] = meas_struct.qa.compass.rollMeanCautionIdx
+            else:
+                self.compass['roll_mean_caution_idx'] = new_qa.compass['roll_mean_caution_idx']
+
+            if hasattr(meas_struct.qa.compass, 'pitchStdCautionIdx'):
+                self.compass['pitch_std_caution_idx'] = meas_struct.qa.compass.pitchStdCautionIdx
+            else:
+                self.compass['pitch_std_caution_idx'] = new_qa.compass['pitch_std_caution_idx']
+
+            if hasattr(meas_struct.qa.compass, 'rollStdCautionIdx'):
+                self.compass['roll_std_caution_idx'] = meas_struct.qa.compass.rollStdCautionIdx
+            else:
+                self.compass['roll_std_caution_idx'] = new_qa.compass['roll_std_caution_idx']
+
             self.temperature = dict()
             self.temperature['messages'] = self.make_list(meas_struct.qa.temperature.messages)
             self.temperature['status'] = meas_struct.qa.temperature.status
@@ -139,6 +179,8 @@ class QAData(object):
             self.user['sta_number'] = bool(meas_struct.qa.user.staNumber)
             self.user['status'] = meas_struct.qa.user.status
             self.depths = self.create_qa_dict(meas_struct.qa.depths)
+            if not hasattr(self.depths, 'draft'):
+                self.depths['draft'] = new_qa.depths['draft']
             self.bt_vel = self.create_qa_dict(meas_struct.qa.btVel)
             self.gga_vel = self.create_qa_dict(meas_struct.qa.ggaVel)
             self.vtg_vel = self.create_qa_dict(meas_struct.qa.vtgVel)
@@ -153,12 +195,40 @@ class QAData(object):
             self.edges['right_q'] = meas_struct.qa.edges.rightQ
             self.edges['left_sign'] = meas_struct.qa.edges.leftSign
             self.edges['right_sign'] = meas_struct.qa.edges.rightSign
-            self.edges['right_dist_moved_idx'] = meas_struct.qa.edges.rightDistMovedIdx
-            self.edges['left_dist_moved_idx'] = meas_struct.qa.edges.leftDistMovedIdx
             self.edges['left_zero'] = meas_struct.qa.edges.leftzero
             self.edges['right_zero'] = meas_struct.qa.edges.rightzero
             self.edges['left_type'] = meas_struct.qa.edges.leftType
             self.edges['right_type'] = meas_struct.qa.edges.rightType
+
+            if hasattr(meas_struct.qa, 'right_dist_moved_idx'):
+                self.edges['right_dist_moved_idx'] = meas_struct.qa.edges.rightDistMovedIdx
+            else:
+                self.edges['right_dist_moved_idx'] = new_qa.edges['right_dist_moved_idx']
+
+            if hasattr(meas_struct.qa, 'left_dist_moved_idx'):
+                self.edges['left_dist_moved_idx'] = meas_struct.qa.edges.leftDistMovedIdx
+            else:
+                self.edges['left_dist_moved_idx'] = new_qa.edges['left_dist_moved_idx']
+
+            if hasattr(meas_struct.qa, 'leftQIdx'):
+                self.edges['left_q_idx'] = meas_struct.qa.edges.leftQIdx
+            else:
+                self.edges['left_q_idx'] = new_qa.edges['left_q_idx']
+
+            if hasattr(meas_struct.qa, 'rightQIdx'):
+                self.edges['right_q_idx'] = meas_struct.qa.edges.rightQIdx
+            else:
+                self.edges['right_q_idx'] = new_qa.edges['right_q_idx']
+
+            if hasattr(meas_struct.qa, 'leftZeroIdx'):
+                self.edges['left_zero_idx'] = meas_struct.qa.edges.leftZeroIdx
+            else:
+                self.edges['left_zero_idx'] = new_qa.edges['left_zero_idx']
+
+            if hasattr(meas_struct.qa, 'rightZeroIdx'):
+                self.edges['right_zero_idx'] = meas_struct.qa.edges.rightZeroIdx
+            else:
+                self.edges['left_zero_idx'] = new_qa.edges['left_zero_idx']
 
     @staticmethod
     def create_qa_dict(mat_data):
@@ -298,7 +368,7 @@ class QAData(object):
             if len(np.unique(q_positive)) > 1:
                 self.transects['status'] = 'warning'
                 self.transects['messages'].append(
-                    ['Transects: Sign of total Q is not consistent. One or more start banks may be incorrect;', 1, 0])
+                    ['TRANSECTS: Sign of total Q is not consistent. One or more start banks may be incorrect;', 1, 0])
 
             # Check for reciprocal transects
             num_left = start_edge.count('Left')
@@ -306,7 +376,7 @@ class QAData(object):
 
             if not num_left == num_right:
                 self.transects['status'] = 'warning'
-                self.transects['messages'].append(['Transects: Transects selected are not reciprocal transects;', 1, 0])
+                self.transects['messages'].append(['TRANSECTS: Transects selected are not reciprocal transects;', 1, 0])
 
         # Check for zero discharge transects
         q_zero = False
@@ -494,8 +564,10 @@ class QAData(object):
             roll_mean = []
             roll_std = []
             roll_exceeded = []
+            transect_idx = []
             for n, transect in enumerate(meas.transects):
                 if transect.checked:
+                    transect_idx.append(n)
                     heading_source_selected = getattr(
                         transect.sensors.heading_deg, transect.sensors.heading_deg.selected)
                     pitch_source_selected = getattr(transect.sensors.pitch_deg, transect.sensors.pitch_deg.selected)
@@ -539,9 +611,7 @@ class QAData(object):
                         if heading_source_selected.mag_error is not None:
                             idx_max = np.where(heading_source_selected.mag_error > 2)[0]
                             if len(idx_max) > 0:
-                                mag_error_exceeded.append(True)
-                            else:
-                                mag_error_exceeded.append(False)
+                                mag_error_exceeded.append(n)
 
             if len(np.unique(magvar)) > 1:
                 self.compass['status2'] = 'caution'
@@ -562,39 +632,63 @@ class QAData(object):
             if np.any(np.asarray(np.abs(pitch_mean)) > 8):
                 self.compass['status2'] = 'warning'
                 self.compass['messages'].append(['PITCH: One or more transects have a mean pitch > 8 deg;', 1, 4])
-                self.compass['pitch_mean_warning_idx'] = np.where(np.abs(pitch_mean) > 8)[0]
+                temp = np.where(np.abs(pitch_mean) > 8)[0]
+                if len(temp) > 0:
+                    self.compass['pitch_mean_warning_idx'] = np.array(transect_idx)[temp]
+                else:
+                    self.compass['pitch_mean_warning_idx'] = []
 
             elif np.any(np.asarray(np.abs(pitch_mean)) > 4):
                 if self.compass['status2'] == 'good':
                     self.compass['status2'] = 'caution'
                 self.compass['messages'].append(['Pitch: One or more transects have a mean pitch > 4 deg;', 2, 4])
-                self.compass['pitch_mean_caution_idx'] = np.where(np.abs(pitch_mean) > 4)[0]
+                temp = np.where(np.abs(pitch_mean) > 4)[0]
+                if len(temp) > 0:
+                    self.compass['pitch_mean_caution_idx'] = np.array(transect_idx)[temp]
+                else:
+                    self.compass['pitch_mean_caution_idx'] = []
 
             # Check roll mean
             if np.any(np.asarray(np.abs(roll_mean)) > 8):
                 self.compass['status2'] = 'warning'
                 self.compass['messages'].append(['ROLL: One or more transects have a mean roll > 8 deg;', 1, 4])
-                self.compass['roll_mean_warning_idx'] = np.where(np.abs(roll_mean) > 8)[0]
+                temp = np.where(np.abs(roll_mean) > 8)[0]
+                if len(temp) > 0:
+                    self.compass['roll_mean_warning_idx'] = np.array(transect_idx)[temp]
+                else:
+                    self.compass['roll_mean_warning_idx'] = []
 
             elif np.any(np.asarray(np.abs(roll_mean)) > 4):
                 if self.compass['status2'] == 'good':
                     self.compass['status2'] = 'caution'
                 self.compass['messages'].append(['Roll: One or more transects have a mean roll > 4 deg;', 2, 4])
-                self.compass['roll_mean_caution_idx'] = np.where(np.abs(roll_mean) > 4)[0]
+                temp = np.where(np.abs(roll_mean) > 4)[0]
+                if len(temp) > 0:
+                    self.compass['roll_mean_caution_idx'] = np.array(transect_idx)[temp]
+                else:
+                    self.compass['roll_mean_caution_idx'] = []
 
             # Check pitch standard deviation
             if np.any(np.asarray(pitch_std) > 5):
                 if self.compass['status2'] == 'good':
                     self.compass['status2'] = 'caution'
                 self.compass['messages'].append(['Pitch: One or more transects have a pitch std dev > 5 deg;', 2, 4])
-                self.compass['pitch_std_caution_idx'] = np.where(np.abs(pitch_std) > 5)[0]
+                temp = np.where(np.abs(pitch_std) > 5)[0]
+                if len(temp) > 0:
+                    self.compass['pitch_std_caution_idx'] = np.array(transect_idx)[temp]
+                else:
+                    self.compass['pitch_std_caution_idx'] = []
 
             # Check roll standard deviation
             if np.any(np.asarray(roll_std) > 5):
                 if self.compass['status2'] == 'good':
                     self.compass['status2'] = 'caution'
                 self.compass['messages'].append(['Roll: One or more transects have a roll std dev > 5 deg;', 2, 4])
-                self.compass['roll_std_caution_idx'] = np.where(np.abs(roll_std) > 5)[0]
+                temp = np.where(np.abs(roll_std) > 5)[0]
+                if len(temp) > 0:
+                    self.compass['roll_std_caution_idx'] = np.array(transect_idx)[temp]
+                else:
+                    self.compass['roll_std_caution_idx'] = []
 
             # Additional checks for SonTek G3 compass
             if meas.transects[checked.index(True)].adcp.manufacturer == 'SonTek':
@@ -613,8 +707,9 @@ class QAData(object):
                         ['Compass: One or more transects have roll exceeding calibration limits;', 2, 4])
 
                 # Check if magnetic error was exceeded
-                self.compass['mag_error_idx'] = mag_error_exceeded
-                if any(mag_error_exceeded):
+                self.compass['mag_error_idx'] = []
+                if len(mag_error_exceeded) > 0:
+                    self.compass['mag_error_idx'] = np.array(mag_error_exceeded)
                     if self.compass['status2'] == 'good':
                         self.compass['status2'] = 'caution'
                     self.compass['messages'].append(
@@ -1306,8 +1401,10 @@ class QAData(object):
         dist_made_good = []
         left_type = []
         right_type = []
+        transect_idx = []
         for n, transect in enumerate(meas.transects):
             checked.append(transect.checked)
+
             if transect.checked:
                 left_q.append(meas.discharge[n].left)
                 right_q.append(meas.discharge[n].right)
@@ -1320,25 +1417,47 @@ class QAData(object):
                 edge_dist_right.append(transect.edges.right.distance_m)
                 left_type.append(transect.edges.left.type)
                 right_type.append(transect.edges.right.type)
+                transect_idx.append(n)
 
         if any(checked):
             # Set default status to good
             self.edges['status'] = 'good'
 
+            mean_total_q = np.nanmean(total_q)
+
             # Check left edge q > 5%
             self.edges['left_q'] = 0
-            left_q_percent = (np.nanmean(left_q) / np.nanmean(total_q)) * 100
+
+            left_q_percent = (np.nanmean(left_q) / mean_total_q ) * 100
+            temp_idx = np.where(left_q / mean_total_q > 0.05)[0]
+            if len(temp_idx) > 0:
+                self.edges['left_q_idx'] = np.array(transect_idx)[temp_idx]
+            else:
+                self.edges['left_q_idx'] = []
             if np.abs(left_q_percent) > 5:
                 self.edges['status'] = 'caution'
                 self.edges['messages'].append(['Edges: Left edge Q is greater than 5%;', 1, 13])
                 self.edges['left_q'] = 1
+            elif len(self.edges['left_q_idx']) > 0:
+                self.edges['status'] = 'caution'
+                self.edges['messages'].append(['Edges: One or more transects have a left edge Q greater than 5%;', 1, 13])
+                self.edges['left_q'] = 1
 
             # Check right edge q > 5%
             self.edges['right_q'] = 0
-            right_q_percent = (np.nanmean(right_q) / np.nanmean(total_q)) * 100
+            right_q_percent = (np.nanmean(right_q) / mean_total_q) * 100
+            temp_idx = np.where(left_q / mean_total_q > 0.05)[0]
+            if len(temp_idx) > 0:
+                self.edges['right_q_idx'] = np.array(transect_idx)[temp_idx]
+            else:
+                self.edges['right_q_idx'] = []
             if np.abs(right_q_percent) > 5:
                 self.edges['status'] = 'caution'
                 self.edges['messages'].append(['Edges: Right edge Q is greater than 5%;', 1, 13])
+                self.edges['right_q'] = 1
+            elif len(self.edges['right_q_idx']) > 0:
+                self.edges['status'] = 'caution'
+                self.edges['messages'].append(['Edges: One or more transects have a right edge Q greater than 5%;', 1, 13])
                 self.edges['right_q'] = 1
 
             # Check for consistent sign
@@ -1370,17 +1489,25 @@ class QAData(object):
             dmg_5_percent = 0.05 * np.nanmean(dist_made_good)
             avg_right_edge_dist = np.nanmean(edge_dist_right)
             right_threshold = np.nanmin([dmg_5_percent, avg_right_edge_dist])
-            self.edges['right_dist_moved_idx'] = np.where(dist_moved_right > right_threshold)[0]
-            if len(self.edges['right_dist_moved_idx']) > 0:
+            temp_idx = np.where(dist_moved_right > right_threshold)[0]
+            if len(temp_idx) > 0:
+                self.edges['right_dist_moved_idx'] = np.array(transect_idx)[temp_idx]
                 self.edges['status'] = 'caution'
                 self.edges['messages'].append(['Edges: Excessive boat movement in right edge ensembles;', 2, 13])
+            else:
+                self.edges['right_dist_moved_idx'] = []
 
             avg_left_edge_dist = np.nanmean(edge_dist_left)
             left_threshold = np.nanmin([dmg_5_percent, avg_left_edge_dist])
-            self.edges['left_dist_moved_idx'] = np.where(dist_moved_left > left_threshold)[0]
-            if len(self.edges['left_dist_moved_idx']) > 0:
+            temp_idx = np.where(dist_moved_left > left_threshold)[0]
+            if len(temp_idx) > 0:
+                self.edges['left_dist_moved_idx'] = np.array(transect_idx)[temp_idx]
                 self.edges['status'] = 'caution'
                 self.edges['messages'].append(['Edges: Excessive boat movement in left edge ensembles;', 2, 13])
+            else:
+                self.edges['left_dist_moved_idx'] = []
+
+            #TODO this needs to be revised to properly count edge ensembles and provide idx to affected transects
 
             # Check for edge ensembles marked invalid due to excluded distance
             for transect in meas.transects:
@@ -1396,18 +1523,24 @@ class QAData(object):
 
             # Check edges for zero discharge
             self.edges['left_zero'] = 0
-            left_zero_idx = np.where(np.round(left_q, 4) == 0)[0]
-            if len(left_zero_idx) > 0:
+            temp_idx =  np.where(np.round(left_q, 4) == 0)[0]
+            if len(temp_idx) > 0:
+                self.edges['left_zero_idx'] = np.array(transect_idx)[temp_idx]
                 self.edges['status'] = 'warning'
                 self.edges['messages'].append(['EDGES: Left edge has zero Q;', 1, 13])
                 self.edges['left_zero'] = 2
+            else:
+                self.edges['left_zero_idx'] = []
 
             self.edges['right_zero'] = 0
-            right_zero_idx = np.where(np.round(right_q, 4) == 0)[0]
-            if len(right_zero_idx) > 0:
+            temp_idx = np.where(np.round(right_q, 4) == 0)[0]
+            if len(temp_idx) > 0:
+                self.edges['right_zero_idx'] = np.array(transect_idx)[temp_idx]
                 self.edges['status'] = 'warning'
                 self.edges['messages'].append(['EDGES: Right edge has zero Q;', 1, 13])
                 self.edges['right_zero'] = 2
+            else:
+                self.edges['right_zero_idx'] = []
 
             # Check consistent edge type
             self.edges['left_type'] = 0
