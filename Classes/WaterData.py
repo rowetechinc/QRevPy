@@ -1392,15 +1392,16 @@ class WaterData(object):
 
         # Find cells with invalid data
         valid_cells = np.equal(self.valid_data[0, :, :].astype(int), self.valid_data[6, :, :].astype(int)).astype(bool)
+        boat_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
+        boat_valid = boat_selected.valid_data[0]
 
-        if not np.all(valid_cells):
+        if not np.all(valid_cells) and np.nansum(boat_valid) > 1:
             # Compute distance along shiptrack to be used in interpolation
             distance_along_shiptrack = transect.boat_vel.compute_boat_track(transect)['distance_m']
 
             # Where there is invalid boat speed at beginning or end of transect mark the distance nan to avoid
             # interpolating velocities that won't be used for discharge
-            boat_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
-            boat_valid = boat_selected.valid_data[0]
+
             distance_along_shiptrack[0:np.argmax(boat_valid==True)] = np.nan
             end_nan = np.argmax(np.flip(boat_valid) == True)
             if end_nan > 0:
