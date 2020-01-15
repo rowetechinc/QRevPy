@@ -146,7 +146,11 @@ class ExtrapQSensitivity(object):
             self.q_cns_opt_mean = mat_data.qSensitivity.qCNSoptmean
             self.q_3p_ns_mean = mat_data.qSensitivity.q3pNSmean
             self.q_3p_ns_opt_mean = mat_data.qSensitivity.q3pNSoptmean
-            self.q_pp_per_diff = mat_data.qSensitivity.qPPperdiff
+            if hasattr(mat_data.qSensitivity, 'qPPperdiff'):
+                self.q_pp_per_diff = mat_data.qSensitivity.qPPperdiff
+            else:
+                self.q_pp_per_diff = np.nan
+
             self.q_pp_opt_per_diff = mat_data.qSensitivity.qPPoptperdiff
             self.q_cns_per_diff = mat_data.qSensitivity.qCNSperdiff
             self.q_cns_opt_per_diff = mat_data.qSensitivity.qCNSoptperdiff

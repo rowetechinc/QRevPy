@@ -228,7 +228,7 @@ class QAData(object):
             if hasattr(meas_struct.qa, 'rightZeroIdx'):
                 self.edges['right_zero_idx'] = meas_struct.qa.edges.rightZeroIdx
             else:
-                self.edges['left_zero_idx'] = new_qa.edges['left_zero_idx']
+                self.edges['right_zero_idx'] = new_qa.edges['right_zero_idx']
 
     @staticmethod
     def create_qa_dict(mat_data):
@@ -251,17 +251,21 @@ class QAData(object):
 
     @staticmethod
     def make_list(array_in):
-        if array_in.size > 3:
-            list_out = array_in.tolist()
+
+        if type(array_in) is str:
+            list_out = [array_in]
         else:
-            temp = array_in.tolist()
-            if len(temp) > 0:
-                internal_list = []
-                for item in temp:
-                    internal_list.append(item)
-                list_out = [internal_list]
+            if array_in.size > 3:
+                list_out = array_in.tolist()
             else:
-                list_out = []
+                temp = array_in.tolist()
+                if len(temp) > 0:
+                    internal_list = []
+                    for item in temp:
+                        internal_list.append(item)
+                    list_out = [internal_list]
+                else:
+                    list_out = []
         return list_out
 
     def transects_qa(self, meas):

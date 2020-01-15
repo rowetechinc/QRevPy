@@ -131,7 +131,10 @@ class PreMeasurement(object):
         """
         self.data = data_in.data
         self.time_stamp = data_in.timeStamp
-        self.result = {'compass': {'error': data_in.result.compass.error}}
+        if hasattr(data_in, 'result'):
+            self.result = {'compass': {'error': data_in.result.compass.error}}
+        else:
+            self.result = {'compass': {'error': np.nan}}
             
     def sys_test_read(self):
         """Method for reading the system test data"""

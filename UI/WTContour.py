@@ -101,14 +101,20 @@ class WTContour(object):
             last_valid_cell = np.nansum(transect.w_vel.cells_above_sl, axis=0) - 1
             last_depth_cell_size= depth_obj.depth_cell_size_m[last_valid_cell,
                                                               np.arange(depth_obj.depth_cell_size_m.shape[1])]
-            self.fig.ax.plot(ensembles+1,
-                             (transect.w_vel.sl_cutoff_m + (last_depth_cell_size * 0.5))* units['L'],
-                             color='r', linewidth=0.5)
+            y_plt_sl = (transect.w_vel.sl_cutoff_m + (last_depth_cell_size * 0.5))* units['L']
+            y_plt_top = (depth_obj.depth_cell_depth_m[0,:] - (depth_obj.depth_cell_size_m[0, :] * 0.5)) * units['L']
+
+            if edge_start is True:
+                y_plt_sl = y_plt_sl[:int(n_ensembles)]
+                y_plt_top = y_plt_top[:int(n_ensembles)]
+            elif edge_start is False:
+                y_plt_sl = y_plt_sl[-int(n_ensembles):]
+                y_plt_top = y_plt_top[-int(n_ensembles):]
+
+
+            self.fig.ax.plot(ensembles+1, y_plt_sl, color='r', linewidth=0.5)
             # Plot upper bound of measured depth cells
-            self.fig.ax.plot(ensembles+1,
-                             (depth_obj.depth_cell_depth_m[0,:]
-                              - (depth_obj.depth_cell_size_m[0, :] * 0.5)) * units['L'],
-                             color='r', linewidth=0.5)
+            self.fig.ax.plot(ensembles+1, y_plt_top, color='r', linewidth=0.5)
         self.fig.ax.set_xlabel(self.canvas.tr('Ensembles'))
         self.fig.ax.set_ylabel(self.canvas.tr('Depth ') + units['label_L'])
         self.fig.ax.xaxis.label.set_fontsize(12)
