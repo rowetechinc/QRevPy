@@ -88,8 +88,8 @@ class GPSFilters (object):
             # Format axis
             # self.fig.ax.set_ylim(top=np.nanmax(transect.gps.diff_qual_ens) + 0.5, bottom=-0.5)
             self.fig.ax.set_ylabel(self.canvas.tr('GPS Quality'))
-            yint = range(0, int(np.ceil(max(transect.gps.diff_qual_ens)) + 1))
-            self.fig.ax.set_ylim(top=max(yint) + 0.5, bottom=min(yint) - 0.5)
+            yint = range(0, int(np.ceil(np.nanmax(transect.gps.diff_qual_ens)) + 1))
+            self.fig.ax.set_ylim(top=np.nanmax(yint) + 0.5, bottom=np.nanmin(yint) - 0.5)
             self.fig.ax.set_yticks(yint)
 
         elif selected == 'altitude':

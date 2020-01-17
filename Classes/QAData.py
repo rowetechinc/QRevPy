@@ -179,12 +179,22 @@ class QAData(object):
             self.user['sta_number'] = bool(meas_struct.qa.user.staNumber)
             self.user['status'] = meas_struct.qa.user.status
             self.depths = self.create_qa_dict(meas_struct.qa.depths)
-            if not hasattr(self.depths, 'draft'):
+            if not 'draft' in self.depths:
                 self.depths['draft'] = new_qa.depths['draft']
+            if not 'all_invalid' in self.depths:
+                self.depths['all_invalid'] = new_qa.depths['all_invalid']
             self.bt_vel = self.create_qa_dict(meas_struct.qa.btVel)
+            if not 'all_invalid' in self.bt_vel:
+                self.bt_vel['all_invalid'] = new_qa.bt_vel['all_invalid']
             self.gga_vel = self.create_qa_dict(meas_struct.qa.ggaVel)
+            if not 'all_invalid' in self.gga_vel:
+                self.gga_vel['all_invalid'] = new_qa.gga_vel['all_invalid']
             self.vtg_vel = self.create_qa_dict(meas_struct.qa.vtgVel)
+            if not 'all_invalid' in self.vtg_vel:
+                self.vtg_vel['all_invalid'] = new_qa.vtg_vel['all_invalid']
             self.w_vel = self.create_qa_dict(meas_struct.qa.wVel)
+            if not 'all_invalid' in self.w_vel:
+                self.w_vel['all_invalid'] = new_qa.w_vel['all_invalid']
             self.extrapolation = dict()
             self.extrapolation['messages'] = self.make_list(meas_struct.qa.extrapolation.messages)
             self.extrapolation['status'] = meas_struct.qa.extrapolation.status
@@ -255,17 +265,22 @@ class QAData(object):
         if type(array_in) is str:
             list_out = [array_in]
         else:
-            if array_in.size > 3:
-                list_out = array_in.tolist()
-            else:
+            # Empty array
+            if array_in.size == 0:
+                    list_out = []
+            # Single message with integer codes at end
+            elif array_in.size == 3 and type(array_in[-1]) is int:
                 temp = array_in.tolist()
                 if len(temp) > 0:
                     internal_list = []
                     for item in temp:
                         internal_list.append(item)
                     list_out = [internal_list]
-                else:
-                    list_out = []
+            # Either multiple messages with or without integer codes
+            else:
+                list_out = array_in.tolist()
+
+
         return list_out
 
     def transects_qa(self, meas):
@@ -1450,7 +1465,7 @@ class QAData(object):
             # Check right edge q > 5%
             self.edges['right_q'] = 0
             right_q_percent = (np.nanmean(right_q) / mean_total_q) * 100
-            temp_idx = np.where(left_q / mean_total_q > 0.05)[0]
+            temp_idx = np.where(right_q / mean_total_q > 0.05)[0]
             if len(temp_idx) > 0:
                 self.edges['right_q_idx'] = np.array(transect_idx)[temp_idx]
             else:

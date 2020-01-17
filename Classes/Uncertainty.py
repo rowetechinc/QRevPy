@@ -124,17 +124,17 @@ class Uncertainty(object):
             self.moving_bed_95 = meas_struct.uncertainty.movingBed95
             self.systematic = meas_struct.uncertainty.systematic
             self.total_95 = meas_struct.uncertainty.total95
-            if len(meas_struct.uncertainty.cov95User) > 0:
+            if not type(meas_struct.uncertainty.cov95User) is np.ndarray:
                 self.cov_95_user = meas_struct.uncertainty.cov95User
-            if len(meas_struct.uncertainty.invalid95User) > 0:
+            if not type(meas_struct.uncertainty.invalid95User) is np.ndarray:
                 self.invalid_95_user = meas_struct.uncertainty.invalid95User
-            if len(meas_struct.uncertainty.edges95User) > 0:
+            if not type(meas_struct.uncertainty.edges95User) is np.ndarray:
                 self.edges_95_user = meas_struct.uncertainty.edges95User
-            if len(meas_struct.uncertainty.extrapolation95User) >0:
+            if not type(meas_struct.uncertainty.extrapolation95User) is np.ndarray:
                 self.extrapolation_95_user = meas_struct.uncertainty.extrapolation95User
-            if len(meas_struct.uncertainty.movingBed95User) > 0:
+            if not type(meas_struct.uncertainty.movingBed95User) is np.ndarray:
                 self.moving_bed_95_user = meas_struct.uncertainty.movingBed95User
-            if len(meas_struct.uncertainty.systematicUser) > 0:
+            if not type(meas_struct.uncertainty.systematicUser) is np.ndarray:
                 self.systematic_user = meas_struct.uncertainty.systematicUser
             self.total_95_user = meas_struct.uncertainty.total95User
 

@@ -1021,8 +1021,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Populate table
         for row, message in enumerate(messages):
-            tbl.setItem(row, 1, QtWidgets.QTableWidgetItem(message[0]))
-            if int(message[1]) == 1:
+            # Handle messages from old QRev that did not have integer codes
+            if type(message) is str:
+                warn = message[:message.find(':')].isupper()
+                tbl.setItem(row, 1, QtWidgets.QTableWidgetItem(message))
+            # Handle newer style messages
+            else:
+                warn = int(message[1]) == 1
+                tbl.setItem(row, 1, QtWidgets.QTableWidgetItem(message[0]))
+            if warn:
                 tbl.item(row, 1).setFont(self.font_bold)
                 item_warning = QtWidgets.QTableWidgetItem(self.icon_warning, '')
                 tbl.setItem(row, 0, item_warning)
@@ -1888,17 +1895,28 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Number of subtests run
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:2.0f}'.format(test.result['sysTest']['n_tests'])))
-                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                if test.result['sysTest']['n_tests'] is None:
+                    tbl.setItem(row, col,
+                                QtWidgets.QTableWidgetItem('N/A'))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                else:
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:2.0f}'.format(test.result['sysTest']['n_tests'])))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Number of subtests failed
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:2.0f}'.format(test.result['sysTest']['n_failed'])))
-                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
-                if test.result['sysTest']['n_failed'] > 0:
-                    tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
-                else:
+                if test.result['sysTest']['n_failed'] is None:
+                    tbl.setItem(row, col,
+                                QtWidgets.QTableWidgetItem('N/A'))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
+                else:
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:2.0f}'.format(test.result['sysTest']['n_failed'])))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                    if test.result['sysTest']['n_failed'] > 0:
+                        tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
+                    else:
+                        tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
 
 
                 # Status of PT3 tests
@@ -1955,7 +1973,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.display_systest_messages.moveCursor(QtGui.QTextCursor.Start)
             for message in self.meas.qa.system_tst['messages']:
                 # Display each comment on a new line
-                self.display_systest_messages.textCursor().insertText(message[0])
+                if type(message) is str:
+                    self.display_systest_messages.textCursor().insertText(message)
+                else:
+                    self.display_systest_messages.textCursor().insertText(message[0])
                 self.display_systest_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_systest_messages.textCursor().insertBlock()
 
@@ -2166,7 +2187,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.display_compass_messages.moveCursor(QtGui.QTextCursor.Start)
             for message in self.meas.qa.compass['messages']:
                 # Display each comment on a new line
-                self.display_compass_messages.textCursor().insertText(message[0])
+                if type(message) is str:
+                    self.display_compass_messages.textCursor().insertText(message)
+                else:
+                    self.display_compass_messages.textCursor().insertText(message[0])
                 self.display_compass_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_compass_messages.textCursor().insertBlock()
 
@@ -2938,7 +2962,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Display each message on a new line
             self.display_tempsal_messages.moveCursor(QtGui.QTextCursor.Start)
             for message in self.meas.qa.temperature['messages']:
-                self.display_tempsal_messages.textCursor().insertText(message[0])
+                if type(message) is str:
+                    self.display_tempsal_messages.textCursor().insertText(message)
+                else:
+                    self.display_tempsal_messages.textCursor().insertText(message[0])
                 self.display_tempsal_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_tempsal_messages.textCursor().insertBlock()
 
@@ -3586,7 +3613,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Display each message on a new line
             self.display_mb_messages.moveCursor(QtGui.QTextCursor.Start)
             for message in self.meas.qa.movingbed['messages']:
-                self.display_mb_messages.textCursor().insertText(message[0])
+                if type(message) is str:
+                    self.display_mb_messages.textCursor().insertText(message)
+                else:
+                    self.display_mb_messages.textCursor().insertText(message[0])
                 self.display_mb_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_mb_messages.textCursor().insertBlock()
 
@@ -4288,7 +4318,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Display each message on a new line
             self.display_bt_messages.moveCursor(QtGui.QTextCursor.Start)
             for message in self.meas.qa.bt_vel['messages']:
-                self.display_bt_messages.textCursor().insertText(message[0])
+                if type(message) is str:
+                    self.display_bt_messages.textCursor().insertText(message)
+                else:
+                    self.display_bt_messages.textCursor().insertText(message[0])
                 self.display_bt_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_bt_messages.textCursor().insertBlock()
 
@@ -5014,11 +5047,17 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Display each message on a new line
             self.display_gps_messages.moveCursor(QtGui.QTextCursor.Start)
             for message in self.meas.qa.gga_vel['messages']:
-                self.display_gps_messages.textCursor().insertText(message[0])
+                if type(message) is str:
+                    self.display_gps_messages.textCursor().insertText(message)
+                else:
+                    self.display_gps_messages.textCursor().insertText(message[0])
                 self.display_gps_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_gps_messages.textCursor().insertBlock()
             for message in self.meas.qa.vtg_vel['messages']:
-                self.display_gps_messages.textCursor().insertText(message[0])
+                if type(message) is str:
+                    self.display_gps_messages.textCursor().insertText(message)
+                else:
+                    self.display_gps_messages.textCursor().insertText(message[0])
                 self.display_gps_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_gps_messages.textCursor().insertBlock()
 
@@ -5595,7 +5634,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Display each message on a new line
             self.display_depth_messages.moveCursor(QtGui.QTextCursor.Start)
             for message in self.meas.qa.depths['messages']:
-                self.display_depth_messages.textCursor().insertText(message[0])
+                if type(message) is str:
+                    self.display_depth_messages.textCursor().insertText(message)
+                else:
+                    self.display_depth_messages.textCursor().insertText(message[0])
                 self.display_depth_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_depth_messages.textCursor().insertBlock()
 
@@ -6337,7 +6379,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Display each message on a new line
             self.display_wt_messages.moveCursor(QtGui.QTextCursor.Start)
             for message in self.meas.qa.w_vel['messages']:
-                self.display_wt_messages.textCursor().insertText(message[0])
+                if type(message) is str:
+                    self.display_wt_messages.textCursor().insertText(message)
+                else:
+                    self.display_wt_messages.textCursor().insertText(message[0])
                 self.display_wt_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_wt_messages.textCursor().insertBlock()
 
@@ -7022,7 +7067,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Display each message on a new line
             self.display_extrap_messages.moveCursor(QtGui.QTextCursor.Start)
             for message in self.meas.qa.extrapolation['messages']:
-                self.display_extrap_messages.textCursor().insertText(message[0])
+                if type(message) is str:
+                    self.display_extrap_messages.textCursor().insertText(message)
+                else:
+                    self.display_extrap_messages.textCursor().insertText(message[0])
                 self.display_extrap_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_extrap_messages.textCursor().insertBlock()
 
@@ -7166,8 +7214,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # Format cell
                 if transect_id in self.meas.qa.edges['left_zero_idx']:
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 77, 77))
-                elif transect_id in self.meas.qa.edges['left_q_idx']:
-                    tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
                 else:
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
                 # Left edge discharge %
@@ -7176,6 +7222,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                         * 100)
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                if transect_id in self.meas.qa.edges['left_q_idx']:
+                    tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
+                else:
+                    tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
 
                 # Right edge type
                 col += 1
@@ -7237,8 +7287,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
                 if transect_id in self.meas.qa.edges['right_zero_idx']:
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 77, 77))
-                elif transect_id in self.meas.qa.edges['right_q_idx']:
-                    tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
                 else:
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
 
@@ -7248,6 +7296,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                         * 100)
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                if transect_id in self.meas.qa.edges['right_q_idx']:
+                    tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
+                else:
+                    tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
 
             tbl.item(self.transect_row, 0).setFont(self.font_bold)
             tbl.scrollToItem(tbl.item(self.transect_row, 0))
@@ -7720,7 +7772,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Display each message on a new line
             self.display_edges_messages.moveCursor(QtGui.QTextCursor.Start)
             for message in self.meas.qa.edges['messages']:
-                self.display_edges_messages.textCursor().insertText(message[0])
+                if type(message) is str:
+                    self.display_edges_messages.textCursor().insertText(message)
+                else:
+                    self.display_edges_messages.textCursor().insertText(message[0])
                 self.display_edges_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_edges_messages.textCursor().insertBlock()
 

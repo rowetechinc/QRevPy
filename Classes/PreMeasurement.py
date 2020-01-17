@@ -134,7 +134,13 @@ class PreMeasurement(object):
         if hasattr(data_in, 'result'):
             self.result = {'compass': {'error': data_in.result.compass.error}}
         else:
-            self.result = {'compass': {'error': np.nan}}
+            # Match regex for compass evaluation error:
+            splits = re.split('(Total error:|Double Cycle Errors:|Error from calibration:)', self.data)
+            if len(splits) > 1:
+                error = float(re.search('\d+\.*\d*', splits[-1])[0])
+            else:
+                error = 'N/A'
+            self.result['compass'] = {'error': error}
             
     def sys_test_read(self):
         """Method for reading the system test data"""
@@ -237,8 +243,13 @@ class PreMeasurement(object):
 
                 self.result['pt3'] = pt3
         except AttributeError:
-            self.result = {'sysTest': {'n_tests': None}}
-            self.result['sysTest']['n_failed'] = None
+            # Match regex for number of tests and number of failures
+            num_tests = re.findall('(Fail|FAIL|F A I L|Pass|PASS|NOT DETECTED|P A S S)', test_in.data)
+            num_fails = re.findall('(Fail|FAIL|F A I L)', test_in.data)
+
+            # Store results
+            self.result = {'sysTest': {'n_tests': len(num_tests)}}
+            self.result['sysTest']['n_failed'] = len(num_fails)
 
     def pt3_data(self):
         """Method for processing the data in the correlation matrices."""
