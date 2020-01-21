@@ -63,7 +63,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         super(QRev, self).__init__(parent)
         self.setupUi(self)
 
-        self.QRev_version = 'QRevPy Beta'
+        self.QRev_version = 'QRevPy Beta 20200121'
         self.setWindowTitle(self.QRev_version)
 
         # Setting file for settings to carry over from one session to the next

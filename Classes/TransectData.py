@@ -767,7 +767,7 @@ class TransectData(object):
             sl_lag_effect_m = (rsdata.Summary.Transmit_Length
                                + self.depths.bt_depths.depth_cell_size_m[0, :]) / 2.0
         else:
-            sl_lag_effect_m = np.copy(self.depths.bt_depths.depth_cell_depth_m[0, :])
+            sl_lag_effect_m = np.copy(self.depths.bt_depths.depth_cell_size_m[0, :])
         sl_cutoff_type = 'Percent'
         cells_above_sl, sl_cutoff_m = TransectData.side_lobe_cutoff(depths=self.depths.bt_depths.depth_orig_m,
                                                                     draft=self.depths.bt_depths.draft_orig_m,
