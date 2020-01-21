@@ -7504,7 +7504,23 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             List of transect indices that comprise a single measurement.
         """
 
-        Measurement.selected_transects_changed(self.meas, selected_transects_idx=group)
+        Measurement.selected_transects_changed(self.meas,
+                                               selected_transects_idx=group)
+
+        if self.group_idx > 0:
+
+            # activate main, Summary, and Messages tabs
+            self.tab_all.setCurrentIndex(0)
+            self.tab_summary.setCurrentIndex(0)
+            self.tab_mc.setCurrentIndex(0)
+
+            # set the change status to True for the main window update
+            self.change = True
+
+            # Set Extrap combo boxes back to auto then force an extrap update
+            self.combo_extrap_fit.setCurrentIndex(0)
+            self.combo_extrap_data.setCurrentIndex(0)
+
         self.update_main()
 
     def split_save(self):
