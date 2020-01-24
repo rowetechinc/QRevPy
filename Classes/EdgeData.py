@@ -60,7 +60,7 @@ class EdgeData(object):
         self.distance_m = mat_data.dist_m
         self.number_ensembles = mat_data.numEns2Avg
         self.user_discharge_cms = mat_data.userQ_cms
-        if len(mat_data.custCoef) > 0:
+        if type(mat_data.custCoef) is float:
             self.cust_coef = mat_data.custCoef
 
 

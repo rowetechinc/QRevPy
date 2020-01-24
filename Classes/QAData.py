@@ -645,7 +645,7 @@ class QAData(object):
                     self.compass['messages'].append(
                         ['COMPASS: Magnetic variation is 0 and GPS data are present;', 1, 4])
                     self.compass['magvar'] = 2
-                    self.compass['magvar_idx'] = magvar.index(0)
+                    self.compass['magvar_idx'] = np.where(np.array(magvar) == 0)[0].tolist()
 
             # Check pitch mean
             if np.any(np.asarray(np.abs(pitch_mean)) > 8):

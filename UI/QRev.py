@@ -63,7 +63,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         super(QRev, self).__init__(parent)
         self.setupUi(self)
 
-        self.QRev_version = 'QRevPy Beta 20200121'
+        self.QRev_version = 'QRevPy Beta 20200123'
         self.setWindowTitle(self.QRev_version)
 
         # Setting file for settings to carry over from one session to the next
@@ -248,9 +248,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.wt_initialized = False
                 self.extrap_initialized = False
                 self.edges_initialized = False
+                self.transect_row = 0
                 self.config_gui()
                 self.change = True
-                self.transect_row = 0
                 self.tab_manager(tab_idx=0)
 
     def save_measurement(self):
@@ -1065,6 +1065,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 status = 'inactive'
             elif gga_status == 'warning' or vtg_status == 'warning':
                 status = 'warning'
+            elif gga_status == 'default' or vtg_status == 'default':
+                status = 'default'
             tab = 'tab_gps'
         elif key == 'movingbed':
             tab = 'tab_mbt'
@@ -1092,6 +1094,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         if tab_base is None:
             tab_base = self.tab_all
+
+        tab_base.tabBar().setTabTextColor(tab_base.indexOf(tab_base.findChild(QtWidgets.QWidget, tab)),
+                                          QtGui.QColor(140, 140, 140))
+        tab_base.setTabIcon(tab_base.indexOf(tab_base.findChild(QtWidgets.QWidget, tab)), QtGui.QIcon())
         # Set appropriate icon
         if status == 'good':
             tab_base.setTabIcon(tab_base.indexOf(tab_base.findChild(QtWidgets.QWidget, tab)),
@@ -3670,6 +3676,17 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.resizeRowsToContents()
 
         selected = self.meas.transects[self.checked_transects_idx[0]].boat_vel.selected
+
+        # Turn signals off
+        self.cb_bt_bt.blockSignals(True)
+        self.cb_bt_gga.blockSignals(True)
+        self.cb_bt_vtg.blockSignals(True)
+        self.cb_bt_vectors.blockSignals(True)
+        self.combo_bt_3beam.blockSignals(True)
+        self.combo_bt_error_velocity.blockSignals(True)
+        self.combo_bt_vert_velocity.blockSignals(True)
+        self.combo_bt_other.blockSignals(True)
+
         if selected == 'gga_vel':
             self.cb_bt_gga.setCheckState(QtCore.Qt.Checked)
         elif selected == 'vtg_vel':
@@ -3703,6 +3720,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.combo_bt_other.setCurrentIndex(0)
         elif self.transect.boat_vel.bt_vel.smooth_filter == 'On':
             self.combo_bt_other.setCurrentIndex(1)
+
+        # Turn signals on
+        self.cb_bt_bt.blockSignals(False)
+        self.cb_bt_gga.blockSignals(False)
+        self.cb_bt_vtg.blockSignals(False)
+        self.cb_bt_vectors.blockSignals(False)
+        self.combo_bt_3beam.blockSignals(False)
+        self.combo_bt_error_velocity.blockSignals(False)
+        self.combo_bt_vert_velocity.blockSignals(False)
+        self.combo_bt_other.blockSignals(False)
 
         # Display content
         if old_discharge is None:
@@ -4360,6 +4387,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
+        # Turn signals off
+        self.cb_gps_bt.blockSignals(True)
+        self.cb_gps_gga.blockSignals(True)
+        self.cb_gps_vtg.blockSignals(True)
+        self.cb_gps_vectors.blockSignals(True)
+        self.combo_gps_qual.blockSignals(True)
+        self.combo_gps_altitude.blockSignals(True)
+        self.combo_gps_hdop.blockSignals(True)
+        self.combo_gps_other.blockSignals(True)
+
         # Initialize checkbox settings for boat reference
         self.cb_gps_bt.setCheckState(QtCore.Qt.Checked)
         if self.meas.transects[self.checked_transects_idx[0]].boat_vel.gga_vel is not None:
@@ -4396,6 +4433,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.combo_gps_other.setCurrentIndex(0)
         elif self.transect.boat_vel.gga_vel.smooth_filter == 'On':
             self.combo_gps_other.setCurrentIndex(1)
+
+        # Turn signals on
+        self.cb_gps_bt.blockSignals(False)
+        self.cb_gps_gga.blockSignals(False)
+        self.cb_gps_vtg.blockSignals(False)
+        self.cb_gps_vectors.blockSignals(False)
+        self.combo_gps_qual.blockSignals(False)
+        self.combo_gps_altitude.blockSignals(False)
+        self.combo_gps_hdop.blockSignals(False)
+        self.combo_gps_other.blockSignals(False)
 
         # Display content
         if old_discharge is None:
@@ -5172,6 +5219,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         depth_ref_selected = self.transect.depths.selected
         depth_composite = self.transect.depths.composite
 
+        # Turn signals off
+        self.combo_depth_ref.blockSignals(True)
+        self.combo_depth_avg.blockSignals(True)
+        self.combo_depth_filter.blockSignals(True)
+
         # Set depth reference
         self.combo_depth_ref.blockSignals(True)
         if depth_ref_selected == 'bt_depths':
@@ -5211,6 +5263,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.combo_depth_filter.setCurrentIndex(0)
         self.combo_depth_filter.blockSignals(False)
 
+        # Turn signals on
+        self.combo_depth_ref.blockSignals(False)
+        self.combo_depth_avg.blockSignals(False)
+        self.combo_depth_filter.blockSignals(False)
 
         # Display content
         if old_discharge is None:
@@ -5677,6 +5733,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
+        # Turn signals off
+        self.cb_wt_bt.blockSignals(True)
+        self.cb_wt_gga.blockSignals(True)
+        self.cb_wt_vtg.blockSignals(True)
+        self.cb_wt_vectors.blockSignals(True)
+        self.combo_wt_3beam.blockSignals(True)
+        self.combo_wt_error_velocity.blockSignals(True)
+        self.combo_wt_vert_velocity.blockSignals(True)
+        self.combo_wt_snr.blockSignals(True)
+
         # Initialize checkbox settings for boat reference
         self.cb_wt_bt.setCheckState(QtCore.Qt.Checked)
         self.cb_wt_gga.setCheckState(QtCore.Qt.Unchecked)
@@ -5702,6 +5768,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         else:
             self.rb_wt_snr.setEnabled(False)
             self.combo_wt_snr.setEnabled(False)
+
+        # Turn signals on
+        self.cb_wt_bt.blockSignals(False)
+        self.cb_wt_gga.blockSignals(False)
+        self.cb_wt_vtg.blockSignals(False)
+        self.cb_wt_vectors.blockSignals(False)
+        self.combo_wt_3beam.blockSignals(False)
+        self.combo_wt_error_velocity.blockSignals(False)
+        self.combo_wt_vert_velocity.blockSignals(False)
+        self.combo_wt_snr.blockSignals(False)
 
         if not self.wt_initialized:
             tbl.cellClicked.connect(self.wt_table_clicked)

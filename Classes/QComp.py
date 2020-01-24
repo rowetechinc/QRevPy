@@ -1606,8 +1606,8 @@ class QComp(object):
 
             # Compute linear regression coefficient forcing through zero to relate
             # near-bed velocity to moving-bed velocity
-            x = np.vstack([near_bed_speed, np.ones(len(near_bed_speed))]).T
-            corr_coef = np.linalg.solve(x, mb_speed)[0]
+            x = np.vstack(near_bed_speed)
+            corr_coef = np.linalg.lstsq(x, mb_speed, rcond=None)[0]
 
             # Assing object properties to local variables
             in_transect_idx = trans_data.in_transect_idx

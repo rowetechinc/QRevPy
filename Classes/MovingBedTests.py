@@ -187,7 +187,7 @@ class MovingBedTests(object):
         if type(mat_data.messages) == np.ndarray:
             self.messages = mat_data.messages.tolist()
         else:
-            self.messages = mat_data.messages
+            self.messages = [mat_data.messages]
         if type(mat_data.nearBedSpeed_mps) is np.ndarray:
             self.near_bed_speed_mps = np.nan
         else:

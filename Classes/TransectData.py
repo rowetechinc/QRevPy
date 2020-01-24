@@ -995,7 +995,7 @@ class TransectData(object):
         self.sensors.roll_deg.selected = 'internal'
 
         # Temperature
-        if rsdata.System.Units.Temperature == 'degC':
+        if rsdata.System.Units.Temperature.find('C') >= 0:
             temperature = rsdata.System.Temperature
         else:
             temperature = (5. / 9.) * (rsdata.System.Temperature - 32)
@@ -1078,7 +1078,7 @@ class TransectData(object):
 
         self.adcp = InstrumentData()
         self.adcp.populate_from_qrev_mat(transect)
-        self.file_name = transect.fileName
+        self.file_name = os.path.basename(transect.fileName)
         self.w_vel = WaterData()
         self.w_vel.populate_from_qrev_mat(transect)
         self.boat_vel = BoatStructure()

@@ -113,6 +113,10 @@ class Shiptrack(object):
         self.fig.ax.yaxis.label.set_fontsize(12)
 
         # Initialize max/min trackers
+        max_x_bt = np.nan
+        max_y_bt = np.nan
+        min_x_bt = np.nan
+        min_y_bt = np.nan
         max_x_vtg = np.nan
         max_y_vtg = np.nan
         min_x_vtg = np.nan
@@ -315,8 +319,8 @@ class Shiptrack(object):
             elif transect.w_vel.nav_ref == 'VTG':
                 max_x = max_x_vtg
                 min_x = min_x_vtg
-                max_y = max_y_gga
-                min_y = min_y_gga
+                max_y = max_y_vtg
+                min_y = min_y_vtg
             max_x = max_x + (max_x - min_x) * 0.1
             min_x = min_x - (max_x - min_x) * 0.1
             max_y = max_y + (max_y - min_y) * 0.1
