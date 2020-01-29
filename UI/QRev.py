@@ -3412,7 +3412,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 # Bottom track tab
 # ================
     def bt_tab(self):
-        """Initialize, setup settings, and display initial data in bottom track tab.
+        """Initialize, setup settings, and display initial data in bottom
+        track tab.
         """
 
         # Setup data table
@@ -3426,7 +3427,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         self.tr('Error Vel \n % Invalid'),
                         self.tr('Vert Vel \n % Invalid'),
                         self.tr('Other \n % Invalid'),
-                        self.tr('Discharge \n Previous \n' + self.units['label_Q']),
+                        self.tr('Discharge \n Previous \n' +
+                                self.units['label_Q']),
                         self.tr('Discharge \n Now \n' + self.units['label_Q']),
                         self.tr('Discharge \n % Change')]
         ncols = len(table_header)
@@ -3442,7 +3444,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
-        selected = self.meas.transects[self.checked_transects_idx[0]].boat_vel.selected
+        selected = self.meas.transects[self.checked_transects_idx[0]].\
+            boat_vel.selected
         if selected == 'gga_vel':
             self.cb_bt_gga.setCheckState(QtCore.Qt.Checked)
         elif selected == 'vtg_vel':
@@ -3464,11 +3467,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.combo_bt_3beam.setCurrentIndex(0)
 
         # Set error velocity filter from transect data
-        index = self.combo_bt_error_velocity.findText(self.transect.boat_vel.bt_vel.d_filter, QtCore.Qt.MatchFixedString)
+        index = self.combo_bt_error_velocity.findText(
+            self.transect.boat_vel.bt_vel.d_filter, QtCore.Qt.MatchFixedString)
         self.combo_bt_error_velocity.setCurrentIndex(index)
 
         # Set vertical velocity filter from transect data
-        index = self.combo_bt_vert_velocity.findText(self.transect.boat_vel.bt_vel.w_filter, QtCore.Qt.MatchFixedString)
+        index = self.combo_bt_vert_velocity.findText(
+            self.transect.boat_vel.bt_vel.w_filter, QtCore.Qt.MatchFixedString)
         self.combo_bt_vert_velocity.setCurrentIndex(index)
 
         # Set smooth filter from transect data
@@ -3479,19 +3484,23 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Display content
         self.idx = 0
-        self.update_bt_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
+        self.update_bt_table(old_discharge=self.meas.discharge,
+                             new_discharge=self.meas.discharge)
         self.bt_plots()
         self.bt_comments_messages()
 
         # Setup lists for use by graphics controls
-        self.canvases = [self.bt_shiptrack_canvas, self.bt_top_canvas, self.bt_bottom_canvas]
-        self.figs = [self.bt_shiptrack_fig, self.bt_top_fig, self.bt_bottom_fig]
-        self.toolbars = [self.bt_shiptrack_toolbar, self.bt_top_toolbar, self.bt_bottom_toolbar]
+        self.canvases = [self.bt_shiptrack_canvas, self.bt_top_canvas,
+                         self.bt_bottom_canvas]
+        self.figs = [self.bt_shiptrack_fig, self.bt_top_fig,
+                     self.bt_bottom_fig]
+        self.toolbars = [self.bt_shiptrack_toolbar, self.bt_top_toolbar,
+                         self.bt_bottom_toolbar]
 
         if not self.bt_initialized:
             tbl.cellClicked.connect(self.bt_table_clicked)
 
-            # set qlineedit to numbers only, 2 decimals, and 0 to 100
+            # set qlineedit to numbers only, 32 decimals, and 0 to 100
             rx = QtCore.QRegExp(
                 "^([0-9]|[1-9][0-9]|100)(\.\d{1,3})$")
             validator = QtGui.QRegExpValidator(rx, self)
@@ -3516,14 +3525,20 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.rb_bt_other.toggled.connect(self.bt_radiobutton_control)
 
             # Connect manual entry
-            self.ed_bt_error_vel_threshold.editingFinished.connect(self.change_error_vel_threshold)
-            self.ed_bt_vert_vel_threshold.editingFinished.connect(self.change_vert_vel_threshold)
+            self.ed_bt_error_vel_threshold.editingFinished.connect(
+                self.change_error_vel_threshold)
+            self.ed_bt_vert_vel_threshold.editingFinished.connect(
+                self.change_vert_vel_threshold)
 
             # Connect filters
-            self.combo_bt_3beam.currentIndexChanged[str].connect(self.change_bt_beam)
-            self.combo_bt_error_velocity.activated[str].connect(self.change_bt_error)
-            self.combo_bt_vert_velocity.currentIndexChanged[str].connect(self.change_bt_vertical)
-            self.combo_bt_other.currentIndexChanged[str].connect(self.change_bt_other)
+            self.combo_bt_3beam.currentIndexChanged[str].connect(
+                self.change_bt_beam)
+            self.combo_bt_error_velocity.activated[str].connect(
+                self.change_bt_error)
+            self.combo_bt_vert_velocity.currentIndexChanged[str].connect(
+                self.change_bt_vertical)
+            self.combo_bt_other.currentIndexChanged[str].connect(
+                self.change_bt_other)
 
             self.bt_initialized = True
 
@@ -5186,7 +5201,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 # WT tab
 # ======
     def wt_tab(self):
-        """Initialize, setup settings, and display initial data in water track tab.
+        """Initialize, setup settings, and display initial data in water
+        track tab.
         """
 
         # Setup data table
@@ -5201,7 +5217,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         self.tr('Vert Vel \n % Invalid'),
                         self.tr('Other \n % Invalid'),
                         self.tr('SNR \n % Invalid'),
-                        self.tr('Discharge \n Previous ' + self.units['label_Q']),
+                        self.tr('Discharge \n Previous ' +
+                                self.units['label_Q']),
                         self.tr('Discharge \n Now ' + self.units['label_Q']),
                         self.tr('Discharge \n % Change')]
         ncols = len(table_header)
@@ -5221,7 +5238,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.cb_wt_bt.setCheckState(QtCore.Qt.Checked)
         self.cb_wt_gga.setCheckState(QtCore.Qt.Unchecked)
         self.cb_wt_vtg.setCheckState(QtCore.Qt.Unchecked)
-        selected = self.meas.transects[self.checked_transects_idx[0]].boat_vel.selected
+        selected = self.meas.transects[self.checked_transects_idx[0]].\
+            boat_vel.selected
         if selected == 'gga_vel':
             self.cb_wt_gga.setCheckState(QtCore.Qt.Checked)
         elif selected == 'vtg_vel':
@@ -5235,7 +5253,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.cb_wt_vtg.stateChanged.connect(self.wt_plot_change)
         self.cb_wt_vectors.stateChanged.connect(self.wt_plot_change)
 
-        if self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'SonTek':
+        if self.meas.transects[self.checked_transects_idx[0]].\
+                adcp.manufacturer == 'SonTek':
             self.rb_wt_snr.setEnabled(True)
             self.combo_wt_snr.setEnabled(True)
             self.rb_wt_snr.toggled.connect(self.wt_radiobutton_control)
@@ -5253,22 +5272,45 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.rb_wt_contour.toggled.connect(self.wt_radiobutton_control)
 
             # Connect manual entry
-            self.ed_wt_error_vel_threshold.editingFinished.connect(self.change_wt_error_vel_threshold)
-            self.ed_wt_vert_vel_threshold.editingFinished.connect(self.change_wt_vert_vel_threshold)
+            self.ed_wt_error_vel_threshold.editingFinished.connect(
+                self.change_wt_error_vel_threshold)
+            self.ed_wt_vert_vel_threshold.editingFinished.connect(
+                self.change_wt_vert_vel_threshold)
+
+            # set qlineedit to numbers only, 3 decimals, and 0 to 100
+            rx = QtCore.QRegExp(
+                "^([0-9]|[1-9][0-9]|100)(\.\d{1,3})$")
+            validator = QtGui.QRegExpValidator(rx, self)
+            self.ed_wt_error_vel_threshold.setValidator(validator)
+            self.ed_wt_vert_vel_threshold.setValidator(validator)
+
+            # set validator for Exceluded distance 0 to 999, 3 decimals
+            rx_excluded_distance = \
+                QtCore.QRegExp("^([0-9]|[1-9][0-9]|[1-9][0-9][0-9])(\.\d{1,3})$")
+            validator_excluded = QtGui.QRegExpValidator(rx_excluded_distance,
+                                                        self)
+            self.ed_wt_excluded_dist.setValidator(validator_excluded)
+
 
             # Connect filters
-            self.ed_wt_excluded_dist.editingFinished.connect(self.change_wt_excluded_dist)
-            self.combo_wt_3beam.currentIndexChanged[str].connect(self.change_wt_beam)
-            self.combo_wt_error_velocity.currentIndexChanged[str].connect(self.change_wt_error)
-            self.combo_wt_vert_velocity.currentIndexChanged[str].connect(self.change_wt_vertical)
-            self.combo_wt_snr.currentIndexChanged[str].connect(self.change_wt_snr)
+            self.ed_wt_excluded_dist.editingFinished.connect(
+                self.change_wt_excluded_dist)
+            self.combo_wt_3beam.currentIndexChanged[str].connect(
+                self.change_wt_beam)
+            self.combo_wt_error_velocity.currentIndexChanged[str].connect(
+                self.change_wt_error)
+            self.combo_wt_vert_velocity.currentIndexChanged[str].connect(
+                self.change_wt_vertical)
+            self.combo_wt_snr.currentIndexChanged[str].connect(
+                self.change_wt_snr)
 
             self.wt_initialized = True
 
         # Transect selected for display
         self.transect = self.meas.transects[self.checked_transects_idx[0]]
         self.idx = 0
-        self.update_wt_table(old_discharge=self.meas.discharge, new_discharge=self.meas.discharge)
+        self.update_wt_table(old_discharge=self.meas.discharge,
+                             new_discharge=self.meas.discharge)
 
         # Set beam filter from transect data
         if self.transect.w_vel.beam_filter < 0:
@@ -5281,15 +5323,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.combo_wt_3beam.setCurrentIndex(0)
 
         # Set excluded distance from transect data
-        ex_dist = self.meas.transects[self.checked_transects_idx[0]].w_vel.excluded_dist_m * self.units['L']
+        ex_dist = self.meas.transects[self.checked_transects_idx[0]].\
+                      w_vel.excluded_dist_m * self.units['L']
         self.ed_wt_excluded_dist.setText('{:2.2f}'.format(ex_dist))
 
         # Set error velocity filter from transect data
-        index = self.combo_wt_error_velocity.findText(self.transect.w_vel.d_filter, QtCore.Qt.MatchFixedString)
+        index = self.combo_wt_error_velocity.findText(
+            self.transect.w_vel.d_filter, QtCore.Qt.MatchFixedString)
         self.combo_wt_error_velocity.setCurrentIndex(index)
 
         # Set vertical velocity filter from transect data
-        index = self.combo_wt_vert_velocity.findText(self.transect.w_vel.w_filter, QtCore.Qt.MatchFixedString)
+        index = self.combo_wt_vert_velocity.findText(
+            self.transect.w_vel.w_filter, QtCore.Qt.MatchFixedString)
         self.combo_wt_vert_velocity.setCurrentIndex(index)
 
         # Set smooth filter from transect data
@@ -5304,9 +5349,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.wt_comments_messages()
 
         # Setup list for use by graphics controls
-        self.canvases = [self.wt_shiptrack_canvas, self.wt_top_canvas, self.wt_bottom_canvas]
-        self.figs = [self.wt_shiptrack_fig, self.wt_top_fig, self.wt_bottom_fig]
-        self.toolbars = [self.wt_shiptrack_toolbar, self.wt_top_toolbar, self.wt_bottom_toolbar]
+        self.canvases = [self.wt_shiptrack_canvas, self.wt_top_canvas,
+                         self.wt_bottom_canvas]
+        self.figs = [self.wt_shiptrack_fig, self.wt_top_fig,
+                     self.wt_bottom_fig]
+        self.toolbars = [self.wt_shiptrack_toolbar, self.wt_top_toolbar,
+                         self.wt_bottom_toolbar]
 
     def update_wt_table(self, old_discharge, new_discharge):
         """Updates the bottom track table with new or reprocessed data.
