@@ -3491,6 +3491,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if not self.bt_initialized:
             tbl.cellClicked.connect(self.bt_table_clicked)
 
+            # set qlineedit to numbers only, 2 decimals, and 0 to 100
+            rx = QtCore.QRegExp(
+                "^([0-9]|[1-9][0-9]|100)(\.\d{1,3})$")
+            validator = QtGui.QRegExpValidator(rx, self)
+            self.ed_bt_error_vel_threshold.setValidator(validator)
+            self.ed_bt_vert_vel_threshold.setValidator(validator)
+
             # Initialize checkbox settings for boat reference
             self.cb_bt_bt.setCheckState(QtCore.Qt.Checked)
             self.cb_bt_gga.setCheckState(QtCore.Qt.Unchecked)

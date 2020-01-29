@@ -15,7 +15,7 @@ class Salinity(QtWidgets.QDialog, wSalinity.Ui_salinity):
         super(Salinity, self).__init__(parent)
         self.setupUi(self)
 
-        # set qlineedit to numbers only
-        rx = QtCore.QRegExp("^(?:(?:\d|[1-9]\d)(?:\.[00]0?)?|60(?:\.00?)?)$")
+        # set qlineedit to numbers only, 2 decimals, and 0 to 69.99 ppt
+        rx = QtCore.QRegExp("^([0-9]|[1-6][0-9])(\.\d{1,2})$")
         validator = QtGui.QRegExpValidator(rx, self)
         self.ed_salinity.setValidator(validator)
