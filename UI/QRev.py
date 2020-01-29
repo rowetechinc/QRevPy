@@ -5942,13 +5942,19 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.extrap_plot()
 
         if not self.extrap_initialized:
-            self.table_extrap_qsen.cellClicked.connect(self.sensitivity_change_fit)
-            self.table_extrap_fit.cellClicked.connect(self.fit_list_table_clicked)
+            self.table_extrap_qsen.cellClicked.\
+                connect(self.sensitivity_change_fit)
+            self.table_extrap_fit.cellClicked.\
+                connect(self.fit_list_table_clicked)
             # Connect fit options
-            self.combo_extrap_fit.currentIndexChanged[str].connect(self.change_fit_method)
-            self.combo_extrap_top.currentIndexChanged[str].connect(self.change_top_method)
-            self.combo_extrap_bottom.currentIndexChanged[str].connect(self.change_bottom_method)
-            self.ed_extrap_exponent.editingFinished.connect(self.change_exponent)
+            self.combo_extrap_fit.currentIndexChanged[str].\
+                connect(self.change_fit_method)
+            self.combo_extrap_top.currentIndexChanged[str].\
+                connect(self.change_top_method)
+            self.combo_extrap_bottom.currentIndexChanged[str].\
+                connect(self.change_bottom_method)
+            self.ed_extrap_exponent.editingFinished.\
+                connect(self.change_exponent)
 
             # Connect display settings
             self.cb_extrap_data.stateChanged.connect(self.extrap_plot)
@@ -5959,10 +5965,34 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.cb_extrap_trans_fit.stateChanged.connect(self.extrap_plot)
 
             # Connect data settings
-            self.combo_extrap_data.currentIndexChanged[str].connect(self.change_data)
-            self.ed_extrap_threshold.editingFinished.connect(self.change_threshold)
-            self.ed_extrap_subsection.editingFinished.connect(self.change_subsection)
-            self.combo_extrap_type.currentIndexChanged[str].connect(self.change_data_type)
+            self.combo_extrap_data.currentIndexChanged[str].\
+                connect(self.change_data)
+            self.ed_extrap_threshold.editingFinished.\
+                connect(self.change_threshold)
+            self.ed_extrap_subsection.editingFinished.\
+                connect(self.change_subsection)
+            self.combo_extrap_type.currentIndexChanged[str].\
+                connect(self.change_data_type)
+
+            # set qlineedit to numbers only, 4 decimals, and 0 to 1
+            rx = QtCore.QRegExp(
+                "^([0-9])(\.\d{1,4})$")
+            validator = QtGui.QRegExpValidator(rx, self)
+            self.ed_extrap_exponent.setValidator(validator)
+
+            # set %threshold qlineedit to numbers only, 2 decimals,
+            # and 0 to 100
+            rx_threshold = QtCore.QRegExp(
+                "^([0-9]|[1-9][0-9]|100)(\.\d{1,2})$")
+            validator_threshold = QtGui.QRegExpValidator(rx_threshold, self)
+            self.ed_extrap_threshold.setValidator(validator_threshold)
+
+            # set subsection qlineedit to numbers only, 2 digits : 2 digits
+            rx_subsection = QtCore.QRegExp(
+                "^([0-9]|[1-9][0-9]|100)(\.\d{1,2})*[:]*([0-9]|[1-9][0-9]|100)"
+                "(\.\d{1,2})$")
+            validator_subsection = QtGui.QRegExpValidator(rx_subsection, self)
+            self.ed_extrap_subsection.setValidator(validator_subsection)
 
             # Cancel and apply buttons
             self.pb_extrap_cancel.clicked.connect(self.cancel_extrap)
@@ -6327,6 +6357,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.ed_extrap_threshold.setText('{:3.0f}'.format(self.meas.extrap_fit.threshold))
         self.ed_extrap_subsection.setText('{:.0f}:{:.0f}'.format(self.meas.extrap_fit.subsection[0],
                                                                    self.meas.extrap_fit.subsection[1]))
+
         if self.meas.extrap_fit.sel_fit[-1].data_type.lower() == 'q':
             self.combo_extrap_type.setCurrentIndex(0)
         else:
