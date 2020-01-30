@@ -3500,7 +3500,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if not self.bt_initialized:
             tbl.cellClicked.connect(self.bt_table_clicked)
 
-            # set qlineedit to numbers only, 32 decimals, and 0 to 100
+            # set qlineedit to numbers only, 3 decimals, and 0 to 100
             rx = QtCore.QRegExp(
                 "^([0-9]|[1-9][0-9]|100)(\.\d{1,3})$")
             validator = QtGui.QRegExpValidator(rx, self)
