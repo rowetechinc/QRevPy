@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class SensorData(object):
     """Class stores data for pitch, roll, temperature, salinity, and speed of sound and its source/
 
@@ -41,8 +44,14 @@ class SensorData(object):
         mat_data: mat_struct
            Matlab data structure obtained from sio.loadmat
         """
-        self.data = mat_data.data
-        self.data_orig = mat_data.dataOrig
+        if np.isnan(mat_data.data).all():
+            self.data = np.array([])
+        else:
+            self.data = mat_data.data
+        if np.isnan(mat_data.dataOrig).all():
+            self.data_orig = np.array([])
+        else:
+            self.data_orig = mat_data.dataOrig
         self.source = mat_data.source
         
     def change_data(self, data_in):

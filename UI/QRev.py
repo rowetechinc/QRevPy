@@ -63,7 +63,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         super(QRev, self).__init__(parent)
         self.setupUi(self)
 
-        self.QRev_version = 'QRevPy Beta 20200123'
+        self.QRev_version = 'QRevPy Beta 20200124b'
         self.setWindowTitle(self.QRev_version)
 
         # Setting file for settings to carry over from one session to the next
@@ -2268,7 +2268,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 pitch = getattr(self.meas.transects[transect_id].sensors.pitch_deg,
                                 self.meas.transects[transect_id].sensors.pitch_deg.selected)
                 item = np.nanmean(pitch.data)
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(item)))
+                if np.isnan(item):
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('N/A'))
+                else:
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(item)))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
                 if transect_id in self.meas.qa.compass['pitch_mean_warning_idx']:
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 77, 77))
@@ -2280,7 +2283,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # Pitch standard deviation
                 col += 1
                 item = np.nanstd(pitch.data, ddof=1)
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(item)))
+                if np.isnan(item):
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('N/A'))
+                else:
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(item)))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
                 if transect_id in self.meas.qa.compass['pitch_std_caution_idx']:
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
@@ -2292,7 +2298,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 roll = getattr(self.meas.transects[transect_id].sensors.roll_deg,
                                self.meas.transects[transect_id].sensors.roll_deg.selected)
                 item = np.nanmean(roll.data)
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(item)))
+                if np.isnan(item):
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('N/A'))
+                else:
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(item)))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
                 if transect_id in self.meas.qa.compass['roll_mean_warning_idx']:
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 77, 77))
@@ -2304,7 +2313,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # Roll standard deviation
                 col += 1
                 item = np.nanstd(roll.data, ddof=1)
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(item)))
+                if np.isnan(item):
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('N/A'))
+                else:
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(item)))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
                 if transect_id in self.meas.qa.compass['roll_std_caution_idx']:
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))

@@ -111,10 +111,16 @@ class TransformationMatrix(object):
         if data_in is not None:
             idx = data_in.find('>PS3')
             if idx != -1:
-                temp2 = float(data_in[idx + 5:idx + 138])
-                if temp2 is not None:
-                    self.matrix = temp2
+                temp_str = data_in[idx + 5:idx + 138]
+                temp_str = temp_str.replace('-', ' -')
+                temp_str = temp_str[:temp_str.find('>')]
+                cell_matrix = np.fromstring(temp_str, dtype=np.float64, sep=' ')
+                try:
+                    self.matrix = cell_matrix.reshape(4,4)
                     self.source = 'ADCP'
+                except ValueError:
+                    pass
+
 
     def riverray(self, data_in):
         """Process RiverRay test data for transformation matrix.
