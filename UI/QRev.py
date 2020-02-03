@@ -3657,7 +3657,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 # Bottom track tab
 # ================
     def bt_tab(self, old_discharge=None):
-        """Initialize, setup settings, and display initial data in bottom track tab.
+        """Initialize, setup settings, and display initial data in bottom
+        track tab.
         """
 
         # Setup data table
@@ -3671,7 +3672,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         self.tr('Error Vel \n % Invalid'),
                         self.tr('Vert Vel \n % Invalid'),
                         self.tr('Other \n % Invalid'),
-                        self.tr('Discharge \n Previous \n' + self.units['label_Q']),
+                        self.tr('Discharge \n Previous \n' +
+                                self.units['label_Q']),
                         self.tr('Discharge \n Now \n' + self.units['label_Q']),
                         self.tr('Discharge \n % Change')]
         ncols = len(table_header)
@@ -3687,7 +3689,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
-        selected = self.meas.transects[self.checked_transects_idx[0]].boat_vel.selected
+        selected = self.meas.transects[self.checked_transects_idx[0]].\
+            boat_vel.selected
 
         # Turn signals off
         self.cb_bt_bt.blockSignals(True)
@@ -3720,11 +3723,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.combo_bt_3beam.setCurrentIndex(0)
 
         # Set error velocity filter from transect data
-        index = self.combo_bt_error_velocity.findText(self.transect.boat_vel.bt_vel.d_filter, QtCore.Qt.MatchFixedString)
+        index = self.combo_bt_error_velocity.findText(
+            self.transect.boat_vel.bt_vel.d_filter, QtCore.Qt.MatchFixedString)
         self.combo_bt_error_velocity.setCurrentIndex(index)
 
         # Set vertical velocity filter from transect data
-        index = self.combo_bt_vert_velocity.findText(self.transect.boat_vel.bt_vel.w_filter, QtCore.Qt.MatchFixedString)
+        index = self.combo_bt_vert_velocity.findText(
+            self.transect.boat_vel.bt_vel.w_filter, QtCore.Qt.MatchFixedString)
         self.combo_bt_vert_velocity.setCurrentIndex(index)
 
         # Set smooth filter from transect data
@@ -3751,12 +3756,22 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.bt_comments_messages()
 
         # Setup lists for use by graphics controls
-        self.canvases = [self.bt_shiptrack_canvas, self.bt_top_canvas, self.bt_bottom_canvas]
-        self.figs = [self.bt_shiptrack_fig, self.bt_top_fig, self.bt_bottom_fig]
-        self.toolbars = [self.bt_shiptrack_toolbar, self.bt_top_toolbar, self.bt_bottom_toolbar]
+        self.canvases = [self.bt_shiptrack_canvas, self.bt_top_canvas,
+                         self.bt_bottom_canvas]
+        self.figs = [self.bt_shiptrack_fig, self.bt_top_fig,
+                     self.bt_bottom_fig]
+        self.toolbars = [self.bt_shiptrack_toolbar, self.bt_top_toolbar,
+                         self.bt_bottom_toolbar]
 
         if not self.bt_initialized:
             tbl.cellClicked.connect(self.bt_table_clicked)
+
+            # set qlineedit to numbers only, 3 decimals, and 0 to 100
+            rx = QtCore.QRegExp(
+                "^([0-9]|[1-9][0-9]|100)(\.\d{1,3})$")
+            validator = QtGui.QRegExpValidator(rx, self)
+            self.ed_bt_error_vel_threshold.setValidator(validator)
+            self.ed_bt_vert_vel_threshold.setValidator(validator)
 
             # Initialize checkbox settings for boat reference
             self.cb_bt_bt.setCheckState(QtCore.Qt.Checked)
@@ -3777,14 +3792,20 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.rb_bt_source.toggled.connect(self.bt_radiobutton_control)
 
             # Connect manual entry
-            self.ed_bt_error_vel_threshold.editingFinished.connect(self.change_error_vel_threshold)
-            self.ed_bt_vert_vel_threshold.editingFinished.connect(self.change_vert_vel_threshold)
+            self.ed_bt_error_vel_threshold.editingFinished.connect(
+                self.change_error_vel_threshold)
+            self.ed_bt_vert_vel_threshold.editingFinished.connect(
+                self.change_vert_vel_threshold)
 
             # Connect filters
-            self.combo_bt_3beam.currentIndexChanged[str].connect(self.change_bt_beam)
-            self.combo_bt_error_velocity.activated[str].connect(self.change_bt_error)
-            self.combo_bt_vert_velocity.currentIndexChanged[str].connect(self.change_bt_vertical)
-            self.combo_bt_other.currentIndexChanged[str].connect(self.change_bt_other)
+            self.combo_bt_3beam.currentIndexChanged[str].connect(
+                self.change_bt_beam)
+            self.combo_bt_error_velocity.activated[str].connect(
+                self.change_bt_error)
+            self.combo_bt_vert_velocity.currentIndexChanged[str].connect(
+                self.change_bt_vertical)
+            self.combo_bt_other.currentIndexChanged[str].connect(
+                self.change_bt_other)
 
             self.bt_initialized = True
 
@@ -5714,7 +5735,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 # WT tab
 # ======
     def wt_tab(self, old_discharge=None):
-        """Initialize, setup settings, and display initial data in water track tab.
+        """Initialize, setup settings, and display initial data in water
+        track tab.
         """
 
         # Setup data table
@@ -5729,7 +5751,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         self.tr('Vert Vel \n % Invalid'),
                         self.tr('Other \n % Invalid'),
                         self.tr('SNR \n % Invalid'),
-                        self.tr('Discharge \n Previous ' + self.units['label_Q']),
+                        self.tr('Discharge \n Previous ' +
+                                self.units['label_Q']),
                         self.tr('Discharge \n Now ' + self.units['label_Q']),
                         self.tr('Discharge \n % Change')]
         ncols = len(table_header)
@@ -5773,7 +5796,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.cb_wt_vtg.stateChanged.connect(self.wt_plot_change)
         self.cb_wt_vectors.stateChanged.connect(self.wt_plot_change)
 
-        if self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'SonTek':
+        if self.meas.transects[self.checked_transects_idx[0]].\
+                adcp.manufacturer == 'SonTek':
             self.rb_wt_snr.setEnabled(True)
             self.combo_wt_snr.setEnabled(True)
             self.rb_wt_snr.toggled.connect(self.wt_radiobutton_control)
@@ -5801,15 +5825,37 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.rb_wt_contour.toggled.connect(self.wt_radiobutton_control)
 
             # Connect manual entry
-            self.ed_wt_error_vel_threshold.editingFinished.connect(self.change_wt_error_vel_threshold)
-            self.ed_wt_vert_vel_threshold.editingFinished.connect(self.change_wt_vert_vel_threshold)
+            self.ed_wt_error_vel_threshold.editingFinished.connect(
+                self.change_wt_error_vel_threshold)
+            self.ed_wt_vert_vel_threshold.editingFinished.connect(
+                self.change_wt_vert_vel_threshold)
+
+            # set qlineedit to numbers only, 3 decimals, and 0 to 100
+            rx = QtCore.QRegExp(
+                "^([0-9]|[1-9][0-9]|100)(\.\d{1,3})$")
+            validator = QtGui.QRegExpValidator(rx, self)
+            self.ed_wt_error_vel_threshold.setValidator(validator)
+            self.ed_wt_vert_vel_threshold.setValidator(validator)
+
+            # set validator for Exceluded distance 0 to 999, 3 decimals
+            rx_excluded_distance = \
+                QtCore.QRegExp("^([0-9]|[1-9][0-9]|[1-9][0-9][0-9])(\.\d{1,3})$")
+            validator_excluded = QtGui.QRegExpValidator(rx_excluded_distance,
+                                                        self)
+            self.ed_wt_excluded_dist.setValidator(validator_excluded)
+
 
             # Connect filters
-            self.ed_wt_excluded_dist.editingFinished.connect(self.change_wt_excluded_dist)
-            self.combo_wt_3beam.currentIndexChanged[str].connect(self.change_wt_beam)
-            self.combo_wt_error_velocity.currentIndexChanged[str].connect(self.change_wt_error)
-            self.combo_wt_vert_velocity.currentIndexChanged[str].connect(self.change_wt_vertical)
-            self.combo_wt_snr.currentIndexChanged[str].connect(self.change_wt_snr)
+            self.ed_wt_excluded_dist.editingFinished.connect(
+                self.change_wt_excluded_dist)
+            self.combo_wt_3beam.currentIndexChanged[str].connect(
+                self.change_wt_beam)
+            self.combo_wt_error_velocity.currentIndexChanged[str].connect(
+                self.change_wt_error)
+            self.combo_wt_vert_velocity.currentIndexChanged[str].connect(
+                self.change_wt_vertical)
+            self.combo_wt_snr.currentIndexChanged[str].connect(
+                self.change_wt_snr)
 
             self.wt_initialized = True
 
@@ -5832,10 +5878,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Set excluded distance from transect data
         ex_dist = self.meas.transects[self.checked_transects_idx[0]].w_vel.excluded_dist_m * self.units['L']
+
         self.ed_wt_excluded_dist.setText('{:2.2f}'.format(ex_dist))
 
         # Set error velocity filter from transect data
         index = self.combo_wt_error_velocity.findText(self.transect.w_vel.d_filter, QtCore.Qt.MatchFixedString)
+
         self.combo_wt_error_velocity.setCurrentIndex(index)
 
         # Set vertical velocity filter from transect data
@@ -6062,6 +6110,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
             # Set selected file to bold font
+
             tbl.item(self.transect_row, 0).setFont(self.font_bold)
             tbl.scrollToItem(tbl.item(self.transect_row, 0))
             tbl.resizeColumnsToContents()
@@ -6080,9 +6129,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.table_wt.item(nrow, 0).setFont(self.font_normal)
 
             # Set selected file to bold font
+
             self.table_wt.item(self.transect_row, 0).setFont(self.font_bold)
 
             # Determine transect selected
+
             transect_id = self.checked_transects_idx[self.transect_row]
             self.transect = self.meas.transects[transect_id]
             self.invalid_wt = np.logical_not(self.transect.w_vel.valid_data)
@@ -6154,6 +6205,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Initialize the boat speed figure and assign to the canvas
         self.wt_bottom_fig = WTContour(canvas=self.wt_bottom_canvas)
         # Create the figure with the specified data
+
         self.wt_max_limit = self.wt_bottom_fig.create(transect=self.transect,
                                   units=self.units)
 
@@ -6197,6 +6249,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             valid_data[:, invalid_ens[0]] = False
             # Create the figure with the specified data
             self.wt_top_fig.create(transect=self.transect,
+
                                    units=self.units,
                                    invalid_data=np.logical_not(self.transect.w_vel.valid_data[0, :, :]),
                                    max_limit=self.wt_max_limit)
@@ -6242,6 +6295,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
 
         if column == 0:
+
             self.transect_row = row
             self.wt_plots()
             self.tab_wt_2_data.setFocus()
@@ -6467,6 +6521,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Display each message on a new line
             self.display_wt_messages.moveCursor(QtGui.QTextCursor.Start)
             for message in self.meas.qa.w_vel['messages']:
+
                 if type(message) is str:
                     self.display_wt_messages.textCursor().insertText(message)
                 else:
@@ -6556,6 +6611,26 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.ed_extrap_threshold.editingFinished.connect(self.change_threshold)
             self.ed_extrap_subsection.editingFinished.connect(self.change_subsection)
             self.combo_extrap_type.currentIndexChanged[str].connect(self.change_data_type)
+
+            # set qlineedit to numbers only, 4 decimals, and 0 to 1
+            rx = QtCore.QRegExp(
+                "^([0-9])(\.\d{1,4})$")
+            validator = QtGui.QRegExpValidator(rx, self)
+            self.ed_extrap_exponent.setValidator(validator)
+
+            # set %threshold qlineedit to numbers only, 2 decimals,
+            # and 0 to 100
+            rx_threshold = QtCore.QRegExp(
+                "^([0-9]|[1-9][0-9]|100)(\.\d{1,2})$")
+            validator_threshold = QtGui.QRegExpValidator(rx_threshold, self)
+            self.ed_extrap_threshold.setValidator(validator_threshold)
+
+            # set subsection qlineedit to numbers only, 2 digits : 2 digits
+            rx_subsection = QtCore.QRegExp(
+                "^([0-9]|[1-9][0-9]|100)(\.\d{1,2})*[:]*([0-9]|[1-9][0-9]|100)"
+                "(\.\d{1,2})$")
+            validator_subsection = QtGui.QRegExpValidator(rx_subsection, self)
+            self.ed_extrap_subsection.setValidator(validator_subsection)
 
             # Cancel and apply buttons
             self.pb_extrap_cancel.clicked.connect(self.cancel_extrap)
@@ -6920,6 +6995,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.ed_extrap_threshold.setText('{:3.0f}'.format(self.meas.extrap_fit.threshold))
         self.ed_extrap_subsection.setText('{:.0f}:{:.0f}'.format(self.meas.extrap_fit.subsection[0],
                                                                    self.meas.extrap_fit.subsection[1]))
+
         if self.meas.extrap_fit.sel_fit[-1].data_type.lower() == 'q':
             self.combo_extrap_type.setCurrentIndex(0)
         else:
@@ -8232,7 +8308,23 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             List of transect indices that comprise a single measurement.
         """
 
-        Measurement.selected_transects_changed(self.meas, selected_transects_idx=group)
+        Measurement.selected_transects_changed(self.meas,
+                                               selected_transects_idx=group)
+
+        if self.group_idx > 0:
+
+            # activate main, Summary, and Messages tabs
+            self.tab_all.setCurrentIndex(0)
+            self.tab_summary.setCurrentIndex(0)
+            self.tab_mc.setCurrentIndex(0)
+
+            # set the change status to True for the main window update
+            self.change = True
+
+            # Set Extrap combo boxes back to auto then force an extrap update
+            self.combo_extrap_fit.setCurrentIndex(0)
+            self.combo_extrap_data.setCurrentIndex(0)
+
         self.update_main()
 
     def split_save(self):
