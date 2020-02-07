@@ -245,7 +245,7 @@ class DepthData(object):
         elif filter_type == 'Smooth':
             # R smooth filter
             self.filter_smooth(transect)
-        elif filter_type == 'TRDI':
+        elif filter_type == 'TRDI' and self.depth_source == 'BT':
             # TRDI filter for multiple returns
             self.filter_trdi()
             self.filter_type = 'TRDI'
@@ -489,7 +489,7 @@ class DepthData(object):
         # Determine number of beams
         if len(self.depth_orig_m.shape) > 1:
             n_beams, n_ensembles = self.depth_orig_m.shape[0], self.depth_orig_m.shape[1]
-            depth_raw = self.depth_orig_m
+            depth_raw = np.copy(self.depth_orig_m)
         else:
             n_beams = 1
             n_ensembles = self.depth_orig_m.shape[0]
@@ -740,7 +740,7 @@ class DepthData(object):
         """Filter used by TRDI to filter out multiple reflections that get digitized as depth."""
 
         # Assign raw depth data to local variable
-        depth_raw = copy.deepcopy(self.depth_orig_m)
+        depth_raw = np.copy(self.depth_orig_m)
 
         # Determine number of beams
         n_beams = depth_raw.shape[0]

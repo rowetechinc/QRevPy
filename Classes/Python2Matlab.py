@@ -212,7 +212,7 @@ class Python2Matlab(object):
         cell = np.zeros((1,), dtype=np.object)
         for n, line in enumerate(comments):
             cell[0] = line
-            struct[n] = cell
+            struct[n] = np.copy(cell)
         return struct
 
     @staticmethod

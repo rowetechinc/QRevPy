@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtCore import pyqtSignal, QRegExp
 import numpy as np
+import scipy.io as sio
 import sys
 import threading
 import copy
@@ -206,16 +207,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # If a selection is made begin loading
         if len(select.type) > 0:
-            with self.wait_cursor():
-                # Load and process Sontek data
-                if select.type == 'SonTek':
+
+            # Load and process Sontek data
+            if select.type == 'SonTek':
+                with self.wait_cursor():
                     # Show folder name in GUI header
                     self.setWindowTitle(self.QRev_version + ': ' + select.pathName)
                     # Create measurement object
                     self.meas = Measurement(in_file=select.fullName, source='SonTek', proc_type='QRev')
 
-                # Load and process TRDI data
-                elif select.type == 'TRDI':
+            # Load and process TRDI data
+            elif select.type == 'TRDI':
+                with self.wait_cursor():
                     # Show mmt filename in GUI header
                     self.setWindowTitle(self.QRev_version + ': ' + select.fullName[0])
                     # Create measurement object
@@ -224,14 +227,32 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                             proc_type='QRev',
                                             checked=select.checked)
 
-                # Load QRev data
-                elif select.type == 'QRev':
-                    # Show QRev filename in GUI header
-                    self.setWindowTitle(self.QRev_version + ': ' + select.fullName)
-                    self.meas = Measurement(in_file=select.fullName, source='QRev')
-                else:
-                    print('Cancel')
+            # Load QRev data
+            elif select.type == 'QRev':
+                # Show QRev filename in GUI header
+                self.setWindowTitle(self.QRev_version + ': ' + select.fullName)
+                mat_data = sio.loadmat(select.fullName,
+                            struct_as_record=False,
+                            squeeze_me=True)
 
+                if not self.QRev_version == mat_data['version']:
+                    message = 'QRev has been updated (version ' + self.QRev_version + \
+                              ') since this file was saved (version ' + mat_data['version'] + \
+                              '). You can view the file without reprocessing by pressing No. ' + \
+                              'NOTE: Any changes will reprocess the file using the QRev updates. ' + \
+                              'You can reprocess the file now by pressing Yes.'
+                    response = QtWidgets.QMessageBox.question(self, 'Reprocess', message,
+                                                              QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Yes,
+                                                              QtWidgets.QMessageBox.No)
+                    with self.wait_cursor():
+                        if response == QtWidgets.QMessageBox.No:
+                            self.meas = Measurement(in_file=mat_data, source='QRev', proc_type=None)
+                        else:
+                            self.meas = Measurement(in_file=mat_data, source='QRev', proc_type='QRev')
+            else:
+                print('Cancel')
+
+            with self.wait_cursor():
                 # Identify transects to be used in discharge computation
                 self.checked_transects_idx = Measurement.checked_transects(self.meas)
                 
@@ -265,7 +286,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 Python2Matlab.save_matlab_file(self.meas, save_file.full_Name)
             else:
                 Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, checked=self.checked_transects_idx)
-            self.config_gui()
+            # self.config_gui()
             self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml')
 
             # Save stylesheet in measurement folder
@@ -1001,7 +1022,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             qa_type = getattr(qa, key)
             if qa_type['messages']:
                 for message in qa_type['messages']:
-                    messages.append(message)
+                    if type(message) is str:
+                        if message[:3].isupper():
+                            messages.append([message, 1])
+                        else:
+                            messages.append([message, 2])
+                    else:
+                        messages.append(message)
             self.setIcon(key, qa_type['status'])
 
         # Sort messages with warning at top
@@ -1023,7 +1050,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         for row, message in enumerate(messages):
             # Handle messages from old QRev that did not have integer codes
             if type(message) is str:
-                warn = message[:message.find(':')].isupper()
+                warn = message[:3].isupper()
                 tbl.setItem(row, 1, QtWidgets.QTableWidgetItem(message))
             # Handle newer style messages
             else:
@@ -1889,6 +1916,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.horizontalHeader().setFont(self.font_bold)
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        self.display_systest.clear()
 
         # Add system tests
         if nrows > 0:
@@ -2877,28 +2905,29 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             t_source_entered = t_source_dialog.exec_()
 
             if t_source_entered:
-                # Assign data based on change made by user
-                old_discharge = copy.deepcopy(self.meas.discharge)
-                if t_source_dialog.rb_internal.isChecked():
-                    t_source = 'internal'
-                elif t_source_dialog.rb_user.isChecked():
-                    t_source = 'user'
-                    user_temp = float(t_source_dialog.ed_user_temp.text())
+                with self.wait_cursor():
+                    # Assign data based on change made by user
+                    old_discharge = copy.deepcopy(self.meas.discharge)
+                    if t_source_dialog.rb_internal.isChecked():
+                        t_source = 'internal'
+                    elif t_source_dialog.rb_user.isChecked():
+                        t_source = 'user'
+                        user_temp = float(t_source_dialog.ed_user_temp.text())
 
-                # Apply change to all or only selected transect based on user input
-                if t_source_dialog.rb_all.isChecked():
-                    self.meas.change_sos(parameter='temperatureSrc',
-                                         temperature=user_temp,
-                                         selected=t_source)
-                else:
-                    self.meas.change_sos(transect_idx=self.checked_transects_idx[row],
-                                         parameter='temperatureSrc',
-                                         temperature=user_temp,
-                                         selected=t_source)
+                    # Apply change to all or only selected transect based on user input
+                    if t_source_dialog.rb_all.isChecked():
+                        self.meas.change_sos(parameter='temperatureSrc',
+                                             temperature=user_temp,
+                                             selected=t_source)
+                    else:
+                        self.meas.change_sos(transect_idx=self.checked_transects_idx[row],
+                                             parameter='temperatureSrc',
+                                             temperature=user_temp,
+                                             selected=t_source)
 
-                # Update the tempsal tab
-                self.update_tempsal_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
-                self.change = True
+                    # Update the tempsal tab
+                    self.update_tempsal_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
+                    self.change = True
 
         # Change salinity
         elif column == 3:
@@ -2908,21 +2937,23 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             salinity_entered = salinity_dialog.exec_()
 
             if salinity_entered:
-                # Assign data based on change made by user
-                old_discharge = copy.deepcopy(self.meas.discharge)
-                salinity = float(salinity_dialog.ed_salinity.text())
+                with self.wait_cursor():
+                    # Assign data based on change made by user
+                    old_discharge = copy.deepcopy(self.meas.discharge)
+                    salinity = float(salinity_dialog.ed_salinity.text())
 
-                # Apply change to all or only selected transect based on user input
-                if salinity_dialog.rb_all.isChecked():
-                    self.meas.change_sos(parameter='salinity',
-                                         salinity=salinity)
-                else:
-                    self.meas.change_sos(transect_idx=self.checked_transects_idx[row],
-                                         parameter='salinity',
-                                         salinity=salinity)
-                # Update the tempsal tab
-                self.update_tempsal_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
-                self.change = True
+                    # Apply change to all or only selected transect based on user input
+                    if salinity_dialog.rb_all.isChecked():
+                        self.meas.change_sos(parameter='salinity',
+                                             salinity=salinity)
+                    else:
+                        self.meas.change_sos(transect_idx=self.checked_transects_idx[row],
+                                             parameter='salinity',
+                                             salinity=salinity)
+                    # Update the tempsal tab
+                    self.update_tempsal_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
+                    self.change = True
+
         # Change speed of sound
         elif column == 4:
             user_sos = None
@@ -2938,28 +2969,29 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             sos_source_entered = sos_source_dialog.exec_()
 
             if sos_source_entered:
-                # Assign data based on change made by user
-                old_discharge = copy.deepcopy(self.meas.discharge)
-                if sos_source_dialog.rb_internal.isChecked():
-                    sos_source = 'internal'
-                elif sos_source_dialog.rb_user.isChecked():
-                    sos_source = 'user'
-                    user_sos = float(sos_source_dialog.ed_sos_user.text()) / self.units['V']
+                with self.wait_cursor():
+                    # Assign data based on change made by user
+                    old_discharge = copy.deepcopy(self.meas.discharge)
+                    if sos_source_dialog.rb_internal.isChecked():
+                        sos_source = 'internal'
+                    elif sos_source_dialog.rb_user.isChecked():
+                        sos_source = 'user'
+                        user_sos = float(sos_source_dialog.ed_sos_user.text()) / self.units['V']
 
-                # Apply change to all or only selected transect based on user input
-                if sos_source_dialog.rb_all.isChecked():
-                    self.meas.change_sos(parameter='sosSrc',
-                                         speed=user_sos,
-                                         selected=sos_source)
-                else:
-                    self.meas.change_sos(transect_idx=self.checked_transects_idx[row],
-                                         parameter='sosSrc',
-                                         speed=user_sos,
-                                         selected=sos_source)
+                    # Apply change to all or only selected transect based on user input
+                    if sos_source_dialog.rb_all.isChecked():
+                        self.meas.change_sos(parameter='sosSrc',
+                                             speed=user_sos,
+                                             selected=sos_source)
+                    else:
+                        self.meas.change_sos(transect_idx=self.checked_transects_idx[row],
+                                             parameter='sosSrc',
+                                             speed=user_sos,
+                                             selected=sos_source)
 
-                # Update the tempsal tab
-                self.update_tempsal_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
-                self.change = True
+                    # Update the tempsal tab
+                    self.update_tempsal_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
+                    self.change = True
 
     def tempsal_comments_messages(self):
         """Displays comments and messages associated with temperature, salinity, and speed of sound in Messages tab.
@@ -3196,10 +3228,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 checked2.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(checked2))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                tbl.item(row, col).setCheckState(QtCore.Qt.Unchecked)
                 if self.meas.mb_tests[row].use_2_correct:
-                    tbl.item(row, col).setCheckState(QtCore.Qt.Checked)
-                else:
-                    tbl.item(row, col).setCheckState(QtCore.Qt.Unchecked)
+                    if self.meas.mb_tests[row].selected:
+                        tbl.item(row, col).setCheckState(QtCore.Qt.Checked)
 
                 # Filename
                 col += 1
@@ -6077,16 +6109,19 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 item = '{:3.2f}'.format((num_snr_invalid / num_useable_cells) * 100.)
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
-                if self.meas.qa.w_vel['q_total_warning'][transect_id, 6] or \
-                        self.meas.qa.w_vel['q_max_run_warning'][transect_id, 6]:
+                if self.meas.qa.w_vel['q_total_warning'].shape[1] > 7:
+                    if self.meas.qa.w_vel['q_total_warning'][transect_id, 7] or \
+                            self.meas.qa.w_vel['q_max_run_warning'][transect_id, 7]:
 
-                    tbl.item(row, col).setBackground(QtGui.QColor(255, 77, 77))
+                        tbl.item(row, col).setBackground(QtGui.QColor(255, 77, 77))
 
-                elif self.meas.qa.w_vel['q_total_caution'][transect_id, 6] or \
-                        self.meas.qa.w_vel['q_max_run_caution'][transect_id, 6]:
+                    elif self.meas.qa.w_vel['q_total_caution'][transect_id, 7] or \
+                            self.meas.qa.w_vel['q_max_run_caution'][transect_id, 7]:
 
-                    tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
+                        tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
 
+                    else:
+                        tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
                 else:
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
 
@@ -6588,6 +6623,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         self.extrap_set_data()
         self.extrap_plot()
+
+        self.extrap_comments_messages()
 
         if not self.extrap_initialized:
             self.table_extrap_qsen.cellClicked.connect(self.sensitivity_change_fit)
@@ -8321,9 +8358,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # set the change status to True for the main window update
             self.change = True
 
-            # Set Extrap combo boxes back to auto then force an extrap update
-            self.combo_extrap_fit.setCurrentIndex(0)
-            self.combo_extrap_data.setCurrentIndex(0)
+            # # Set Extrap combo boxes back to auto then force an extrap update
+            # self.combo_extrap_fit.setCurrentIndex(0)
+            # self.combo_extrap_data.setCurrentIndex(0)
 
         self.update_main()
 

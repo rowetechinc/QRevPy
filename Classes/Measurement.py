@@ -14,7 +14,7 @@ from Classes.QAData import QAData
 from MiscLibs.common_functions import cart2pol, pol2cart, rad2azdeg, nans, azdeg2rad
 from Classes.BoatStructure import BoatStructure
 import xml.etree.ElementTree as ET
-from xml.dom.minidom import parse, parseString
+from xml.dom.minidom import parseString
 import datetime
 
 class Measurement(object):
@@ -93,7 +93,12 @@ class Measurement(object):
 
         # Load data from selected source
         if source == 'QRev':
-            self.load_qrev_mat(fullname=in_file)
+            self.load_qrev_mat(mat_data=in_file)
+            if proc_type == 'QRev':
+                # Apply QRev default settings
+                settings = self.qrev_default_settings()
+                settings['Processing'] = 'QRev'
+                self.apply_settings(settings)
 
         else:
             if source == 'TRDI':
@@ -530,7 +535,7 @@ class Measurement(object):
                                                                       file),
                                                     test_type='Stationary')
 
-    def load_qrev_mat(self, fullname):
+    def load_qrev_mat(self, mat_data):
         """Loads and coordinates the mapping of existing QRev Matlab files
         into Python instance variables.
 
@@ -541,9 +546,9 @@ class Measurement(object):
         """
 
         # Read Matlab file and extract meas_struct
-        mat_data = sio.loadmat(fullname,
-                               struct_as_record=False,
-                               squeeze_me=True)
+        # mat_data = sio.loadmat(fullname,
+        #                        struct_as_record=False,
+        #                        squeeze_me=True)
 
         meas_struct = mat_data['meas_struct']
 
@@ -843,7 +848,7 @@ class Measurement(object):
                 break
         return external
 
-    def apply_settings(self, settings):
+    def apply_settings(self, settings, force_abba=True):
         """Applies reference, filter, and interpolation settings.
         
         Parameters
@@ -973,6 +978,15 @@ class Measurement(object):
             wt_kwargs['snr'] = settings['WTsnrFilter']
             wt_kwargs['wt_depth'] = settings['WTwtDepthFilter']
             wt_kwargs['excluded'] = settings['WTExcludedDistance']
+
+
+            # Data loaded from old QRev.mat files will be set to use this new interpolation method. When reprocessing
+            # any data the interpolation method should be 'abba'
+            if force_abba:
+                transect.w_vel.interpolate_cells = 'abba'
+                transect.w_vel.interpolate_ens = 'abba'
+                settings['WTEnsInterpolation'] = 'abba'
+                settings['WTCellInterpolation'] = 'abba'
 
             transect.w_vel.apply_filter(transect=transect, **wt_kwargs)
 
@@ -1313,13 +1327,13 @@ class Measurement(object):
         # interpolations because the TRDI approach for power/power
         # using the power curve and exponent to estimate invalid cells.
 
-        if (self.extrap_fit is None) or (self.extrap_fit.fit_method == 'Automatic'):
-            self.extrap_fit = ComputeExtrap()
-            self.extrap_fit.populate_data(transects=self.transects, compute_sensitivity=False)
-            top = self.extrap_fit.sel_fit[-1].top_method
-            bot = self.extrap_fit.sel_fit[-1].bot_method
-            exp = self.extrap_fit.sel_fit[-1].exponent
-            self.change_extrapolation(self.extrap_fit.fit_method, top=top, bot=bot, exp=exp)
+        # if (self.extrap_fit is None) or (self.extrap_fit.fit_method == 'Automatic'):
+        self.extrap_fit = ComputeExtrap()
+        self.extrap_fit.populate_data(transects=self.transects, compute_sensitivity=False)
+        top = self.extrap_fit.sel_fit[-1].top_method
+        bot = self.extrap_fit.sel_fit[-1].bot_method
+        exp = self.extrap_fit.sel_fit[-1].exponent
+        self.change_extrapolation(self.extrap_fit.fit_method, top=top, bot=bot, exp=exp)
 
         self.extrap_fit.q_sensitivity = ExtrapQSensitivity()
         self.extrap_fit.q_sensitivity.populate_data(transects=self.transects,
@@ -1833,7 +1847,7 @@ class Measurement(object):
             if len(selected_idx) >= 1:
                 temp = self.mb_tests[selected_idx[0]].type
             else:
-                temp = self.mb_tests[selected_idx[-1]].type
+                temp = self.mb_tests[-1].type
             ET.SubElement(qa, 'MovingBedTestType', type='char').text = str(temp)
 
             # MovingBedTestResult Node
@@ -2000,7 +2014,13 @@ class Measurement(object):
             qa_type = getattr(self.qa, key)
             if qa_type['messages']:
                 for message in qa_type['messages']:
-                    messages.append(message)
+                    if type(message) is str:
+                        if message[:3].isupper():
+                            messages.append([message, 1])
+                        else:
+                            messages.append([message, 2])
+                    else:
+                        messages.append(message)
 
         # Sort messages with warning at top
         messages.sort(key=lambda x: x[1])

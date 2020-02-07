@@ -683,7 +683,7 @@ class BoatData(object):
         self.v_mps = self.v_mps * ratio
 
         # Apply filters to corrected velocities
-        self.apply_filter(transect=transect)
+        # self.apply_filter(transect=transect)
 
     def interpolate_hold_9(self):
         """This function applies Sontek's approach to maintaining the last valid boat speed for up to 9 invalid samples.

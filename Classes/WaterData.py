@@ -101,9 +101,9 @@ class WaterData(object):
         wt_depth_filter: np.array(bool)
             WT in ensembles with invalid depths are marked invalid.
         interpolate_ens: str
-            Type of interpolation: "None", "TRDI", "Linear".
+            Type of interpolation: "None", "TRDI", "Linear", 'abba'.
         interpolate_cells: str
-            Type of cell interpolation: "None", "TRDI", "Linear"
+            Type of cell interpolation: "None", "TRDI", "Linear", 'abba'
         coord_sys: str
             Defines the velocity coordinate system "Beam", "Inst", "Ship", "Earth"
         nav_ref: str
@@ -860,7 +860,7 @@ class WaterData(object):
         self.v_earth_no_ref_mps = self.v_earth_no_ref_mps * ratio
 
         # Apply filters to new water velocities
-        self.apply_filter(transect)   
+        # self.apply_filter(transect)
         
     def adjust_side_lobe(self, transect):
         """Adjust the side lobe cutoff for vertical beam and interpolated depths.
@@ -997,33 +997,44 @@ class WaterData(object):
 
         # Check for presence of 3-beam solutions
         if len(rows_3b) > 0:
+            interpolated_data = self.compute_abba_interpolation(wt_data=temp,
+                                                                valid=temp.valid_data[5, :, :],
+                                                                transect=transect)
+            # # Find cells with invalid data
+            # valid_cells = np.equal(self.valid_data[0, :, :].astype(int), self.valid_data[6, :, :].astype(int)).astype(
+            #     bool)
+            # boat_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
+            # boat_valid = boat_selected.valid_data[0]
+            #
+            # if not np.all(valid_cells) and np.nansum(boat_valid) > 1:
+            #     # Data needed for interpolation
+            #     distance_along_shiptrack = transect.boat_vel.compute_boat_track(transect)['distance_m']
+            #     depth_selected = getattr(transect.depths, transect.depths.selected)
+            #
+            #     # Interpolate values for cells with 3-beam solutions from neighboring data
+            #     interpolated_data = abba_idw_interpolation(data_list=[temp.u_mps, temp.v_mps],
+            #                                                valid_data=temp.valid_data[5, :, :],
+            #                                                cells_above_sl=temp.cells_above_sl,
+            #                                                y_centers=depth_selected.depth_cell_depth_m,
+            #                                                y_cell_size=depth_selected.depth_cell_size_m,
+            #                                                y_depth=depth_selected.depth_processed_m,
+            #                                                x_shiptrack=distance_along_shiptrack,
+            #                                                normalize=True)
+            if interpolated_data is not None:
+                # Compute interpolated to measured ratios and apply filter criteria
+                for n in range(len(interpolated_data[0])):
+                    u_ratio = (temp.u_mps[interpolated_data[0][n][0]] / interpolated_data[0][n][1]) - 1
+                    v_ratio = (temp.v_mps[interpolated_data[1][n][0]] / interpolated_data[1][n][1]) - 1
+                    if np.abs(u_ratio) < 0.5 and np.abs(v_ratio) < 0.5:
+                        valid_bool[interpolated_data[0][n][0]] = True
+                    else:
+                        valid_bool[interpolated_data[0][n][0]] = False
+                    # n += 1
 
-            # Data needed for interpolation
-            distance_along_shiptrack = transect.boat_vel.compute_boat_track(transect)['distance_m']
-            depth_selected = getattr(transect.depths, transect.depths.selected)
-
-            # Interpolate values for cells with 3-beam solutions from neighboring data
-            interpolated_data = abba_idw_interpolation(data_list=[temp.u_mps, temp.v_mps],
-                                                       valid_data=temp.valid_data[5, :, :],
-                                                       cells_above_sl=temp.cells_above_sl,
-                                                       y_centers=depth_selected.depth_cell_depth_m,
-                                                       y_cell_size=depth_selected.depth_cell_size_m,
-                                                       y_depth=depth_selected.depth_processed_m,
-                                                       x_shiptrack=distance_along_shiptrack,
-                                                       normalize=True)
-
-            # Compute interpolated to measured ratios and apply filter criteria
-            for n in range(len(interpolated_data[0])):
-                u_ratio = (temp.u_mps[interpolated_data[0][n][0]] / interpolated_data[0][n][1]) - 1
-                v_ratio = (temp.v_mps[interpolated_data[1][n][0]] / interpolated_data[1][n][1]) - 1
-                if np.abs(u_ratio) < 0.5 and np.abs(v_ratio) < 0.5:
-                    valid_bool[interpolated_data[0][n][0]] = True
-                else:
-                    valid_bool[interpolated_data[0][n][0]] = False
-                # n += 1
-
-            # Update object with filter results
-            self.valid_data[5, :, :] = valid_bool
+                # Update object with filter results
+                self.valid_data[5, :, :] = valid_bool
+            else:
+                self.valid_data[5, :, :] = temp.valid_data[5, :, :]
         else:
             self.valid_data[5, :, :] = temp.valid_data[5, :, :]
 
@@ -1390,8 +1401,47 @@ class WaterData(object):
         self.u_processed_mps[np.logical_not(valid)] = np.nan
         self.v_processed_mps[np.logical_not(valid)] = np.nan
 
+        interpolated_data = self.compute_abba_interpolation(wt_data=self,valid=valid, transect=transect)
+        # # Find cells with invalid data
+        # valid_cells = np.equal(self.valid_data[0, :, :].astype(int), self.valid_data[6, :, :].astype(int)).astype(bool)
+        # boat_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
+        # boat_valid = boat_selected.valid_data[0]
+        #
+        # if not np.all(valid_cells) and np.nansum(boat_valid) > 1:
+        #     # Compute distance along shiptrack to be used in interpolation
+        #     distance_along_shiptrack = transect.boat_vel.compute_boat_track(transect)['distance_m']
+        #
+        #     # Where there is invalid boat speed at beginning or end of transect mark the distance nan to avoid
+        #     # interpolating velocities that won't be used for discharge
+        #
+        #     distance_along_shiptrack[0:np.argmax(boat_valid==True)] = np.nan
+        #     end_nan = np.argmax(np.flip(boat_valid) == True)
+        #     if end_nan > 0:
+        #         distance_along_shiptrack[-1*end_nan:] = np. nan
+        #     if type(distance_along_shiptrack) is np.ndarray:
+        #         depth_selected = getattr(transect.depths, transect.depths.selected)
+        #
+        #         # Interpolate values for  invalid cells with from neighboring data
+        #         interpolated_data = abba_idw_interpolation(data_list=[self.u_processed_mps, self.v_processed_mps],
+        #                                                    valid_data=valid,
+        #                                                    cells_above_sl=self.valid_data[6, :, :],
+        #                                                    y_centers=depth_selected.depth_cell_depth_m,
+        #                                                    y_cell_size=depth_selected.depth_cell_size_m,
+        #                                                    y_depth=depth_selected.depth_processed_m,
+        #                                                    x_shiptrack=distance_along_shiptrack,
+        #                                                    normalize=True)
+        if interpolated_data is not None:
+            # Incorporate interpolated values in processed data
+            for n in range(len(interpolated_data[0])):
+                self.u_processed_mps[interpolated_data[0][n][0]] = \
+                    interpolated_data[0][n][1]
+                self.v_processed_mps[interpolated_data[1][n][0]] = \
+                    interpolated_data[1][n][1]
+
+    @staticmethod
+    def compute_abba_interpolation(wt_data, valid, transect):
         # Find cells with invalid data
-        valid_cells = np.equal(self.valid_data[0, :, :].astype(int), self.valid_data[6, :, :].astype(int)).astype(bool)
+        valid_cells = np.equal(wt_data.valid_data[0, :, :].astype(int), wt_data.valid_data[6, :, :].astype(int)).astype(bool)
         boat_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
         boat_valid = boat_selected.valid_data[0]
 
@@ -1402,30 +1452,25 @@ class WaterData(object):
             # Where there is invalid boat speed at beginning or end of transect mark the distance nan to avoid
             # interpolating velocities that won't be used for discharge
 
-            distance_along_shiptrack[0:np.argmax(boat_valid==True)] = np.nan
+            distance_along_shiptrack[0:np.argmax(boat_valid == True)] = np.nan
             end_nan = np.argmax(np.flip(boat_valid) == True)
             if end_nan > 0:
-                distance_along_shiptrack[-1*end_nan:] = np. nan
+                distance_along_shiptrack[-1 * end_nan:] = np.nan
             if type(distance_along_shiptrack) is np.ndarray:
                 depth_selected = getattr(transect.depths, transect.depths.selected)
 
                 # Interpolate values for  invalid cells with from neighboring data
-                interpolated_data = abba_idw_interpolation(data_list=[self.u_processed_mps, self.v_processed_mps],
+                interpolated_data = abba_idw_interpolation(data_list=[wt_data.u_processed_mps, wt_data.v_processed_mps],
                                                            valid_data=valid,
-                                                           cells_above_sl=self.valid_data[6, :, :],
+                                                           cells_above_sl=wt_data.valid_data[6, :, :],
                                                            y_centers=depth_selected.depth_cell_depth_m,
                                                            y_cell_size=depth_selected.depth_cell_size_m,
                                                            y_depth=depth_selected.depth_processed_m,
                                                            x_shiptrack=distance_along_shiptrack,
                                                            normalize=True)
-
-                # Incorporate interpolated values in processed data
-                for n in range(len(interpolated_data[0])):
-                    self.u_processed_mps[interpolated_data[0][n][0]] = \
-                        interpolated_data[0][n][1]
-                    self.v_processed_mps[interpolated_data[1][n][0]] = \
-                        interpolated_data[1][n][1]
-
+            return interpolated_data
+        else:
+            return None
     def interpolate_ens_next(self):
         """Applies data from the next valid ensemble for ensembles with invalid water velocities."""
 
