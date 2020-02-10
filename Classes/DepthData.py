@@ -128,7 +128,7 @@ class DepthData(object):
         self.depth_cell_depth_m = cell_depth_in
 
         # Remove all filters to initialize data
-        self.apply_filter('dummy', filter_type='None')
+        self.apply_filter('dummy', filter_type='Off')
 
     def populate_from_qrev_mat(self, mat_data):
         """Populates the object using data from previously saved QRev Matlab file.
@@ -235,11 +235,11 @@ class DepthData(object):
             Type of filter to apply (None, Smooth, TRDI).
         """
 
-        if filter_type is None:
-            self.filter_type = filter_type
+        # if filter_type is not None:
+        #     self.filter_type = filter_type
 
         # Compute selected filter
-        if filter_type == 'None':
+        if filter_type == 'Off' or filter_type is None:
             # No filter
             self.filter_none()
         elif filter_type == 'Smooth':
@@ -752,7 +752,7 @@ class DepthData(object):
         self.filter_type = 'TRDI'
 
         for n in range(n_beams):
-            depth_ratio = depth_raw / depth_raw[n, :]
+            depth_ratio =  depth_raw[n, :] / depth_raw
             exceeded = depth_ratio > 1.75
             exceeded_ens = np.nansum(exceeded, 0)
             self.valid_beams[n, exceeded_ens > 0] = False

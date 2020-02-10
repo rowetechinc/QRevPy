@@ -5157,7 +5157,7 @@
                  </font>
                 </property>
                 <property name="title">
-                 <string>Previous Fit Settings</string>
+                 <string>Fit Settings When Tab Opened</string>
                 </property>
                 <layout class="QVBoxLayout" name="verticalLayout_61">
                  <item>
@@ -5279,7 +5279,7 @@
                  <item>
                   <widget class="QPushButton" name="pb_extrap_cancel">
                    <property name="text">
-                    <string>Reset to Previous</string>
+                    <string>Reset to These Settings</string>
                    </property>
                   </widget>
                  </item>

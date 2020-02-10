@@ -337,6 +337,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.update_toolbar_trans_select()
 
                 # Update display
+                self.transect_row = 0
+                self.config_gui()
                 self.change = True
                 self.tab_manager()
 
@@ -547,16 +549,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # If graphics have been created, update them
             else:
                 if hasattr(self, 'main_extrap_canvas'):
-                    self.main_extrap_fig.clear()
+                    self.main_extrap_fig.fig.clear()
                     self.main_extrap_canvas.draw()
                 if hasattr(self, 'main_wt_contour_canvas'):
-                    self.main_wt_contour_fig.clear()
+                    self.main_wt_contour_fig.fig.clear()
                     self.main_wt_contour_canvas.draw()
                 if hasattr(self, 'main_discharge_canvas'):
-                    self.main_discharge_fig.clear()
+                    self.main_discharge_fig.fig.clear()
                     self.main_discharge_canvas.draw()
                 if hasattr(self, 'main_shiptrack_canvas'):
-                    self.main_shiptrack_fig.clear()
+                    self.main_shiptrack_fig.fig.clear()
                     self.main_shiptrack_canvas.draw()
 
             # Setup list for use by graphics controls
@@ -3355,7 +3357,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         tbl = self.table_moving_bed
         reprocess_measurement = True
-
+        tbl.blockSignals(True)
         # User valid
         if column == 0:
             if tbl.item(row, 0).checkState()== QtCore.Qt.Checked:
@@ -3465,6 +3467,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                                                           'more stationary test.',
                                                                           QtWidgets.QMessageBox.Ok,
                                                                           QtWidgets.QMessageBox.Ok)
+                else:
+                    user_warning = QtWidgets.QMessageBox.question(self, 'Moving-Bed Test Not Selected',
+                                                                  'This moving-bed test is not being used. '
+                                                                  'Only those tests with Bold file names can be used.',
+                                                                  QtWidgets.QMessageBox.Ok,
+                                                                  QtWidgets.QMessageBox.Ok)
 
             else:
                 # No moving-bed, so no moving-bed correction is applied
@@ -3491,6 +3499,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.update_mb_table()
         # self.mb_plots(idx=0)
         self.mb_comments_messages()
+        tbl.blockSignals(False)
 
     def mb_plots(self, idx=0):
         """Creates graphics specific to the type of moving-bed test.
