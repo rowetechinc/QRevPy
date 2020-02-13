@@ -549,7 +549,7 @@ class Python2Matlab(object):
         return py_2_mat_dict
 
     @staticmethod
-    def save_matlab_file(meas, file_name, checked=None):
+    def save_matlab_file(meas, file_name, version, checked=None):
         """Saves the measurement class and all data into a Matlab file using the variable names and structure
         from the QRev Matlab version.
 
@@ -565,13 +565,13 @@ class Python2Matlab(object):
             checked = list(range(len(meas.transects)))
 
         # Convert Python objects to Matlab structure
-        mat_struct = {'meas_struct': Python2Matlab(meas, checked).matlab_dict, 'version': 'QRevPy - 0'}
+        mat_struct = {'meas_struct': Python2Matlab(meas, checked).matlab_dict, 'version': version}
         sio.savemat(file_name=file_name,
                     mdict=mat_struct,
                     appendmat=True,
                     format='5',
                     long_field_names=True,
-                    do_compression=False,
+                    do_compression=True,
                     oned_as='row')
 
     @staticmethod

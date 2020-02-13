@@ -12,6 +12,7 @@ import time
 import os
 import shutil
 import simplekml
+import webbrowser
 
 from MiscLibs.common_functions import units_conversion, convert_temperature
 
@@ -64,7 +65,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         super(QRev, self).__init__(parent)
         self.setupUi(self)
 
-        self.QRev_version = 'QRevPy Beta 20200207'
+        self.QRev_version = 'QRevPy 4.00'
         self.setWindowTitle(self.QRev_version)
 
         # Setting file for settings to carry over from one session to the next
@@ -85,8 +86,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Save all transects by default
         self.save_all = True
 
-        # Do not save a stylesheet with each measurement by default
-        self.save_stylesheet = False
+        # Stylesheet setting
+        try:
+            ss = self.sticky_settings.get('StyleSheet')
+            self.save_stylesheet = ss
+        except KeyError:
+            self.sticky_settings.new('StyleSheet', False)
+            self.save_stylesheet = False
 
         # Set initial change switch to false
         self.change = False
@@ -109,6 +115,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.actionZoom.triggered.connect(self.zoom)
         self.actionPan.triggered.connect(self.pan)
         self.actionGoogle_Earth.triggered.connect(self.plot_google_earth)
+        self.actionHelp.triggered.connect(self.help)
 
         self.figs = []
         self.canvases = []
@@ -283,9 +290,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if len(save_file.full_Name) > 0:
             # Save data in Matlab format
             if self.save_all:
-                Python2Matlab.save_matlab_file(self.meas, save_file.full_Name)
+                Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, self.QRev_version)
             else:
-                Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, checked=self.checked_transects_idx)
+                Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, self.QRev_version,
+                                               checked=self.checked_transects_idx)
             # self.config_gui()
             self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml')
 
@@ -477,9 +485,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # Stylesheet option
                 if options.cb_stylesheet.isChecked():
                     self.save_stylesheet = True
+                    self.sticky_settings.set('StyleSheet', True)
                 else:
                     self.save_stylesheet = False
-
+                    self.stick_settings.set('StyleSheet', False)
                 # Update tabs
                 self.tab_manager()
 
@@ -500,6 +509,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                  datetime.today().strftime('%Y%m%d_%H%M%S_QRev.kml'))
         kml.save(fullname)
         os.startfile(fullname)
+
+    def help(self):
+
+        help_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Help')
+        help_file = os.path.join(help_file, 'QRev_Help.pdf')
+        webbrowser.open('file:///' + help_file, new=2, autoraise=True)
 
 # Main tab
 # ========
@@ -1448,6 +1463,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
 
         # Initialize and connect the station name and number fields
+        font = self.label_site_name.font()
+        font.setPointSize(13)
+        self.label_site_name.setFont(font)
+        self.label_site_number.setFont(font)
         self.ed_site_name.setText(self.meas.station_name)
         if self.meas.qa.user['sta_name']:
             self.label_site_name.setStyleSheet('background: #ffcc00')
@@ -1544,7 +1563,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.setItem(3, 0, QtWidgets.QTableWidgetItem(self.tr('Independent Temperature (C): ')))
             tbl.item(3, 0).setFlags(QtCore.Qt.ItemIsEnabled)
             tbl.item(3, 0).setFont(self.font_bold)
-            if type(self.meas.ext_temp_chk['user']) != float:
+            if type(self.meas.ext_temp_chk['user']) != float or np.isnan(self.meas.ext_temp_chk['user']):
                 tbl.setItem(3, 1, QtWidgets.QTableWidgetItem(self.tr('N/A')))
             else:
                 tbl.setItem(3, 1, QtWidgets.QTableWidgetItem('{:4.1f}'.format(self.meas.ext_temp_chk['user'])))
@@ -1554,7 +1573,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.setItem(3, 2, QtWidgets.QTableWidgetItem(self.tr('ADCP Temperature (C): ')))
             tbl.item(3, 2).setFlags(QtCore.Qt.ItemIsEnabled)
             tbl.item(3, 2).setFont(self.font_bold)
-            if type(self.meas.ext_temp_chk['adcp']) != float:
+            if type(self.meas.ext_temp_chk['adcp']) != float or np.isnan(self.meas.ext_temp_chk['adcp']):
                 avg_temp = Sensors.avg_temperature(self.meas.transects)
                 tbl.setItem(3, 3, QtWidgets.QTableWidgetItem('{:4.1f}'.format(avg_temp)))
             else:
@@ -1602,6 +1621,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.label_site_name.setStyleSheet('background: white')
         self.meas.qa.user_qa(self.meas)
         self.messages_tab()
+        self.main_premeasurement_table()
 
     def update_site_number(self):
         """Sets the station number to the number entered by the user.
@@ -1611,6 +1631,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.label_site_number.setStyleSheet('background: white')
         self.meas.qa.user_qa(self.meas)
         self.messages_tab()
+        self.main_premeasurement_table()
 
     def main_settings_table(self):
         """Create and populate settings table.

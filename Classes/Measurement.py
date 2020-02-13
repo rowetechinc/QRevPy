@@ -243,6 +243,9 @@ class Measurement(object):
                 target = 'gga_vel'
             elif reference == 'VTG':
                 target = 'vtg_vel'
+            else:
+                target = 'bt_vel'
+
             for transect in self.transects:
                 if getattr(transect.boat_vel, target) is None:
                     reference = 'BT'
@@ -561,6 +564,16 @@ class Measurement(object):
         self.processing = meas_struct.processing
         if type(meas_struct.comments) == np.ndarray:
             self.comments = meas_struct.comments.tolist()
+            # Needed to handle comments with blank lines
+            for n, comment in enumerate(self.comments):
+                if type(comment) is not str:
+                    new_comment = ''
+                    for item in comment:
+                        if len(item.strip()) > 0:
+                            new_comment = new_comment + item
+                        else:
+                            new_comment = new_comment + '\n'
+                    self.comments[n] = new_comment
         else:
             self.comments = [meas_struct.comments]
         # Check to make sure all comments are str
@@ -1181,6 +1194,8 @@ class Measurement(object):
         excluded_dist = np.nanmin([x.excluded_dist_m for x in temp])
         if excluded_dist < 0.158 and self.transects[0].adcp.model == 'M9':
             settings['WTExcludedDistance'] = 0.16
+        elif excluded_dist < 0.248 and self.transects[0].adcp.model == 'RioPro':
+            settings['WTExcludedDistance'] = 0.25
         else:
             settings['WTExcludedDistance'] = excluded_dist
 

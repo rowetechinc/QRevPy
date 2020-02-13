@@ -269,13 +269,16 @@ class QAData(object):
             if array_in.size == 0:
                     list_out = []
             # Single message with integer codes at end
-            elif array_in.size == 3 and type(array_in[-1]) is int:
-                temp = array_in.tolist()
-                if len(temp) > 0:
-                    internal_list = []
-                    for item in temp:
-                        internal_list.append(item)
-                    list_out = [internal_list]
+            elif array_in.size == 3:
+                if type(array_in[1]) is int or len(array_in[1].strip()) == 1:
+                    temp = array_in.tolist()
+                    if len(temp) > 0:
+                        internal_list = []
+                        for item in temp:
+                            internal_list.append(item)
+                        list_out = [internal_list]
+                else:
+                    list_out = array_in.tolist()
             # Either multiple messages with or without integer codes
             else:
                 list_out = array_in.tolist()
