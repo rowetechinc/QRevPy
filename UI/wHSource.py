@@ -2,11 +2,13 @@
 
 # Form implementation generated from reading ui file 'wHSource.ui'
 #
-# Created by: PyQt5 UI code generator 5.10.1
+# Created by: PyQt5 UI code generator 5.13.1
 #
 # WARNING! All changes made in this file will be lost!
 
+
 from PyQt5 import QtCore, QtGui, QtWidgets
+
 
 class Ui_h_source(object):
     def setupUi(self, h_source):
@@ -87,7 +89,7 @@ class Ui_h_source(object):
 
     def retranslateUi(self, h_source):
         _translate = QtCore.QCoreApplication.translate
-        h_source.setWindowTitle(_translate("h_source", "Heading Offset"))
+        h_source.setWindowTitle(_translate("h_source", "Heading Source"))
         self.gb_source.setTitle(_translate("h_source", "Heading Source"))
         self.rb_internal.setText(_translate("h_source", "Internal"))
         self.rb_external.setText(_translate("h_source", "External"))
@@ -104,4 +106,3 @@ if __name__ == "__main__":
     ui.setupUi(h_source)
     h_source.show()
     sys.exit(app.exec_())
-

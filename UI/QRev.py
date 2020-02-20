@@ -13,6 +13,7 @@ import os
 import shutil
 import simplekml
 import webbrowser
+import getpass
 
 from MiscLibs.common_functions import units_conversion, convert_temperature
 
@@ -65,8 +66,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         super(QRev, self).__init__(parent)
         self.setupUi(self)
 
-        self.QRev_version = 'QRevPy 4.00'
+        self.QRev_version = 'QRevPy 4.02'
         self.setWindowTitle(self.QRev_version)
+
+        self.toolBar.toggleViewAction().setEnabled(False)
 
         # Setting file for settings to carry over from one session to the next
         # (examples: Folder, UnitsID)
@@ -288,6 +291,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         save_file = SaveMeasurementDialog(parent=self)
 
         if len(save_file.full_Name) > 0:
+            # Add comment when saving file
+            time_stamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            user_name = getpass.getuser()
+            discharge = Measurement.mean_discharges(self.meas)
+            text = '[' + time_stamp + ', ' + user_name + ']: File Saved Q = '\
+                   + '{:8.2f}'.format(discharge['total_mean'] * self.units['Q']) + ' ' + self.units['label_Q'][1:-1]
+            self.meas.comments.append(text)
+            self.comments_tab()
+
             # Save data in Matlab format
             if self.save_all:
                 Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, self.QRev_version)
@@ -2093,33 +2105,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.verticalHeader().hide()
         tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
 
-        # Update table, graphs, messages, and comments
-        for transect_idx in self.checked_transects_idx:
-            if self.meas.transects[transect_idx].sensors.heading_deg.internal.mag_error is not None:
-                self.cb_mag_field.setEnabled(True)
-                self.cb_mag_field.setChecked(True)
-                break
-        for transect_idx in self.checked_transects_idx:
-            if self.meas.transects[transect_idx].sensors.heading_deg.external is not None:
-                self.cb_ext_compass.setEnabled(True)
-                break
-        if old_discharge is None:
-            old_discharge=self.meas.discharge
-
-        self.update_compass_tab(tbl=tbl, old_discharge=old_discharge,
-                                new_discharge=self.meas.discharge,
-                                initial=self.transect_row)
-
-        # Setup list for use by graphics controls
-        self.canvases = [self.heading_canvas, self.pr_canvas]
-        self.figs = [self.heading_fig, self.pr_fig]
-        self.toolbars = [self.heading_toolbar, self.pr_toolbar]
-
-
-
-        # Initialize the calibration/evaluation tab
-        self.compass_cal_eval(idx_eval=0)
-
         if not self.compass_pr_initialized:
             # Connect table
             tbl.cellClicked.connect(self.compass_table_clicked)
@@ -2132,6 +2117,40 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.cb_pitch.stateChanged.connect(self.pr_plot)
             self.cb_roll.stateChanged.connect(self.pr_plot)
             self.compass_pr_initialized = True
+
+        self.cb_mag_field.blockSignals(True)
+        self.cb_mag_field.setEnabled(False)
+        self.cb_mag_field.setChecked(False)
+        for transect_idx in self.checked_transects_idx:
+            if self.meas.transects[transect_idx].sensors.heading_deg.internal.mag_error is not None:
+                self.cb_mag_field.setEnabled(True)
+                self.cb_mag_field.setChecked(True)
+                break
+        self.cb_mag_field.blockSignals(False)
+        self.cb_ext_compass.blockSignals(True)
+        self.cb_ext_compass.setEnabled(False)
+        self.cb_ext_compass.setChecked(False)
+        for transect_idx in self.checked_transects_idx:
+            if self.meas.transects[transect_idx].sensors.heading_deg.external is not None:
+                self.cb_ext_compass.setEnabled(True)
+                break
+        self.cb_ext_compass.blockSignals(False)
+
+        # Update table, graphs, messages, and comments
+        if old_discharge is None:
+            old_discharge = self.meas.discharge
+
+        self.update_compass_tab(tbl=tbl, old_discharge=old_discharge,
+                                new_discharge=self.meas.discharge,
+                                initial=self.transect_row)
+
+        # Setup list for use by graphics controls
+        self.canvases = [self.heading_canvas, self.pr_canvas]
+        self.figs = [self.heading_fig, self.pr_fig]
+        self.toolbars = [self.heading_toolbar, self.pr_toolbar]
+
+        # Initialize the calibration/evaluation tab
+        self.compass_cal_eval(idx_eval=0)
 
     def compass_cal_eval(self, idx_cal=None, idx_eval=None):
         """Displays data in the calibration / evaluation tab.
@@ -2757,7 +2776,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.rb_f.toggled.connect(self.change_temp_units)
 
             # Setup input validator for independent and adcp user temperature
-            reg_ex = QRegExp("^[1-9]\d*(\.\d+)?$")
+            reg_ex = QRegExp("^[0-9]\d*(\.\d+)?$")
             input_validator = QtGui.QRegExpValidator(reg_ex, self)
 
             # Connect independent and adcp input option
@@ -3231,6 +3250,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         with self.wait_cursor():
 
             tbl = self.table_moving_bed
+            tbl.blockSignals(True)
             # Populate each row
             for row in range(tbl.rowCount()):
 
@@ -3364,6 +3384,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # Automatically resize rows and columns
                 tbl.resizeColumnsToContents()
                 tbl.resizeRowsToContents()
+                tbl.blockSignals(False)
 
     def mb_table_clicked(self, row, column):
         """Manages actions caused by the user clicking in selected columns of the table.
@@ -6688,16 +6709,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # set %threshold qlineedit to numbers only, 2 decimals,
             # and 0 to 100
             rx_threshold = QtCore.QRegExp(
-                "^([0-9]|[1-9][0-9]|100)(\.\d{1,2})$")
+                "^([1-9][0-9]|[0-9]|)")
             validator_threshold = QtGui.QRegExpValidator(rx_threshold, self)
             self.ed_extrap_threshold.setValidator(validator_threshold)
 
-            # set subsection qlineedit to numbers only, 2 digits : 2 digits
-            rx_subsection = QtCore.QRegExp(
-                "^([0-9]|[1-9][0-9]|100)(\.\d{1,2})*[:]*([0-9]|[1-9][0-9]|100)"
-                "(\.\d{1,2})$")
-            validator_subsection = QtGui.QRegExpValidator(rx_subsection, self)
-            self.ed_extrap_subsection.setValidator(validator_subsection)
+            # # set subsection qlineedit to numbers only, 2 digits : 2 digits
+            # rx_subsection = QtCore.QRegExp(
+            #     "^([0-9]|[1-9][0-9]|100)(\.\d{1,2})*[:]*([0-9]|[1-9][0-9]|100)"
+            #     "(\.\d{1,2})$")
+            # validator_subsection = QtGui.QRegExpValidator(rx_subsection, self)
+            # self.ed_extrap_subsection.setValidator(validator_subsection)
 
             # Cancel and apply buttons
             self.pb_extrap_cancel.clicked.connect(self.cancel_extrap)
@@ -7101,6 +7122,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.ed_extrap_subsection.setText('0:100')
                 self.combo_extrap_type.setCurrentIndex(0)
                 self.meas.extrap_fit.change_data_auto(self.meas.transects)
+                self.extrap_update()
 
     @QtCore.pyqtSlot()
     def change_threshold(self):

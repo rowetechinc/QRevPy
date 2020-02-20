@@ -2664,7 +2664,7 @@ class Measurement(object):
 
         # (4) AutoEdge Node
         temp = uncertainty.edges_95
-        ET.SubElement(s_u, 'AutoEdges', type='double').text = '{:.1f}'.format(temp)
+        ET.SubElement(s_u, 'AutoEdge', type='double').text = '{:.1f}'.format(temp)
 
         # (4) AutoExtrapolation Node
         temp = uncertainty.extrapolation_95
