@@ -5722,6 +5722,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
 
         with self.wait_cursor():
+            self.combo_depth_ref.blockSignals(True)
             # Get current settings
             s = self.meas.current_settings()
 
@@ -5748,6 +5749,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Update measurement and display
             self.update_depth_tab(s)
             self.change = True
+            self.combo_depth_ref.blockSignals(False)
 
     @QtCore.pyqtSlot(str)
     def change_filter(self, text):
@@ -5760,6 +5762,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     """
 
         with self.wait_cursor():
+            self.combo_depth_filter.blockSignals(True)
             # Get current settings
             s = self.meas.current_settings()
             s['depthFilterType'] = text
@@ -5767,6 +5770,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Update measurement and display
             self.update_depth_tab(s)
             self.change = True
+            self.combo_depth_filter.blockSignals(False)
 
     @QtCore.pyqtSlot(str)
     def change_avg_method(self, text):
@@ -5779,6 +5783,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     """
 
         with self.wait_cursor():
+            self.combo_depth_avg.blockSignals(True)
             # Get current settings
             s = self.meas.current_settings()
             s['depthAvgMethod'] = text
@@ -5786,6 +5791,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Update measurement and display
             self.update_depth_tab(s)
             self.change = True
+            self.combo_depth_avg.blockSignals(False)
 
     def depth_comments_messages(self):
         """Displays comments and messages associated with bottom track filters in Messages tab.

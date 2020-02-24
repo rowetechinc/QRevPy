@@ -1061,21 +1061,21 @@ class QAData(object):
             # Check consecutive interpolated discharge criteria
             if np.any(self.depths['q_max_run_warning']):
                 self.depths['messages'].append(['DEPTH: Int. Q for consecutive invalid ensembles exceeds '
-                                                + '%2.0f % self.q_run_threshold_warning' + '%;', 1, 10])
+                                                + '%2.0f' % self.q_run_threshold_warning + '%;', 1, 10])
                 self.depths['status'] = 'warning'
             elif np.any(self.depths['q_max_run_caution']):
                 self.depths['messages'].append(['Depth: Int. Q for consecutive invalid ensembles exceeds '
-                                                + '%2.0f % self.q_run_threshold_caution' + '%;', 2, 10])
+                                                + '%2.0f' % self.q_run_threshold_caution + '%;', 2, 10])
                 self.depths['status'] = 'caution'
 
             # Check total interpolated discharge criteria
             if np.any(self.depths['q_total_warning']):
                 self.depths['messages'].append(['DEPTH: Int. Q for invalid ensembles in a transect exceeds '
-                                                + '%2.0f % self.q_total_threshold_warning' + '%;', 1, 10])
+                                                + '%2.0f' % self.q_total_threshold_warning + '%;', 1, 10])
                 self.depths['status'] = 'warning'
             elif np.any(self.depths['q_total_caution']):
                 self.depths['messages'].append(['Depth: Int. Q for invalid ensembles in a transect exceeds '
-                                                + '%2.0f % self.q_total_threshold_caution' + '%;', 2, 10])
+                                                + '%2.0f' % self.q_total_threshold_caution + '%;', 2, 10])
                 self.depths['status'] = 'caution'
 
             # Check if all depths are invalid

@@ -139,11 +139,6 @@ class DepthData(object):
            Matlab data structure obtained from sio.loadmat
         """
 
-        self.depth_orig_m = mat_data.depthOrig_m
-        if len(mat_data.depthBeams_m.shape) < 2:
-            self.depth_beams_m = mat_data.depthBeams_m.reshape(1, -1)
-        else:
-            self.depth_beams_m = mat_data.depthBeams_m
         self.depth_processed_m = mat_data.depthProcessed_m
         self.depth_freq_kHz = mat_data.depthFreq_Hz
         if len(mat_data.depthInvalidIndex) > 0:
@@ -158,9 +153,19 @@ class DepthData(object):
         self.depth_cell_depth_m = mat_data.depthCellDepth_m
         self.depth_cell_size_orig_m = mat_data.depthCellSizeOrig_m
         self.depth_cell_size_m = mat_data.depthCellSize_m
-        self.smooth_depth = mat_data.smoothDepth
-        self.smooth_upper_limit = mat_data.smoothUpperLimit
-        self.smooth_lower_limit = mat_data.smoothLowerLimit
+        # Configure arrays properly for VB and DS
+        if mat_data.depthSource == 'BT':
+            self.depth_beams_m = mat_data.depthBeams_m
+            self.depth_orig_m = mat_data.depthOrig_m
+            self.smooth_depth = mat_data.smoothDepth
+            self.smooth_upper_limit = mat_data.smoothUpperLimit
+            self.smooth_lower_limit = mat_data.smoothLowerLimit
+        else:
+            self.depth_beams_m = mat_data.depthBeams_m.reshape(1, -1)
+            self.depth_orig_m = mat_data.depthOrig_m.reshape(1, -1)
+            self.smooth_depth = mat_data.smoothDepth.reshape(1, -1)
+            self.smooth_upper_limit = mat_data.smoothUpperLimit.reshape(1, -1)
+            self.smooth_lower_limit = mat_data.smoothLowerLimit.reshape(1, -1)
         self.avg_method = mat_data.avgMethod
         self.filter_type = mat_data.filterType
         self.interp_type = mat_data.interpType
@@ -441,8 +446,11 @@ class DepthData(object):
                     # Compute residuals based on robust loess smooth
                     if len(x) > 1:
                         # Fit smooth
-                        smooth_fit = rloess(x, depth_filtered[j, :], 20)
-                        depth_smooth[j, :] = smooth_fit
+                        try:
+                            smooth_fit = rloess(x, depth_filtered[j, :], 20)
+                            depth_smooth[j, :] = smooth_fit
+                        except ValueError:
+                            depth_smooth[j, :] = depth_filtered[j, :]
                     else:
                         depth_smooth[j, :] = depth_filtered[j, :]
                     
