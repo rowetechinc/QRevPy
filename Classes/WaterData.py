@@ -689,7 +689,7 @@ class WaterData(object):
         u_nr_rotated, v_nr_rotated = pol2cart(direction - np.deg2rad(heading_chng), mag)
         self.u_earth_no_ref_mps = u_nr_rotated
         self.v_earth_no_ref_mps = v_nr_rotated
-        # TODO Need to check why this sets boat reference
+        # Reprocess water data to get navigation reference corrected velocities
         self.set_nav_reference(boat_vel)
         
     def change_heading_source(self, boat_vel, heading):
@@ -1441,7 +1441,9 @@ class WaterData(object):
     @staticmethod
     def compute_abba_interpolation(wt_data, valid, transect):
         # Find cells with invalid data
-        valid_cells = np.equal(wt_data.valid_data[0, :, :].astype(int), wt_data.valid_data[6, :, :].astype(int)).astype(bool)
+        # Not sure why I used the following line. Replaced 2/25/2020 dsm
+        # valid_cells = np.equal(wt_data.valid_data[0, :, :].astype(int), wt_data.valid_data[6, :, :].astype(int)).astype(bool)
+        valid_cells = wt_data.valid_data[0, :, :]
         boat_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
         boat_valid = boat_selected.valid_data[0]
 

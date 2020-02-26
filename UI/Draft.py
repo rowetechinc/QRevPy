@@ -16,6 +16,6 @@ class Draft(QtWidgets.QDialog, wDraft.Ui_draft):
         self.setupUi(self)
 
         # set qlineedit to numbers only, 2 decimals
-        rx = QtCore.QRegExp("^[0-9]\d*(\.\d{1,2})$")
-        validator = QtGui.QRegExpValidator(rx, self)
-        self.ed_draft.setValidator(validator)
+        # rx = QtCore.QRegExp("^[0-9]\d*(\.\d{1,2})$")
+        # validator = QtGui.QRegExpValidator(rx, self)
+        # self.ed_draft.setValidator(validator)

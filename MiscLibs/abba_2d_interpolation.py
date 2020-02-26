@@ -97,12 +97,14 @@ def find_neighbors(valid_data, cells_above_sl, y_cell_centers, y_cell_size, y_de
             points.append(below)
 
         # Find valid cell indices for all ensembles with valid data within the target cell
-        # Find cell centers that are withing the range of the target cell
-        y_match1 = np.array((np.logical_and(y_centers >= y_top[target], y_centers <= y_bottom[target])))
+        # Find cells that contain the center of the target cell
+        y_match1 = np.array((np.logical_and(y_centers[target] >= y_top, y_centers[target] <= y_bottom)))
+        # Find cells with cell centers that are withing the range of the target cell
+        y_match2 = np.array((np.logical_and(y_centers >= y_top[target], y_centers <= y_bottom[target])))
         # Find all cells that the target falls within their range
-        y_match2 = np.array((np.logical_and(y_top[target] >= y_top, y_bottom[target] <= y_bottom)))
+        y_match3 = np.array((np.logical_and(y_top[target] >= y_top, y_bottom[target] <= y_bottom)))
         # Combine matches
-        y_match = np.logical_or(y_match1, y_match2)
+        y_match = np.logical_or(np.logical_or(y_match1, y_match2), y_match3)
         y_match = np.logical_and(y_match, valid_data)
 
         # Identify indices of cells before and after target
@@ -384,7 +386,7 @@ def abba_idw_interpolation(data_list, valid_data, cells_above_sl, y_centers, y_c
     # Initialize output list
     interpolated_data = [[] for _ in range(len(data_list))]
 
-    valid_cells = np.equal(cells_above_sl, valid_data)
+    valid_cells = np.logical_and(cells_above_sl, valid_data)
     if not np.all(valid_cells):
         # Find neighbors associated with each target
         interpolation_points = find_neighbors(valid_data=valid_data,

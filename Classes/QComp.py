@@ -906,6 +906,8 @@ class QComp(object):
             # the specified number of valid ensembles
             # noinspection PyTypeChecker
             valid_ens = QComp.valid_edge_ens(transect)
+            if num_edge_ens > len(valid_ens):
+                num_edge_ens = len(valid_ens)
             if edge_loc.lower() == transect.start_edge.lower():
                 edge_idx = np.where(valid_ens == True)[0][0:num_edge_ens]
             else:
@@ -915,11 +917,13 @@ class QComp(object):
         else:
             # Determine the indices of the edge ensembles as collected by RiverSurveyor.  There
             # is no check as to whether the ensembles contain valid data
+            trans_select = getattr(transect.depths, transect.depths.selected)
+            n_ensembles = len(trans_select.depth_processed_m)
+            if num_edge_ens > n_ensembles:
+                num_edge_ens = n_ensembles
             if edge_loc.lower() == transect.start_edge.lower():
                 edge_idx = np.arange(0, num_edge_ens)
             else:
-                trans_select = getattr(transect.depths, transect.depths.selected)
-                n_ensembles = len(trans_select.depth_processed_m)
                 edge_idx = np.arange(n_ensembles - num_edge_ens, n_ensembles)
 
         return edge_idx

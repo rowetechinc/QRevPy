@@ -1253,7 +1253,7 @@ class TransectData(object):
         
         if self.sensors.heading_deg.selected == 'external':
             old = getattr(self.sensors.heading_deg, self.sensors.heading_deg.selected)
-            old_offset = old.align_correction
+            old_offset = old.align_correction_deg
             offset_change = h_offset - old_offset
             self.boat_vel.bt_vel.change_heading(offset_change)
             self.w_vel.change_heading(self.boat_vel, offset_change)
@@ -1279,8 +1279,8 @@ class TransectData(object):
             new_heading = new_heading_selection.data
             heading_change = new_heading - old_heading
             self.sensors.heading_deg.set_selected(h_source)
-            self.boat_vel.bt_vel.change_heading_source(heading_change)
-            self.w_vel.change_heading_source(self.boat_vel, heading_change)
+            self.boat_vel.bt_vel.change_heading(heading_change)
+            self.w_vel.change_heading(self.boat_vel, heading_change)
             
         self.update_water()
             

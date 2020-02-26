@@ -795,7 +795,7 @@ class Measurement(object):
         n_transects = len(self.transects)
         recompute = False
         n = 0
-        while n <= n_transects and recompute == False:
+        while n < n_transects and recompute == False:
             if self.transects[n].sensors.heading_deg.selected == 'internal':
                 recompute = True
             n += 1
@@ -815,8 +815,8 @@ class Measurement(object):
         n_transects = len(self.transects)
         recompute = False
         n = 0
-        while n <= n_transects and recompute == False:
-            if self.transects[n].sensors.heading_deg.selected == 'internal':
+        while n < n_transects and recompute == False:
+            if self.transects[n].sensors.heading_deg.selected == 'external':
                 recompute = True
             n += 1
 
@@ -835,9 +835,9 @@ class Measurement(object):
         if transect_idx is None:
             # Apply change to all transects
             for transect in self.transects:
-                transect.change_h_source(h_source)
+                transect.change_heading_source(h_source)
         else:
-            self.transects[transect_idx].change_h_source(h_source)
+            self.transects[transect_idx].change_heading_source(h_source)
 
         self.apply_settings(s)
 

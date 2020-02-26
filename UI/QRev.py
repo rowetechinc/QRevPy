@@ -2415,7 +2415,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     tbl.item(row, 0).setCheckState(QtCore.Qt.Unchecked)
 
             # Check the row specified by initial
-            tbl.item(initial, 0).setCheckState(QtCore.Qt.Checked)
+            if initial is None:
+                tbl.item(0, 0).setCheckState(QtCore.Qt.Checked)
+            else:
+                tbl.item(initial, 0).setCheckState(QtCore.Qt.Checked)
 
             # Automatically resize rows and columns
             tbl.resizeColumnsToContents()
@@ -2559,17 +2562,17 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             with self.wait_cursor():
                 if rsp == QtWidgets.QDialog.Accepted:
                     old_discharge = copy.deepcopy(self.meas.discharge)
-                    magvar = float(magvar_dialog.ed_magvar.text())
+                    magvar = self.check_numeric_input(magvar_dialog.ed_magvar)
+                    if magvar is not None:
+                        # Apply change to selected or all transects
+                        if magvar_dialog.rb_all.isChecked():
+                            self.meas.change_magvar(magvar=magvar)
+                        else:
+                            self.meas.change_magvar( magvar=magvar, transect_idx=self.checked_transects_idx[row])
 
-                    # Apply change to selected or all transects
-                    if magvar_dialog.rb_all.isChecked():
-                        self.meas.change_magvar(magvar=magvar)
-                    else:
-                        self.meas.change_magvar( magvar=magvar, transect_idx=self.checked_transects_idx[row])
-
-                    # Update compass tab
-                    self.change_table_data(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
-                    self.change = True
+                        # Update compass tab
+                        self.change_table_data(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
+                        self.change = True
 
         # Heading Offset
         elif column == 2:
@@ -2581,17 +2584,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 with self.wait_cursor():
                     if h_offset_entered:
                         old_discharge = copy.deepcopy(self.meas.discharge)
-                        h_offset = float(h_offset_dialog.ed_hoffset.text())
+                        h_offset = self.check_numeric_input(h_offset_dialog.ed_hoffset)
+                        if h_offset is not None:
 
-                        # Apply change to selected or all transects
-                        if h_offset_dialog.rb_all.isChecked():
-                            self.meas.change_h_offset(h_offset=h_offset)
-                        else:
-                            self.meas.change_h_offset(h_offset=h_offset, transect_idx=self.checked_transects_idx[row])
+                            # Apply change to selected or all transects
+                            if h_offset_dialog.rb_all.isChecked():
+                                self.meas.change_h_offset(h_offset=h_offset)
+                            else:
+                                self.meas.change_h_offset(h_offset=h_offset, transect_idx=self.checked_transects_idx[row])
 
-                        # Update compass tab
-                        self.update_compass_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
-                        self.change = True
+                            # Update compass tab
+                            self.update_compass_tab(tbl=tbl, old_discharge=old_discharge, new_discharge=self.meas.discharge)
+                            self.change = True
 
         # Heading Source
         elif column == 3:
@@ -2603,7 +2607,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 with self.wait_cursor():
                     if h_source_entered:
                         old_discharge = copy.deepcopy(self.meas.discharge)
-                        if h_source_dialog.rb_internal:
+                        if h_source_dialog.rb_internal.isChecked():
                             h_source = 'internal'
                         else:
                             h_source = 'external'
@@ -3850,11 +3854,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.cellClicked.connect(self.bt_table_clicked)
 
             # set qlineedit to numbers only, 3 decimals, and 0 to 100
-            rx = QtCore.QRegExp(
-                "^([0-9]|[1-9][0-9]|100)(\.\d{1,3})$")
-            validator = QtGui.QRegExpValidator(rx, self)
-            self.ed_bt_error_vel_threshold.setValidator(validator)
-            self.ed_bt_vert_vel_threshold.setValidator(validator)
+            # rx = QtCore.QRegExp(
+            #     "^([0-9]|[1-9][0-9]|100)(\.\d{1,3})$")
+            # validator = QtGui.QRegExpValidator(rx, self)
+            # self.ed_bt_error_vel_threshold.setValidator(validator)
+            # self.ed_bt_vert_vel_threshold.setValidator(validator)
 
             # Initialize checkbox settings for boat reference
             self.cb_bt_bt.setCheckState(QtCore.Qt.Checked)
@@ -4401,20 +4405,22 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.ed_bt_error_vel_threshold.blockSignals(True)
 
             # Get threshold and convert to SI units
-            threshold = float(self.ed_bt_error_vel_threshold.text()) / self.units['V']
+            threshold = self.check_numeric_input(self.ed_bt_error_vel_threshold)
+            if threshold is not None:
+                threshold = threshold / self.units['V']
 
-            # Get current settings
-            s = self.meas.current_settings()
-            # Because editingFinished is used if return is pressed and later focus is changed the method could get
-            # twice. This line checks to see if there was and actual change.
-            if np.abs(threshold - s['BTdFilterThreshold']) > 0.0001:
-                # Change settings to manual and the associated threshold
-                s['BTdFilter'] = 'Manual'
-                s['BTdFilterThreshold'] = threshold
+                # Get current settings
+                s = self.meas.current_settings()
+                # Because editingFinished is used if return is pressed and later focus is changed the method could get
+                # twice. This line checks to see if there was and actual change.
+                if np.abs(threshold - s['BTdFilterThreshold']) > 0.0001:
+                    # Change settings to manual and the associated threshold
+                    s['BTdFilter'] = 'Manual'
+                    s['BTdFilterThreshold'] = threshold
 
-                # Update measurement and display
-                self.update_bt_tab(s)
-                self.change = True
+                    # Update measurement and display
+                    self.update_bt_tab(s)
+                    self.change = True
             self.ed_bt_error_vel_threshold.blockSignals(False)
 
     @QtCore.pyqtSlot()
@@ -4426,20 +4432,22 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.ed_bt_vert_vel_threshold.blockSignals(True)
 
             # Get threshold and convert to SI units
-            threshold = float(self.ed_bt_vert_vel_threshold.text()) / self.units['V']
+            threshold = self.check_numeric_input(self.ed_bt_vert_vel_threshold)
+            if threshold is not None:
+                threshold = threshold / self.units['V']
 
-            # Get current settings
-            s = self.meas.current_settings()
-            # Because editingFinished is used if return is pressed and later focus is changed the method could get
-            # twice. This line checks to see if there was and actual change.
-            if np.abs(threshold - s['BTwFilterThreshold']) > 0.0001:
-                # Change settings to manual and the associated threshold
-                s['BTwFilter'] = 'Manual'
-                s['BTwFilterThreshold'] = threshold
+                # Get current settings
+                s = self.meas.current_settings()
+                # Because editingFinished is used if return is pressed and later focus is changed the method could get
+                # twice. This line checks to see if there was and actual change.
+                if np.abs(threshold - s['BTwFilterThreshold']) > 0.0001:
+                    # Change settings to manual and the associated threshold
+                    s['BTwFilter'] = 'Manual'
+                    s['BTwFilterThreshold'] = threshold
 
-                # Update measurement and display
-                self.update_bt_tab(s)
-                self.change = True
+                    # Update measurement and display
+                    self.update_bt_tab(s)
+                    self.change = True
             self.ed_bt_vert_vel_threshold.blockSignals(False)
 
     def bt_comments_messages(self):
@@ -5154,20 +5162,22 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         with self.wait_cursor():
             # Get threshold and convert to SI units
-            threshold = float(self.ed_gps_altitude_threshold.text()) / self.units['L']
+            threshold = self.check_numeric_input(self.ed_gps_altitude_threshold)
+            if threshold is not None:
+                threshold = threshold / self.units['L']
 
-            # Get current settings
-            s = self.meas.current_settings()
-            # Because editingFinished is used if return is pressed and later focus is changed the method could get
-            # twice. This line checks to see if there was and actual change.
-            if np.abs(threshold - s['ggaAltitudeFilterChange']) > 0.0001:
-                # Change settings to manual and the associated threshold
-                s['ggaAltitudeFilter'] = 'Manual'
-                s['ggaAltitudeFilterChange'] = threshold
+                # Get current settings
+                s = self.meas.current_settings()
+                # Because editingFinished is used if return is pressed and later focus is changed the method could get
+                # twice. This line checks to see if there was and actual change.
+                if np.abs(threshold - s['ggaAltitudeFilterChange']) > 0.0001:
+                    # Change settings to manual and the associated threshold
+                    s['ggaAltitudeFilter'] = 'Manual'
+                    s['ggaAltitudeFilterChange'] = threshold
 
-                # Update measurement and display
-                self.update_gps_tab(s)
-                self.change = True
+                    # Update measurement and display
+                    self.update_gps_tab(s)
+                    self.change = True
 
     @QtCore.pyqtSlot()
     def change_hdop_threshold(self):
@@ -5176,20 +5186,21 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         with self.wait_cursor():
             # Get threshold and convert to SI units
-            threshold = float(self.ed_gps_hdop_threshold.text())
+            threshold = self.check_numeric_input(self.ed_gps_hdop_threshold)
+            if threshold is not None:
 
-            # Get current settings
-            s = self.meas.current_settings()
-            # Because editingFinished is used if return is pressed and later focus is changed the method could get
-            # twice. This line checks to see if there was and actual change.
-            if np.abs(threshold - s['GPSHDOPFilterMax']) > 0.0001:
-                # Change settings to manual and the associated threshold
-                s['GPSHDOPFilter'] = 'Manual'
-                s['GPSHDOPFilterMax'] = threshold
+                # Get current settings
+                s = self.meas.current_settings()
+                # Because editingFinished is used if return is pressed and later focus is changed the method could get
+                # twice. This line checks to see if there was and actual change.
+                if np.abs(threshold - s['GPSHDOPFilterMax']) > 0.0001:
+                    # Change settings to manual and the associated threshold
+                    s['GPSHDOPFilter'] = 'Manual'
+                    s['GPSHDOPFilterMax'] = threshold
 
-                # Update measurement and display
-                self.update_gps_tab(s)
-                self.change = True
+                    # Update measurement and display
+                    self.update_gps_tab(s)
+                    self.change = True
 
     def gps_comments_messages(self):
         """Displays comments and messages associated with bottom track filters in Messages tab.
@@ -5652,23 +5663,24 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # Save discharge from previous settings
                 old_discharge = copy.deepcopy(self.meas.discharge)
                 if draft_entered:
-                    draft = float(draft_dialog.ed_draft.text())
-                    draft = draft / self.units['L']
-                    # Apply change to selected or all transects
-                    if draft_dialog.rb_all.isChecked():
-                        self.meas.change_draft(draft=draft)
-                    else:
-                        self.meas.change_draft(draft=draft, transect_idx=self.checked_transects_idx[row])
+                    draft = self.check_numeric_input(draft_dialog.ed_draft)
+                    if draft is not None:
+                        draft = draft / self.units['L']
+                        # Apply change to selected or all transects
+                        if draft_dialog.rb_all.isChecked():
+                            self.meas.change_draft(draft=draft)
+                        else:
+                            self.meas.change_draft(draft=draft, transect_idx=self.checked_transects_idx[row])
 
-                    # Update depth tab
-                    # Update table
-                    self.update_depth_table(old_discharge=old_discharge, new_discharge=self.meas.discharge)
+                        # Update depth tab
+                        # Update table
+                        self.update_depth_table(old_discharge=old_discharge, new_discharge=self.meas.discharge)
 
-                    # Update plots
-                    self.depth_plots()
+                        # Update plots
+                        self.depth_plots()
 
-                    self.depth_comments_messages()
-                    self.change = True
+                        self.depth_comments_messages()
+                        self.change = True
         self.table_depth.blockSignals(False)
         self.tab_depth_2_data.setFocus()
 
@@ -5920,18 +5932,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.change_wt_vert_vel_threshold)
 
             # set qlineedit to numbers only, 3 decimals, and 0 to 100
-            rx = QtCore.QRegExp(
-                "^([0-9]|[1-9][0-9]|100)(\.\d{1,3})$")
-            validator = QtGui.QRegExpValidator(rx, self)
-            self.ed_wt_error_vel_threshold.setValidator(validator)
-            self.ed_wt_vert_vel_threshold.setValidator(validator)
-
-            # set validator for Exceluded distance 0 to 999, 3 decimals
-            rx_excluded_distance = \
-                QtCore.QRegExp("^([0-9]|[1-9][0-9]|[1-9][0-9][0-9])(\.\d{1,3})$")
-            validator_excluded = QtGui.QRegExpValidator(rx_excluded_distance,
-                                                        self)
-            self.ed_wt_excluded_dist.setValidator(validator_excluded)
+            # rx = QtCore.QRegExp(
+            #     "^([0-9]|[1-9][0-9]|100)(\.\d{1,3})$")
+            # validator = QtGui.QRegExpValidator(rx, self)
+            # self.ed_wt_error_vel_threshold.setValidator(validator)
+            # self.ed_wt_vert_vel_threshold.setValidator(validator)
+            #
+            # # set validator for Exceluded distance 0 to 999, 3 decimals
+            # rx_excluded_distance = \
+            #     QtCore.QRegExp("^([0-9]|[1-9][0-9]|[1-9][0-9][0-9])(\.\d{1,3})$")
+            # validator_excluded = QtGui.QRegExpValidator(rx_excluded_distance,
+            #                                             self)
+            # self.ed_wt_excluded_dist.setValidator(validator_excluded)
 
 
             # Connect filters
@@ -6536,20 +6548,21 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         with self.wait_cursor():
             # Get threshold and convert to SI units
-            threshold = float(self.ed_wt_error_vel_threshold.text()) / self.units['V']
+            threshold = self.check_numeric_input(self.ed_wt_error_vel_threshold)
+            if threshold is not None:
+                threshold = threshold / self.units['V']
+                # Get current settings
+                s = self.meas.current_settings()
+                # Because editingFinished is used if return is pressed and later focus is changed the method could get
+                # twice. This line checks to see if there was and actual change.
+                if np.abs(threshold - s['WTdFilterThreshold']) > 0.0001:
+                    # Change settings to manual and the associated threshold
+                    s['WTdFilter'] = 'Manual'
+                    s['WTdFilterThreshold'] = threshold
 
-            # Get current settings
-            s = self.meas.current_settings()
-            # Because editingFinished is used if return is pressed and later focus is changed the method could get
-            # twice. This line checks to see if there was and actual change.
-            if np.abs(threshold - s['WTdFilterThreshold']) > 0.0001:
-                # Change settings to manual and the associated threshold
-                s['WTdFilter'] = 'Manual'
-                s['WTdFilterThreshold'] = threshold
-
-                # Update measurement and display
-                self.update_wt_tab(s)
-                self.change = True
+                    # Update measurement and display
+                    self.update_wt_tab(s)
+                    self.change = True
 
     @QtCore.pyqtSlot()
     def change_wt_vert_vel_threshold(self):
@@ -6558,20 +6571,22 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         with self.wait_cursor():
             # Get threshold and convert to SI units
-            threshold = float(self.ed_wt_vert_vel_threshold.text()) / self.units['V']
+            threshold = self.check_numeric_input(self.ed_wt_vert_vel_threshold)
+            if threshold is not None:
+                threshold = threshold / self.units['V']
 
-            # Get current settings
-            s = self.meas.current_settings()
-            # Because editingFinished is used if return is pressed and later focus is changed the method could get
-            # twice. This line checks to see if there was and actual change.
-            if np.abs(threshold - s['WTwFilterThreshold']) > 0.0001:
-                # Change settings to manual and the associated threshold
-                s['WTwFilter'] = 'Manual'
-                s['WTwFilterThreshold'] = threshold
+                # Get current settings
+                s = self.meas.current_settings()
+                # Because editingFinished is used if return is pressed and later focus is changed the method could get
+                # twice. This line checks to see if there was and actual change.
+                if np.abs(threshold - s['WTwFilterThreshold']) > 0.0001:
+                    # Change settings to manual and the associated threshold
+                    s['WTwFilter'] = 'Manual'
+                    s['WTwFilterThreshold'] = threshold
 
-                # Update measurement and display
-                self.update_wt_tab(s)
-                self.change = True
+                    # Update measurement and display
+                    self.update_wt_tab(s)
+                    self.change = True
 
     @QtCore.pyqtSlot()
     def change_wt_excluded_dist(self):
@@ -6580,19 +6595,21 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         with self.wait_cursor():
             # Get threshold and convert to SI units
-            threshold = float(self.ed_wt_excluded_dist.text()) / self.units['L']
+            threshold = self.check_numeric_input(self.ed_wt_excluded_dist)
+            if threshold is not None:
+                threshold = threshold / self.units['L']
 
-            # Get current settings
-            s = self.meas.current_settings()
-            # Because editingFinished is used if return is pressed and later focus is changed the method could get
-            # twice. This line checks to see if there was and actual change.
-            if np.abs(threshold - s['WTExcludedDistance']) > 0.0001:
-                # Change settings
-                s['WTExcludedDistance'] = threshold
+                # Get current settings
+                s = self.meas.current_settings()
+                # Because editingFinished is used if return is pressed and later focus is changed the method could get
+                # twice. This line checks to see if there was and actual change.
+                if np.abs(threshold - s['WTExcludedDistance']) > 0.0001:
+                    # Change settings
+                    s['WTExcludedDistance'] = threshold
 
-                # Update measurement and display
-                self.update_wt_tab(s)
-                self.change = True
+                    # Update measurement and display
+                    self.update_wt_tab(s)
+                    self.change = True
 
     def wt_comments_messages(self):
         """Displays comments and messages associated with bottom track filters in Messages tab.
@@ -6707,17 +6724,17 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.combo_extrap_type.currentIndexChanged[str].connect(self.change_data_type)
 
             # set qlineedit to numbers only, 4 decimals, and 0 to 1
-            rx = QtCore.QRegExp(
-                "^([0-9])(\.\d{1,4})$")
-            validator = QtGui.QRegExpValidator(rx, self)
-            self.ed_extrap_exponent.setValidator(validator)
+            # rx = QtCore.QRegExp(
+            #     "^([0-9])(\.\d{1,4})$")
+            # validator = QtGui.QRegExpValidator(rx, self)
+            # self.ed_extrap_exponent.setValidator(validator)
 
             # set %threshold qlineedit to numbers only, 2 decimals,
             # and 0 to 100
-            rx_threshold = QtCore.QRegExp(
-                "^([1-9][0-9]|[0-9]|)")
-            validator_threshold = QtGui.QRegExpValidator(rx_threshold, self)
-            self.ed_extrap_threshold.setValidator(validator_threshold)
+            # rx_threshold = QtCore.QRegExp(
+            #     "^([1-9][0-9]|[0-9]|)")
+            # validator_threshold = QtGui.QRegExpValidator(rx_threshold, self)
+            # self.ed_extrap_threshold.setValidator(validator_threshold)
 
             # # set subsection qlineedit to numbers only, 2 digits : 2 digits
             # rx_subsection = QtCore.QRegExp(
@@ -7137,16 +7154,19 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # If data entered.
         with self.wait_cursor():
-            threshold = float(self.ed_extrap_threshold.text())
+            threshold = self.check_numeric_input(self.ed_extrap_threshold)
+            if threshold is not None:
 
-            if np.abs(threshold - self.meas.extrap_fit.threshold) > 0.0001:
-                if threshold >= 0 and threshold <= 100:
-                    self.meas.extrap_fit.change_threshold(transects=self.meas.transects,
-                                                          data_type=self.meas.extrap_fit.sel_fit[0].data_type,
-                                                          threshold=threshold)
-                    self.extrap_update()
-                else:
-                    self.ed_extrap_threshold.setText('{:3.0f}'.format(self.meas.extrap_fit.threshold))
+                if np.abs(threshold - self.meas.extrap_fit.threshold) > 0.0001:
+                    if threshold >= 0 and threshold <= 100:
+                        self.meas.extrap_fit.change_threshold(transects=self.meas.transects,
+                                                              data_type=self.meas.extrap_fit.sel_fit[0].data_type,
+                                                              threshold=threshold)
+                        self.extrap_update()
+                    else:
+                        self.ed_extrap_threshold.setText('{:3.0f}'.format(self.meas.extrap_fit.threshold))
+            else:
+                self.ed_extrap_threshold.setText('{:3.0f}'.format(self.meas.extrap_fit.threshold))
 
     @QtCore.pyqtSlot()
     def change_subsection(self):
@@ -7269,17 +7289,20 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
 
         with self.wait_cursor():
-            exponent = float(self.ed_extrap_exponent.text())
-            # Because editingFinished is used if return is pressed and later focus is changed the method could get
-            # twice. This line checks to see if there was and actual change.
-            if np.abs(exponent - self.meas.extrap_fit.sel_fit[self.idx].exponent) > 0.00001:
-                # Change based on user input
-                self.meas.extrap_fit.change_fit_method(transects=self.meas.transects,
-                                                       new_fit_method='Manual',
-                                                       idx=self.idx,
-                                                       exponent=exponent)
+            exponent = self.check_numeric_input(self.ed_extrap_exponent)
+            if exponent is not None and exponent > 0 and exponent < 1.01:
+                # Because editingFinished is used if return is pressed and later focus is changed the method could get
+                # twice. This line checks to see if there was and actual change.
+                if np.abs(exponent - self.meas.extrap_fit.sel_fit[self.idx].exponent) > 0.00001:
+                    # Change based on user input
+                    self.meas.extrap_fit.change_fit_method(transects=self.meas.transects,
+                                                           new_fit_method='Manual',
+                                                           idx=self.idx,
+                                                           exponent=exponent)
 
-                self.extrap_update()
+                    self.extrap_update()
+            else:
+                self.ed_extrap_exponent.setText('{:6.4f}'.format(self.meas.extrap_fit.sel_fit[self.idx].exponent))
 
     def sensitivity_change_fit(self, row, col):
         """Changes the fit based on the row in the discharge sensitivity table selected by the user.
@@ -7642,12 +7665,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         user_discharge_cms = None
                     elif type_dialog.rb_custom.isChecked():
                         type = 'Custom'
-                        cust_coef = float(type_dialog.ed_custom.text())
+                        cust_coef = self.check_numeric_input(type_dialog.ed_custom)
+                        if cust_coef is None:
+                            cust_coef = 0
                         user_discharge_cms = None
                     elif type_dialog.rb_user.isChecked():
                         type = 'User Q'
                         cust_coef = None
-                        user_discharge_cms = float(type_dialog.ed_q_user.text()) / self.units['Q']
+                        user_discharge_cms = self.check_numeric_input(type_dialog.ed_q_user)
+                        if user_discharge_cms is not None:
+                            user_discharge_cms = user_discharge_cms / self.units['Q']
+                        else:
+                            user_discharge_cms = 0
 
                     if type_dialog.rb_all.isChecked():
                         for idx in self.checked_transects_idx:
@@ -7676,16 +7705,19 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Data entered.
             with self.wait_cursor():
                 if rsp == QtWidgets.QDialog.Accepted:
-                    dist = float(dist_dialog.ed_edge_dist.text()) / self.units['L']
-                    if dist_dialog.rb_all.isChecked():
-                        for idx in self.checked_transects_idx:
-                            self.meas.transects[idx].edges.left.distance_m = dist
-                    else:
-                        self.meas.transects[self.checked_transects_idx[row]].edges.left.distance_m = dist
+                    dist = self.check_numeric_input(dist_dialog.ed_edge_dist)
+                    if dist is not None:
+                        dist = dist / self.units['L']
+                        if dist_dialog.rb_all.isChecked():
+                            for idx in self.checked_transects_idx:
+                                self.meas.transects[idx].edges.left.distance_m = dist
+                        else:
+                            self.meas.transects[self.checked_transects_idx[row]].edges.left.distance_m = dist
 
-                    s = self.meas.current_settings()
-                    self.meas.apply_settings(s)
-                    self.update_edges_table()
+                        s = self.meas.current_settings()
+                        self.meas.apply_settings(s)
+                        self.update_edges_table()
+
 
         # Left number of ensembles
         elif col == 5:
@@ -7698,17 +7730,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Data entered.
             with self.wait_cursor():
                 if rsp == QtWidgets.QDialog.Accepted:
-                    num_ens = float(ens_dialog.ed_edge_ens.text())
-                    if ens_dialog.rb_all.isChecked():
-                        for idx in self.checked_transects_idx:
-                            self.meas.transects[idx].edges.left.number_ensembles = num_ens
-                    else:
-                        self.meas.transects[self.checked_transects_idx[row]].edges.left.number_ensembles = num_ens
+                    num_ens = self.check_numeric_input(ens_dialog.ed_edge_ens)
+                    if num_ens is None:
+                        if ens_dialog.rb_all.isChecked():
+                            for idx in self.checked_transects_idx:
+                                self.meas.transects[idx].edges.left.number_ensembles = num_ens
+                        else:
+                            self.meas.transects[self.checked_transects_idx[row]].edges.left.number_ensembles = num_ens
 
-                    s = self.meas.current_settings()
-                    self.meas.apply_settings(s)
-                    self.update_edges_table()
-                    self.edges_graphics()
+                        s = self.meas.current_settings()
+                        self.meas.apply_settings(s)
+                        self.update_edges_table()
+                        self.edges_graphics()
 
         # Right edge type and coefficient
         elif col == 9 or col == 10:
@@ -7742,13 +7775,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         user_discharge_cms = None
                     elif type_dialog.rb_custom.isChecked():
                         type = 'Custom'
-                        cust_coef = float(type_dialog.ed_custom.text())
+                        cust_coef = self.check_numeric_input(type_dialog.ed_custom)
+                        if cust_coef is None:
+                            cust_coef = 0
                         user_discharge_cms = None
                     elif type_dialog.rb_user.isChecked():
                         type = 'User Q'
                         cust_coef = None
-                        user_discharge_cms = float(type_dialog.ed_q_user.text()) / self.units['Q']
-
+                        user_discharge_cms = self.check_numeric_input(type_dialog.ed_q_user)
+                        if user_discharge_cms is not None:
+                            user_discharge_cms = user_discharge_cms / self.units['Q']
+                        else:
+                            user_discharge_cms = 0
                     if type_dialog.rb_all.isChecked():
                         for idx in self.checked_transects_idx:
                             transect = self.meas.transects[idx]
@@ -7776,16 +7814,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Data entered.
             with self.wait_cursor():
                 if rsp == QtWidgets.QDialog.Accepted:
-                    dist = float(dist_dialog.ed_edge_dist.text()) / self.units['L']
-                    if dist_dialog.rb_all.isChecked():
-                        for idx in self.checked_transects_idx:
-                            self.meas.transects[idx].edges.right.distance_m = dist
-                    else:
-                        self.meas.transects[self.checked_transects_idx[row]].edges.right.distance_m = dist
+                    dist = self.check_numeric_input(dist_dialog.ed_edge_dist)
+                    if dist is not None:
+                        dist = dist / self.units['L']
+                        if dist_dialog.rb_all.isChecked():
+                            for idx in self.checked_transects_idx:
+                                self.meas.transects[idx].edges.right.distance_m = dist
+                        else:
+                            self.meas.transects[self.checked_transects_idx[row]].edges.right.distance_m = dist
 
-                    s = self.meas.current_settings()
-                    self.meas.apply_settings(s)
-                    self.update_edges_table()
+                        s = self.meas.current_settings()
+                        self.meas.apply_settings(s)
+                        self.update_edges_table()
 
         # Right number of ensembles
         elif col == 12:
@@ -7798,17 +7838,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Data entered.
             with self.wait_cursor():
                 if rsp == QtWidgets.QDialog.Accepted:
-                    num_ens = float(ens_dialog.ed_edge_ens.text())
-                    if ens_dialog.rb_all.isChecked():
-                        for idx in self.checked_transects_idx:
-                            self.meas.transects[idx].edges.right.number_ensembles = num_ens
-                    else:
-                        self.meas.transects[self.checked_transects_idx[row]].edges.right.number_ensembles = num_ens
+                    num_ens = self.check_numeric_input(ens_dialog.ed_edge_ens)
+                    if num_ens is not None:
+                        if ens_dialog.rb_all.isChecked():
+                            for idx in self.checked_transects_idx:
+                                self.meas.transects[idx].edges.right.number_ensembles = num_ens
+                        else:
+                            self.meas.transects[self.checked_transects_idx[row]].edges.right.number_ensembles = num_ens
 
-                    s = self.meas.current_settings()
-                    self.meas.apply_settings(s)
-                    self.update_edges_table()
-                    self.edges_graphics()
+                        s = self.meas.current_settings()
+                        self.meas.apply_settings(s)
+                        self.update_edges_table()
+                        self.edges_graphics()
 
         self.tab_edges_2_data.setFocus()
 
@@ -8516,6 +8557,24 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.change = True
                 self.tab_manager()
 
+    @staticmethod
+    def check_numeric_input(obj):
+        obj.blockSignals(True)
+        out = None
+        if len(obj.text()) > 0:
+            try:
+                text = obj.text()
+                out = float(text)
+            except ValueError:
+                obj.setText('')
+                msg = QtWidgets.QMessageBox()
+                msg.setIcon(QtWidgets.QMessageBox.Critical)
+                msg.setText("Error")
+                msg.setInformativeText('You have entered non-numeric text. Enter a numeric value.')
+                msg.setWindowTitle("Error")
+                msg.exec_()
+        obj.blockSignals(False)
+        return out
 
     @contextmanager
     def wait_cursor(self):
