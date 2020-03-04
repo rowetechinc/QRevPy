@@ -134,6 +134,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.actionSave.setDisabled(True)
         self.actionComment.setDisabled(True)
         self.actionCheck.setDisabled(True)
+        self.actionBT.setDisabled(True)
+        self.actionGGA.setDisabled(True)
+        self.actionVTG.setDisabled(True)
+        self.actionOFF.setDisabled(True)
+        self.actionON.setDisabled(True)
+        self.actionOptions.setDisabled(True)
+        self.actionGoogle_Earth.setDisabled(True)
+
 
         # Configure bold and normal fonts
         self.font_bold = QtGui.QFont()
@@ -217,7 +225,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # If a selection is made begin loading
         if len(select.type) > 0:
-
+            self.tab_all.setEnabled(False)
             # Load and process Sontek data
             if select.type == 'SonTek':
                 with self.wait_cursor():
@@ -1095,6 +1103,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
+
+    def update_tab_icons(self):
+        qa = self.meas.qa
+        qa_check_keys = ['bt_vel', 'compass', 'depths', 'edges', 'extrapolation', 'gga_vel', 'movingbed', 'system_tst',
+                         'temperature', 'transects', 'user', 'vtg_vel', 'w_vel']
+        for key in qa_check_keys:
+            qa_type = getattr(qa, key)
+            self.setIcon(key, qa_type['status'])
 
     def setIcon(self, key, status):
         """Set tab icon based on qa check status.
@@ -2049,7 +2065,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_systest_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_systest_messages.textCursor().insertBlock()
 
-            self.setTabIcon('tab_systest', self.meas.qa.system_tst['status'])
+            self.update_tab_icons()
+            # self.setTabIcon('tab_systest', self.meas.qa.system_tst['status'])
 
     def select_systest(self, row, column):
         """Displays selected system test in text box.
@@ -2270,7 +2287,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_compass_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_compass_messages.textCursor().insertBlock()
 
-            self.setTabIcon('tab_compass', self.meas.qa.compass['status'])
+            self.update_tab_icons()
+            # self.setTabIcon('tab_compass', self.meas.qa.compass['status'])
             if self.meas.qa.compass['status1'] != 'default':
                 self.setTabIcon('tab_compass_2_cal', self.meas.qa.compass['status1'], tab_base=self.tab_compass_2)
 
@@ -3064,8 +3082,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     self.display_tempsal_messages.textCursor().insertText(message[0])
                 self.display_tempsal_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_tempsal_messages.textCursor().insertBlock()
-
-            self.setTabIcon('tab_tempsal', self.meas.qa.temperature['status'])
+            self.update_tab_icons()
+            # self.setTabIcon('tab_tempsal', self.meas.qa.temperature['status'])
 
     def plot_temperature(self):
         """Generates the graph of temperature.
@@ -3616,7 +3634,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                      cb_bt=self.cb_mb_bt,
                                      cb_gga=self.cb_mb_gga,
                                      cb_vtg=self.cb_mb_vtg,
-                                     cb_vectors=self.cb_mb_vectors)
+                                     cb_vectors=self.cb_mb_vectors,
+                                     edge_start=True)
 
         # Draw canvas
         self.mb_shiptrack_canvas.draw()
@@ -3739,7 +3758,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         self.display_mb_messages.moveCursor(QtGui.QTextCursor.End)
                         self.display_mb_messages.textCursor().insertBlock()
 
-            self.setTabIcon('tab_mbt', self.meas.qa.movingbed['status'])
+            self.update_tab_icons()
+            # self.setTabIcon('tab_mbt', self.meas.qa.movingbed['status'])
 
 # Bottom track tab
 # ================
@@ -4476,7 +4496,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_bt_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_bt_messages.textCursor().insertBlock()
 
-            self.setTabIcon('tab_bt', self.meas.qa.bt_vel['status'])
+            self.update_tab_icons()
+            # self.setTabIcon('tab_bt', self.meas.qa.bt_vel['status'])
 
 # GPS tab
 # =======
@@ -5242,7 +5263,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 status = 'caution'
             if gga_status == 'warning' or vtg_status == 'warning':
                 status = 'warning'
-            self.setTabIcon('tab_gps', status)
+
+            self.update_tab_icons()
+            # self.setTabIcon('tab_gps', status)
 
 # Depth tab
 # =======
@@ -5831,7 +5854,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_depth_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_depth_messages.textCursor().insertBlock()
 
-            self.setTabIcon('tab_depth', self.meas.qa.depths['status'])
+            self.update_tab_icons()
+            # self.setTabIcon('tab_depth', self.meas.qa.depths['status'])
 
 # WT tab
 # ======
@@ -6431,7 +6455,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Update table
         self.update_wt_table(old_discharge=old_discharge, new_discharge=self.meas.discharge)
-
+        self.wt_comments_messages()
         # Update plots
         self.wt_plots()
 
@@ -6638,7 +6662,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_wt_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_wt_messages.textCursor().insertBlock()
 
-            self.setTabIcon('tab_wt', self.meas.qa.w_vel['status'])
+            self.update_tab_icons()
+            # self.setTabIcon('tab_wt', self.meas.qa.w_vel['status'])
 
 # Extrap Tab
 # ==========
@@ -7356,7 +7381,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_extrap_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_extrap_messages.textCursor().insertBlock()
 
-            self.setTabIcon('tab_extrap', self.meas.qa.extrapolation['status'])
+            self.update_tab_icons()
+            # self.setTabIcon('tab_extrap', self.meas.qa.extrapolation['status'])
 
 # Edges tab
 # =========
@@ -7488,6 +7514,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
+                if transect_id in self.meas.qa.edges['excluded_transect_left_idx']:
+                    tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
+                else:
+                    tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
+
                 # Left edge discharge
                 col += 1
                 item = '{:6.2f}'.format(self.meas.discharge[transect_id].left * self.units['Q'])
@@ -7562,6 +7593,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
+                if transect_id in self.meas.qa.edges['excluded_transect_left_idx']:
+                    tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
+                else:
+                    tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
+
                 # Right edge discharge
                 col += 1
                 item = '{:6.2f}'.format(self.meas.discharge[transect_id].right * self.units['Q'])
@@ -7594,6 +7630,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     def edges_table_clicked(self, row, col):
 
         tbl = self.table_edges
+        tbl.blockSignals(True)
         self.change = True
         # Show transect
         if col == 0:
@@ -7634,7 +7671,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                                                            'are correct.')
 
         # Left edge type and coefficient
-        elif col == 2 or col == 3:
+        elif col == 2 or col == 3 or col==7:
             # Initialize dialog
             type_dialog = EdgeType()
             type_dialog.rb_transect.setChecked(True)
@@ -7744,7 +7781,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         self.edges_graphics()
 
         # Right edge type and coefficient
-        elif col == 9 or col == 10:
+        elif col == 9 or col == 10 or col==15:
             # Initialize dialog
             type_dialog = EdgeType()
             type_dialog.rb_transect.setChecked(True)
@@ -7852,6 +7889,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         self.edges_graphics()
 
         self.tab_edges_2_data.setFocus()
+        tbl.blockSignals(False)
 
     def edges_graphics(self):
         self.edge_shiptrack_plots()
@@ -8079,7 +8117,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.display_edges_messages.moveCursor(QtGui.QTextCursor.End)
                 self.display_edges_messages.textCursor().insertBlock()
 
-            self.setTabIcon('tab_edges', self.meas.qa.edges['status'])
+            self.update_tab_icons()
+            # self.setTabIcon('tab_edges', self.meas.qa.edges['status'])
 
 # EDI tab
 # =======
@@ -8182,6 +8221,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl_edi.horizontalHeader().setFont(header_font)
         tbl_edi.verticalHeader().hide()
 
+        # Initialize values in results table
         tbl_edi.setItem(0, 0, QtWidgets.QTableWidgetItem('10'))
         tbl_edi.setItem(1, 0, QtWidgets.QTableWidgetItem('30'))
         tbl_edi.setItem(2, 0, QtWidgets.QTableWidgetItem('50'))
@@ -8190,7 +8230,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Configure table so first column is the only editable column
         for row in range(tbl_edi.rowCount()):
-            for col in range(1,7):
+            for col in range(1,8):
                 tbl_edi.setItem(row, col, QtWidgets.QTableWidgetItem(' '))
                 tbl_edi.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -8422,6 +8462,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.actionCheck.setEnabled(False)
             self.actionSave.setEnabled(True)
             self.actionComment.setEnabled(True)
+            self.actionBT.setDisabled(True)
+            self.actionGGA.setDisabled(True)
+            self.actionVTG.setDisabled(True)
+            self.actionOFF.setDisabled(True)
+            self.actionON.setDisabled(True)
+            self.actionOptions.setDisabled(True)
+            self.actionGoogle_Earth.setDisabled(True)
 
             # Data settings
             self.meas = data
@@ -8725,6 +8772,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.actionSave.setEnabled(True)
         self.actionComment.setEnabled(True)
         self.actionCheck.setEnabled(True)
+        self.actionBT.setDisabled(True)
+        self.actionGGA.setDisabled(True)
+        self.actionVTG.setDisabled(True)
+        self.actionOFF.setDisabled(True)
+        self.actionON.setDisabled(True)
+        self.actionOptions.setDisabled(True)
+        self.actionGoogle_Earth.setDisabled(True)
 
         # Set tab text and icons to default
         for tab_idx in range(self.tab_all.count()-1):

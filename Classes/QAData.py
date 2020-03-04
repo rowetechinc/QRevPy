@@ -1532,16 +1532,28 @@ class QAData(object):
             #TODO this needs to be revised to properly count edge ensembles and provide idx to affected transects
 
             # Check for edge ensembles marked invalid due to excluded distance
-            for transect in meas.transects:
+            self.edges['excluded_transect_left_idx'] = []
+            self.edges['excluded_transect_right_idx'] = []
+            for n, transect in enumerate(meas.transects):
                 if transect.checked:
-                    ens_sum_excluded_data = np.nansum(transect.w_vel.valid_data[6, :, :], 0)
-                    cells_above_sl = np.nansum(transect.w_vel.cells_above_sl, 0)
-                    ens_excluded_data = np.not_equal(ens_sum_excluded_data, cells_above_sl)
-                    if any(ens_excluded_data):
-                        self.edges['status'] = 'caution'
-                        self.edges['messages'].append(['Edges: The excluded distance caused invalid ensembles '
-                                                       + 'in an edge, check edge distance;', 2, 13])
-                        break
+                    ens_invalid_excluded = np.nansum(transect.w_vel.valid_data[6, :, :], 0) > 0
+                    ens_cells_above_sl = np.nansum(transect.w_vel.cells_above_sl, 0) > 0
+                    ens_invalid_excluded = np.logical_not(np.logical_and(ens_invalid_excluded, ens_cells_above_sl))
+                    if np.any(ens_invalid_excluded):
+                        if transect.start_edge == 'Left':
+                            invalid_left = ens_invalid_excluded[0:int(transect.edges.left.number_ensembles)]
+                            invalid_right =ens_invalid_excluded[-int(transect.edges.right.number_ensembles):]
+                        else:
+                            invalid_right = ens_invalid_excluded[0:int(transect.edges.right.number_ensembles)]
+                            invalid_left = ens_invalid_excluded[-int(transect.edges.left.number_ensembles):]
+                        if np.any(invalid_left) or np.any(invalid_right):
+                            self.edges['status'] = 'caution'
+                            self.edges['messages'].append(['Edges: The excluded distance caused invalid ensembles '
+                                                           + 'in an edge, check edge distance;', 2, 13])
+                            if np.any(invalid_left):
+                                self.edges['excluded_transect_left_idx'].append(n)
+                            if np.any(invalid_right):
+                                self.edges['excluded_transect_right_idx'].append(n)
 
             # Check edges for zero discharge
             self.edges['left_zero'] = 0

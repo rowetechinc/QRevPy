@@ -128,7 +128,7 @@ class Shiptrack(object):
 
         # Plot shiptrack based on bottom track
         ship_data_bt = transect.boat_vel.compute_boat_track(transect, ref='bt_vel')
-        if edge_start is not None:
+        if edge_start is not None and n_ensembles is not None:
             ship_data_bt['track_x_m'] = self.subsection(ship_data_bt['track_x_m'], n_ensembles, edge_start)
             ship_data_bt['track_y_m'] = self.subsection(ship_data_bt['track_y_m'], n_ensembles, edge_start)
 
@@ -194,7 +194,7 @@ class Shiptrack(object):
         # Plot shiptrack based on vtg, if available
         if transect.boat_vel.vtg_vel is not None:
             ship_data_vtg = transect.boat_vel.compute_boat_track(transect, ref='vtg_vel')
-            if edge_start is not None:
+            if edge_start is not None and n_ensembles is not None:
                 ship_data_vtg['track_x_m'] = self.subsection(ship_data_vtg['track_x_m'], n_ensembles, edge_start)
                 ship_data_vtg['track_y_m'] = self.subsection(ship_data_vtg['track_y_m'], n_ensembles, edge_start)
             self.vtg = self.fig.ax.plot(ship_data_vtg['track_x_m'] * units['L'],
@@ -237,7 +237,7 @@ class Shiptrack(object):
         # Plot shiptrack based on gga, if available
         if transect.boat_vel.gga_vel is not None:
             ship_data_gga = transect.boat_vel.compute_boat_track(transect, ref='gga_vel')
-            if edge_start is not None:
+            if edge_start is not None and n_ensembles is not None:
                 ship_data_gga['track_x_m'] = self.subsection(ship_data_gga['track_x_m'], n_ensembles, edge_start)
                 ship_data_gga['track_y_m'] = self.subsection(ship_data_gga['track_y_m'], n_ensembles, edge_start)
             self.gga = self.fig.ax.plot(ship_data_gga['track_x_m'] * units['L'],
@@ -339,7 +339,7 @@ class Shiptrack(object):
         v = np.copy(transect.w_vel.v_processed_mps)
         self.vector_ref = transect.w_vel.nav_ref
 
-        if edge_start is not None:
+        if edge_start is not None and n_ensembles is not None:
             u[np.logical_not(transect.w_vel.valid_data[0,:,:])] = np.nan
             v[np.logical_not(transect.w_vel.valid_data[0,:,:])] = np.nan
             u_mean = np.nanmean(u, axis=0)
@@ -461,6 +461,11 @@ class Shiptrack(object):
                 control['vtg'] = True
             else:
                 control['vtg'] = False
+            if self.cb_vectors.checkState() == QtCore.Qt.Checked:
+                control['vectors'] = True
+            else:
+                control['vectors'] = False
+
         return control
 
     def hover(self, event):

@@ -74,7 +74,7 @@ class ExtrapPlot(object):
         self.fig.ax = self.fig.add_subplot(111)
 
         # Set margins and padding for figure
-        self.fig.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.98, wspace=0.1, hspace=0)
+        self.fig.subplots_adjust(left=0.13, bottom=0.1, right=0.98, top=0.98, wspace=0.1, hspace=0)
 
         # If valid data exist create graph
         if np.any(np.logical_not(np.isnan(extrap_fit.norm_data[-1].unit_normalized))):
