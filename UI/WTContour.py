@@ -121,10 +121,12 @@ class WTContour(object):
         self.fig.ax.yaxis.label.set_fontsize(12)
         self.fig.ax.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
         self.fig.ax.set_ylim(top=0, bottom=np.ceil(np.nanmax(depth * units['L'])))
-        self.fig.ax.set_xlim(left=ensembles[0] - len(ensembles) * 0.02, right=ensembles[-1] + len(ensembles) * 0.02)
+        lower_limit = ensembles[0] - max([len(ensembles) * 0.02, 1])
+        upper_limit = ensembles[-1] + max([len(ensembles) * 0.02, 2])
+        self.fig.ax.set_xlim(left=lower_limit, right=upper_limit)
         if transect.start_edge == 'Right':
             self.fig.ax.invert_xaxis()
-            self.fig.ax.set_xlim(right=ensembles[0] - len(ensembles) * 0.02, left=ensembles[-1] + len(ensembles) * 0.02)
+            self.fig.ax.set_xlim(right=lower_limit, left=upper_limit)
 
         # Initialize annotation for data cursor
         self.annot = self.fig.ax.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
@@ -283,7 +285,8 @@ class WTContour(object):
 
             if cont_fig and self.fig.get_visible():
                 # col_idx = (int(round(event.xdata)) - int(round(self.fig.ax.viewLim.x0))) * 2
-                col_idx = (int(round(event.xdata)) * 2) - 1
+                # col_idx = (int(round(event.xdata)) * 2) - 1
+                col_idx = (int(round(abs(event.xdata - self.x_plt[0, 0]))) * 2) - 1
                 vel = None
                 for n, cell in enumerate(self.cell_plt[:, col_idx]):
                     if event.ydata < cell:

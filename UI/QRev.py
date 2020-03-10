@@ -66,7 +66,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         super(QRev, self).__init__(parent)
         self.setupUi(self)
 
-        self.QRev_version = 'QRevPy 4.02'
+        self.QRev_version = 'QRevPy 4.04'
         self.setWindowTitle(self.QRev_version)
 
         self.toolBar.toggleViewAction().setEnabled(False)
@@ -7501,7 +7501,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Left edge # ens
                 col += 1
-                item = '{:4.0f}'.format(transect.edges.left.number_ensembles)
+                # This allows the number of edge ensembles to be increased to obtain total number of ensembles including
+                # invalid ensembles for TRDI and report the specified number of ensembles (even if all invalid) for
+                # SonTek
+                left_idx = self.meas.discharge[transect_id].left_idx
+                if len(left_idx) > 0:
+                    n_ensembles = (left_idx[-1] - left_idx[0]) + 1
+                else:
+                    n_ensembles = transect.edges.left.number_ensembles
+                item = '{:4.0f}'.format(n_ensembles)
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -7514,7 +7522,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-                if transect_id in self.meas.qa.edges['excluded_transect_left_idx']:
+                if transect_id in self.meas.qa.edges['invalid_transect_left_idx']:
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
                 else:
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
@@ -7580,7 +7588,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Right edge # ens
                 col += 1
-                item = '{:4.0f}'.format(transect.edges.right.number_ensembles)
+                # This allows the number of edge ensembles to be increased to obtain total number of ensembles including
+                # invalid ensembles for TRDI and report the specified number of ensembles (even if all invalid) for
+                # SonTek
+                right_idx = self.meas.discharge[transect_id].right_idx
+                if len(right_idx) > 0:
+                    n_ensembles = (right_idx[-1] - right_idx[0]) + 1
+                else:
+                    n_ensembles = transect.edges.right.number_ensembles
+                item = '{:4.0f}'.format(n_ensembles)
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -7593,7 +7609,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-                if transect_id in self.meas.qa.edges['excluded_transect_left_idx']:
+                if transect_id in self.meas.qa.edges['invalid_transect_right_idx']:
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
                 else:
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
@@ -7768,7 +7784,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             with self.wait_cursor():
                 if rsp == QtWidgets.QDialog.Accepted:
                     num_ens = self.check_numeric_input(ens_dialog.ed_edge_ens)
-                    if num_ens is None:
+                    if num_ens is not None:
                         if ens_dialog.rb_all.isChecked():
                             for idx in self.checked_transects_idx:
                                 self.meas.transects[idx].edges.left.number_ensembles = num_ens
@@ -7902,7 +7918,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         transect = self.meas.transects[self.checked_transects_idx[self.transect_row]]
 
         # Left edge
-        n_ensembles = transect.edges.left.number_ensembles
+        left_idx = self.meas.discharge[self.checked_transects_idx[self.transect_row]].left_idx
+        # Compute total number of edge ensembles including invalid data
+        if len(left_idx) > 0:
+            n_ensembles = (left_idx[-1] - left_idx[0]) + 1
+        else:
+            n_ensembles = n_ensembles = transect.edges.left.number_ensembles
         if transect.start_edge == 'Left':
             edge_start = True
         else:
@@ -7939,11 +7960,17 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.left_edge_contour_canvas.draw()
         
         # Right edge
-        n_ensembles = transect.edges.right.number_ensembles
+        # Compute total number of edge ensembles including invalid data
+        right_idx = self.meas.discharge[self.checked_transects_idx[self.transect_row]].right_idx
+        if len(right_idx) > 0:
+            n_ensembles = (right_idx[-1] - right_idx[0]) + 1
+        else:
+            n_ensembles = transect.edges.right.number_ensembles
         if transect.start_edge == 'Left':
             edge_start = False
         else:
             edge_start = True
+
 
         # If the canvas has not been previously created, create the canvas and add the widget.
         if not hasattr(self, 'right_edge_contour_canvas'):
@@ -8397,7 +8424,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             error_dialog = QtWidgets.QErrorMessage()
             error_dialog.showMessage('Invalid output filename. TopoQuad file not created.')
 
-
 # Graphics controls
 # =================
     def clear_zphd(self):
@@ -8812,6 +8838,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.tab_all.setTabEnabled(2, True)
         else:
             self.tab_all.setTabEnabled(2, False)
+
 
 # Command line functions
 # ======================

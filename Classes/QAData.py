@@ -1529,31 +1529,35 @@ class QAData(object):
             else:
                 self.edges['left_dist_moved_idx'] = []
 
-            #TODO this needs to be revised to properly count edge ensembles and provide idx to affected transects
-
             # Check for edge ensembles marked invalid due to excluded distance
-            self.edges['excluded_transect_left_idx'] = []
-            self.edges['excluded_transect_right_idx'] = []
+            self.edges['invalid_transect_left_idx'] = []
+            self.edges['invalid_transect_right_idx'] = []
             for n, transect in enumerate(meas.transects):
                 if transect.checked:
-                    ens_invalid_excluded = np.nansum(transect.w_vel.valid_data[6, :, :], 0) > 0
+                    ens_invalid = np.nansum(transect.w_vel.valid_data[0, :, :], 0) > 0
                     ens_cells_above_sl = np.nansum(transect.w_vel.cells_above_sl, 0) > 0
-                    ens_invalid_excluded = np.logical_not(np.logical_and(ens_invalid_excluded, ens_cells_above_sl))
-                    if np.any(ens_invalid_excluded):
+                    ens_invalid = np.logical_not(np.logical_and(ens_invalid, ens_cells_above_sl))
+                    if np.any(ens_invalid):
                         if transect.start_edge == 'Left':
-                            invalid_left = ens_invalid_excluded[0:int(transect.edges.left.number_ensembles)]
-                            invalid_right =ens_invalid_excluded[-int(transect.edges.right.number_ensembles):]
+                            invalid_left = ens_invalid[0:int(transect.edges.left.number_ensembles)]
+                            invalid_right =ens_invalid[-int(transect.edges.right.number_ensembles):]
                         else:
-                            invalid_right = ens_invalid_excluded[0:int(transect.edges.right.number_ensembles)]
-                            invalid_left = ens_invalid_excluded[-int(transect.edges.left.number_ensembles):]
-                        if np.any(invalid_left) or np.any(invalid_right):
+                            invalid_right = ens_invalid[0:int(transect.edges.right.number_ensembles)]
+                            invalid_left = ens_invalid[-int(transect.edges.left.number_ensembles):]
+                        # if np.any(invalid_left) or np.any(invalid_right):
+                        left_invalid_percent = sum(invalid_left) / len(invalid_left)
+                        right_invalid_percent = sum(invalid_right) / len(invalid_right)
+                        max_invalid_percent = max([left_invalid_percent, right_invalid_percent]) * 100
+                        if max_invalid_percent > 25:
                             self.edges['status'] = 'caution'
-                            self.edges['messages'].append(['Edges: The excluded distance caused invalid ensembles '
-                                                           + 'in an edge, check edge distance;', 2, 13])
                             if np.any(invalid_left):
-                                self.edges['excluded_transect_left_idx'].append(n)
+                                self.edges['invalid_transect_left_idx'].append(n)
                             if np.any(invalid_right):
-                                self.edges['excluded_transect_right_idx'].append(n)
+                                self.edges['invalid_transect_right_idx'].append(n)
+
+            if len(self.edges['invalid_transect_left_idx']) > 0 or len(self.edges['invalid_transect_right_idx']) > 0:
+                self.edges['messages'].append(['Edges: The percent of invalid ensembles exceeds 25% in' +
+                                               ' one or more transects.', 2, 13])
 
             # Check edges for zero discharge
             self.edges['left_zero'] = 0

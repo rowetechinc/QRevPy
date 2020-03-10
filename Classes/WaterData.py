@@ -840,7 +840,7 @@ class WaterData(object):
             self.filter_snr(setting=self.snr_filter)
 
         # After filters have been applied, interpolate to estimate values for invalid data.
-        self.apply_interpolation(transect=transect)
+        # self.apply_interpolation(transect=transect)
         
     def sos_correction(self, transect, ratio):
         """Corrects water velocities for a change in speed of sound.
@@ -928,7 +928,7 @@ class WaterData(object):
         self.all_valid_data()
         self.compute_snr_rng()
         self.apply_filter(transect)
-        self.apply_interpolation(transect)
+        # self.apply_interpolation(transect)
 
     def all_valid_data(self):
         """Combines the results of all filters to determine a final set of valid data"""

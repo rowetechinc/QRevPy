@@ -160,23 +160,6 @@ class Shiptrack(object):
                                             ship_data_bt['track_y_m'][invalid_bt[5]] * units['L'],
                                             'k', linestyle='', marker='$B$')[0])
 
-        # if invalid_wt is not None:
-        #     self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][invalid_wt[1]] * units['L'],
-        #                                     ship_data_bt['track_y_m'][invalid_wt[1]] * units['L'],
-        #                                     'k', linestyle='', marker='$O$')[0])
-        #     self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][invalid_wt[2]] * units['L'],
-        #                                     ship_data_bt['track_y_m'][invalid_wt[2]] * units['L'],
-        #                                     'k', linestyle='', marker='$E$')[0])
-        #     self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][invalid_wt[3]] * units['L'],
-        #                                     ship_data_bt['track_y_m'][invalid_wt[3]] * units['L'],
-        #                                     'k', linestyle='', marker='$V$')[0])
-        #     self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][invalid_wt[5]] * units['L'],
-        #                                     ship_data_bt['track_y_m'][invalid_wt[5]] * units['L'],
-        #                                     'k', linestyle='', marker='$B$')[0])
-        #     self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][invalid_wt[7]] * units['L'],
-        #                                     ship_data_bt['track_y_m'][invalid_wt[7]] * units['L'],
-        #                                     'k', linestyle='', marker='$R$')[0])
-
         ship_data = ship_data_bt
         max_x_bt = np.nanmax(ship_data_bt['track_x_m'])
         max_y_bt = np.nanmax(ship_data_bt['track_y_m'])
