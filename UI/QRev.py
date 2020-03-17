@@ -1204,7 +1204,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.check_depth_settings()
         self.check_extrap_settings()
         self.check_tempsal_settings()
-        self.check_edge_settings()
+        self.check_gps_settings()
 
         for tab in self.tab_settings:
 
@@ -4374,16 +4374,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.bt_plots()
 
     def check_bt_settings(self):
-        """Checks the comboboxes to see if they are still on the default
+        """Checks the bt settings to see if they are still on the default
                 settings."""
 
         s = self.meas.current_settings()
         d = self.meas.qrev_default_settings()
-
-        # beam_sol = self.combo_bt_3beam.currentText()
-        # bt_error = self.combo_bt_error_velocity.currentText()
-        # bt_vert = self.combo_bt_vert_velocity.currentText()
-        # other = self.combo_bt_other.currentText()
 
         beam_sol = s['BTbeamFilter']
         bt_error = s['BTdFilter']
@@ -5171,6 +5166,31 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Update plots
         self.gps_plots()
+
+    def check_gps_settings(self):
+        """Checks the gps settings to see if they are still on the default
+        settings."""
+
+        s = self.meas.current_settings()
+        d = self.meas.qrev_default_settings()
+
+        quality = s['ggaDiffQualFilter']
+        alt_change = s['ggaAltitudeFilter']
+        hdop = s['GPSHDOPFilter']
+        other = s['GPSSmoothFilter']
+
+        d_quality = d['ggaDiffQualFilter']
+        d_alt_change = d['ggaAltitudeFilter']
+        d_hdop = d['GPSHDOPFilter']
+        d_other = d['GPSSmoothFilter']
+
+        settings = [quality, alt_change, hdop, other]
+        default = [d_quality, d_alt_change, d_hdop, d_other]
+
+        if settings == default:
+            self.tab_settings['tab_gps'] = 'Default'
+        else:
+            self.tab_settings['tab_gps'] = 'Custom'
 
     @QtCore.pyqtSlot(str)
     def change_quality(self, text):
@@ -7825,27 +7845,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.resizeColumnsToContents()
             tbl.resizeRowsToContents()
         self.edge_comments_messages()
-
-    def check_edge_settings(self):
-        """Checks the edge settigns to see if they are still on the default
-                settings."""
-
-        s = self.meas.current_settings()
-        d = self.meas.qrev_default_settings()
-
-        vel_method = s['edgeVelMethod']
-        rec_method = s['edgeRecEdgeMethod']
-
-        d_vel_method = d['edgeVelMethod']
-        d_rec_method = d['edgeRecEdgeMethod']
-
-        settings = [vel_method, rec_method]
-        default = [d_vel_method, d_rec_method]
-
-        if settings == default:
-            self.tab_settings['tab_edges'] = 'Default'
-        else:
-            self.tab_settings['tab_edges'] = 'Custom'
 
     def edges_table_clicked(self, row, col):
 
