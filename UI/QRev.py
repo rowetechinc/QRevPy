@@ -294,6 +294,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.config_gui()
                 self.change = True
                 self.tab_manager(tab_idx=0)
+                self.set_tab_color()
 
     def save_measurement(self):
         """Save measurement in Matlab format.
@@ -1204,7 +1205,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.check_depth_settings()
         self.check_extrap_settings()
         self.check_tempsal_settings()
-        self.check_gps_settings()
+        if self.tab_all.isTabEnabled(6) is True:
+            self.check_gps_settings()
 
         for tab in self.tab_settings:
 
@@ -9041,9 +9043,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.tab_all.setTabEnabled(2, True)
         else:
             self.tab_all.setTabEnabled(2, False)
-
-        self.set_tab_color()
-
 
 # Command line functions
 # ======================
