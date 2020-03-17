@@ -1202,7 +1202,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.check_bt_settings()
         self.check_wt_settings()
         self.check_depth_settings()
-        #self.check_extrap_settings()
+        self.check_extrap_settings()
         self.check_tempsal_settings()
         self.check_edge_settings()
 
@@ -6950,16 +6950,19 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Checks the comboboxes to see if they are still on the default
         settings."""
 
-        # fit = self.combo_extrap_fit.currentText()
-        # d_used = self.combo_extrap_data.currentText()
+        # Check fit parameters
+        if self.meas.extrap_fit.sel_fit[0].fit_method == 'Automatic':
+            fit = 'Automatic'
+        else:
+            fit = 'Manual'
 
-        fit = self.meas.extrap_fit.sel_fit[self.idx].fit_method()
-
+        # Check subsection parameters
         if self.meas.extrap_fit.sel_fit[-1].data_type.lower() != 'q':
            d_used = 'Manual'
         elif self.meas.extrap_fit.threshold != 20:
             d_used = 'Manual'
-        elif self.meas.extrap_fit.subsection[0] != 0 or self.meas.extrap_fit.subsection[1] != 100:
+        elif self.meas.extrap_fit.subsection[0] != 0 or \
+                self.meas.extrap_fit.subsection[1] != 100:
             d_used = 'Manual'
         else:
             d_used = 'Automatic'
