@@ -55,6 +55,7 @@ class HeadingTS(object):
         self.fig.axh.xaxis.label.set_fontsize(10)
         self.fig.axh.yaxis.label.set_fontsize(10)
         self.fig.axh.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+        self.fig.axh.set_yticks([0, 90, 180, 270, 360])
 
         if cb_merror.isChecked():
             # Plot magnetic field change
@@ -112,7 +113,7 @@ class HeadingTS(object):
                                           arrowprops=dict(arrowstyle="->"))
 
         self.annot.set_visible(False)
-
+        self.fig.axh.set_yticks([0, 90, 180, 270, 360])
         self.canvas.draw()
 
     def update_annot(self, annot, ind, plt_ref, row):

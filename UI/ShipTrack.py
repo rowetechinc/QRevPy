@@ -138,9 +138,11 @@ class Shiptrack(object):
 
         if edge_start is not None and not np.alltrue(np.isnan(ship_data_bt['track_x_m'])):
                 if edge_start:
-                    self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][0], ship_data_bt['track_y_m'][0], 'sk')[0])
+                    self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][0] * units['L'],
+                                                    ship_data_bt['track_y_m'][0] * units['L'], 'sk')[0])
                 else:
-                    self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][-1], ship_data_bt['track_y_m'][-1], 'sk')[0])
+                    self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][-1] * units['L'],
+                                                    ship_data_bt['track_y_m'][-1] * units['L'], 'sk')[0])
 
         # Plot invalid data points using a symbol to represent what caused the data to be invalid
         if invalid_bt is not None and not np.alltrue(np.isnan(ship_data_bt['track_x_m'])):
@@ -186,9 +188,11 @@ class Shiptrack(object):
 
             if edge_start is not None:
                 if edge_start:
-                    self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][0], ship_data_vtg['track_y_m'][0], 'sk')[0])
+                    self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][0] * units['L'],
+                                                     ship_data_vtg['track_y_m'][0] * units['L'], 'sk')[0])
                 else:
-                    self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][-1], ship_data_vtg['track_y_m'][-1], 'sk')[0])
+                    self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][-1] * units['L'],
+                                                     ship_data_vtg['track_y_m'][-1] * units['L'], 'sk')[0])
 
             # Plot invalid data points using a symbol to represent what caused the data to be invalid
             if invalid_gps is not None and not np.alltrue(np.isnan(ship_data_vtg['track_x_m'])):
@@ -230,9 +234,11 @@ class Shiptrack(object):
             if edge_start is not None:
                 try:
                     if edge_start:
-                        self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][0], ship_data_gga['track_y_m'][0], 'sk')[0])
+                        self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][0] * units['L'],
+                                                         ship_data_gga['track_y_m'][0] * units['L'], 'sk')[0])
                     else:
-                        self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][-1], ship_data_gga['track_y_m'][-1], 'sk')[0])
+                        self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][-1] * units['L'],
+                                                         ship_data_gga['track_y_m'][-1] * units['L'], 'sk')[0])
                 except TypeError:
                     pass
 
@@ -430,17 +436,17 @@ class Shiptrack(object):
 
             # Get checkbox status
             # BT
-            if self.cb_bt.checkState() == QtCore.Qt.Checked:
+            if self.cb_bt.checkState():
                 control['bt'] = True
             else:
                 control['bt'] = False
             # GGA
-            if self.cb_gga.checkState() == QtCore.Qt.Checked:
+            if self.cb_gga.checkState():
                 control['gga'] = True
             else:
                 control['gga'] = False
             # VTG
-            if self.cb_vtg.checkState() == QtCore.Qt.Checked:
+            if self.cb_vtg.checkState():
                 control['vtg'] = True
             else:
                 control['vtg'] = False

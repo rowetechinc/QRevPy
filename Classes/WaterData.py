@@ -811,8 +811,7 @@ class WaterData(object):
         # Determine filters to apply
         if len({beam, difference, difference_threshold, vertical, vertical_threshold, other, excluded, snr,
                 wt_depth}) > 1:
-            if beam is not None:
-                self.filter_beam(setting=beam, transect=transect)
+
             if difference is not None:
                 if difference == 'Manual':
                     self.filter_diff_vel(setting=difference, threshold=difference_threshold)
@@ -831,13 +830,15 @@ class WaterData(object):
                 self.filter_snr(setting=snr)
             if wt_depth is not None:
                 self.filter_wt_depth(transect=transect, setting=wt_depth)
+            if beam is not None:
+                self.filter_beam(setting=beam, transect=transect)
         else:
-            self.filter_beam(setting=self.beam_filter, transect=transect)
             self.filter_diff_vel(setting=self.d_filter, threshold=self.d_filter_threshold)
             self.filter_vert_vel(setting=self.w_filter, threshold=self.w_filter_threshold)
             self.filter_smooth(transect=transect, setting=self.smooth_filter)
             self.filter_excluded(transect=transect, setting=self.excluded_dist_m)
             self.filter_snr(setting=self.snr_filter)
+            self.filter_beam(setting=self.beam_filter, transect=transect)
 
         # After filters have been applied, interpolate to estimate values for invalid data.
         # self.apply_interpolation(transect=transect)
@@ -991,6 +992,14 @@ class WaterData(object):
         valid_bool = temp.valid_data[5, :, :]
         valid = valid_bool.astype(float)
         valid[temp.cells_above_sl == False] = np.nan
+
+        # Initialize processed velocity data variables
+        temp.u_processed_mps = copy.deepcopy(temp.u_mps)
+        temp.v_processed_mps = copy.deepcopy(temp.v_mps)
+
+        # Set invalid data to nan in processed velocity data variables
+        temp.u_processed_mps[np.logical_not(valid)] = np.nan
+        temp.v_processed_mps[np.logical_not(valid)] = np.nan
 
         # Find indices of cells with 3 beams solutions
         rows_3b, cols_3b = np.where(np.abs(valid) == 0)
@@ -1473,6 +1482,7 @@ class WaterData(object):
             return interpolated_data
         else:
             return None
+
     def interpolate_ens_next(self):
         """Applies data from the next valid ensemble for ensembles with invalid water velocities."""
 

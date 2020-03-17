@@ -62,8 +62,8 @@ class Measurement(object):
 
         Parameters
         ----------
-        in_file: str or list
-            String containing fullname of mmt file for TRDI data, QRev file for
+        in_file: str or list or dict
+            String containing fullname of mmt file for TRDI data, dict for
             QRev data, or list of files for SonTek
         source: str
             Source of data. TRDI, SonTek, QRev
@@ -110,22 +110,24 @@ class Measurement(object):
             # Process TRDI and SonTek data
             if len(self.transects) > 0:
 
-                # Get navigation reference
-                # select = self.transects[0].boat_vel.selected
-                # if select == 'bt_vel':
-                #     ref = 'BT'
-                # elif select == 'gga_vel':
-                #     ref = 'GGA'
-                # elif select == 'vtg_vel':
-                #     ref = 'VTG'
+                # Save initial settings
+                self.initial_settings = self.current_settings()
 
                 # Process moving-bed tests
                 if len(self.mb_tests) > 0:
+                    # Get navigation reference
+                    select = self.initial_settings['NavRef']
+                    ref = None
+                    if select == 'bt_vel':
+                        ref = 'BT'
+                    elif select == 'gga_vel':
+                        ref = 'GGA'
+                    elif select == 'vtg_vel':
+                        ref = 'VTG'
                     self.mb_tests = MovingBedTests.auto_use_2_correct(
-                        moving_bed_tests=self.mb_tests)
+                        moving_bed_tests=self.mb_tests, boat_ref=ref)
 
-                # Save initial settings
-                self.initial_settings = self.current_settings()
+
 
                 # Set processing type
                 if proc_type == 'QRev':
@@ -466,26 +468,28 @@ class Measurement(object):
         # Compass Calibration
         compass_cal_folder = os.path.join(pathname, 'CompassCal')
         if os.path.isdir(compass_cal_folder):
-            compass_cal_files = []
             for file in os.listdir(compass_cal_folder):
-
+                valid_file = False
                 # G3 compasses
                 if file.endswith('.ccal'):
                     # compass_cal_files.append(file)
                     time_stamp = file.split('_')
                     time_stamp = time_stamp[0] + '_' + time_stamp[1]
+                    valid_file = True
 
                 # G2 compasses
                 elif file.endswith('.txt'):
                     # compass_cal_files.append(file)
                     time_stamp = file.split('l')[1].split('.')[0]
+                    valid_file = True
 
             # for file in compass_cal_files:
-                with open(os.path.join(compass_cal_folder, file)) as f:
-                    cal_data = f.read()
-                    cal = PreMeasurement()
-                    cal.populate_data(time_stamp, cal_data, 'SCC')
-                    self.compass_cal.append(cal)
+                if valid_file:
+                    with open(os.path.join(compass_cal_folder, file)) as f:
+                        cal_data = f.read()
+                        cal = PreMeasurement()
+                        cal.populate_data(time_stamp, cal_data, 'SCC')
+                        self.compass_cal.append(cal)
         # else:
         #     cal = PreMeasurement()
         #     self.compass_cal.append(cal)
@@ -1012,17 +1016,18 @@ class Measurement(object):
         # interpolations because the TRDI approach for power/power
         # using the power curve and exponent to estimate invalid cells.
 
-        if self.extrap_fit is None :
-            self.extrap_fit = ComputeExtrap()
-            self.extrap_fit.populate_data(transects=self.transects, compute_sensitivity=False)
-            self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
-        elif self.extrap_fit.fit_method == 'Automatic':
-            self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
-        else:
-            if 'extrapTop' not in settings.keys():
-                settings['extrapTop'] = self.extrap_fit.sel_fit[-1].top_method
-                settings['extrapBot'] = self.extrap_fit.sel_fit[-1].bot_method
-                settings['extrapExp'] = self.extrap_fit.sel_fit[-1].exponent
+        if transect.w_vel.interpolate_cells == 'TRDI':
+            if self.extrap_fit is None :
+                self.extrap_fit = ComputeExtrap()
+                self.extrap_fit.populate_data(transects=self.transects, compute_sensitivity=False)
+                self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
+            elif self.extrap_fit.fit_method == 'Automatic':
+                self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
+            else:
+                if 'extrapTop' not in settings.keys():
+                    settings['extrapTop'] = self.extrap_fit.sel_fit[-1].top_method
+                    settings['extrapBot'] = self.extrap_fit.sel_fit[-1].bot_method
+                    settings['extrapExp'] = self.extrap_fit.sel_fit[-1].exponent
 
             self.change_extrapolation(self.extrap_fit.fit_method,
                                       top=settings['extrapTop'],
@@ -1036,6 +1041,24 @@ class Measurement(object):
             transect.w_vel.apply_interpolation(transect=transect,
                                                ens_interp=settings['WTEnsInterpolation'],
                                                cells_interp=settings['WTCellInterpolation'])
+
+        if self.extrap_fit is None :
+            self.extrap_fit = ComputeExtrap()
+            self.extrap_fit.populate_data(transects=self.transects, compute_sensitivity=False)
+            self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
+        elif self.extrap_fit.fit_method == 'Automatic':
+            self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
+        else:
+            if 'extrapTop' not in settings.keys():
+                settings['extrapTop'] = self.extrap_fit.sel_fit[-1].top_method
+                settings['extrapBot'] = self.extrap_fit.sel_fit[-1].bot_method
+                settings['extrapExp'] = self.extrap_fit.sel_fit[-1].exponent
+
+        self.change_extrapolation(self.extrap_fit.fit_method,
+                                  top=settings['extrapTop'],
+                                  bot=settings['extrapBot'],
+                                  exp=settings['extrapExp'],
+                                  compute_q=False)
 
         self.extrap_fit.q_sensitivity = ExtrapQSensitivity()
         self.extrap_fit.q_sensitivity.populate_data(transects=self.transects,
@@ -1248,6 +1271,11 @@ class Measurement(object):
         # Edge settings
         settings['edgeVelMethod'] = 'MeasMag'
         settings['edgeRecEdgeMethod'] = 'Fixed'
+
+        # Extrapolation Settings
+        settings['extrapTop'] = 'Power'
+        settings['extrapBot'] = 'Power'
+        settings['extrapExp'] = 0.1667
 
         return settings
 

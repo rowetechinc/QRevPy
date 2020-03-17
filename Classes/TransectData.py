@@ -952,6 +952,9 @@ class TransectData(object):
             mag_error = rsdata.Compass.Magnetic_error
             pitch_limit = np.array((rsdata.Compass.Maximum_Pitch, rsdata.Compass.Minimum_Pitch)).T
             roll_limit = np.array((rsdata.Compass.Maximum_Roll, rsdata.Compass.Minimum_Roll)).T
+            if np.any(np.greater_equal(np.abs(pitch_limit), 90)) or np.any(np.greater_equal(np.abs(roll_limit), 90)):
+                pitch_limit = None
+                roll_limit = None
         else:
             mag_error = None
             pitch_limit = None
@@ -1060,11 +1063,18 @@ class TransectData(object):
        """
         transects = []
         if hasattr(meas_struct, 'transects'):
-            if len(meas_struct.transects) > 0:
-                for transect in meas_struct.transects:
-                    trans = TransectData()
-                    trans.populate_from_qrev_mat(transect)
-                    transects.append(trans)
+			# If only one transect the data are not a list or array of transects
+            try:
+                if len(meas_struct.transects) > 0:
+                    for transect in meas_struct.transects:
+                        trans = TransectData()
+                        trans.populate_from_qrev_mat(transect)
+                        transects.append(trans)
+            except TypeError:
+                trans = TransectData()
+                trans.populate_from_qrev_mat(meas_struct.transects)
+                transects.append(trans)
+
         return transects
 
     def populate_from_qrev_mat(self, transect):
@@ -1296,6 +1306,7 @@ class TransectData(object):
         # are applied with this one call
 
         self.w_vel.apply_filter(transect=self)
+        self.w_vel.apply_interpolation(transect=self)
 
     @staticmethod
     def side_lobe_cutoff(depths, draft, cell_depth, sl_lag_effect, slc_type='Percent', value=None):

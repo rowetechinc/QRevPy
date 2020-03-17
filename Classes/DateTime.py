@@ -67,10 +67,18 @@ class DateTime(object):
         """
 
         if hasattr(transect, 'dateTime'):
-            time_correction = 719528.8333333337
             seconds_day = (60 * 60 * 24)
+            time_correction = 719528.8333333337 + 14400 / seconds_day
+
             self.date = transect.dateTime.date
             self.start_serial_time = (transect.dateTime.startSerialTime - time_correction) * seconds_day
             self.end_serial_time = (transect.dateTime.endSerialTime - time_correction) * seconds_day
             self.transect_duration_sec = float(transect.dateTime.transectDuration_sec)
             self.ens_duration_sec = transect.dateTime.ensDuration_sec.astype(float)
+
+            #
+            # self.date = transect.dateTime.date
+            # self.start_serial_time = transect.dateTime.startSerialTime
+            # self.end_serial_time = transect.dateTime.endSerialTime
+            # self.transect_duration_sec = float(transect.dateTime.transectDuration_sec)
+            # self.ens_duration_sec = transect.dateTime.ensDuration_sec.astype(float)

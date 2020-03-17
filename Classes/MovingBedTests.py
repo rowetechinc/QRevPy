@@ -4,7 +4,7 @@ from Classes.TransectData import TransectData
 from Classes.QComp import QComp
 from MiscLibs.common_functions import cart2pol, sind, pol2cart, rad2azdeg
 from Classes.MatSonTek import MatSonTek
-
+import copy
 
 class MovingBedTests(object):
     """Stores and processes moving-bed tests.
@@ -196,7 +196,6 @@ class MovingBedTests(object):
         self.stationary_cs_track = mat_data.stationaryCSTrack
         self.stationary_mb_vel = mat_data.stationaryMBVel
 
-
     @staticmethod
     def make_list(array_in):
         if array_in.size > 3:
@@ -256,7 +255,7 @@ class MovingBedTests(object):
         # Assign data from transect to local variables
         self.transect.boat_interpolations(update=False, target='BT', method='Linear')
         self.transect.boat_interpolations(update=False, target='GPS', method='Linear')
-        trans_data = self.transect
+        trans_data = copy.deepcopy(self.transect)
         in_transect_idx = trans_data.in_transect_idx
         n_ensembles = len(in_transect_idx)
         bt_valid = trans_data.boat_vel.bt_vel.valid_data[0, in_transect_idx]
@@ -271,8 +270,7 @@ class MovingBedTests(object):
             wt_v = trans_data.w_vel.v_processed_mps[:, in_transect_idx]
             if ens_duration is None:
                 ens_duration = trans_data.date_time.ens_duration_sec[in_transect_idx]
-            # else:
-            #     ens_duration = kargs[:]
+
             bt_u = trans_data.boat_vel.bt_vel.u_processed_mps[in_transect_idx]
             bt_v = trans_data.boat_vel.bt_vel.v_processed_mps[in_transect_idx]
             bin_size = trans_data.depths.bt_depths.depth_cell_size_m[:, in_transect_idx]
@@ -379,7 +377,7 @@ class MovingBedTests(object):
             direct, _ = cart2pol(se, sn)
             flow_dir2 = rad2azdeg(direct)
             
-            # Compute unwieghted flow direction in each cell
+            # Compute unweighted flow direction in each cell
             direct, _ = cart2pol(u_ret, v_ret)
             flow_dir_cell = rad2azdeg(direct)
             
@@ -483,8 +481,8 @@ class MovingBedTests(object):
         """Processed the stationary moving-bed tests."""
 
         # Assign data from transect to local variables
-        trans_data = self.transect
-        in_transect_idx = self.transect.in_transect_idx
+        trans_data = copy.deepcopy(self.transect)
+        in_transect_idx = trans_data.in_transect_idx
         bt_valid = trans_data.boat_vel.bt_vel.valid_data[0, in_transect_idx]
 
         # Check to see that there is valid bottom track data
@@ -607,6 +605,8 @@ class MovingBedTests(object):
             self.messages.append('ERROR - Stationary moving-bed test has no valid bottom track data.')
             self.test_quality = 'Errors'
             self.moving_bed = 'Unknown'
+            self.duration_sec = np.nansum(trans_data.date_time.ens_duration_sec[in_transect_idx])
+            self.percent_invalid_bt = 100
 
     @staticmethod
     def near_bed_velocity(u, v, depth, bin_depth):

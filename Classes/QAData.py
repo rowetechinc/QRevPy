@@ -129,7 +129,7 @@ class QAData(object):
                 self.compass['magvar'] = new_qa.compass['magvar']
 
             if hasattr(meas_struct.qa.compass, 'magvarIdx'):
-                self.compass['magvar_idx'] = meas_struct.qa.compass.magvarIdx
+                self.compass['magvar_idx'] = self.make_array(meas_struct.qa.compass.magvarIdx)
             else:
                 self.compass['magvar_idx'] = new_qa.compass['magvar_idx']
 
@@ -137,32 +137,32 @@ class QAData(object):
             self.compass['mag_error_idx'] = new_qa.compass['mag_error_idx']
 
             if hasattr(meas_struct.qa.compass, 'pitchMeanWarningIdx'):
-                self.compass['pitch_mean_warning_idx'] = meas_struct.qa.compass.pitchMeanWarningIdx
+                self.compass['pitch_mean_warning_idx'] = self.make_array(meas_struct.qa.compass.pitchMeanWarningIdx)
             else:
                 self.compass['pitch_mean_warning_idx'] = new_qa.compass['pitch_mean_warning_idx']
 
             if hasattr(meas_struct.qa.compass, 'rollMeanWarningIdx'):
-                self.compass['roll_mean_warning_idx'] = meas_struct.qa.compass.rollMeanWarningIdx
+                self.compass['roll_mean_warning_idx'] = self.make_array(meas_struct.qa.compass.rollMeanWarningIdx)
             else:
                 self.compass['roll_mean_warning_idx'] = new_qa.compass['roll_mean_warning_idx']
 
             if hasattr(meas_struct.qa.compass, 'pitchMeanCautionIdx'):
-                self.compass['pitch_mean_caution_idx'] = meas_struct.qa.compass.pitchMeanCautionIdx
+                self.compass['pitch_mean_caution_idx'] = self.make_array(meas_struct.qa.compass.pitchMeanCautionIdx)
             else:
                 self.compass['pitch_mean_caution_idx'] = new_qa.compass['pitch_mean_caution_idx']
 
             if hasattr(meas_struct.qa.compass, 'rollMeanCautionIdx'):
-                self.compass['roll_mean_caution_idx'] = meas_struct.qa.compass.rollMeanCautionIdx
+                self.compass['roll_mean_caution_idx'] = self.make_array(meas_struct.qa.compass.rollMeanCautionIdx)
             else:
                 self.compass['roll_mean_caution_idx'] = new_qa.compass['roll_mean_caution_idx']
 
             if hasattr(meas_struct.qa.compass, 'pitchStdCautionIdx'):
-                self.compass['pitch_std_caution_idx'] = meas_struct.qa.compass.pitchStdCautionIdx
+                self.compass['pitch_std_caution_idx'] = self.make_array(meas_struct.qa.compass.pitchStdCautionIdx)
             else:
                 self.compass['pitch_std_caution_idx'] = new_qa.compass['pitch_std_caution_idx']
 
             if hasattr(meas_struct.qa.compass, 'rollStdCautionIdx'):
-                self.compass['roll_std_caution_idx'] = meas_struct.qa.compass.rollStdCautionIdx
+                self.compass['roll_std_caution_idx'] = self.make_array(meas_struct.qa.compass.rollStdCautionIdx)
             else:
                 self.compass['roll_std_caution_idx'] = new_qa.compass['roll_std_caution_idx']
 
@@ -178,21 +178,23 @@ class QAData(object):
             self.user['sta_name'] = bool(meas_struct.qa.user.staName)
             self.user['sta_number'] = bool(meas_struct.qa.user.staNumber)
             self.user['status'] = meas_struct.qa.user.status
-            self.depths = self.create_qa_dict(meas_struct.qa.depths)
+
+            self.depths = self.create_qa_dict(self, meas_struct.qa.depths)
             if not 'draft' in self.depths:
                 self.depths['draft'] = new_qa.depths['draft']
             if not 'all_invalid' in self.depths:
                 self.depths['all_invalid'] = new_qa.depths['all_invalid']
-            self.bt_vel = self.create_qa_dict(meas_struct.qa.btVel)
+
+            self.bt_vel = self.create_qa_dict(self, meas_struct.qa.btVel)
             if not 'all_invalid' in self.bt_vel:
                 self.bt_vel['all_invalid'] = new_qa.bt_vel['all_invalid']
-            self.gga_vel = self.create_qa_dict(meas_struct.qa.ggaVel)
+            self.gga_vel = self.create_qa_dict(self, meas_struct.qa.ggaVel)
             if not 'all_invalid' in self.gga_vel:
                 self.gga_vel['all_invalid'] = new_qa.gga_vel['all_invalid']
-            self.vtg_vel = self.create_qa_dict(meas_struct.qa.vtgVel)
+            self.vtg_vel = self.create_qa_dict(self, meas_struct.qa.vtgVel)
             if not 'all_invalid' in self.vtg_vel:
                 self.vtg_vel['all_invalid'] = new_qa.vtg_vel['all_invalid']
-            self.w_vel = self.create_qa_dict(meas_struct.qa.wVel)
+            self.w_vel = self.create_qa_dict(self, meas_struct.qa.wVel)
             if not 'all_invalid' in self.w_vel:
                 self.w_vel['all_invalid'] = new_qa.w_vel['all_invalid']
             self.extrapolation = dict()
@@ -211,53 +213,72 @@ class QAData(object):
             self.edges['right_type'] = meas_struct.qa.edges.rightType
 
             if hasattr(meas_struct.qa, 'right_dist_moved_idx'):
-                self.edges['right_dist_moved_idx'] = meas_struct.qa.edges.rightDistMovedIdx
+                self.edges['right_dist_moved_idx'] = self.make_array(meas_struct.qa.edges.rightDistMovedIdx)
             else:
                 self.edges['right_dist_moved_idx'] = new_qa.edges['right_dist_moved_idx']
 
             if hasattr(meas_struct.qa, 'left_dist_moved_idx'):
-                self.edges['left_dist_moved_idx'] = meas_struct.qa.edges.leftDistMovedIdx
+                self.edges['left_dist_moved_idx'] = self.make_array(meas_struct.qa.edges.leftDistMovedIdx)
             else:
                 self.edges['left_dist_moved_idx'] = new_qa.edges['left_dist_moved_idx']
 
             if hasattr(meas_struct.qa, 'leftQIdx'):
-                self.edges['left_q_idx'] = meas_struct.qa.edges.leftQIdx
+                self.edges['left_q_idx'] = self.make_array(meas_struct.qa.edges.leftQIdx)
             else:
                 self.edges['left_q_idx'] = new_qa.edges['left_q_idx']
 
             if hasattr(meas_struct.qa, 'rightQIdx'):
-                self.edges['right_q_idx'] = meas_struct.qa.edges.rightQIdx
+                self.edges['right_q_idx'] = self.make_array(meas_struct.qa.edges.rightQIdx)
             else:
                 self.edges['right_q_idx'] = new_qa.edges['right_q_idx']
 
             if hasattr(meas_struct.qa, 'leftZeroIdx'):
-                self.edges['left_zero_idx'] = meas_struct.qa.edges.leftZeroIdx
+                self.edges['left_zero_idx'] = self.make_array(meas_struct.qa.edges.leftZeroIdx)
             else:
                 self.edges['left_zero_idx'] = new_qa.edges['left_zero_idx']
 
             if hasattr(meas_struct.qa, 'rightZeroIdx'):
-                self.edges['right_zero_idx'] = meas_struct.qa.edges.rightZeroIdx
+                self.edges['right_zero_idx'] = self.make_array(meas_struct.qa.edges.rightZeroIdx)
             else:
                 self.edges['right_zero_idx'] = new_qa.edges['right_zero_idx']
 
+            if hasattr(meas_struct.qa, 'invalid_transect_left_idx'):
+                self.edges['invalid_transect_left_idx'] = \
+                    self.make_array(meas_struct.qa.edges.invalid_transect_left_idx)
+            else:
+                self.edges['invalid_transect_left_idx'] = new_qa.edges['invalid_transect_left_idx']
+
+            if hasattr(meas_struct.qa, 'invalid_transect_right_idx'):
+                self.edges['invalid_transect_right_idx'] = \
+                    self.make_array(meas_struct.qa.edges.invalid_transect_right_idx)
+            else:
+                self.edges['invalid_transect_right_idx'] = new_qa.edges['invalid_transect_right_idx']
+
     @staticmethod
-    def create_qa_dict(mat_data):
+    def create_qa_dict(self, mat_data):
         qa_dict = dict()
         qa_dict['messages'] = QAData.make_list(mat_data.messages)
         if hasattr(mat_data, 'allInvalid'):
-            qa_dict['all_invalid'] = mat_data.allInvalid.astype(bool)
-        qa_dict['q_max_run_caution'] = mat_data.qRunCaution.astype(bool)
-        qa_dict['q_max_run_warning'] = mat_data.qRunWarning.astype(bool)
-        qa_dict['q_total_caution'] = mat_data.qTotalCaution.astype(bool)
-        qa_dict['q_total_warning'] = mat_data.qTotalWarning.astype(bool)
+            qa_dict['all_invalid'] = self.make_array(mat_data.allInvalid).astype(bool)
+        qa_dict['q_max_run_caution'] = self.make_array(mat_data.qRunCaution).astype(bool)
+        qa_dict['q_max_run_warning'] = self.make_array(mat_data.qRunWarning).astype(bool)
+        qa_dict['q_total_caution'] = self.make_array(mat_data.qTotalCaution).astype(bool)
+        qa_dict['q_total_warning'] = self.make_array(mat_data.qTotalWarning).astype(bool)
         qa_dict['status'] = mat_data.status
         try:
-            qa_dict['q_max_run'] = mat_data.qMaxRun
-            qa_dict['q_total'] = mat_data.qTotal
+            qa_dict['q_max_run'] = self.make_array(mat_data.qMaxRun)
+            qa_dict['q_total'] = self.make_array(mat_data.qTotal)
         except AttributeError:
             qa_dict['q_max_run'] = np.tile(np.nan, (len(mat_data.qRunCaution), 6))
             qa_dict['q_total'] = np.tile(np.nan, (len(mat_data.qRunCaution), 6))
         return qa_dict
+
+    @staticmethod
+    def make_array(num_in):
+        if type(num_in) is np.ndarray:
+            return num_in
+        else:
+            return np.array([num_in])
 
     @staticmethod
     def make_list(array_in):
@@ -354,7 +375,7 @@ class QAData(object):
 
                 # Save caution message
                 if num_missing > 0:
-                    self.transects['messages'].append(['Transects: ' + str(transect.file_name) + ' is missing'
+                    self.transects['messages'].append(['Transects: ' + str(transect.file_name) + ' is missing '
                                                        + str(int(num_missing)) + ' ensembles;', 2, 0])
                     self.transects['status'] = 'caution'
 
@@ -1410,7 +1431,7 @@ class QAData(object):
             Object of class Measurement
         """
 
-        # Intialize variables
+        # Initialize variables
         self.edges['messages'] = []
         checked = []
         left_q = []
@@ -1424,6 +1445,8 @@ class QAData(object):
         left_type = []
         right_type = []
         transect_idx = []
+
+
         for n, transect in enumerate(meas.transects):
             checked.append(transect.checked)
 

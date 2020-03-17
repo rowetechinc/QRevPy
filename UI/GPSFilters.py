@@ -121,10 +121,14 @@ class GPSFilters (object):
             max_y = np.nanmax(transect.gps.num_sats_ens) + 0.5
             min_y = np.nanmin(transect.gps.num_sats_ens) - 0.5
             self.sats = self.fig.ax.plot(ensembles, transect.gps.num_sats_ens, 'b.')
-            self.fig.ax.set_ylim(top=max_y, bottom=min_y)
+            try:
+                self.fig.ax.set_ylim(top=max_y, bottom=min_y)
+                yint = range(int(min_y), int(max_y) + 1)
+                self.fig.ax.set_yticks(yint)
+            except ValueError:
+                pass
             self.fig.ax.set_ylabel(self.canvas.tr('Number of Satellites'))
-            yint = range(int(min_y), int(max_y) + 1)
-            self.fig.ax.set_yticks(yint)
+
 
         elif selected == 'other':
 

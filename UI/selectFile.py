@@ -124,10 +124,6 @@ class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
             self.type = 'SonTek'
         self.close()
 
-
-        # Read Matlab file
-        # mat_contents = sio.loadmat(fileName, struct_as_record=False, squeeze_me=True)
-
     def selectTRDI(self):
         """Get filenames and pathname for TRDI mmt file
 
