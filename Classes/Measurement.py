@@ -1468,7 +1468,7 @@ class Measurement(object):
             try:
                 lat.append(transect.gps.gga_lat_ens_deg[ensemble])
                 lon.append(transect.gps.gga_lon_ens_deg[ensemble])
-            except ValueError:
+            except (ValueError, AttributeError):
                 lat.append('')
                 lon.append('')
             depth.append(depth_selected.depth_processed_m[ensemble])
@@ -2680,11 +2680,13 @@ class Measurement(object):
 
         # (4) COV Node
         temp = uncertainty.cov
-        ET.SubElement(s_u, 'COV', type='double').text = '{:.1f}'.format(temp)
+        if np.isnan(temp) == False:
+            ET.SubElement(s_u, 'COV', type='double').text = '{:.1f}'.format(temp)
 
         # (4) AutoRandom Node
         temp = uncertainty.cov_95
-        ET.SubElement(s_u, 'AutoRandom', type='double').text = '{:.1f}'.format(temp)
+        if np.isnan(temp) == False:
+            ET.SubElement(s_u, 'AutoRandom', type='double').text = '{:.1f}'.format(temp)
 
         # (4) AutoInvalidData Node
         temp = uncertainty.invalid_95
@@ -2708,7 +2710,8 @@ class Measurement(object):
 
         # (4) AutoTotal
         temp = uncertainty.total_95
-        ET.SubElement(s_u, 'AutoTotal', type='double').text = '{:.1f}'.format(temp)
+        if np.isnan(temp) == False:
+            ET.SubElement(s_u, 'AutoTotal', type='double').text = '{:.1f}'.format(temp)
 
         # (4) UserRandom Node
         user_random = uncertainty.cov_95_user
@@ -2742,14 +2745,16 @@ class Measurement(object):
 
         # (4) UserTotal Node
         temp = uncertainty.total_95_user
-        ET.SubElement(s_u, 'UserTotal', type='double').text = '{:.1f}'.format(temp)
+        if np.isnan(temp) == False:
+            ET.SubElement(s_u, 'UserTotal', type='double').text = '{:.1f}'.format(temp)
 
         # (4) Random
         if user_random:
             temp = user_random
         else:
             temp = uncertainty.cov_95
-        ET.SubElement(s_u, 'Random', type='double').text = '{:.1f}'.format(temp)
+        if np.isnan(temp) == False:
+            ET.SubElement(s_u, 'Random', type='double').text = '{:.1f}'.format(temp)
 
         # (4) InvalidData
         if user_invalid:
@@ -2788,7 +2793,8 @@ class Measurement(object):
 
         # (4) UserTotal Node
         temp = uncertainty.total_95_user
-        ET.SubElement(s_u, 'Total', type='double').text = '{:.1f}'.format(temp)
+        if np.isnan(temp) == False:
+            ET.SubElement(s_u, 'Total', type='double').text = '{:.1f}'.format(temp)
 
         # (3) Other Node
         s_o = ET.SubElement(summary, 'Other')
@@ -2799,7 +2805,8 @@ class Measurement(object):
 
         # (4) WidthCOV
         temp = other_prop['width_cov'][-1]
-        ET.SubElement(s_o, 'WidthCOV', type='double').text = '{:.4f}'.format(temp)
+        if np.isnan(temp) == False:
+            ET.SubElement(s_o, 'WidthCOV', type='double').text = '{:.4f}'.format(temp)
 
         # (4) MeanArea
         temp = other_prop['area'][-1]
@@ -2807,7 +2814,8 @@ class Measurement(object):
 
         # (4) AreaCOV
         temp = other_prop['area_cov'][-1]
-        ET.SubElement(s_o, 'AreaCOV', type='double').text = '{:.2f}'.format(temp)
+        if np.isnan(temp) == False:
+            ET.SubElement(s_o, 'AreaCOV', type='double').text = '{:.2f}'.format(temp)
 
         # (4) MeanBoatSpeed
         temp = other_prop['avg_boat_speed'][-1]
