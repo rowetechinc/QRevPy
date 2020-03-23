@@ -12,8 +12,16 @@ class StationaryGraphs(object):
         Object of MplCanvas a FigureCanvas
     fig: Object
         Figure object of the canvas
-    units: dict
-        Dictionary of units conversions
+    mb: list
+        List of plot objects
+    stud: list
+        List of plot objects
+    hover_connection: int
+        Index to data cursor connection
+    annot_mb: Annotation
+        Annotation object for moving-bed time series data cursor
+    annot_stud: Annotation
+        Annotation object for upstream/downstream shiptrack data cursor
     """
 
     def __init__(self, canvas):
@@ -28,6 +36,10 @@ class StationaryGraphs(object):
         self.canvas = canvas
         self.fig = canvas.fig
         self.hover_connection = None
+        self.annot_mb = None
+        self.annot_stud = None
+        self.mb = None
+        self.stud = None
 
     def create(self, mb_test, units):
         """Generates a moving-bed time series and upstream/downstream bottom track plot from stationary moving-bed
@@ -50,7 +62,7 @@ class StationaryGraphs(object):
         # Set margins and padding for figure
         self.fig.subplots_adjust(left=0.1, bottom=0.1, right=0.98, top=0.85, wspace=0.2, hspace=0)
 
-        # Generate color contour
+        # Configure moving-bed time series graph
         self.fig.axmb = self.fig.add_subplot(gs[0, 0])
         self.fig.axmb.set_xlabel(self.canvas.tr('Ensembles'))
         self.fig.axmb.set_ylabel(self.canvas.tr('Moving-bed speed' + units['label_V']))
@@ -59,12 +71,14 @@ class StationaryGraphs(object):
         self.fig.axmb.yaxis.label.set_fontsize(12)
         self.fig.axmb.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
 
+        # Mark invalid data
         valid_data = mb_test.transect.boat_vel.bt_vel.valid_data[0, mb_test.transect.in_transect_idx]
         if np.any(valid_data):
             invalid_data = np.logical_not(valid_data)
             ensembles = np.arange(1, len(valid_data) + 1)
             self.mb = self.fig.axmb.plot(ensembles, mb_test.stationary_mb_vel * units['V'], 'b-')
-            self.mb.append(self.fig.axmb.plot(ensembles[invalid_data], mb_test.stationary_mb_vel[invalid_data] * units['V'], 'ro')[0])
+            self.mb.append(self.fig.axmb.plot(ensembles[invalid_data],
+                                              mb_test.stationary_mb_vel[invalid_data] * units['V'], 'ro')[0])
 
             # Generate upstream/cross stream shiptrack
             self.fig.axstud = self.fig.add_subplot(gs[0, 1])
@@ -76,22 +90,22 @@ class StationaryGraphs(object):
             self.fig.axstud.axis('equal')
             self.fig.axstud.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
 
-            self.stud = self.fig.axstud.plot(mb_test.stationary_cs_track * units['L'], mb_test.stationary_us_track * units['L'], 'r-')
+            self.stud = self.fig.axstud.plot(mb_test.stationary_cs_track * units['L'],
+                                             mb_test.stationary_us_track * units['L'], 'r-')
 
             # Initialize annotation for data cursor
             self.annot_mb = self.fig.axmb.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
-                                              bbox=dict(boxstyle="round", fc="w"),
-                                              arrowprops=dict(arrowstyle="->"))
+                                                   bbox=dict(boxstyle="round", fc="w"),
+                                                   arrowprops=dict(arrowstyle="->"))
 
             self.annot_mb.set_visible(False)
 
             # Initialize annotation for data cursor
             self.annot_stud = self.fig.axstud.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
-                                              bbox=dict(boxstyle="round", fc="w"),
-                                              arrowprops=dict(arrowstyle="->"))
+                                                       bbox=dict(boxstyle="round", fc="w"),
+                                                       arrowprops=dict(arrowstyle="->"))
 
             self.annot_stud.set_visible(False)
-
 
             self.canvas.draw()
 
@@ -101,10 +115,22 @@ class StationaryGraphs(object):
         """
         pass
 
-    def update_annot(self, ind, plt_ref, annot):
+    @staticmethod
+    def update_annot(ind, plt_ref, annot):
+        """Updates the location and text and makes visible the previously initialized and hidden annotation.
 
-        # pos = plt_ref.get_offsets()[ind["ind"][0]]
+        Parameters
+        ----------
+        ind: dict
+            Contains data selected.
+        plt_ref: Line2D
+            Reference containing plotted data
+        annot: Annotation
+            Annotation associated with figure clicked
+        """
+
         pos = plt_ref._xy[ind["ind"][0]]
+
         # Shift annotation box left or right depending on which half of the axis the pos x is located and the
         # direction of x increasing.
         if plt_ref.axes.viewLim.intervalx[0] < plt_ref.axes.viewLim.intervalx[1]:
@@ -130,15 +156,31 @@ class StationaryGraphs(object):
                 annot._y = 20
             else:
                 annot._y = -40
+
+        # Format and display text
         annot.xy = pos
         text = 'x: {:.2f}, y: {:.2f}'.format(pos[0], pos[1])
         annot.set_text(text)
 
     def hover(self, event):
+        """Determines if the user has selected a location with data and makes
+        annotation visible and calls method to update the text of the annotation. If the
+        location is not valid the existing annotation is hidden.
+
+        Parameters
+        ----------
+        event: MouseEvent
+            Triggered when mouse button is pressed.
+        """
+
+        # Set annotation to visible
         vis_mb = self.annot_mb.get_visible()
         vis_stud = self.annot_stud.get_visible()
+
+        # Determine if mouse location references a data point in the plot and update the annotation.
         if event.inaxes == self.fig.axmb:
             cont_mb = False
+            ind_mb = None
             if self.mb is not None:
                 cont_mb, ind_mb = self.mb[0].contains(event)
             if cont_mb and self.mb[0].get_visible():
@@ -151,6 +193,7 @@ class StationaryGraphs(object):
                     self.canvas.draw_idle()
         elif event.inaxes == self.fig.axstud:
             cont_stud = False
+            ind_stud = None
             if self.stud is not None:
                 cont_stud, ind_stud = self.stud[0].contains(event)
             if cont_stud and self.stud[0].get_visible():
@@ -158,15 +201,21 @@ class StationaryGraphs(object):
                 self.annot_stud.set_visible(True)
                 self.canvas.draw_idle()
             else:
+                # If the cursor location is not associated with the plotted data hide the annotation.
                 if vis_stud:
                     self.annot_stud.set_visible(False)
                     self.canvas.draw_idle()
 
-
     def set_hover_connection(self, setting):
+        """Turns the connection to the mouse event on or off.
+
+        Parameters
+        ----------
+        setting: bool
+            Boolean to specify whether the connection for the mouse event is active or not.
+        """
 
         if setting and self.hover_connection is None:
-            # self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
             self.hover_connection = self.canvas.mpl_connect('button_press_event', self.hover)
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)

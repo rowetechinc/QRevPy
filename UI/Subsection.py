@@ -12,5 +12,7 @@ class Subsection(QtWidgets.QDialog, wSubsection.Ui_subsection):
     """
 
     def __init__(self, parent=None):
+        """Initialize dialog
+        """
         super(Subsection, self).__init__(parent)
         self.setupUi(self)

@@ -17,6 +17,8 @@ class PRTS(object):
         List of rows from the table that are plotted
     hover_connection: bool
         Switch to allow user to use the data cursor
+    annot: Annotation
+        Annotation for data cursor
     """
 
     def __init__(self, canvas):
@@ -35,15 +37,24 @@ class PRTS(object):
         self.roll = None
         self.row_index = []
         self.hover_connection = None
+        self.annot = None
 
     def create(self, meas, checked, tbl, cb_pitch, cb_roll):
         """Generates the pitch and roll plot.
 
-                Parameters
-                ----------
-                meas: Measurement
-                    Object of class Measurement
-                """
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        checked: list
+            List of transect indices to be included in discharge computation
+        tbl: QTableWidget
+            Table containing heading, pitch, and roll information
+        cb_pitch: QCheckBox
+            Checkbox indicating if the pitch is displayed
+        cb_roll: QCheckBox
+            Checkbox indication if the roll is displayed
+        """
 
         # Clear the plot
         self.fig.clear()
@@ -62,6 +73,7 @@ class PRTS(object):
         self.roll = []
         self.row_index = []
 
+        # Plot all selected transects
         for row in range(len(checked)):
             if tbl.item(row, 0).checkState() == QtCore.Qt.Checked:
                 self.row_index.append(row)
@@ -103,6 +115,8 @@ class PRTS(object):
             Contains data selected.
         plt_ref: Line2D
             Reference containing plotted data
+        row: int
+            Index to row from which the data selected by the data cursor is associated
         """
 
         # Get selected data coordinates
@@ -157,6 +171,9 @@ class PRTS(object):
         # Determine if mouse location references a data point in the plot and update the annotation.
         if event.inaxes == self.fig.ax:
             cont = False
+            ind = None
+            item = None
+            n = None
             if self.pitch is not None:
                 for n, item in enumerate(self.pitch):
                     cont, ind = item.contains(event)

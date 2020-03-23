@@ -1,7 +1,5 @@
 from UI.QRev import QRev
 from Classes.Measurement import Measurement
-from PyQt5 import QtWidgets
-import sys
 
 
 class MeasSplitter(object):
@@ -21,7 +19,7 @@ class MeasSplitter(object):
 
     Example of code for external program
     Assume:
-    path_2_raw_measurement_file: is the full path to the mmt file, *QRev.mat file, or a list of paths to SonTek mat files
+    path_2_raw_measurement_file: is the full path to the mmt file, *QRev.mat file, or a list of paths to SonTek files
     source: is the type of file (TRDI, SonTek, QRev)
     pairings: is a list of lists of meas.transect indices that represent individual measurements
             Example pairings = [[0, 1], [2, 3, 4, 5], [8, 9]]
@@ -58,7 +56,7 @@ class MeasSplitter(object):
 
         # self.qrev = QRev()
 
-    def pass2qrev (self, pairings):
+    def pass2qrev(self, pairings):
         """QRev GUI is initiated using the self.meas data and the pairings created externally
 
         Parameters

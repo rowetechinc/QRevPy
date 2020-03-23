@@ -110,6 +110,196 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         Unchecked icon
     save_all: bool
         Indicates if all transects should be save (True) or only the checked transects (False)
+    QRev_version: str
+        QRev version number
+    current_tab: int
+        Index of currently viewed tab
+    transect_row: int
+        Row index of selected transect
+    figs: list
+        List of figure objects
+    canvases: list
+        List of canvas objects
+    toolbars: list
+        List of toolbar objects
+    font_bold: QtGui.QFont
+        Bold font
+    font_normal: QtGui.QFont
+        Normal font
+    mb_row_selected: int
+        Moving-bed test index to selected
+    transect: TransectData
+        Temporary storage to pass selected transect
+    invalid_bt: np.array(bool)
+        Array to facilitate sharing of invalid bottom track among some methods
+    invalid_gps: np.array(bool)
+        Array to facilitate sharing of invalid gps data among some methods
+    invalid_wt: np.array(bool)
+        Array to facilitate sharing of invalid water track data among some methods
+    wt_max_limit: float
+        Maximum water speed to allow consistent scaling of color contour graphs on same tab
+    extrap_meas: Measurement
+        Copy of measurement to allow resetting of changes made on the extrap tab
+    start_bank: str
+        Start bank for selected transect used in graphics methods
+    idx: int
+        Index of selected transect or measurement used in extrap tab
+    edi_results: dict
+        Dictionary of edi computed data
+    groupings: list
+        List of transect groupings used with interface with RIVRS
+    group_idx: int
+        Index to grouping being processed
+    main_shiptrack_canvas: MplCanvas
+        Shiptrack canvas for main tab
+    main_shiptrack_toolbar: NavigationToolbar
+        Shiptrack toolbar for main tab
+    main_shiptrack_fig: ShipTrack
+        Shiptrack figure for main tab
+    main_wt_contour_canvas: MplCanvas
+        Color contour canvas for main tab
+    main_wt_contour_fig: WTContour
+        Color contour figure for main tab
+    main_wt_contour_toolbar: NavigationToolbar
+        Color contour toolbar for main tab
+    main_extrap_canvas: MplCanvas
+        Extrapolation canvas for main tab
+    main_extrap_toolbar: NavigationToolbar
+        Extrapolation toolbar for main tab
+    main_extrap_fig: ExtrapPlot
+        Extrapolation figure for main tab
+    main_discharge_canvas: MplCanvas
+        Discharge time series canvas for main tab
+    main_discharge_toolbar: NavigationToolbar
+        Discharge time series toolbar for main tab
+    main_discharge_fig: DischargeTS
+        Discharge time series figure for main tab
+    heading_canvas: MplCanvas
+        Heading time series canvas
+    heading_toolbar: NavigationToolbar
+        Heading time series toolbar
+    heading_fig: HeadingTS
+        Heading time series figure
+    pr_canvas: MplCanvas
+        Pitch and roll time series canvas
+    pr_toolbar: NavigationToolbar
+        Pitch and roll time series toolbar
+    pr_fig: PRTS
+        Pitch and roll time series figure
+    tts_canvas: MplCanvas
+        Temperature time series canvas
+    tts_toolbar: NavigationToolbar
+        Temperature time seriex toolbar
+    tts_fig: TemperatureTS
+        Temperature time series figure
+    mb_shiptrack_canvas: MplCanvas
+        Moving-bed test shiptrack canvas
+    mb_shiptrack_toolbar: NavigationToolbar
+        Moving-bed test shiptrack toolbar
+    mb_shiptrack_fig: ShipTrack
+        Moving-bed test shiptrack figure
+    mb_ts_canvas: MplCanvas
+        Moving-bed time series canvas
+    mb_ts_toolbar: NavigationToolbar
+        Moving-bed time seris toolbar
+    mb_ts_fig: BoatSpeed, StationaryGraphs
+        Moving-bed time series for loop and stationary tests
+    bt_shiptrack_canvas: MplCanvas
+        Bottom track shiptrack canvas
+    bt_shiptrack_toolbar: NavigationToolbar
+        Bottom track shiptrack toolbar
+    bt_shiptrack_fig: ShipTrack
+        Bottom track shiptrack figure
+    bt_bottom_canvas: MplCanvas
+        Bottom track time series canvas
+    bt_bottom_toolbar: NavigationToolbar
+        Bottom track time series toolbar
+    bt_bottom_fig: BoatSpeed
+        Bottom track time series figure
+    bt_top_canvas: MplCanvas
+        Bottom track filter time series canvas
+    bt_top_toolbar: NavigationToolbar
+        Bottom track filter time series toolbar
+    bt_top_fig: BTFilters
+        Bottom track filters time series figure
+    gps_shiptrack_canvas: MplCanvas
+        GPS shiptrack canvas
+    gps_shiptrack_toolbar: NavigationToolbar
+        GPS shiptrack toolbar
+    gps_shiptrack_fig: ShipTrack
+        GPS shiptrack figure
+    gps_bottom_canvas: MplCanvas
+        GPS time series canvas
+    gps_bottom_toolbar: NavigationToolbar
+        GPS time series toolbar
+    gps_bottom_fig: BoatSpeed
+        GPS time series figure
+    gps_top_canvas: MplCanvas
+        GPS filters time series canvases
+    gps_top_toolbar: NavigationToolbar
+        GPS filters time series toolbar
+    gps_top_fig: GPSFilters
+        GPS filters times series figure
+    depth_top_canvas: MplCanvas
+        Depth beam depths canvas
+    depth_top_toolbar: NavigationToolbar
+        Depth beam depths toolbar
+    depth_top_fig: BeamDepths
+        Depth beam depths figure
+    depth_bottom_canvas: MplCanvas
+        Depth final cross section canvas
+    depth_bottom_toolbar: NavigationToolbar
+        Depth final cross section toolbar
+    depth_bottom_fig: CrossSection
+        Depth final cross section figure
+    wt_shiptrack_canvas: MplCanvas
+        Water track shiptrack canvas
+    wt_shiptrack_toolbar: NavigationToolbar
+        Water track shiptrack toolbar
+    wt_shiptrack_fig: ShipTrack
+        Water track shiptrack figure
+    wt_bottom_canvas: MplCanvas
+        Water track process color contour canvas
+    wt_bottom_toolbar: NavigationToolbar
+        Water track processed color contour toolbar
+    wt_bottom_fig: WTContour
+        Water track processed color contour figure
+    wt_top_canvas: MplCanvas
+        Water track filters graph canvas
+    wt_top_toolbar: NavigationToolbar
+        Water track filters graphs toolbar
+    wt_top_fig: WTFilters
+        Water track filters graph figure
+    extrap_canvas: MplCanvas
+        Extrapolation canvas
+    extrap_toolbar: NavigationToolbar
+        Extrapolation toolbar
+    extrap_fig: ExtrapPlot
+        Extrapolation figure
+    left_edge_contour_canvas: MplCanvas
+        Left edge color contour canvas
+    left_edge_contour_toolbar: NavigationToolbar
+        Left edge color contour toolbar
+    left_edge_contour_fig: WTContour
+        Left edge color contour figure
+    right_edge_contour_canvas: MplCanvas
+        Right edge color contour canvas
+    right_edge_contour_toolbar: NavigationToolbar
+        Right edge color contour toolbar
+    right_edge_contour_fig: WTContour
+        Right edge color contour figure
+    left_edge_st_canvas: MplCanvas
+        Left edge shiptrack canvas
+    left_edge_st_toolbar: NavigationToolbar
+        Left edge shiptrack toolbar
+    left_edge_st_fig: ShipTrack
+        Left edge shiptrack figure
+    right_edge_st_canvas: MplCanvas
+        Right edge shiptrack canvas
+    right_edge_st_toolbar: NavigationToolbar
+        Right edge shiptrack toolbar
+    right_edge_st_fig: ShipTrack
+        Right edge shiptrack figure
     """
     handle_args_trigger = pyqtSignal()
     gui_initialized = False
@@ -133,7 +323,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.setupUi(self)
 
         # Set version of QRev
-        self.QRev_version = 'QRevPy 4.05'
+        self.QRev_version = 'QRevPy 4.06'
         self.setWindowTitle(self.QRev_version)
 
         # Disable ability to hide toolbar
@@ -278,9 +468,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.mb_ts_canvas = None
         self.mb_ts_toolbar = None
         self.mb_ts_fig = None
-        self.mb_ts_canvas = None
-        self.mb_ts_toolbar = None
-        self.mb_ts_fig = None
         self.bt_shiptrack_canvas = None
         self.bt_shiptrack_toolbar = None
         self.bt_shiptrack_fig = None
@@ -317,18 +504,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.extrap_canvas = None
         self.extrap_toolbar = None
         self.extrap_fig = None
-        self.left_edge_contour_canvas = None
-        self.left_edge_contour_toolbar = None
-        self.left_edge_contour_fig = None
-        self.right_edge_contour_canvas = None
-        self.right_edge_contour_toolbar = None
-        self.right_edge_contour_fig = None
-        self.left_edge_st_canvas = None
-        self.left_edge_st_toolbar = None
-        self.left_edge_st_fig = None
-        self.right_edge_st_canvas = None
-        self.right_edge_st_toolbar = None
-        self.right_edge_st_fig = None
         self.left_edge_contour_canvas = None
         self.left_edge_contour_toolbar = None
         self.left_edge_contour_fig = None
@@ -3373,7 +3548,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.tts_fig = TemperatureTS(canvas=self.tts_canvas)
         # Create the figure with the specified data
         self.tts_fig.create(meas=self.meas,
-                            units=self.units,
                             rb_f=self.rb_f)
 
         # Draw canvas

@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets, QtGui
 from UI import wLoading
 
+
 class Loading(QtWidgets.QDialog, wLoading.Ui_Loading_Message):
     """Dialog to allow users to change QRev options.
 

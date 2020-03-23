@@ -1,4 +1,3 @@
-from PyQt5 import QtCore
 import numpy as np
 import matplotlib.cm as cm
 
@@ -14,6 +13,16 @@ class WTContour(object):
         Figure object of the canvas
     units: dict
         Dictionary of units conversions
+    hover_connection: int
+        Index to data cursor connection
+    annot: Annotation
+        Annotation object for data cursor
+    x_plt: int
+        Ensembles numbers for x axis
+    cell_plt: np.ndarray(float)
+        Cell depths to plot in user specified units
+    speed_plt: np.ndarray(float)
+        Water speeds to plot in user specified units
     """
 
     def __init__(self, canvas):
@@ -30,6 +39,10 @@ class WTContour(object):
         self.fig = canvas.fig
         self.units = None
         self.hover_connection = None
+        self.annot = None
+        self.x_plt = None
+        self.cell_plt = None
+        self.speed_plt = None
 
     def create(self, transect, units, invalid_data=None, n_ensembles=None, edge_start=None, max_limit=0):
         """Create the axes and lines for the figure.
@@ -42,6 +55,12 @@ class WTContour(object):
             Dictionary of units conversions
         invalid_data: np.array(bool)
             Array indicating which depth cells contain invalid data
+        n_ensembles: int
+            Number of ensembles in edge for edge graph
+        edge_start: bool, None
+            Transect started on left bank
+        max_limit: float
+            Maximum limit for colorbar. Used to keep scale consistent when multiple contours on same page.
         """
 
         # Assign and save parameters
@@ -60,8 +79,7 @@ class WTContour(object):
             x_plt, cell_plt, speed_plt, ensembles, depth = self.color_contour_data_prep(transect=transect,
                                                                                         data_type='Processed',
                                                                                         invalid_data=invalid_data,
-                                                                                        n_ensembles = n_ensembles,
-                                                                                       edge_start = edge_start)
+                                                                                        n_ensembles=n_ensembles)
         else:
             x_plt, cell_plt, speed_plt, ensembles, depth = self.color_contour_data_prep(transect=transect,
                                                                                         data_type='Raw',
@@ -86,7 +104,7 @@ class WTContour(object):
 
         # Generate color contour
         c = self.fig.ax.pcolormesh(self.x_plt, self.cell_plt, self.speed_plt, cmap=cmap, vmin=min_limit,
-                                vmax=max_limit)
+                                   vmax=max_limit)
 
         # Add color bar and axis labels
         cb = self.fig.colorbar(c, pad=0.02)
@@ -99,10 +117,10 @@ class WTContour(object):
         if transect.w_vel.sl_cutoff_m is not None:
             depth_obj = getattr(transect.depths, transect.depths.selected)
             last_valid_cell = np.nansum(transect.w_vel.cells_above_sl, axis=0) - 1
-            last_depth_cell_size= depth_obj.depth_cell_size_m[last_valid_cell,
-                                                              np.arange(depth_obj.depth_cell_size_m.shape[1])]
-            y_plt_sl = (transect.w_vel.sl_cutoff_m + (last_depth_cell_size * 0.5))* units['L']
-            y_plt_top = (depth_obj.depth_cell_depth_m[0,:] - (depth_obj.depth_cell_size_m[0, :] * 0.5)) * units['L']
+            last_depth_cell_size = depth_obj.depth_cell_size_m[last_valid_cell,
+                                                               np.arange(depth_obj.depth_cell_size_m.shape[1])]
+            y_plt_sl = (transect.w_vel.sl_cutoff_m + (last_depth_cell_size * 0.5)) * units['L']
+            y_plt_top = (depth_obj.depth_cell_depth_m[0, :] - (depth_obj.depth_cell_size_m[0, :] * 0.5)) * units['L']
 
             if edge_start is True:
                 y_plt_sl = y_plt_sl[:int(n_ensembles)]
@@ -110,7 +128,6 @@ class WTContour(object):
             elif edge_start is False:
                 y_plt_sl = y_plt_sl[-int(n_ensembles):]
                 y_plt_top = y_plt_top[-int(n_ensembles):]
-
 
             self.fig.ax.plot(ensembles+1, y_plt_sl, color='r', linewidth=0.5)
             # Plot upper bound of measured depth cells
@@ -150,6 +167,12 @@ class WTContour(object):
             Object of TransectData containing data to be plotted
         data_type: str
             Specifies Processed or Filtered data type to be be plotted
+        invalid_data: np.ndarray(bool)
+            Array indicating what data are invalid
+        n_ensembles: int
+            Number of ensembles to plot. Used for edge contour plot.
+        edge_start: bool
+            Indicates if transect starts on left edge
 
         Returns
         -------
@@ -168,6 +191,7 @@ class WTContour(object):
 
         # Get data from transect
         if n_ensembles is None:
+            # Use whole transect
             if data_type == 'Processed':
                 water_u = transect.w_vel.u_processed_mps[:, in_transect_idx]
                 water_v = transect.w_vel.v_processed_mps[:, in_transect_idx]
@@ -181,8 +205,10 @@ class WTContour(object):
             cell_size = depth_selected.depth_cell_size_m[:, in_transect_idx]
             ensembles = in_transect_idx
         else:
+            # Use only edge ensembles from transect
             n_ensembles = int(n_ensembles)
             if edge_start:
+                # Start on left bank
                 if data_type == 'Processed':
                     water_u = transect.w_vel.u_processed_mps[:, :n_ensembles]
                     water_v = transect.w_vel.v_processed_mps[:, :n_ensembles]
@@ -198,6 +224,7 @@ class WTContour(object):
                 if invalid_data is not None:
                     invalid_data = invalid_data[:, :n_ensembles]
             else:
+                # Start on right bank
                 if data_type == 'Processed':
                     water_u = transect.w_vel.u_processed_mps[:, -n_ensembles:]
                     water_v = transect.w_vel.v_processed_mps[:, -n_ensembles:]
@@ -271,21 +298,34 @@ class WTContour(object):
             x_plt[j, :] = x_xpand[n, :]
             cell_plt[j, :] = cell_depth_xpand[n, :] + 0.5 * cell_size_xpand[n, :]
             speed_plt[j, :] = speed_xpand[n, :]
+
         cell_plt[np.isnan(cell_plt)] = 0
         speed_plt[np.isnan(speed_plt)] = -999
-        x_plt[np.isnan(x_plt)] == 0
+        x_plt[np.isnan(x_plt)] = 0
+
         return x_plt, cell_plt, speed_plt, ensembles, depth
 
     def hover(self, event):
+        """Determines if the user has selected a location with data and makes
+        annotation visible and calls method to update the text of the annotation. If the
+        location is not valid the existing annotation is hidden.
+
+        Parameters
+        ----------
+        event: MouseEvent
+            Triggered when mouse button is pressed.
+        """
+
+        # Set annotation to visible
         vis = self.annot.get_visible()
+
+        # Determine if mouse location references a data point in the plot and update the annotation.
         if event.inaxes == self.fig.ax:
             cont_fig = False
             if self.fig is not None:
                 cont_fig, ind_fig = self.fig.contains(event)
 
             if cont_fig and self.fig.get_visible():
-                # col_idx = (int(round(event.xdata)) - int(round(self.fig.ax.viewLim.x0))) * 2
-                # col_idx = (int(round(event.xdata)) * 2) - 1
                 col_idx = (int(round(abs(event.xdata - self.x_plt[0, 0]))) * 2) - 1
                 vel = None
                 for n, cell in enumerate(self.cell_plt[:, col_idx]):
@@ -297,12 +337,19 @@ class WTContour(object):
                 self.annot.set_visible(True)
                 self.canvas.draw_idle()
             else:
+                # If the cursor location is not associated with the plotted data hide the annotation.
                 if vis:
                     self.annot.set_visible(False)
                     self.canvas.draw_idle()
 
     def set_hover_connection(self, setting):
+        """Turns the connection to the mouse event on or off.
 
+        Parameters
+        ----------
+        setting: bool
+            Boolean to specify whether the connection for the mouse event is active or not.
+        """
         if setting and self.hover_connection is None:
             # self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
             self.hover_connection = self.canvas.mpl_connect('button_press_event', self.hover)
@@ -311,10 +358,20 @@ class WTContour(object):
             self.hover_connection = None
 
     def update_annot(self, x, y, v):
+        """Updates the location and text and makes visible the previously initialized and hidden annotation.
 
+        Parameters
+        ----------
+        x: float
+            x coordinate for annotation, ensemble
+        y: float
+            y coordinate for annotation, depth
+        v: float
+            Speed for annotation
+        """
         plt_ref = self.fig
-        # pos = plt_ref.get_offsets()[ind["ind"][0]]
         pos = [x, y]
+
         # Shift annotation box left or right depending on which half of the axis the pos x is located and the
         # direction of x increasing.
         if plt_ref.ax.viewLim.intervalx[0] < plt_ref.ax.viewLim.intervalx[1]:

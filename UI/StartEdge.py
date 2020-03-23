@@ -12,5 +12,7 @@ class StartEdge(QtWidgets.QDialog, wStartEdge.Ui_start_edge):
     """
 
     def __init__(self, parent=None):
+        """Initialize dialog.
+        """
         super(StartEdge, self).__init__(parent)
         self.setupUi(self)

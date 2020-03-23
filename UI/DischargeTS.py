@@ -1,4 +1,3 @@
-from PyQt5 import QtCore
 import numpy as np
 from datetime import datetime
 import matplotlib.dates as mdates
@@ -15,6 +14,10 @@ class DischargeTS(object):
             Figure object of the canvas
         units: dict
             Dictionary of units conversions
+        hover_connection: int
+            Index to data cursor connection
+        annot: Annotation
+            Annotation object for data cursor
     """
 
     def __init__(self, canvas):
@@ -30,8 +33,8 @@ class DischargeTS(object):
         self.canvas = canvas
         self.fig = canvas.fig
         self.units = None
-        self.qp = None
         self.hover_connection = None
+        self.annot = None
 
     def create(self, meas, checked, units):
         """Generates the discharge plot.
@@ -46,8 +49,6 @@ class DischargeTS(object):
             Dictionary of units conversion factors
         """
 
-
-
         # Configure axis
         self.fig.ax = self.fig.add_subplot(1, 1, 1)
 
@@ -55,45 +56,25 @@ class DischargeTS(object):
 
         # Set margins and padding for figure
         self.fig.subplots_adjust(left=0.2, bottom=0.15, right=0.98, top=0.98, wspace=0.1, hspace=0)
-        # self.qp = []
+
+        # Plot each transects discharge as a horizontal line from start time to end time
         for idx in checked:
             x = []
             y = []
-            # x.append([datetime.fromtimestamp(meas.transects[idx].date_time.start_serial_time),
-            #           datetime.fromtimestamp(meas.transects[idx].date_time.end_serial_time)])
             x.append(datetime.utcfromtimestamp(meas.transects[idx].date_time.start_serial_time))
             x.append(datetime.utcfromtimestamp(meas.transects[idx].date_time.end_serial_time))
-            # x.append(np.nan)
-            # x.append(meas.transects[idx].date_time.start_serial_time)
-            # x.append(meas.transects[idx].date_time.end_serial_time)
-
-            # y.append([meas.discharge[idx].total * units['Q'],
-            #           meas.discharge[idx].total * units['Q']])
             y.append(meas.discharge[idx].total * units['Q'])
             y.append(meas.discharge[idx].total * units['Q'])
-            # y.append(np.nan)
-
-            # self.qp.append(self.fig.ax.plot([datetime.fromtimestamp(meas.transects[idx].date_time.start_serial_time),
-            #                                  datetime.fromtimestamp(meas.transects[idx].date_time.end_serial_time)],
-            #                                  [meas.discharge[idx].total * units['Q'],
-            #                                   meas.discharge[idx].total * units['Q']], 'k-')[0])
-            # self.fig.ax.plot([datetime.fromtimestamp(meas.transects[idx].date_time.start_serial_time),
-            #                   datetime.fromtimestamp(meas.transects[idx].date_time.end_serial_time)],
-            #                  [meas.discharge[idx].total * units['Q'],
-            #                   meas.discharge[idx].total * units['Q']], 'k-')
-            # ym = np.ma.masked_where(np.isnan(y), y)
-            # xm = np.ma.masked_where(np.equal(x, -999), x)
             self.fig.ax.plot(np.array(x), np.array(y), 'k-')
-        self.qp = self.fig.ax
+
         # Customize axis
-        timeFmt = mdates.DateFormatter('%H:%M:%S')
-        self.fig.ax.xaxis.set_major_formatter(timeFmt)
+        time_fmt = mdates.DateFormatter('%H:%M:%S')
+        self.fig.ax.xaxis.set_major_formatter(time_fmt)
         self.fig.ax.set_xlabel(self.canvas.tr('Time '))
         self.fig.ax.set_ylabel(self.canvas.tr('Discharge ') + units['label_Q'])
         self.fig.ax.xaxis.label.set_fontsize(10)
         self.fig.ax.yaxis.label.set_fontsize(10)
         self.fig.ax.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
-        # self.fig.axq.xaxis.set_major_locator(MaxNLocator(4))
         self.fig.ax.grid()
 
         # Initialize annotation for data cursor
@@ -167,12 +148,11 @@ class DischargeTS(object):
         # Determine if mouse location references a data point in the plot and update the annotation.
         if event.inaxes == self.fig.ax:
             cont = False
-            # if self.qp is not None:
-            #     for n, item in enumerate(self.qp):
-            #         cont, ind = item.contains(event)
-            #         if cont:
-            #             break
-            for plotted_line in self.qp.lines:
+            ind = None
+            plotted_line = None
+
+            # Find the transect(line) that contains the mouse click
+            for plotted_line in self.fig.ax.lines:
                 cont, ind = plotted_line.contains(event)
                 if cont:
                     break

@@ -15,7 +15,8 @@ class TemperatureTS(object):
         Reference to time series plot
     hover_connection: bool
         Switch to allow user to use the data cursor
-
+    annot: Annotation
+        Annotation object for data cursor
     """
 
     def __init__(self, canvas):
@@ -32,16 +33,15 @@ class TemperatureTS(object):
         self.fig = canvas.fig
         self.tp = None
         self.hover_connection = None
+        self.annot = None
 
-    def create(self, meas, units, rb_f):
+    def create(self, meas, rb_f):
         """Creates the figure on the canvas.
 
         Parameters
         ----------
         meas: Measurement
             Object of class Measurement
-        units: dict
-            Dictionary of specified units
         rb_f: Widget
             Radio button control for F or C units
         """
@@ -71,8 +71,8 @@ class TemperatureTS(object):
         self.tp = self.fig.ax.plot(time_stamp, temp, 'b.')
 
         # Customize axis
-        timeFmt = mdates.DateFormatter('%H:%M:%S')
-        self.fig.ax.xaxis.set_major_formatter(timeFmt)
+        time_fmt = mdates.DateFormatter('%H:%M:%S')
+        self.fig.ax.xaxis.set_major_formatter(time_fmt)
         self.fig.ax.set_xlabel(self.canvas.tr('Time '))
         self.fig.ax.set_ylabel(y_label)
         self.fig.ax.xaxis.label.set_fontsize(12)
@@ -152,6 +152,7 @@ class TemperatureTS(object):
         # Determine if mouse location references a data point in the plot and update the annotation.
         if event.inaxes == self.fig.ax:
             cont = False
+            ind = None
             if self.tp is not None:
                 cont, ind = self.tp[0].contains(event)
 

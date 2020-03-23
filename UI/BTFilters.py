@@ -21,6 +21,12 @@ class BTFilters(object):
         Axis of figure for vertical velocity
     other: object
         Axis of figure for other filters
+    source: object
+        Axis of figure for navigation reference source
+    hover_connection: int
+        Index to data cursor connection
+    annot: Annotation
+        Annotation object for data cursor
     """
 
     def __init__(self, canvas):
@@ -40,7 +46,9 @@ class BTFilters(object):
         self.error = None
         self.vert = None
         self.other = None
+        self.source = None
         self.hover_connection = None
+        self.annot = None
 
     def create(self, transect, units, selected):
         """Create the axes and lines for the figure.
@@ -159,6 +167,7 @@ class BTFilters(object):
             else:
                 boat_selected = transect.boat_vel.bt_vel
             source = boat_selected.processed_source
+
             # Plot dummy data to establish consistent order of y axis
             self.source = self.fig.ax.plot([-10, -10, -10, -10, -10], ['INV', 'INT', 'BT', 'GGA', 'VTG'], 'w-')
             self.source = self.fig.ax.plot(ensembles, source, 'b.')
@@ -181,9 +190,18 @@ class BTFilters(object):
         self.canvas.draw()
 
     def update_annot(self, ind, plt_ref):
+        """Updates the location and text and makes visible the previously initialized and hidden annotation.
 
-        # pos = plt_ref.get_offsets()[ind["ind"][0]]
+        Parameters
+        ----------
+        ind: dict
+            Contains data selected.
+        plt_ref: Line2D
+            Reference containing plotted data
+        """
+
         pos = plt_ref._xy[ind["ind"][0]]
+
         # Shift annotation box left or right depending on which half of the axis the pos x is located and the
         # direction of x increasing.
         if plt_ref.axes.viewLim.intervalx[0] < plt_ref.axes.viewLim.intervalx[1]:
@@ -210,17 +228,36 @@ class BTFilters(object):
             else:
                 self.annot._y = -40
 
+        # Format and display text
         self.annot.xy = pos
         text = 'x: {:.2f}, y: {:.2f}'.format(pos[0], pos[1])
         self.annot.set_text(text)
 
     def hover(self, event):
+        """Determines if the user has selected a location with data and makes
+        annotation visible and calls method to update the text of the annotation. If the
+        location is not valid the existing annotation is hidden.
+
+        Parameters
+        ----------
+        event: MouseEvent
+            Triggered when mouse button is pressed.
+        """
+
+        # Set annotation to visible
         vis = self.annot.get_visible()
+
+        # Determine if mouse location references a data point in the plot and update the annotation.
         if event.inaxes == self.fig.ax:
             cont_beam = False
             cont_error = False
             cont_vert = False
             cont_other = False
+            ind_beam = None
+            ind_error = None
+            ind_vert = None
+            ind_other = None
+
             if self.beam is not None:
                 cont_beam, ind_beam = self.beam[0].contains(event)
             elif self.error is not None:
@@ -247,14 +284,21 @@ class BTFilters(object):
                 self.annot.set_visible(True)
                 self.canvas.draw_idle()
             else:
+                # If the cursor location is not associated with the plotted data hide the annotation.
                 if vis:
                     self.annot.set_visible(False)
                     self.canvas.draw_idle()
 
     def set_hover_connection(self, setting):
+        """Turns the connection to the mouse event on or off.
+
+        Parameters
+        ----------
+        setting: bool
+            Boolean to specify whether the connection for the mouse event is active or not.
+        """
 
         if setting and self.hover_connection is None:
-            # self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
             self.hover_connection = self.canvas.mpl_connect('button_press_event', self.hover)
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)

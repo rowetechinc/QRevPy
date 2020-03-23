@@ -32,6 +32,10 @@ class Shiptrack(object):
             Plot reference for VTG
         vectors: list
             Plot reference for vectors
+        hover_connection: int
+            Index to data cursor connection
+        annot: Annotation
+            Annotation object for data cursor
         """
 
     def __init__(self, canvas):
@@ -58,10 +62,11 @@ class Shiptrack(object):
         self.vectors = None
         self.vector_ref = None
         self.hover_connection = None
+        self.annot = None
 
     def create(self, transect, units,
                cb=False, cb_bt=None, cb_gga=None, cb_vtg=None, cb_vectors=None,
-               invalid_bt=None, invalid_gps=None, invalid_wt=None, n_ensembles=None, edge_start=None):
+               invalid_bt=None, invalid_gps=None, n_ensembles=None, edge_start=None):
         """Create the axes and lines for the figure.
 
         Parameters
@@ -113,10 +118,6 @@ class Shiptrack(object):
         self.fig.ax.yaxis.label.set_fontsize(12)
 
         # Initialize max/min trackers
-        max_x_bt = np.nan
-        max_y_bt = np.nan
-        min_x_bt = np.nan
-        min_y_bt = np.nan
         max_x_vtg = np.nan
         max_y_vtg = np.nan
         min_x_vtg = np.nan
@@ -137,12 +138,12 @@ class Shiptrack(object):
                                    label='BT')
 
         if edge_start is not None and not np.alltrue(np.isnan(ship_data_bt['track_x_m'])):
-                if edge_start:
-                    self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][0] * units['L'],
-                                                    ship_data_bt['track_y_m'][0] * units['L'], 'sk')[0])
-                else:
-                    self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][-1] * units['L'],
-                                                    ship_data_bt['track_y_m'][-1] * units['L'], 'sk')[0])
+            if edge_start:
+                self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][0] * units['L'],
+                                                ship_data_bt['track_y_m'][0] * units['L'], 'sk')[0])
+            else:
+                self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][-1] * units['L'],
+                                                ship_data_bt['track_y_m'][-1] * units['L'], 'sk')[0])
 
         # Plot invalid data points using a symbol to represent what caused the data to be invalid
         if invalid_bt is not None and not np.alltrue(np.isnan(ship_data_bt['track_x_m'])):
@@ -245,20 +246,20 @@ class Shiptrack(object):
             # Plot invalid data points using a symbol to represent what caused the data to be invalid
             if invalid_gps is not None and not np.alltrue(np.isnan(ship_data_gga['track_x_m'])):
                 self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[1]] * units['L'],
-                                                ship_data_gga['track_y_m'][invalid_gps[1]] * units['L'],
-                                                'k', linestyle='', marker='$O$')[0])
+                                                 ship_data_gga['track_y_m'][invalid_gps[1]] * units['L'],
+                                                 'k', linestyle='', marker='$O$')[0])
                 self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[2]] * units['L'],
-                                                ship_data_gga['track_y_m'][invalid_gps[2]] * units['L'],
-                                                'k', linestyle='', marker='$Q$')[0])
+                                                 ship_data_gga['track_y_m'][invalid_gps[2]] * units['L'],
+                                                 'k', linestyle='', marker='$Q$')[0])
                 self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[3]] * units['L'],
-                                                ship_data_gga['track_y_m'][invalid_gps[3]] * units['L'],
-                                                'k', linestyle='', marker='$A$')[0])
+                                                 ship_data_gga['track_y_m'][invalid_gps[3]] * units['L'],
+                                                 'k', linestyle='', marker='$A$')[0])
                 self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[4]] * units['L'],
-                                                ship_data_gga['track_y_m'][invalid_gps[4]] * units['L'],
-                                                'k', linestyle='', marker='$S$')[0])
+                                                 ship_data_gga['track_y_m'][invalid_gps[4]] * units['L'],
+                                                 'k', linestyle='', marker='$S$')[0])
                 self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[5]] * units['L'],
-                                                ship_data_gga['track_y_m'][invalid_gps[5]] * units['L'],
-                                                'k', linestyle='', marker='$H$')[0])
+                                                 ship_data_gga['track_y_m'][invalid_gps[5]] * units['L'],
+                                                 'k', linestyle='', marker='$H$')[0])
 
             if transect.boat_vel.selected == 'gga_vel':
                 ship_data = ship_data_gga
@@ -329,8 +330,8 @@ class Shiptrack(object):
         self.vector_ref = transect.w_vel.nav_ref
 
         if edge_start is not None and n_ensembles is not None:
-            u[np.logical_not(transect.w_vel.valid_data[0,:,:])] = np.nan
-            v[np.logical_not(transect.w_vel.valid_data[0,:,:])] = np.nan
+            u[np.logical_not(transect.w_vel.valid_data[0, :, :])] = np.nan
+            v[np.logical_not(transect.w_vel.valid_data[0, :, :])] = np.nan
             u_mean = np.nanmean(u, axis=0)
             v_mean = np.nanmean(v, axis=0)
             u_mean = self.subsection(u_mean, n_ensembles, edge_start)
@@ -340,8 +341,6 @@ class Shiptrack(object):
             v_mean = np.nanmean(v, axis=0)
 
         # Plot water vectors
-        # self.vectors = self.fig.ax.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
-        #                                   u_mean * units['V'], v_mean * units['V'], units='dots', width=1, scale=0.6)
         self.vectors = self.fig.ax.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
                                           u_mean * units['V'], v_mean * units['V'], units='dots', width=1,
                                           scale_units='width', scale=20)
@@ -349,13 +348,11 @@ class Shiptrack(object):
             self.vectors.set_visible(True)
         else:
             self.vectors.set_visible(False)
-        # qk = ax.quiverkey(quiv_plt, 0.9, 0.9, 1, r'$1 \frac{m}{s}$', labelpos='E',
-        #                    coordinates='figure')
 
         # Initialize annotation for data cursor
         self.annot = self.fig.ax.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
-                            bbox=dict(boxstyle="round", fc="w"),
-                            arrowprops=dict(arrowstyle="->"))
+                                          bbox=dict(boxstyle="round", fc="w"),
+                                          arrowprops=dict(arrowstyle="->"))
 
         self.annot.set_visible(False)
 
@@ -396,8 +393,18 @@ class Shiptrack(object):
 
     @staticmethod
     def subsection(data, n_ensembles, edge_start):
+        """Subsections data for shiptrack of edge ensembles.
 
-        data_out = np.nan
+        Parameters
+        ----------
+        data: np.ndarray(float)
+            Shiptrack coordinate
+        n_ensembles: int
+            Number of ensembles in subsection
+        edge_start: int
+            Identifies start bank
+        """
+
         if np.all(np.isnan(data)):
             data_out = data
         else:
@@ -458,11 +465,27 @@ class Shiptrack(object):
         return control
 
     def hover(self, event):
+        """Determines if the user has selected a location with data and makes
+        annotation visible and calls method to update the text of the annotation. If the
+        location is not valid the existing annotation is hidden.
+
+        Parameters
+        ----------
+        event: MouseEvent
+            Triggered when mouse button is pressed.
+        """
+
+        # Set annotation to visible
         vis = self.annot.get_visible()
+
+        # Determine if mouse location references a data point in the plot and update the annotation.
         if event.inaxes == self.fig.ax:
             cont_bt = False
             cont_gga = False
             cont_vtg = False
+            ind_bt = None
+            ind_gga = None
+            ind_vtg = None
             if self.bt is not None:
                 cont_bt, ind_bt = self.bt[0].contains(event)
             if self.gga is not None:
@@ -483,23 +506,43 @@ class Shiptrack(object):
                 self.annot.set_visible(True)
                 self.canvas.draw_idle()
             else:
+                # If the cursor location is not associated with the plotted data hide the annotation.
                 if vis:
                     self.annot.set_visible(False)
                     self.canvas.draw_idle()
 
     def set_hover_connection(self, setting):
+        """Turns the connection to the mouse event on or off.
+
+        Parameters
+        ----------
+        setting: bool
+            Boolean to specify whether the connection for the mouse event is active or not.
+        """
 
         if setting and self.hover_connection is None:
-            # self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
             self.hover_connection = self.canvas.mpl_connect('button_press_event', self.hover)
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)
             self.hover_connection = None
 
     def update_annot(self, ind, plt_ref, vector_ref, ref_label):
+        """Updates the location and text and makes visible the previously initialized and hidden annotation.
 
-        # pos = plt_ref.get_offsets()[ind["ind"][0]]
+        Parameters
+        ----------
+        ind: dict
+            Contains data selected.
+        plt_ref: Line2D
+            Reference containing plotted data
+        vector_ref: Quiver
+            Refernece containing plotted data
+        ref_label: str
+            Label used to ID data type in annotation
+        """
+
         pos = plt_ref._xy[ind["ind"][0]]
+
         # Shift annotation box left or right depending on which half of the axis the pos x is located and the
         # direction of x increasing.
         if plt_ref.axes.viewLim.intervalx[0] < plt_ref.axes.viewLim.intervalx[1]:
@@ -527,7 +570,7 @@ class Shiptrack(object):
                 self.annot._y = -40
         self.annot.xy = pos
         if self.vector_ref == ref_label:
-            v=np.sqrt(vector_ref.U[ind["ind"][0]]**2 + vector_ref.V[ind["ind"][0]]**2)
+            v = np.sqrt(vector_ref.U[ind["ind"][0]]**2 + vector_ref.V[ind["ind"][0]]**2)
             text = '{} x: {:.2f}, y: {:.2f}, \n v: {:.1f}'.format(ref_label, pos[0], pos[1], v)
         else:
             text = '{} x: {:.2f}, y: {:.2f}'.format(ref_label, pos[0], pos[1])

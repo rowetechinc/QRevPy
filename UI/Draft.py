@@ -1,4 +1,4 @@
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtWidgets
 from UI import wDraft
 
 
@@ -14,8 +14,3 @@ class Draft(QtWidgets.QDialog, wDraft.Ui_draft):
     def __init__(self, parent=None):
         super(Draft, self).__init__(parent)
         self.setupUi(self)
-
-        # set qlineedit to numbers only, 2 decimals
-        # rx = QtCore.QRegExp("^[0-9]\d*(\.\d{1,2})$")
-        # validator = QtGui.QRegExpValidator(rx, self)
-        # self.ed_draft.setValidator(validator)

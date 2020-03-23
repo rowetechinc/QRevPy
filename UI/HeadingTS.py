@@ -19,6 +19,10 @@ class HeadingTS(object):
         List of rows from the table that are plotted
     hover_connection: bool
         Switch to allow user to use the data cursor
+    annot: Annotation
+        Annotation object for heading
+    annot2: Annotation
+        Annotation object for percent change in magnetic field
     """
 
     def __init__(self, canvas):
@@ -38,8 +42,27 @@ class HeadingTS(object):
         self.merror = None
         self.row_index = []
         self.hover_connection = None
+        self.annot = None
+        self.annot2 = None
 
     def create(self, meas, checked, tbl, cb_internal, cb_external, cb_merror):
+        """Creates heading time series graph.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of Measurement class
+        checked: list
+            List of bool indicating which transects are included in the discharge computation
+        tbl: QTableWidget
+            Heading, pitch, and roll table
+        cb_internal: QCheckBox
+            Indicates if the internal heading data is visible
+        cb_external: QCheckBox
+            Inidcates if the external heading data is visible
+        cb_merror: QCheckBox
+            Indicates if the percent change in magnetic field is visible
+        """
 
         # Clear the plot
         self.fig.clear()
@@ -102,29 +125,34 @@ class HeadingTS(object):
 
         if cb_merror.isChecked():
             self.annot2 = self.fig.axm.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
-                                               bbox=dict(boxstyle="round", fc="w"),
-                                               arrowprops=dict(arrowstyle="->"))
+                                                bbox=dict(boxstyle="round", fc="w"),
+                                                arrowprops=dict(arrowstyle="->"))
 
             self.annot2.set_visible(False)
 
         # Initialize annotation for data cursor
         self.annot = self.fig.axh.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
-                                          bbox=dict(boxstyle="round", fc="w"),
-                                          arrowprops=dict(arrowstyle="->"))
+                                           bbox=dict(boxstyle="round", fc="w"),
+                                           arrowprops=dict(arrowstyle="->"))
 
         self.annot.set_visible(False)
         self.fig.axh.set_yticks([0, 90, 180, 270, 360])
         self.canvas.draw()
 
-    def update_annot(self, annot, ind, plt_ref, row):
+    @staticmethod
+    def update_annot(annot, ind, plt_ref, row):
         """Updates the location and text and makes visible the previously initialized and hidden annotation.
 
         Parameters
         ----------
+        annot: Annotation
+            Annotation for data cursor
         ind: dict
             Contains data selected.
         plt_ref: Line2D
             Reference containing plotted data
+        row: int
+            Index of row in table from to which the plotted data are associated
         """
 
         # Get selected data coordinates
@@ -177,6 +205,9 @@ class HeadingTS(object):
         vis = self.annot.get_visible()
 
         cont = False
+        ind = None
+        item = None
+        n = None
         # Determine if mouse location references a data point in the plot and update the annotation.
         if event.inaxes == self.fig.axh or event.inaxes == self.fig.axm:
             if self.internal is not None:
@@ -227,7 +258,6 @@ class HeadingTS(object):
         """
 
         if setting and self.hover_connection is None:
-            # self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
             self.hover_connection = self.canvas.mpl_connect('button_press_event', self.hover)
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)

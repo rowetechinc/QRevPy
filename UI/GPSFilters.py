@@ -22,6 +22,12 @@ class GPSFilters (object):
         Axis of figure for other filters
     sats: object
         Axis of figure for number of satellites
+    source: object
+        Axis of figure for navigation reference source
+    hover_connection: int
+        Index to data cursor connection
+    annot: Annotation
+        Annotation object for data cursor
     """
 
     def __init__(self, canvas):
@@ -42,7 +48,9 @@ class GPSFilters (object):
         self.hdop = None
         self.other = None
         self. sats = None
+        self.source = None
         self.hover_connection = None
+        self.annot = None
 
     def create(self, transect, units, selected):
         """Create the axes and lines for the figure.
@@ -86,7 +94,6 @@ class GPSFilters (object):
                                               transect.gps.diff_qual_ens[invalid_gps], 'ro', markerfacecolor='none')[0])
 
             # Format axis
-            # self.fig.ax.set_ylim(top=np.nanmax(transect.gps.diff_qual_ens) + 0.5, bottom=-0.5)
             self.fig.ax.set_ylabel(self.canvas.tr('GPS Quality'))
             yint = range(0, int(np.ceil(np.nanmax(transect.gps.diff_qual_ens)) + 1))
             self.fig.ax.set_ylim(top=np.nanmax(yint) + 0.5, bottom=np.nanmin(yint) - 0.5)
@@ -94,14 +101,11 @@ class GPSFilters (object):
 
         elif selected == 'altitude':
             # Plot altitude
-            max_y = np.nanmax(transect.gps.altitude_ens_m) + 2
-            min_y = np.nanmin(transect.gps.altitude_ens_m) - 2
             invalid_altitude = np.logical_not(transect.boat_vel.gga_vel.valid_data[3, :])
             self.alt = self.fig.ax.plot(ensembles, transect.gps.altitude_ens_m * units['L'], 'b.')
             self.alt.append(self.fig.ax.plot(ensembles[invalid_altitude],
                                              transect.gps.altitude_ens_m[invalid_altitude] * units['L'],
                                              'ro', markerfacecolor='none')[0])
-            # self.fig.ax.set_ylim(top=max_y * units['L'], bottom=min_y * units['L'])
             self.fig.ax.set_ylabel(self.canvas.tr('Altitude' + self.units['label_L']))
 
         elif selected == 'hdop':
@@ -128,7 +132,6 @@ class GPSFilters (object):
             except ValueError:
                 pass
             self.fig.ax.set_ylabel(self.canvas.tr('Number of Satellites'))
-
 
         elif selected == 'other':
 
@@ -183,7 +186,9 @@ class GPSFilters (object):
                 boat_selected = transect.boat_vel.gga_vel
             else:
                 boat_selected = transect.boat_vel.bt_vel
+
             source = boat_selected.processed_source
+
             # Plot dummy data to establish consistent order of y axis
             self.source = self.fig.ax.plot([-10, -10, -10, -10, -10], ['INV', 'INT', 'BT', 'GGA', 'VTG'], 'w-')
             self.source = self.fig.ax.plot(ensembles, source, 'b.')
@@ -206,9 +211,18 @@ class GPSFilters (object):
         self.canvas.draw()
 
     def update_annot(self, ind, plt_ref):
+        """Updates the location and text and makes visible the previously initialized and hidden annotation.
 
-        # pos = plt_ref.get_offsets()[ind["ind"][0]]
+        Parameters
+        ----------
+        ind: dict
+            Contains data selected.
+        plt_ref: Line2D
+            Reference containing plotted data
+        """
+
         pos = plt_ref._xy[ind["ind"][0]]
+
         # Shift annotation box left or right depending on which half of the axis the pos x is located and the
         # direction of x increasing.
         if plt_ref.axes.viewLim.intervalx[0] < plt_ref.axes.viewLim.intervalx[1]:
@@ -235,18 +249,37 @@ class GPSFilters (object):
             else:
                 self.annot._y = -40
 
+        # Format and display text
         self.annot.xy = pos
         text = 'x: {:.2f}, y: {:.2f}'.format(pos[0], pos[1])
         self.annot.set_text(text)
 
     def hover(self, event):
+        """Determines if the user has selected a location with data and makes
+        annotation visible and calls method to update the text of the annotation. If the
+        location is not valid the existing annotation is hidden.
+
+        Parameters
+        ----------
+        event: MouseEvent
+            Triggered when mouse button is pressed.
+        """
+
+        # Set annotation to visible
         vis = self.annot.get_visible()
+
+        # Determine if mouse location references a data point in the plot and update the annotation.
         if event.inaxes == self.fig.ax:
             cont_qual = False
             cont_hdop = False
             cont_alt = False
             cont_sats = False
             cont_other = False
+            ind_qual = None
+            ind_hdop = None
+            ind_alt = None
+            ind_sats = None
+            ind_other = None
             if self.qual is not None:
                 cont_qual, ind_qual = self.qual[0].contains(event)
             elif self.hdop is not None:
@@ -279,14 +312,21 @@ class GPSFilters (object):
                 self.annot.set_visible(True)
                 self.canvas.draw_idle()
             else:
+                # If the cursor location is not associated with the plotted data hide the annotation.
                 if vis:
                     self.annot.set_visible(False)
                     self.canvas.draw_idle()
 
     def set_hover_connection(self, setting):
+        """Turns the connection to the mouse event on or off.
+
+        Parameters
+        ----------
+        setting: bool
+            Boolean to specify whether the connection for the mouse event is active or not.
+        """
 
         if setting and self.hover_connection is None:
-            # self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
             self.hover_connection = self.canvas.mpl_connect('button_press_event', self.hover)
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)

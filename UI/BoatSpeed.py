@@ -28,6 +28,10 @@ class BoatSpeed(object):
         Plot reference for GGA
     vtg: list
         Plot reference for VTG
+    hover_connection: int
+        Index to data cursor connection
+    annot: Annotation
+        Annotation object for data cursor
     """
 
     def __init__(self, canvas):
@@ -51,6 +55,7 @@ class BoatSpeed(object):
         self.gga = None
         self.vtg = None
         self.hover_connection = None
+        self.annot = None
 
     def create(self, transect, units,
                cb=False, cb_bt=None, cb_gga=None, cb_vtg=None, invalid_bt=None, invalid_gps=None):
@@ -143,11 +148,11 @@ class BoatSpeed(object):
             # Plot invalid data points using a symbol to represent what caused the data to be invalid
             if invalid_gps is not None:
                 self.vtg.append(self.fig.ax.plot(ensembles[invalid_gps[1]], speed[invalid_gps[1]] * units['V'],
-                                                'k', linestyle='', marker='$O$')[0])
+                                                 'k', linestyle='', marker='$O$')[0])
                 self.vtg.append(self.fig.ax.plot(ensembles[invalid_gps[5]], speed[invalid_gps[5]] * units['V'],
-                                                'k', linestyle='', marker='$H$')[0])
+                                                 'k', linestyle='', marker='$H$')[0])
                 self.vtg.append(self.fig.ax.plot(ensembles[invalid_gps[4]], speed[invalid_gps[4]] * units['V'],
-                                                'k', linestyle='', marker='$S$')[0])
+                                                 'k', linestyle='', marker='$S$')[0])
 
             max_vtg = np.nanmax(speed)
             if control['vtg']:
@@ -174,7 +179,7 @@ class BoatSpeed(object):
                 self.gga.append(self.fig.ax.plot(ensembles[invalid_gps[5]], speed[invalid_gps[5]] * units['V'],
                                                  'k', linestyle='', marker='$H$')[0])
                 self.gga.append(self.fig.ax.plot(ensembles[invalid_gps[4]], speed[invalid_gps[4]] * units['V'],
-                                                'k', linestyle='', marker='$S$')[0])
+                                                 'k', linestyle='', marker='$S$')[0])
 
             max_gga = np.nanmax(speed)
             if control['gga']:
@@ -195,8 +200,8 @@ class BoatSpeed(object):
 
         # Initialize annotation for data cursor
         self.annot = self.fig.ax.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
-                            bbox=dict(boxstyle="round", fc="w"),
-                            arrowprops=dict(arrowstyle="->"))
+                                          bbox=dict(boxstyle="round", fc="w"),
+                                          arrowprops=dict(arrowstyle="->"))
 
         self.annot.set_visible(False)
 
@@ -340,6 +345,10 @@ class BoatSpeed(object):
             cont_bt = False
             cont_gga = False
             cont_vtg = False
+            ind_bt = None
+            ind_gga = None
+            ind_vtg = None
+
             if self.bt is not None:
                 cont_bt, ind_bt = self.bt[0].contains(event)
             if self.gga is not None:
@@ -374,7 +383,6 @@ class BoatSpeed(object):
         """
 
         if setting and self.hover_connection is None:
-            # self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
             self.hover_connection = self.canvas.mpl_connect('button_press_event', self.hover)
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)

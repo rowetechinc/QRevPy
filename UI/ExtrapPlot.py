@@ -14,6 +14,10 @@ class ExtrapPlot(object):
         Object of class Measurement
     checked: list
         List of transect indices of transects used to compute discharge
+    hover_connection: int
+        Index to data cursor connection
+    annot: Annotation
+        Annotation object for data cursor
     """
 
     def __init__(self, canvas):
@@ -31,6 +35,7 @@ class ExtrapPlot(object):
         self.meas = None
         self.checked = None
         self.hover_connection = None
+        self.annot = None
 
     def create(self, meas, checked, idx=-1, data_type='Discharge',
                cb_data=True, cb_surface=False,
@@ -60,6 +65,8 @@ class ExtrapPlot(object):
             Plot medians for entire measurement (True or False)
         cb_meas_fit: bool
             Plot extrapolation fit for entire measurement (True or False)
+        auto: bool
+            Indicator that the auto fit should be shown in addition to the selected fit.
         """
 
         # Initialize variables
@@ -240,6 +247,8 @@ class ExtrapPlot(object):
             List of or single object of class SelectFit
         idx: int
             Index of data to be plotted
+        auto: bool
+            Indicator that the auto fit should be shown in addition to the selected fit.
         """
 
         # If sel_fit is a list plot data from all checked transects
@@ -300,7 +309,20 @@ class ExtrapPlot(object):
                          markerfacecolor='g', linestyle='None', markersize=2)
 
     def hover(self, event):
+        """Determines if the user has selected a location with data and makes
+        annotation visible and calls method to update the text of the annotation. If the
+        location is not valid the existing annotation is hidden.
+
+        Parameters
+        ----------
+        event: MouseEvent
+            Triggered when mouse button is pressed.
+        """
+
+        # Set annotation to visible
         vis = self.annot.get_visible()
+
+        # Determine if mouse location references a data point in the plot and update the annotation.
         if event.inaxes == self.fig.ax:
             cont_fig = False
             if self.fig is not None:
@@ -316,18 +338,32 @@ class ExtrapPlot(object):
                     self.canvas.draw_idle()
 
     def set_hover_connection(self, setting):
+        """Turns the connection to the mouse event on or off.
+
+        Parameters
+        ----------
+        setting: bool
+            Boolean to specify whether the connection for the mouse event is active or not.
+        """
 
         if setting and self.hover_connection is None:
-            # self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
             self.hover_connection = self.canvas.mpl_connect('button_press_event', self.hover)
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)
             self.hover_connection = None
 
     def update_annot(self, x, y):
+        """Updates the location and text and makes visible the previously initialized and hidden annotation.
+
+        Parameters
+        ----------
+        x: int
+            x coordinate for annotation
+        y: int
+            y coordinate for annotation
+        """
 
         plt_ref = self.fig
-        # pos = plt_ref.get_offsets()[ind["ind"][0]]
         pos = [x, y]
         # Shift annotation box left or right depending on which half of the axis the pos x is located and the
         # direction of x increasing.

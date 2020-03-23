@@ -38,6 +38,10 @@ class BeamDepths(object):
         Plot reference for vertical beam
     ds: list
         Plot reference for depth sounder
+    hover_connection: int
+        Index to data cursor connection
+    annot: Annotation
+        Annotation for data cursor
     """
 
     def __init__(self, canvas):
@@ -66,14 +70,10 @@ class BeamDepths(object):
         self.vb = None
         self.ds = None
         self.hover_connection = None
+        self.annot = None
 
-    def create(self, transect, units,
-               cb_beam1=None,
-               cb_beam2=None,
-               cb_beam3=None,
-               cb_beam4=None,
-               cb_vert=None,
-               cb_ds=None):
+    def create(self, transect, units, cb_beam1=None, cb_beam2=None, cb_beam3=None, cb_beam4=None,
+               cb_vert=None, cb_ds=None):
 
         """Create the axes and lines for the figure.
 
@@ -113,6 +113,8 @@ class BeamDepths(object):
 
         # Set margins and padding for figure
         self.fig.subplots_adjust(left=0.08, bottom=0.2, right=0.98, top=0.98, wspace=0.1, hspace=0)
+
+        # Configure axes
         self.fig.ax.set_xlabel(self.canvas.tr('Length' + units['label_L']))
         self.fig.ax.set_ylabel(self.canvas.tr('Depth' + units['label_L']))
         self.fig.ax.grid()
@@ -126,6 +128,8 @@ class BeamDepths(object):
 
         # Compute x axis data
         boat_track = transect.boat_vel.compute_boat_track(transect=transect)
+
+        # Check to make sure there is valib boat track data
         if not np.alltrue(np.isnan(boat_track['track_x_m'])):
             x = boat_track['distance_m']
             invalid_beams = np.logical_not(transect.depths.bt_depths.valid_beams)
@@ -170,7 +174,7 @@ class BeamDepths(object):
             # Compute max depth from beams
             max_beams = np.nanmax(np.nanmax(transect.depths.bt_depths.depth_beams_m))
 
-            # Based on checkbox control make beams visible or not
+            # Based on checkbox control make beams visible
             if cb_beam1.checkState() == QtCore.Qt.Checked:
                 for item in self.beam1:
                     item.set_visible(True)
@@ -249,6 +253,8 @@ class BeamDepths(object):
             self.fig.ax.invert_yaxis()
             self.fig.ax.set_ylim(bottom=np.ceil(max_y * units['L']), top=0)
             self.fig.ax.set_xlim(left=-1 * x[-1] * 0.02 * units['L'], right=x[-1] * 1.02 * units['L'])
+
+            # Plot all transects from left to right
             if transect.start_edge == 'Right':
                 self.fig.ax.invert_xaxis()
                 self.fig.ax.set_xlim(right=-1 * x[-1] * 0.02 * units['L'], left=x[-1] * 1.02 * units['L'])
@@ -314,9 +320,21 @@ class BeamDepths(object):
         self.canvas.draw()
 
     def update_annot(self, ind, plt_ref, ref_label):
+        """Creates annotation for data cursor event.
 
-        # pos = plt_ref.get_offsets()[ind["ind"][0]]
+        Parameters
+        ----------
+        ind: dict
+            Contains array of position data from mouse click.
+        plt_ref: Line2D
+            Line on graph that was clicked
+        ref_label: str
+            Label for line that was clicked
+
+        """
+
         pos = plt_ref._xy[ind["ind"][0]]
+
         # Shift annotation box left or right depending on which half of the axis the pos x is located and the
         # direction of x increasing.
         if plt_ref.axes.viewLim.intervalx[0] < plt_ref.axes.viewLim.intervalx[1]:
@@ -342,19 +360,40 @@ class BeamDepths(object):
                 self.annot._y = 20
             else:
                 self.annot._y = -40
+
+        # Create annotation box
         self.annot.xy = pos
         text = 'x: {:.2f}, {}: {:.2f}'.format(pos[0], ref_label, pos[1])
         self.annot.set_text(text)
 
     def hover(self, event):
+        """Handles data cursor events.
+
+        Parameters
+        ----------
+        event: MouseEvent
+            Results of mouse click
+        """
+
         vis = self.annot.get_visible()
+
+        # Check to see if event is associated with the figure
         if event.inaxes == self.fig.ax:
+            # Intialize variables
             cont_beam1 = False
             cont_beam2 = False
             cont_beam3 = False
             cont_beam4 = False
             cont_vb = False
             cont_ds = False
+            ind_beam1 = None
+            ind_beam2 = None
+            ind_beam3 = None
+            ind_beam4 = None
+            ind_vb = None
+            ind_ds = None
+
+            # Identify beam selected
             if self.beam1 is not None:
                 cont_beam1, ind_beam1 = self.beam1[0].contains(event)
             if self.beam2 is not None:
@@ -367,6 +406,8 @@ class BeamDepths(object):
                 cont_vb, ind_vb = self.vb[0].contains(event)
             if self.ds is not None:
                 cont_ds, ind_ds = self.ds[0].contains(event)
+
+            # Display result
             if cont_beam1 and self.beam1[0].get_visible():
                 self.update_annot(ind_beam1, self.beam1[0], 'B1')
                 self.annot.set_visible(True)
@@ -397,9 +438,14 @@ class BeamDepths(object):
                     self.canvas.draw_idle()
 
     def set_hover_connection(self, setting):
+        """Provides connection between data cursor and canvas.
+        Parameters
+        ----------
+        setting: bool
+            Identifies if the data cursor is selected.
+        """
 
         if setting and self.hover_connection is None:
-            # self.hover_connection = self.canvas.mpl_connect("motion_notify_event", self.hover)
             self.hover_connection = self.canvas.mpl_connect('button_press_event', self.hover)
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)

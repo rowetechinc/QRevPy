@@ -30,6 +30,10 @@ class CrossSection(object):
         Plot reference for depth sounder cross section
     final_cs: list
         Plot reference for final cross section
+    hover_connection: int
+        Index to data cursor connection
+    annot: Annotation
+        Annotation object for data cursor
     """
 
     def __init__(self, canvas):
@@ -54,12 +58,9 @@ class CrossSection(object):
         self.ds_cs = None
         self.final_cs = None
         self.hover_connection = None
+        self.annot = None
 
-    def create(self, transect, units,
-               cb_beam_cs=None,
-               cb_vert_cs=None,
-               cb_ds_cs=None,
-               cb_final_cs=None):
+    def create(self, transect, units, cb_beam_cs=None, cb_vert_cs=None, cb_ds_cs=None, cb_final_cs=None):
 
         """Create the axes and lines for the figure.
 
@@ -237,8 +238,8 @@ class CrossSection(object):
         """
 
         # Get selected data coordinates
-
         pos = plt_ref._xy[ind["ind"][0]]
+
         # Shift annotation box left or right depending on which half of the axis the pos x is located and the
         # direction of x increasing.
         if plt_ref.axes.viewLim.intervalx[0] < plt_ref.axes.viewLim.intervalx[1]:
@@ -290,6 +291,11 @@ class CrossSection(object):
             cont_vb = False
             cont_ds = False
             cont_4b = False
+            ind_final = None
+            ind_vb = None
+            ind_ds = None
+            ind_4b = None
+
             if self.final_cs is not None:
                 cont_final, ind_final = self.final_cs[0].contains(event)
             if self.vb_cs is not None:

@@ -12,6 +12,15 @@ class SOSSource(QtWidgets.QDialog, wSOSSource.Ui_sos_source):
     """
 
     def __init__(self, units, setting='internal', sos=None, parent=None):
+        """Initialize speed of sound dialog.
+
+        Parameters
+        ----------
+        setting: str
+            Speed of sound source setting
+        sos: float
+            Speed of sound in m/s
+        """
         super(SOSSource, self).__init__(parent)
         self.setupUi(self)
         self.rb_user.setText('User ' + units['label_V'])
@@ -27,12 +36,14 @@ class SOSSource(QtWidgets.QDialog, wSOSSource.Ui_sos_source):
 
     @QtCore.pyqtSlot()
     def user(self):
+        """Enables edit box for speed of sound if User is selected.
+        """
         if self.rb_user.isChecked():
             self.ed_sos_user.setEnabled(True)
 
     @QtCore.pyqtSlot()
     def internal(self):
+        """Disables edit box for speed of sound if Internal is selected.
+        """
         if self.rb_internal.isChecked():
             self.ed_sos_user.setEnabled(False)
-
-

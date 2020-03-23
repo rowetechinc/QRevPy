@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets, QtGui
 from UI import wOptions
 
+
 class Options(QtWidgets.QDialog, wOptions.Ui_Options):
     """Dialog to allow users to change QRev options.
 
@@ -11,6 +12,8 @@ class Options(QtWidgets.QDialog, wOptions.Ui_Options):
     """
 
     def __init__(self, parent=None):
+        """Initialize options dialog.
+        """
         super(Options, self).__init__(parent)
         self.setupUi(self)
 

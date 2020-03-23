@@ -27,18 +27,6 @@ class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
         Type of file (SonTek, TRDI, QRev).
     checked: bool
         Switch for TRDI files (True: load only checked, False: load all).
-    pbSonTek: QWidgets.QPushButton
-        Allows selection of SonTek Matlab transect files.
-    pbTRDI: QWidgets.QPushButton
-        Allows selection of TRDI mmt file.
-    cbTRDI: QWidgets.QCheckBox
-        When checked only the checked transects in the mmt file are loaded.
-    pbQRev: QWidgets.QPushButton
-        Allows selection of QRev file.
-    pbCancel: QWidgets.QPushButton
-        Closes dialog with no file selection.
-    pbHelp: QWidgets.QPushButton
-        Opens help file.
     """
 
     def __init__(self, parent=None):
@@ -57,9 +45,9 @@ class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
         self.settings = SSet(parent.settingsFile)
 
         # Create connections for buttons
-        self.pbSonTek.clicked.connect(self.selectSonTek)
-        self.pbTRDI.clicked.connect(self.selectTRDI)
-        self.pbQRev.clicked.connect(self.selectQRev)
+        self.pbSonTek.clicked.connect(self.select_sontek)
+        self.pbTRDI.clicked.connect(self.select_trdi)
+        self.pbQRev.clicked.connect(self.select_qrev)
         self.pbCancel.clicked.connect(self.cancel)
 
         # Initialize parameters
@@ -69,7 +57,7 @@ class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
         self.type = ''
         self.checked = False
 
-    def defaultFolder(self):
+    def default_folder(self):
         """Returns default folder.
 
         Returns the folder stored in settings or if no folder is stored, then the current
@@ -84,13 +72,14 @@ class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
             folder = self.settings.get('Folder')
         return folder
 
-    def processNames(self):
+    def process_names(self):
         """Parses fullnames into filenames and pathnames and sets default folder.
         """
         # Parse filenames and pathname from fullName
         if isinstance(self.fullName, str):
             self.pathName, self.fileName = os.path.split(self.fullName)
         else:
+            self.fileName = []
             for file in self.fullName:
                 self.pathName, fileTemp = os.path.split(file)
                 self.fileName.append(fileTemp)
@@ -98,7 +87,7 @@ class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
         # Update the folder setting
         self.settings.set('Folder', self.pathName)
 
-    def selectSonTek(self):
+    def select_sontek(self):
         """Get filenames and pathname for SonTek Matlab transect files
 
         Allows the user to select one or more SonTek Matlab transect files for
@@ -107,7 +96,7 @@ class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
         """
 
         # Get the current folder setting.
-        folder = self.defaultFolder()
+        folder = self.default_folder()
 
         # Get the full names (path + file) of the selected files
         self.fullName = QtWidgets.QFileDialog.getOpenFileNames(
@@ -120,11 +109,11 @@ class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
 
         # Process fullName if selection was made
         if self.fullName:
-            self.processNames()
+            self.process_names()
             self.type = 'SonTek'
         self.close()
 
-    def selectTRDI(self):
+    def select_trdi(self):
         """Get filenames and pathname for TRDI mmt file
 
         Allows the user to select a TRDI mmt file for processing.
@@ -133,7 +122,7 @@ class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
         """
 
         # Get the current folder setting.
-        folder = self.defaultFolder()
+        folder = self.default_folder()
 
         # Get the full names (path + file) of the selected files
         self.fullName = QtWidgets.QFileDialog.getOpenFileNames(
@@ -147,10 +136,10 @@ class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
         # Process fullName if selection was made
         if self.fullName:
             self.type = 'TRDI'
-            self.processNames()
+            self.process_names()
         self.close()
 
-    def selectQRev(self):
+    def select_qrev(self):
         """Get filename and pathname of QRev file.
 
                 Allows the user to select a QRev file for viewing or reprocessing.
@@ -159,7 +148,7 @@ class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
                 """
 
         # Get the current folder setting.
-        folder = self.defaultFolder()
+        folder = self.default_folder()
 
         # Get the full names (path + file) of the selected file
         self.fullName = QtWidgets.QFileDialog.getOpenFileName(
@@ -173,7 +162,7 @@ class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):
         # Process fullName if selection was made
         if self.fullName:
             self.type = 'QRev'
-            self.processNames()
+            self.process_names()
         self.close()
 
     def cancel(self):
@@ -212,7 +201,7 @@ class SaveMeasurementDialog(QtWidgets.QDialog):
         settings = SSet(parent.settingsFile)
 
         # Get the current folder setting.
-        folder = self.defaultFolder(settings)
+        folder = self.default_folder(settings)
         version = str(int(round(float(parent.QRev_version[-4:]) * 100)))
         # Create default file name
         file_name = os.path.join(folder, datetime.datetime.today().strftime('%Y%m%d_%H%M%S_' + version + '_QRev.mat'))
@@ -221,9 +210,8 @@ class SaveMeasurementDialog(QtWidgets.QDialog):
             self, self.tr('Save File'), file_name,
             self.tr('QRev File (*_QRev.mat)'))[0]
 
-
     @staticmethod
-    def defaultFolder(settings):
+    def default_folder(settings):
         """Returns default folder.
 
         Returns the folder stored in settings or if no folder is stored, then the current
