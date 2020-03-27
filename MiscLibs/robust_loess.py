@@ -171,6 +171,7 @@ def compute_loess(x, y, neighbors_idx, idx, r_weights=None):
 
     return smoothed_values[0]
 
+
 def rloess(x, y, span):
     """This function computes a robust loess smooth using a quadratic model as defined by
     W.S.Cleveland, (1979) "Robust Locally Weighted Regression and Smoothing Scatterplots",
@@ -254,4 +255,3 @@ def rloess(x, y, span):
 
                         smoothed_values[n] = compute_loess(x, y, neighbors_idx, n, r_weights)
     return smoothed_values
-

@@ -80,7 +80,6 @@ class FitData(object):
 
         avg_z = norm_data.unit_normalized_z
         y = norm_data.unit_normalized_med
-        # idxz = np.squeeze(norm_data.valid_data)
         idxz = norm_data.valid_data
         zc = np.nan
 
@@ -174,12 +173,10 @@ class FitData(object):
                 # If less than 6 bins use constant at the top
                 if len(idxz) < 6:
                     zc = np.arange(np.max(idxz) + 0.01, 1.0, 0.01)
-                    # zc = zc.T
                     uc = np.tile(y[idxz[0]], zc.shape)
                 else:
                     p = np.polyfit(avg_z[idxz[0:3]], y[idxz[0:3]], 1)
                     zc = np.arange(np.max(avg_z[idxz]) + 0.01, 1.0, 0.01)
-                    # zc = zc.T
                     uc = zc * p[0] + p[1]
 
             # Compute exponent
@@ -188,9 +185,6 @@ class FitData(object):
 
             # Check data validity
             ok_ = np.logical_and(np.isfinite(zfit), np.isfinite(yfit))
-            # if np.all(ok_) == False:
-            #     pass
-            #     # TODO Add warning
 
             self.exponent = np.nan
             self.exponent_95_ci = np.nan

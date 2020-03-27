@@ -19,7 +19,6 @@ from datetime import timezone
 from MiscLibs.common_functions import nandiff
 
 
-
 class TransectData(object):
     """Class to hold Transect properties.
 
@@ -116,12 +115,13 @@ class TransectData(object):
                                          cell_size_in=cell_size_all_m)
             
             # Compute cells above side lobe
-            cells_above_sl, sl_cutoff_m = TransectData.side_lobe_cutoff(depths=self.depths.bt_depths.depth_orig_m,
-                                                                        draft=self.depths.bt_depths.draft_orig_m,
-                                                                        cell_depth=self.depths.bt_depths.depth_cell_depth_m,
-                                                                        sl_lag_effect=sl_lag_effect_m,
-                                                                        slc_type='Percent',
-                                                                        value=1-sl_cutoff_per / 100)
+            cells_above_sl, sl_cutoff_m = \
+                TransectData.side_lobe_cutoff(depths=self.depths.bt_depths.depth_orig_m,
+                                              draft=self.depths.bt_depths.draft_orig_m,
+                                              cell_depth=self.depths.bt_depths.depth_cell_depth_m,
+                                              sl_lag_effect=sl_lag_effect_m,
+                                              slc_type='Percent',
+                                              value=1-sl_cutoff_per / 100)
             
             # Check for the presence of vertical beam data
             if np.nanmax(np.nanmax(pd0_data.Sensor.vert_beam_status)) > 0:
@@ -310,35 +310,12 @@ class TransectData(object):
             for n, lat_ref in enumerate(pd0_data.Gps2.lat_ref):
                 idx = np.nonzero(np.array(lat_ref) == 'S')
                 raw_gga_lat[n, idx] = raw_gga_lat[n, idx] * -1
-                # try:
-                #     idx = [lat_ref.index('S')]
-                #     if len(idx) > 0:
-                #         raw_gga_lat[n, idx] = raw_gga_lat[n, idx] * -1
-                # except ValueError:
-                #     pass
-            # idx = np.where(pd0_data.Gps2.lat_ref == 'S')[0]
-            # if len(idx) > 0:
-            #     raw_gga_lat[idx] = raw_gga_lat[idx] * -1
 
             # Determine correct sign for longitude
             for n, lon_ref in enumerate(pd0_data.Gps2.lon_ref):
                 idx = np.nonzero(np.array(lon_ref) == 'W')
                 raw_gga_lon[n, idx] = raw_gga_lon[n, idx] * -1
-                # try:
-                #     idx = [lon_ref.index('W')]
-                #     if len(idx) > 0:
-                #         raw_gga_lon[n, idx] = raw_gga_lon[n, idx] * -1
-                # except ValueError:
-                #     pass
-            # for sublist in data:
-            #     if sublist[1] == 'W':
-            #         print
-            #         "Found it!", sublist
-            #         break
-            # idx = np.where(pd0_data.Gps2.lon_ref == 'W')
-            # if len(idx) > 0:
-            #     raw_gga_lon[idx] = raw_gga_lon[idx] * -1
-            
+
             # Assign data to local variables
             raw_gga_alt = pd0_data.Gps2.alt
             raw_gga_diff = pd0_data.Gps2.corr_qual
@@ -631,7 +608,7 @@ class TransectData(object):
             end_hour = int(pd0_data.Sensor.time[idx, 0])
             end_min = int(pd0_data.Sensor.time[idx, 1])
             end_sec = int(pd0_data.Sensor.time[idx, 2] + pd0_data.Sensor.time[idx, 3] / 100)
-            end_micro =int(((pd0_data.Sensor.time[idx, 2] + pd0_data.Sensor.time[idx, 3] / 100) - end_sec) * 10**6)
+            end_micro = int(((pd0_data.Sensor.time[idx, 2] + pd0_data.Sensor.time[idx, 3] / 100) - end_sec) * 10**6)
             
             end_dt = datetime(end_year, end_month, end_day, end_hour, end_min, end_sec, end_micro, tzinfo=timezone.utc)
             end_serial_time = end_dt.timestamp()
@@ -660,7 +637,6 @@ class TransectData(object):
         file_name: str
             Name of SonTek Matlab file not including path.
         """
-
 
         self.file_name = os.path.basename(file_name)
 
@@ -721,7 +697,6 @@ class TransectData(object):
         # --------------
 
         # Rearrange arrays for consistency with WaterData class
-
         vel = np.swapaxes(rsdata.WaterTrack.Velocity, 1, 0)
         snr = np.swapaxes(rsdata.System.SNR, 1, 0)
         corr = np.swapaxes(rsdata.WaterTrack.Correlation, 1, 0)
@@ -739,10 +714,6 @@ class TransectData(object):
         vel[0, :, :] = vel[0, :, :] + boat_vel[0, :]
         vel[1, :, :] = vel[1, :, :] + boat_vel[1, :]
 
-        # Because Matlab pads arrays with zeros and RR data has variable
-        # number of bins, the raw data may be padded with zeros.  The next
-        # four statements changes those to nan.
-        # vel[vel == 0] = np.nan
         ref_water = 'None'
         ref_coord = None
 
@@ -887,6 +858,7 @@ class TransectData(object):
             ensembles_left = np.nansum(rsdata.System.Step == 2)
             self.start_edge = 'Left'
         self.in_transect_idx = np.where(rsdata.System.Step == 3)[0]
+
         # Create left edge object
         edge_type = None
         if rsdata.Setup.Edges_0__Method == 2:
@@ -900,6 +872,7 @@ class TransectData(object):
                                       number_ensembles=ensembles_left,
                                       coefficient=None,
                                       user_discharge=rsdata.Setup.Edges_0__EstimatedQ)
+
         # Create right edge object
         if rsdata.Setup.Edges_1__Method == 2:
             edge_type = 'Triangular'
@@ -925,6 +898,7 @@ class TransectData(object):
             top = 'Power'
         elif rsdata.Setup.extrapolation_Top_nFitType == 2:
             top = '3-Point'
+
         # Bottom extrapolation
         if rsdata.Setup.extrapolation_Bottom_nFitType == 0:
             bottom = 'Constant'
@@ -946,6 +920,7 @@ class TransectData(object):
 
         # Internal heading
         self.sensors.heading_deg.internal = HeadingData()
+
         # Check for firmware supporting G3 compass and associated data
         if hasattr(rsdata, 'Compass'):
             # TODO need to find older file that had 3 columns in Magnetic error to test and modify code
@@ -1025,11 +1000,12 @@ class TransectData(object):
 
         # Ensemble times
         ensemble_delta_time = np.append([0], np.diff(rsdata.System.Time))
-        idx_missing = np.where(ensemble_delta_time > 1.5)
-        if len(idx_missing[0]) > 0:
-            number_missing = np.sum(ensemble_delta_time[idx_missing]) - len(idx_missing)
-            error_str = self.file_name + ' is missing ' + str(number_missing) + ' samples'
-            # raise ValueError(error_str)
+        # TODO potentially add popup message when there are missing ensembles. Matlab did that.
+
+        # idx_missing = np.where(ensemble_delta_time > 1.5)
+        # if len(idx_missing[0]) > 0:
+        #     number_missing = np.sum(ensemble_delta_time[idx_missing]) - len(idx_missing)
+        #     error_str = self.file_name + ' is missing ' + str(number_missing) + ' samples'
 
         start_serial_time = rsdata.System.Time[0] + ((30 * 365) + 7) * 24 * 60 * 60
         end_serial_time = rsdata.System.Time[-1] + ((30 * 365) + 7) * 24 * 60 * 60
@@ -1061,9 +1037,10 @@ class TransectData(object):
        transects: list
            List of TransectData objects
        """
+
         transects = []
         if hasattr(meas_struct, 'transects'):
-			# If only one transect the data are not a list or array of transects
+            # If only one transect the data are not a list or array of transects
             try:
                 if len(meas_struct.transects) > 0:
                     for transect in meas_struct.transects:
@@ -1231,7 +1208,7 @@ class TransectData(object):
         
         Parameters
         ----------
-        mag_var: float
+        magvar: float
             Magnetic variation in degrees.
         """
         
@@ -1620,11 +1597,6 @@ class TransectData(object):
             if selected == 'internal':
                 self.update_sos()
             elif selected == 'user':
-                # if self.sensors.speed_of_sound_mps.user is None:
-                #     self.sensors.speed_of_sound_mps.set_selected(selected_name=selected)
-                #     self.update_sos()
-                # else:
-                    # self.sensors.speed_of_sound_mps.set_selected(selected_name=selected)
                 self.update_sos(speed=speed, selected='user', source='Manual Input')
 
     def update_sos(self, selected=None, source=None, speed=None):
@@ -1646,23 +1618,6 @@ class TransectData(object):
         sos_selected = getattr(self.sensors.speed_of_sound_mps, self.sensors.speed_of_sound_mps.selected)
         old_sos = sos_selected.data
         new_sos = None
-
-
-        # If source is set to calculated, the selected is set to internal and the original data from the ADCP is used
-        # elif selected == 'internal' and source == 'Calculated':
-        #     self.sensors.speed_of_sound_mps.set_selected(selected_name='internal')
-        #     self.sensors.speed_of_sound_mps.internal.set_source(source_in=source)
-        #
-        # # If source is computed, check on whether user is selected for temperature or salinity, if not then
-        # # Computed is changed to Calculated
-        # elif selected == 'internal' and source == 'Computed':
-        #     self.sensors.speed_of_sound_mps.set_selected('internal')
-        #     # If temperature or salinity is set by the user, the speed of sound is computed otherwise it is consider
-        #     # calculated by the ADCP.
-        #     if (self.sensors.temperature_deg_c.selected == 'user') or (self.sensors.salinity_ppt.selected == 'user'):
-        #         self.sensors.speed_of_sound_mps.internal.set_source('Computed')
-        #     else:
-        #         self.sensors.speed_of_sound_mps.internal.set_source('Calculated')
 
         # Manual input for speed of sound
         if selected == 'user' and source == 'Manual Input':
@@ -1722,8 +1677,8 @@ class TransectData(object):
         # RiverRay horizontal velocities are not affected by changes in speed of sound
         if self.adcp.model != 'RiverRay':
             # Apply speed of sound change to water and boat data
-            self.w_vel.sos_correction(transect=self, ratio=ratio)
-            self.boat_vel.bt_vel.sos_correction(transect=self, ratio=ratio)
+            self.w_vel.sos_correction(ratio=ratio)
+            self.boat_vel.bt_vel.sos_correction(ratio=ratio)
         # Correct depths
         self.depths.sos_correction(ratio=ratio)
 
@@ -1782,15 +1737,14 @@ class TransectData(object):
 
         return valid_ens, valid_wt.T
 
-
-
-
 # ========================================================================
 # Begin multithread function included in module but not TransectData class
 # Currently this is coded only for TRDI data
 # ========================================================================
 
+
 # DSM changed 1/23/2018 def allocate_transects(source, mmt, kargs)
+# TODO This needs a complete rewrite from what Greg did. However it works with no multi-threading for now
 def allocate_transects(mmt, transect_type='Q', checked=False):
     """Method to load transect data. Changed from Matlab approach by Greg to allow possibility
     of multi-thread approach.
@@ -1808,13 +1762,13 @@ def allocate_transects(mmt, transect_type='Q', checked=False):
     # DEBUG, set threaded to false to get manual serial commands
     multi_threaded = False
 
-    file_names = None
+    file_names = []
+    file_idx = []
+
     # Setup processing for discharge or moving-bed transects
     if transect_type == 'Q':
         # Identify discharge transect files to load
         if checked:
-            file_names = []
-            file_idx = []
             for idx, transect in enumerate(mmt.transects):
                 if transect.Checked == 1:
                     file_names.append(transect.Files[0])
@@ -1870,11 +1824,11 @@ def allocate_transects(mmt, transect_type='Q', checked=False):
     thread_id = 0
 
     # DSM 1/24/2018 couldn't this be added to the TransectData class
-    def add_transect(transect, mmt_transect, mt_pd0_data, mt_mmt):
-        transect.trdi(mmt=mt_mmt,
-                      mmt_transect=mmt_transect,
-                      pd0_data=mt_pd0_data)
-        processed_transects.append(transect)
+    def add_transect(transect_data, mmt_transect, mt_pd0_data, mt_mmt):
+        transect_data.trdi(mmt=mt_mmt,
+                           mmt_transect=mmt_transect,
+                           pd0_data=mt_pd0_data)
+        processed_transects.append(transect_data)
 
     # Process each transect
     for k in range(len(pd0_data)):
@@ -1894,7 +1848,7 @@ def allocate_transects(mmt, transect_type='Q', checked=False):
 
                 else:
                     transect = TransectData()
-                    add_transect(transect=transect,
+                    add_transect(transect_data=transect,
                                  mmt_transect=mmt.mbt_transects[valid_indices[k]],
                                  mt_pd0_data=pd0_data[k],
                                  mt_mmt=mmt)
@@ -1912,14 +1866,14 @@ def allocate_transects(mmt, transect_type='Q', checked=False):
                     transect_threads.append(t_thread)
 
                 else:
-                    add_transect(transect=transect,
+                    add_transect(transect_data=transect,
                                  mmt_transect=mmt.transects[valid_indices[k]],
                                  mt_pd0_data=pd0_data[k],
                                  mt_mmt=mmt)
 
     if multi_threaded:
         for x in transect_threads:
-                x.join()
+            x.join()
                 
     return processed_transects   
 
@@ -1963,5 +1917,3 @@ def adjusted_ensemble_duration(transect, trans_type=None):
         delta_t = transect.date_time.ens_duration_sec
         
     return delta_t
-
-

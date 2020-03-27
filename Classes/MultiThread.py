@@ -5,6 +5,7 @@ Created on Sep 28, 2017
 """
 import threading
 
+
 class MultiThread(threading.Thread):
     
     def __init__(self, thread_id, function, args=None):
@@ -19,5 +20,3 @@ class MultiThread(threading.Thread):
             self.function(**self.args)
         else:
             self.function()
-        
-        

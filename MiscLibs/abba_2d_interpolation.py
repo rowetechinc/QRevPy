@@ -4,10 +4,8 @@ This module performs 2-D interpolation on data that is assumed to be arranged in
 than in a random pattern. The rows represent vertical location or y-coordinate of each cell
 in the data array. The columns represent a horizontal location or x-coordinate of the data.
 The cell size and thus the y-coordinate of a cell can change from cell to cell or ensemble to ensemble.
-The interpolation algorithm searches for the nearest valid cell above, below, before, and after
-the cell to be interpolated. All cells before and after that lie completely within the target cell are
-determined to be neighbors. If the target cell lies completely with in a larger cell before or after the
-target that larger cell is consider a neighbor. Bathymetry is honored by checking to see if the depth of the streambed
+The interpolation algorithm searches for the all valid cells above, below, before, and after
+that touch the cell to be interpolated. Bathymetry is honored by checking to see if the depth of the streambed
 of the cell before or after is greater than the bottom of the target cell. When searching before or after, if the
 streambed is encountered before a valid cell then no valid cell is used in that direction.
 
@@ -68,11 +66,10 @@ def find_neighbors(valid_data, cells_above_sl, y_cell_centers, y_cell_size, y_de
     y_top = y_cell_centers - 0.5 * y_cell_size
     y_bottom = y_cell_centers + 0.5 * y_cell_size
     y_bottom_actual = y_cell_centers + 0.5 * y_cell_size
-    y_centers = y_cell_centers
+
     if normalize:
         y_top = np.round(y_top / y_depth, 3)
         y_bottom = np.round(y_bottom / y_depth, 3)
-        y_centers = np.round(y_cell_centers / y_depth, 3)
 
     # ID cells above side lobe with invalid data
     valid_data_float = valid_data.astype(float)
@@ -95,17 +92,6 @@ def find_neighbors(valid_data, cells_above_sl, y_cell_centers, y_cell_size, y_de
         below = find_below(target, valid_data)
         if below is not None:
             points.append(below)
-
-        # Find valid cell indices for all ensembles with valid data within the target cell
-        # Find cells that contain the center of the target cell
-        # y_match1 = np.array((np.logical_and(y_centers[target] >= y_top, y_centers[target] <= y_bottom)))
-        # # Find cells with cell centers that are withing the range of the target cell
-        # y_match2 = np.array((np.logical_and(y_centers >= y_top[target], y_centers <= y_bottom[target])))
-        # # Find all cells that the target falls within their range
-        # y_match3 = np.array((np.logical_and(y_top[target] >= y_top, y_bottom[target] <= y_bottom)))
-        #
-        # # Combine matches
-        # y_match = np.logical_or(np.logical_or(y_match1, y_match2), y_match3)
 
         # Find all cells in ensembles before or after the target ensemble that overlap the target cell
         # This is a change implemented on 2/27/2020 - dsm
@@ -215,8 +201,7 @@ def find_before(target, y_match, y_depth, y_bottom):
     # the bathymetry. If the streambed is encountered while searching for a previously valid ensemble then
     # it is determined that there is no available valid data before the target that can be used.
     found = False
-    # while before_ens > 0 and not np.any(y_match[:, before_ens]):
-    #     before_ens = before_ens - 1
+
     while (before_ens >= 0) and not found:
         if y_bottom[target] < y_depth[before_ens] and np.any(y_match[:, before_ens]):
             found = True
@@ -267,8 +252,7 @@ def find_after(target, y_match, y_depth, y_bottom):
     # the bathymetry. If the streambed is encountered while searching for a next valid ensemble then
     # it is determined that there is no available valid data after the target that can be used.
     found = False
-    # while after_ens <= y_match.shape[1]-1 and not np.any(y_match[:, after_ens]):
-    #     after_ens = after_ens + 1
+
     while (after_ens <= y_match.shape[1] - 1) and not found:
         if (y_bottom[target] < y_depth[after_ens]) and np.any(y_match[:, after_ens]):
             found = True

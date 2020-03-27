@@ -28,7 +28,9 @@ class InstrumentData(object):
     """
      
     def __init__(self):
-        """Constructor initializes the variables to None"""
+        """Constructor initializes the variables to None.
+        """
+
         self.serial_num = None  # Serial number of ADCP
         self.manufacturer = None  # manufacturer of ADCP (SonTek, TRDI)
         self.model = None  # model of ADCP (Rio Grande, StreamPro, RiverRay, M9, S5)
@@ -91,6 +93,7 @@ class InstrumentData(object):
 
         self.serial_num = mmt_site['ADCPSerialNmb']
 
+        # Determine TRDI model
         num = float(self.firmware)
         model_switch = np.floor(num)
 
@@ -140,7 +143,6 @@ class InstrumentData(object):
             self.configuration_commands = np.append(self.configuration_commands, ['User'])
             self.configuration_commands = np.append(self.configuration_commands,
                                                     mmt_config['User_Commands'])
-
 
         # Obtain transformation matrix from one of the available sources
         if not np.isnan(pd0.Inst.t_matrix[0, 0]):
@@ -226,6 +228,7 @@ class InstrumentData(object):
         self.beam_pattern = transect.adcp.beamPattern
         self.t_matrix = TransformationMatrix()
         self.t_matrix.populate_from_qrev_mat(transect.adcp.tMatrix)
+
         if len(transect.adcp.configurationCommands) > 0:
             self.configuration_commands = []
             for command in transect.adcp.configurationCommands:

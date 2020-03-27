@@ -93,6 +93,8 @@ class GPSData(object):
     """
     
     def __init__(self):
+        """Initialize instance variables.
+        """
         
         # Raw properties
         self.raw_gga_lat_deg = None         # self.raw_ latitude, in degress [ensemble,n]
@@ -206,9 +208,11 @@ class GPSData(object):
             self.raw_gga_utc = raw_gga_utc
             self.raw_gga_serial_time = np.floor(raw_gga_utc / 10000) * 3600 \
                 + np.floor(np.mod(raw_gga_utc, 10000) / 100) * 60 + np.mod(raw_gga_utc, 100)
+
         self.raw_gga_lat_deg = raw_gga_lat
         self.raw_gga_lon_deg = raw_gga_lon
-        self.raw_gga_lat_deg[np.where(np.logical_and((self.raw_gga_lat_deg == 0), (self.raw_gga_lon_deg == 0)))] = np.nan
+        self.raw_gga_lat_deg[np.where(np.logical_and((self.raw_gga_lat_deg == 0),
+                                                     (self.raw_gga_lon_deg == 0)))] = np.nan
         self.raw_gga_lat_deg[raw_gga_diff < 1] = np.nan
         self.raw_gga_lon_deg[np.isnan(self.raw_gga_lat_deg)] = np.nan
         self.raw_gga_altitude_m = raw_gga_alt
@@ -220,20 +224,25 @@ class GPSData(object):
         self.raw_gga_num_sats = raw_gga_num_sats
         self.raw_gga_num_sats[np.isnan(self.raw_gga_lat_deg)] = np.nan
         self.raw_gga_serial_time[np.isnan(self.raw_gga_lat_deg)] = np.nan
+
         # Delta time is a TRDI only variable
         if raw_gga_delta_time is None:
             self.raw_gga_delta_time = np.tile(np.nan, raw_gga_lat.shape)
         else:
             self.raw_gga_delta_time = raw_gga_delta_time
+
         self.raw_vtg_course_deg = raw_vtg_course
         self.raw_vtg_speed_mps = raw_vtg_speed
-        self.raw_vtg_course_deg[np.where(np.logical_and((self.raw_vtg_course_deg == 0), (self.raw_vtg_speed_mps == 0)))] = np.nan
+        self.raw_vtg_course_deg[np.where(np.logical_and((self.raw_vtg_course_deg == 0),
+                                                        (self.raw_vtg_speed_mps == 0)))] = np.nan
         self.raw_vtg_speed_mps[np.isnan(self.raw_vtg_course_deg)] = np.nan
+
         # Delta time is a TRDI only variable
         if raw_vtg_delta_time is None:
             self.raw_vtg_delta_time = np.tile(np.nan, raw_gga_lat.shape)
         else:
             self.raw_vtg_delta_time = raw_vtg_delta_time
+
         self.raw_vtg_mode_indicator = raw_vtg_mode_indicator
         
         # Assign input data to ensemble values computed by other software
@@ -261,7 +270,6 @@ class GPSData(object):
         # If vtg data exist compute velocity
         if np.sum(np.sum(np.isnan(raw_vtg_speed) == False)) > 0:
             self.process_vtg()
-
 
     def populate_from_qrev_mat(self, transect):
         """Populates the object using data from previously saved QRev Matlab file.
@@ -334,7 +342,6 @@ class GPSData(object):
             Specifies method to use for computing velocity from gga data (External, End, First, Average, Mindt).
         """
 
-        # DSM changed to remove use of kargs 1/30/2018
         if p_setting is None:
             p_setting = self.gga_position_method
 
@@ -342,7 +349,6 @@ class GPSData(object):
             v_setting = self.gga_velocity_method
             
         # Use only valid gga data
-        # Check on need for deepcopy
         valid = np.copy(self.raw_gga_num_sats)
         valid[np.isnan(valid)] = 0
         valid[valid > 0] = 1
@@ -365,7 +371,6 @@ class GPSData(object):
         n_ensembles = gga_lat_deg.shape[0]
 
         # Apply method for computing position of ensemble
-        # TODO could these if process refer to generic functions for External, End, Average, First, mindt.
 
         # Use ensemble data from other software
         if p_setting == 'External':
@@ -400,8 +405,6 @@ class GPSData(object):
             self.gga_lat_ens_deg = np.tile(np.nan, gga_lat_deg.shape[0])
             self.gga_lon_ens_deg = np.tile(np.nan, gga_lon_deg.shape[0])
             d_time = np.abs(gga_delta_time)
-            # DSM 1/30/2018 Next line is not need done above
-            # d_time[valid is False] = np.nan
             d_time_min = np.nanmin(d_time.T, 0).T
             
             use = []
@@ -462,8 +465,7 @@ class GPSData(object):
                     self.gga_serial_time_ens[n] = gga_serial_time[n, idx]
                     self.altitude_ens_m[n] = gga_altitude_m[n, idx]
                     self.diff_qual_ens[n] = gga_differential[n, idx]
-                    
-                # DSM changed 1/30/2018 to add <= rather than <
+
                 if idx <= len(self.raw_gga_hdop):
                     self.hdop_ens[n] = gga_hdop[n, idx]
                     
@@ -530,7 +532,6 @@ class GPSData(object):
         """
         
         # Determine method used to compute ensemble velocity
-        # DSM changed to remove use of kargs 1/30/2018
         if v_setting is None:
             v_setting = self.vtg_velocity_method
 
@@ -538,6 +539,7 @@ class GPSData(object):
         vtg_speed_mps = np.copy(self.raw_vtg_speed_mps)
         vtg_course_deg = np.copy(self.raw_vtg_course_deg)
         vtg_delta_time = np.copy(self.raw_vtg_delta_time)
+
         # VTG mode indicator is a letter but is coming in as the ASCII value. 78 is the value for N.
         idx = np.where(self.raw_vtg_mode_indicator == 78)[0]
         vtg_speed_mps[idx] = np.nan
@@ -641,8 +643,7 @@ class GPSData(object):
         # Set invalid data to nan
         lat_in[lat_in == 0] = np.nan
         lon_in[lon_in == 0] = np.nan
-        
-        #
+
         lat2 = np.deg2rad(lat_in)
         lon2 = np.deg2rad(lon_in)
         

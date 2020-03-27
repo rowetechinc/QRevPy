@@ -71,10 +71,7 @@ class NormData(object):
         if data_extent is None:
             data_extent = [0, 100]
             
-        # Determine number of transects to be processed
-        # n_cells = np.nan
-        # n_ens = np.nan
-        
+        # Get data copies to avoid changing original data
         filename = transect.file_name
         in_transect_idx = transect.in_transect_idx
 
@@ -102,6 +99,7 @@ class NormData(object):
         # Compute normalized cell depth by average depth in each ensemble
         norm_cell_depth = np.divide(cell_depth, depth_ens)
         norm_cell_depth[norm_cell_depth < 0] = np.nan
+
         # If data type is discharge compute unit discharge for each cell
         if data_type.lower() == 'q':
             # Compute the cross product for each cell
@@ -225,7 +223,7 @@ class NormData(object):
         # Set averaging interval
         avg_interval = np.arange(0, 1.05, .05)
 
-        # Intialize variables to nan
+        # Initialize variables to nan
         unit_norm_med = np.tile([np.nan], len(avg_interval) - 1)
         unit_norm_med_no = np.tile([np.nan], len(avg_interval) - 1)
         unit_25 = np.tile([np.nan], len(avg_interval) - 1)

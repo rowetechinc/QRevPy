@@ -1,6 +1,5 @@
 from Classes.QComp import QComp
 import numpy as np
-from MiscLibs.common_functions import get_object_values
 
 
 class ExtrapQSensitivity(object):
@@ -87,7 +86,6 @@ class ExtrapQSensitivity(object):
         q_cns_opt = []
         q_3p_ns = []
         q_3p_ns_opt = []
-        checked = []
         self.pp_exp = extrap_fits[-1].pp_exponent
         self.ns_exp = extrap_fits[-1].ns_exponent
 
@@ -121,12 +119,6 @@ class ExtrapQSensitivity(object):
         self.q_cns_opt_mean = np.nanmean(q_cns_opt)
         self.q_3p_ns_mean = np.nanmean(q_3p_ns)
         self.q_3p_ns_opt_mean = np.nanmean(q_3p_ns_opt)
-        # self.q_pp_mean = np.nanmean(get_object_values(q_pp, 'total', checked))
-        # self.q_pp_opt_mean = np.nanmean(get_object_values(q_pp_opt, 'total', checked))
-        # self.q_cns_mean = np.nanmean(get_object_values(q_cns, 'total', checked))
-        # self.q_cns_opt_mean = np.nanmean(get_object_values(q_cns_opt, 'total', checked))
-        # self.q_3p_ns_mean = np.nanmean(get_object_values(q_3p_ns, 'total', checked))
-        # self.q_3p_ns_opt_mean = np.nanmean(get_object_values(q_3p_ns_opt, 'total', checked))
 
         self.compute_percent_diff(extrap_fits=extrap_fits, transects=transects)
 
@@ -146,6 +138,8 @@ class ExtrapQSensitivity(object):
             self.q_cns_opt_mean = mat_data.qSensitivity.qCNSoptmean
             self.q_3p_ns_mean = mat_data.qSensitivity.q3pNSmean
             self.q_3p_ns_opt_mean = mat_data.qSensitivity.q3pNSoptmean
+
+            # For compatibility with older QRev.mat files
             if hasattr(mat_data.qSensitivity, 'qPPperdiff'):
                 self.q_pp_per_diff = mat_data.qSensitivity.qPPperdiff
             else:
@@ -158,6 +152,8 @@ class ExtrapQSensitivity(object):
             self.q_3p_ns_opt_per_diff = mat_data.qSensitivity.q3pNSoptperdiff
             self.pp_exp = mat_data.qSensitivity.ppExponent
             self.ns_exp = mat_data.qSensitivity.nsExponent
+
+            # If a manual fit was used
             if len(mat_data.qSensitivity.manTop) > 0:
                 self.man_top = mat_data.qSensitivity.manTop
                 self.man_bot = mat_data.qSensitivity.manBot
@@ -184,6 +180,7 @@ class ExtrapQSensitivity(object):
             if transects is not None:
                 q_man = []
                 checked = []
+                # Compute discharge for each transect
                 for transect in transects:
                     q = QComp()
                     checked.append(transect.checked)

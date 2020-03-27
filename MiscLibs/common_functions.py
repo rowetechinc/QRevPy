@@ -3,26 +3,70 @@ import scipy.stats as sp
 
 
 def cosd(angle):
+    """Compute cosine of angle in degrees.
+
+    Parameters
+    ----------
+    angle: float
+        Angle in degrees
+    """
     
     return np.cos(np.pi * angle/180)
 
 
 def sind(angle):
+    """Compute sine of angle in degrees.
+
+        Parameters
+        ----------
+        angle: float
+            Angle in degrees
+        """
     
     return np.sin(np.pi * angle/180)
 
 
 def tand(angle):
+    """Compute tangent of angle in degrees.
+
+        Parameters
+        ----------
+        angle: float
+            Angle in degrees
+        """
     
     return np.tan(np.pi * angle/180)
 
 
 def arctand(angle):
+    """Compute arctangent of angle in degrees.
+
+        Parameters
+        ----------
+        angle: float
+            Angle in degrees
+        """
     
     return np.arctan(angle) * 180/np.pi
 
 
 def cart2pol(x, y):
+    """Convert cartesian coordinates to polar coordinates.
+
+    Parameters
+    ----------
+    x: float
+        x coordinate
+    y: float
+        y coordinate
+
+    Returns
+    -------
+    phi: float
+        Angle in radians
+    rho: float
+        Magnitude
+    """
     
     rho = np.sqrt(x**2 + y**2)
     phi = np.arctan2(y, x)
@@ -31,6 +75,23 @@ def cart2pol(x, y):
 
 
 def pol2cart(phi, rho):
+    """Convert polar coordinates to cartesian coordinates.
+
+        Parameters
+        ----------
+        phi: float
+            Angle in radians
+        rho: float
+            Magnitude
+
+        Returns
+        -------
+        x: float
+            x coordinate
+        y: float
+            y coordinate
+
+        """
     
     x = rho * np.cos(phi)
     y = rho * np.sin(phi)
@@ -39,7 +100,19 @@ def pol2cart(phi, rho):
 
 
 def iqr(data):
-    """This function computes the iqr consistent with Matlab"""
+    """This function computes the iqr consistent with Matlab
+
+    Parameters
+    ----------
+    data: np.ndarray
+        Data for which the statistic is required
+
+    Returns
+    -------
+    sp_iqr: float
+        Inner quartile range
+
+    """
 
     # If 2-D array use only 1st row
     if len(data.shape) > 1:
@@ -58,7 +131,23 @@ def iqr(data):
 
 
 def azdeg2rad(angle):
+    """Converts an azimuth angle in degrees to radians.
+
+    Parameters
+    ----------
+    angle: float, np.ndarray(float)
+        Azimuth angle in degrees
+
+    Returns
+    -------
+    direction: float, np.ndarray(float)
+        Angle in radians
+    """
+
+    # Convert to radians
     direction = np.deg2rad(90-angle)
+
+    # Create postive angle
     idx = np.where(direction < 0)[0]
     if len(idx) > 1:
         direction[idx] = direction[idx] + 2 * np.pi
@@ -69,6 +158,19 @@ def azdeg2rad(angle):
 
 
 def rad2azdeg(angle):
+    """Converts an angle in radians to an azimuth in degrees.
+
+    Parameters
+    ----------
+    angle: float, np.ndarray(float)
+        Angle in radians
+
+    Returns
+    -------
+    deg: float, np.ndarray(float)
+        Azimuth in degrees
+    """
+
     if isinstance(angle, float):
         deg = np.rad2deg(angle)
         deg = 90 - deg
@@ -87,13 +189,26 @@ def rad2azdeg(angle):
 
 
 def nandiff(values):
+    """Computes difference in consecutive values with handling of nans.
+
+    Parameters
+    ----------
+    values: np.ndarray()
+        1-D array of numbers
+
+    Returns
+    -------
+    final_values: np.ndarray()
+        1-D array of differences of consecutive non nan numbers
+    """
     
     final_values = []
     for n in range(len(values) - 1):
-        
+        # Check for nan and add nan to final values
         if np.isnan(values[n]):
             final_values.append(np.nan)
         else:
+            # Search for next non nan number and compute difference
             i = n + 1
             while np.isnan(values[i]) and i < len(values) - 1:
                 i += 1
@@ -101,31 +216,6 @@ def nandiff(values):
             final_values.append(values[i] - values[n])
         
     return np.array(final_values)
-
-
-def get_object_values(list_in, item, checked=None):
-    if checked is not None:
-        working_list = list_in[checked is True]
-    else:
-        working_list = list_in
-
-    if working_list is list:
-        out = []
-        for obj in working_list:
-            temp = getattr(obj, item)
-            out.append(temp)
-    else:
-        out = getattr(working_list, item)
-    return np.array(out)
-
-
-def sontek_3d_arrange(data_in):
-    r1 = np.squeeze(data_in[:, 0, :])
-    r2 = np.squeeze(data_in[:, 1, :])
-    r3 = np.squeeze(data_in[:, 2, :])
-    r4 = np.squeeze(data_in[:, 3, :])
-    new_array = np.array([r1, r2, r3, r4])
-    return new_array
 
 
 def valid_number(data_in):
@@ -150,12 +240,39 @@ def valid_number(data_in):
 
 
 def nans(shape, dtype=float):
+    """Create array of nans.
+
+    Parameters
+    ----------
+    shape: tuple
+        Shape of array to be filled with nans
+    dtype: type
+        Type of array
+
+    Returns
+    -------
+    a: np.ndarray(float)
+        Array of nan
+    """
     a = np.empty(shape, dtype)
     a.fill(np.nan)
     return a
 
 
 def checked_idx(transects):
+    """Create list of transect indices of all checked transects.
+
+    Parameters
+    ----------
+    transects: list
+        List of TransectData objects
+
+    Returns
+    -------
+    checked: list
+        List of indices
+
+    """
     checked = []
     for n, transect in enumerate(transects):
         if transect.checked:
@@ -163,13 +280,14 @@ def checked_idx(transects):
 
     return checked
 
+
 def units_conversion(units_id='SI'):
     """Computes the units conversion from SI units used internally to the
     desired display units.
 
     Parameters
     ----------
-    units: str
+    units_id: str
         String variable identifying units (English, SI) SI is the default.
 
     Returns
@@ -202,6 +320,7 @@ def units_conversion(units_id='SI'):
 
     return units
 
+
 def convert_temperature(temp_in, units_in, units_out):
     """Converts temperature from F to C or C to F.
 
@@ -220,6 +339,7 @@ def convert_temperature(temp_in, units_in, units_out):
         temperature in units_out
     """
 
+    temp_out = None
     if units_in == 'F':
         if units_out == 'C':
             temp_out = (temp_in - 32) * (5./9.)

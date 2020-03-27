@@ -60,8 +60,7 @@ class Pd0TRDI(object):
         
         self.pd0_read(file_name)
         
-    def create_objects(self, n_ensembles, n_types, n_bins, max_surface_bins,
-                       n_velocities, wr2=False):
+    def create_objects(self, n_ensembles, n_types, n_bins, max_surface_bins, n_velocities, wr2=False):
         """Create objects for instance variables.
 
         Parameters
@@ -704,7 +703,7 @@ class Pd0TRDI(object):
                                 j100 += 1
                                 # If the number of values exceeds 20 expand arrays
                                 if j100 > self.Gps2.gga_delta_time.shape[1] - 1:
-                                    self.Gps2.gga_expand(n_ensembles, i_ens)
+                                    self.Gps2.gga_expand(n_ensembles)
 
                                 self.Gps2.gga_delta_time[i_ens, j100] = delta_time
 
@@ -736,7 +735,7 @@ class Pd0TRDI(object):
                                 j101 += 1
                                 # If the number of values exceeds 20 expand arrays
                                 if j101 > self.Gps2.vtg_delta_time.shape[1] - 1:
-                                    self.Gps2.vtg_expand(n_ensembles, i_ens)
+                                    self.Gps2.vtg_expand(n_ensembles)
 
                                 self.Gps2.vtg_delta_time[i_ens, j101] = delta_time
                                 self.Gps2.vtg_header[i_ens][j101] = ''.join([chr(x) for x in f.read(10)])
@@ -753,7 +752,7 @@ class Pd0TRDI(object):
                                 j102 += 1
 
                                 if j102 > self.Gps2.dbt_delta_time.shape[1] - 1:
-                                    self.Gps2.dbt_expand(n_ensembles, i_ens)
+                                    self.Gps2.dbt_expand(n_ensembles)
 
                                 self.Gps2.dbt_delta_time[i_ens, j102] = delta_time
                                 self.Gps2.dbt_header[i_ens][j102] = ''.join([chr(x) for x in f.read(10)])
@@ -769,7 +768,7 @@ class Pd0TRDI(object):
                                 j103 += 1
 
                                 if j103 > self.Gps2.hdt_delta_time.shape[1]:
-                                    self.Gps2.hdt_expand(n_ensembles, i_ens)
+                                    self.Gps2.hdt_expand(n_ensembles)
 
                                 self.Gps2.hdt_delta_time[i_ens, j103] = delta_time
                                 self.Gps2.hdt_header[i_ens][j103] = ''.join([chr(x) for x in f.read(10)])
@@ -781,12 +780,12 @@ class Pd0TRDI(object):
                                 j100 += 1
 
                                 if j100 > self.Gps2.gga_delta_time.shape[1] - 1:
-                                    self.Gps2.gga_expand(n_ensembles, i_ens)
+                                    self.Gps2.gga_expand(n_ensembles)
 
                                 self.Gps2.gga_delta_time[i_ens, j100] = delta_time
                                 try:
                                     self.Gps2.gga_header[i_ens][j100] = ''.join([chr(x) for x in f.read(7)])
-                                except (IndexError):
+                                except IndexError:
                                     self.Gps2.gga_header[i_ens][j100] = '       '
 
                                 try:
@@ -815,7 +814,7 @@ class Pd0TRDI(object):
                                 j101 += 1
 
                                 if j101 > self.Gps2.vtg_delta_time.shape[1] - 1:
-                                    self.Gps2.vtg_expand(n_ensembles, i_ens)
+                                    self.Gps2.vtg_expand(n_ensembles)
 
                                 self.Gps2.vtg_delta_time[i_ens, j101] = delta_time
                                 self.Gps2.vtg_header[i_ens][j101] = ''.join([chr(x) for x in f.read(7)])
@@ -834,7 +833,7 @@ class Pd0TRDI(object):
                                 j102 += 1
 
                                 if j102 > self.Gps2.dbt_delta_time.shape[1] - 1:
-                                    self.Gps2.dbt_expand(n_ensembles, i_ens)
+                                    self.Gps2.dbt_expand(n_ensembles)
 
                                 self.Gps2.dbt_delta_time[i_ens, j102] = delta_time
                                 self.Gps2.dbt_header[i_ens][j102] = ''.join([chr(x) for x in f.read(7)])
@@ -850,7 +849,7 @@ class Pd0TRDI(object):
                                 j103 += 1
 
                                 if j103 > self.Gps2.hdt_delta_time.shape[1] - 1:
-                                    self.Gps2.hdt_expand(n_ensembles, i_ens)
+                                    self.Gps2.hdt_expand(n_ensembles)
 
                                 self.Gps2.hdt_delta_time[i_ens, j103] = delta_time
                                 self.Gps2.hdt_header[i_ens][j103] = ''.join([chr(x) for x in f.read(7)])
@@ -862,7 +861,7 @@ class Pd0TRDI(object):
                                 j100 += 1
 
                                 if j100 > self.Gps2.gga_delta_time.shape[1] - 1:
-                                    self.Gps2.gga_expand(n_ensembles, i_ens)
+                                    self.Gps2.gga_expand(n_ensembles)
 
                                 temp = ''.join([chr(x) for x in f.read(msg_size)])
                                 self.Gps2.gga_sentence[i_ens][j100] = temp
@@ -903,7 +902,7 @@ class Pd0TRDI(object):
                                 j101 += 1
 
                                 if j101 > self.Gps2.vtg_delta_time.shape[1] - 1:
-                                    self.Gps2.vtg_expand(n_ensembles, i_ens)
+                                    self.Gps2.vtg_expand(n_ensembles)
 
                                 temp = ''.join([chr(x) for x in f.read(msg_size)])
                                 self.Gps2.vtg_sentence[i_ens][j100] = temp
@@ -932,7 +931,7 @@ class Pd0TRDI(object):
                                 j102 += 1
 
                                 if j102 > self.Gps2.dbt_delta_time.shape[1] - 1:
-                                    self.Gps2.dbt_expand(n_ensembles, i_ens)
+                                    self.Gps2.dbt_expand(n_ensembles)
 
                                 temp = ''.join([chr(x) for x in f.read(msg_size)])
                                 temp_array = np.array(temp.split(','))
@@ -957,7 +956,7 @@ class Pd0TRDI(object):
                                 j103 += 1
 
                                 if j103 > self.Gps2.hdt_delta_time.shape[1] - 1:
-                                    self.Gps2.hdt_expand(n_ensembles, i_ens)
+                                    self.Gps2.hdt_expand(n_ensembles)
 
                                 temp = ''.join([chr(x) for x in f.read(msg_size)])
                                 temp_array = np.array(temp.split(','))
@@ -2149,7 +2148,7 @@ class Gps2(object):
         self.vtg_velE_mps = nans(n_ensembles)
         self.vtg_velN_mps = nans(n_ensembles)
 
-    def gga_expand(self, n_ensembles, i_ens):
+    def gga_expand(self, n_ensembles):
         self.gga_delta_time = np.concatenate(
             (self.gga_delta_time, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
         self.utc = np.concatenate(
@@ -2179,7 +2178,7 @@ class Gps2(object):
             self.lon_ref[ens].append('')
             self.lat_ref[ens].append('')
 
-    def vtg_expand(self, n_ensembles, i_ens):
+    def vtg_expand(self, n_ensembles):
         self.vtg_delta_time = np.concatenate(
             (self.vtg_delta_time, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
         self.course_true = np.concatenate(
@@ -2198,7 +2197,7 @@ class Gps2(object):
             self.mag_indicator[ens].append('')
             self.knots_indicator[ens].append('')
 
-    def dbt_expand(self, n_ensembles, i_ens):
+    def dbt_expand(self, n_ensembles):
         self.dbt_delta_time = np.concatenate(
             (self.dbt_delta_time, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
         self.depth_ft = np.concatenate(
@@ -2213,7 +2212,7 @@ class Gps2(object):
             self.ft_indicator[ens].append('')
             self.m_indicator[ens].append('')
 
-    def hdt_expand(self, n_ensembles, i_ens):
+    def hdt_expand(self, n_ensembles):
         self.hdt_delta_time = np.concatenate(
             (self.hdt_delta_time, np.tile(np.nan, (1, n_ensembles)).T), axis=1)
         self.heading_deg = np.concatenate(

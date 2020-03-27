@@ -14,7 +14,7 @@ class Python2Matlab(object):
     """
 
     def __init__(self, meas, checked):
-        """Intitialize dictionaries and convert Python data to Matlab structures.
+        """Initialize dictionaries and convert Python data to Matlab structures.
 
         Parameters
         ----------
@@ -33,7 +33,7 @@ class Python2Matlab(object):
 
         checked_idx = np.array(checked)
         checked_idx_meas = np.copy(checked_idx)
-        np.append(checked_idx_meas, len(meas_mat.extrap_fit.sel_fit)-1 )
+        np.append(checked_idx_meas, len(meas_mat.extrap_fit.sel_fit)-1)
 
         # Convert Python data structure to Matlab
         self.matlab_dict['stationName'] = meas_mat.station_name
@@ -56,18 +56,16 @@ class Python2Matlab(object):
         transects_sel = [transects[i] for i in checked_idx]
         self.matlab_dict['transects'] = self.listobj2struct(transects_sel, py_2_mat_dict)
         extrap = copy.deepcopy(meas_mat.extrap_fit)
-        # sel_fit = [extrap.sel_fit[i] for i in checked_idx_meas]
-        # norm_data = [extrap.norm_data[i] for i in checked_idx_meas]
-        # extrap.sel_fit = sel_fit
-        # extrap.norm_data = norm_data
         self.matlab_dict['extrapFit'] = self.listobj2struct([extrap], py_2_mat_dict)
+        # Check for multiple moving-bed tests
         if type(meas_mat.mb_tests) == list:
-            mbTests = self.listobj2struct(meas_mat.mb_tests, py_2_mat_dict)
+            mb_tests = self.listobj2struct(meas_mat.mb_tests, py_2_mat_dict)
         else:
-            mbTests = self.obj2dict(meas_mat.mb_tests, py_2_mat_dict)
-        if len(mbTests) == 0:
-            mbTests = np.array([])
-        self.matlab_dict['mbTests'] = mbTests
+            mb_tests = self.obj2dict(meas_mat.mb_tests, py_2_mat_dict)
+        if len(mb_tests) == 0:
+            mb_tests = np.array([])
+
+        self.matlab_dict['mbTests'] = mb_tests
         self.matlab_dict['uncertainty'] = self.listobj2struct([meas_mat.uncertainty], py_2_mat_dict)
         self.matlab_dict['qa'] = self.listobj2struct([meas_mat.qa], py_2_mat_dict)
 
@@ -151,7 +149,6 @@ class Python2Matlab(object):
                             if type(dict_in[key][line][col]) is str:
                                 dict_in[key][line][col] = np.array([list(dict_in[key][line][col])])
 
-
             # Change key if needed
             if new_key_dict is not None and key in new_key_dict:
                 dict_out[new_key_dict[key]] = dict_in[key]
@@ -208,19 +205,25 @@ class Python2Matlab(object):
 
     @staticmethod
     def comment2struct(comments):
+        """Convert comments to a structure.
+
+        Parameters
+        ----------
+        comments: list
+            List of comments
+
+        Returns
+        -------
+        struct: np.ndarray
+            Array of comments
+
+        """
         struct = np.zeros((len(comments),), dtype=np.object)
         cell = np.zeros((1,), dtype=np.object)
         for n, line in enumerate(comments):
             cell[0] = line
             struct[n] = np.copy(cell)
         return struct
-
-    @staticmethod
-    def comment2cell(comments):
-        cell_out = []
-        for n, line in enumerate(comments):
-            cell_out.append(np.array([list(line)]))
-        return cell_out
 
     @staticmethod
     def listobj2dict(list_in, new_key_dict=None):
@@ -559,6 +562,10 @@ class Python2Matlab(object):
             Object of class Measurement
         file_name: str
             File name of saved Matlab file
+        version: str
+            QRev version
+        checked: bool
+            Determines if all or only checked files are saved
         """
 
         if checked is None:
@@ -585,8 +592,8 @@ class Python2Matlab(object):
 
         Returns
         -------
-            meas_mat: Measurement
-                Deepcopy of meas with changes to replicate QRev for Matlab conventions
+        meas_mat: Measurement
+            Deepcopy of meas with changes to replicate QRev for Matlab conventions
         """
 
         # Make copy to prevent changing Python meas data
@@ -629,7 +636,8 @@ class Python2Matlab(object):
             # Adjust serial time to Matlab convention
             seconds_day = (60 * 60 * 24)
             time_correction = 719528.8333333337 + 14400 / seconds_day
-            transect.date_time.start_serial_time = (transect.date_time.start_serial_time / seconds_day) + time_correction
+            transect.date_time.start_serial_time = (transect.date_time.start_serial_time / seconds_day) \
+                + time_correction
             transect.date_time.end_serial_time = (transect.date_time.end_serial_time / seconds_day) + time_correction
 
         # Adjust 1-D array to be row based
@@ -663,8 +671,6 @@ class Python2Matlab(object):
             if len(meas_mat.mb_tests.messages) > 0:
                 meas_mat.mb_tests.messages = np.array(meas_mat.mb_tests.messages).astype(np.object)
 
-
-
         # Fix user and adcp temperature for QRev Matlab
         if np.isnan(meas_mat.ext_temp_chk['user']):
             meas_mat.ext_temp_chk['user'] = ''
@@ -672,4 +678,3 @@ class Python2Matlab(object):
             meas_mat.ext_temp_chk['adcp'] = ''
 
         return meas_mat
-

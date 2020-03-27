@@ -61,7 +61,7 @@ def test_neighbors_uniform():
                             cells_above_sl=cells_above_sl,
                             y_cell_centers=y_cell_centers,
                             y_cell_size=y_cell_size,
-                            y_normalize=y_normalize)
+                            normalize=y_normalize)
     assert result[0]['target'] == (0, 2) and result[0]['neighbors'] == [(2, 2), (0, 1), (0, 3)]
     assert result[1]['target'] == (0, 4) and result[1]['neighbors'] == [(1, 4), (0, 3)]
     assert result[2]['target'] == (1, 0) and result[2]['neighbors'] == [(0, 0), (2, 0), (1, 1)]

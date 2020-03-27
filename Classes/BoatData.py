@@ -4,6 +4,7 @@ from numpy.matlib import repmat
 from MiscLibs.common_functions import cosd, sind, cart2pol, iqr, pol2cart
 from MiscLibs.robust_loess import rloess
 
+
 class BoatData(object):
     """Class to process and store boat velocity data.
 
@@ -156,6 +157,7 @@ class BoatData(object):
         if source == 'SonTek':
             vel_in = BoatData.filter_sontek(vel_in)
 
+        # Store input data
         self.raw_vel_mps = vel_in
         self.frequency_khz = freq_in
         self.coord_sys = coord_sys_in
@@ -262,47 +264,67 @@ class BoatData(object):
         self.v_processed_mps = mat_data.vProcessed_mps
         self.processed_source = mat_data.processedSource
 
-        # Filter and interpolation properties
+        # Error velocity filter
         if type(mat_data.dFilter) is np.ndarray:
             self.d_filter = None
         else:
             self.d_filter = mat_data.dFilter
+
+        # Error velocity threshold
         if type(mat_data.dFilterThreshold) is np.ndarray:
             self.d_filter_threshold = None
         else:
             self.d_filter_threshold = mat_data.dFilterThreshold
+
+        # Vertical velocity filter
         if type(mat_data.wFilter) is np.ndarray:
             self.w_filter = None
         else:
             self.w_filter = mat_data.wFilter
+
+        # Vertical velocity threshold
         if type(mat_data.wFilterThreshold) is np.ndarray:
             self.w_filter_threshold = None
         else:
             self.w_filter_threshold = mat_data.wFilterThreshold
+
+        # GPS quality filter
         if type(mat_data.gpsDiffQualFilter) is np.ndarray:
             self.gps_diff_qual_filter = None
         else:
             self.gps_diff_qual_filter = mat_data.gpsDiffQualFilter
+
+        # GPS altitude filter
         if type(mat_data.gpsAltitudeFilter) is np.ndarray:
             self.gps_altitude_filter = None
         else:
             self.gps_altitude_filter = mat_data.gpsAltitudeFilter
+
+        # GPS altitude threshold
         if type(mat_data.gpsAltitudeFilterChange) is np.ndarray:
             self.gps_altitude_filter_change = None
         else:
             self.gps_altitude_filter_change = mat_data.gpsAltitudeFilterChange
+
+        # HDOP filter
         if type(mat_data.gpsHDOPFilter) is np.ndarray:
             self.gps_HDOP_filter = None
         else:
             self.gps_HDOP_filter = mat_data.gpsHDOPFilter
+
+        # HDOP max threshold
         if type(mat_data.gpsHDOPFilterMax) is np.ndarray:
             self.gps_HDOP_filter_max = None
         else:
             self.gps_HDOP_filter_max = mat_data.gpsHDOPFilterMax
+
+        # HDOP change threshold
         if type(mat_data.gpsHDOPFilterChange) is np.ndarray:
             self.gps_HDOP_filter_change = None
         else:
             self.gps_HDOP_filter_change = mat_data.gpsHDOPFilterChange
+
+        # Other filters
         self.smooth_filter = mat_data.smoothFilter
         self.smooth_speed = mat_data.smoothSpeed
         self.smooth_upper_limit = mat_data.smoothUpperLimit
@@ -335,19 +357,12 @@ class BoatData(object):
         # Initialize variables
         orig_sys = 0
         new_sys = 0
+        temp_t = None
 
         if self.orig_coord_sys.strip() != new_coord_sys.strip():
             # Assign the transformation matrix and retrieve the sensor data
             t_matrix = copy.deepcopy(adcp.t_matrix.matrix)
             t_matrix_freq = copy.deepcopy(adcp.frequency_khz)
-
-            # DSM changed 2/6/2018
-            # pitch_select = getattr(sensors.pitch_deg, sensors.pitch_deg.selected)
-            # p =  getattr(pitch_select, '_SensorData__data')
-            # roll_select = getattr(sensors.roll_deg, sensors.roll_deg.selected)
-            # r = getattr(roll_select, '_SensorData__data')
-            # heading_select = getattr(sensors.heading_deg, sensors.heading_deg.selected)
-            # h = getattr(heading_select, 'data')
             p = getattr(sensors.pitch_deg, sensors.pitch_deg.selected).data
             r = getattr(sensors.roll_deg, sensors.roll_deg.selected).data
             h = getattr(sensors.heading_deg, sensors.heading_deg.selected).data
@@ -667,13 +682,11 @@ class BoatData(object):
         self.processed_source[composite_source == 0] = 'INT'
         self.processed_source[composite_source == -1] = 'INV'
 
-    def sos_correction(self, transect, ratio):
+    def sos_correction(self, ratio):
         """Correct boat velocity for a change in speed of sound.
 
         Parameters
         ----------
-        transect: TransectData
-            Object of TransectData
         ratio: float
             Ratio of new and old speed of sound
         """
@@ -681,9 +694,6 @@ class BoatData(object):
         # Correct velocities
         self.u_mps = self.u_mps * ratio
         self.v_mps = self.v_mps * ratio
-
-        # Apply filters to corrected velocities
-        # self.apply_filter(transect=transect)
 
     def interpolate_hold_9(self):
         """This function applies Sontek's approach to maintaining the last valid boat speed for up to 9 invalid samples.
@@ -758,7 +768,8 @@ class BoatData(object):
         Parameters
         ----------
         transect: TransectData
-            Object of TransectData"""
+            Object of TransectData
+        """
 
         # Get data from object
 
@@ -784,6 +795,7 @@ class BoatData(object):
         """This function interpolates data flagged invalid using linear interpolation.
 
         Parameters
+        ----------
         transect: TransectData
             Object of TransectData
         """
@@ -820,6 +832,7 @@ class BoatData(object):
         transect: TransectData
             Object of TransectData
         """
+
         u = np.copy(self.u_processed_mps)
         v = np.copy(self.v_processed_mps)
 
@@ -850,10 +863,8 @@ class BoatData(object):
                                              mono_array[0, :],
                                              mono_array[2, :])
 
-    def apply_filter(self, transect, beam=None,
-                     difference=None, difference_threshold=None,
-                     vertical=None, vertical_threshold=None,
-                     other=None):
+    def apply_filter(self, transect, beam=None, difference=None, difference_threshold=None, vertical=None,
+                     vertical_threshold=None, other=None):
         """Function to apply filters to navigation data.
 
         More than one filter can be applied during a single call.
@@ -1056,9 +1067,6 @@ class BoatData(object):
             # Initialize variables
             d_vel_filtered = copy.deepcopy(d_vel)
 
-            # Fix to zeros in Sontek M9 data
-            # d_vel_filtered[d_vel_filtered == 0] = np.nan
-
             # Initialize variables
             std_diff = np.repeat(1., 1000)
             k = 0
@@ -1231,7 +1239,7 @@ class BoatData(object):
         n_ensembles = len(ens_time)
         # Determine if smooth filter should be applied
         if self.smooth_filter == 'On':
-             # Initialize arrays
+            # Initialize arrays
             self.smooth_speed = repmat([np.nan], 1, n_ensembles)
             self.smooth_upper_limit = repmat([np.nan], 1, n_ensembles)
             self.smooth_lower_limit = repmat([np.nan], 1, n_ensembles)
@@ -1290,10 +1298,8 @@ class BoatData(object):
         self.valid_data[0, :] = np.all(self.valid_data[1:, ], 0)
         self.num_invalid = np.sum(self.valid_data[0, :] == False, 0)
 
-    def apply_gps_filter(self, transect, differential=None,
-                         altitude=None, altitude_threshold=None,
-                         hdop=None, hdop_max_threshold=None, hdop_change_threshold=None,
-                         other=None):
+    def apply_gps_filter(self, transect, differential=None, altitude=None, altitude_threshold=None,
+                         hdop=None, hdop_max_threshold=None, hdop_change_threshold=None, other=None):
         """Applies filters to GPS referenced boat velocity data.
 
         Parameters
@@ -1490,7 +1496,7 @@ class BoatData(object):
                 change = 1
 
                 # Apply max filter
-                self.valid_data[5, np.greater(gps_data.hdop_ens,self.gps_HDOP_filter_max)] = False
+                self.valid_data[5, np.greater(gps_data.hdop_ens, self.gps_HDOP_filter_max)] = False
 
                 # Loop until the number of valid ensembles does not change
                 while k < 100 and change > 0.1:
@@ -1552,6 +1558,7 @@ class BoatData(object):
         # Set invalid ensembles to nan
         vel_out = np.copy(vel_in)
         vel_out[:, invalid_bool] = np.nan
+
         return vel_out
 
     @staticmethod

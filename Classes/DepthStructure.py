@@ -146,11 +146,8 @@ class DepthStructure(object):
                 ds_filtered[np.squeeze(np.equal(self.ds_depths.valid_data, False))] = np.nan
             else:
                 ds_filtered = np.tile(np.nan, n_ensembles)
-                
-            # if len(bt_filtered.shape) > 1:
+
             comp_source = np.tile(np.nan, bt_filtered.shape)
-            # else:
-            #     comp_source = np.tile(np.nan, bt_filtered.shape[0])
 
             # Apply composite depths
             if ref == 'bt_depths':

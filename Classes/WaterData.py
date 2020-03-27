@@ -115,10 +115,11 @@ class WaterData(object):
         sl_cutoff_type: str
             Type of cutoff method "Percent" or "Number".
     """
-    # TODO check water mode for TRDI is it an array, should it be?
-    # TODO how is number of bins for sl cutoff implemented by SonTek?
 
     def __init__(self):
+        """Initialize instance variables.
+        """
+
         # Data input to this class
         self.raw_vel_mps = None
         self.frequency = None
@@ -231,8 +232,7 @@ class WaterData(object):
         self.water_mode = wm_in
         self.excluded_dist_m = excluded_dist_in
         self.rssi_units = rssi_units_in
-        # ============================
-        # DSM need to check this for correctness
+
         # Set object properties that depend on the presence or absence of surface cells
         if np.sum(surface_num_cells_in) > 0:
             surface_num_cells_in[np.isnan(surface_num_cells_in)] = 0
@@ -292,7 +292,7 @@ class WaterData(object):
         self.sl_cutoff_number = sl_cutoff_num_in
         self.sl_cutoff_type = sl_cutoff_type_in
         self.sl_lag_effect_m = sl_lag_effect_in
-        self.sl_cutoff_m=sl_cutoff_m
+        self.sl_cutoff_m = sl_cutoff_m
         
         # Set filter defaults to no filtering and no interruption
         self.beam_filter = 3
@@ -448,15 +448,6 @@ class WaterData(object):
             t_matrix = copy.deepcopy(adcp.t_matrix.matrix)
             t_matrix_freq = copy.deepcopy(adcp.frequency_khz)
 
-            # DSM changed 2/6/2018
-            # pitch_select = getattr(sensors.pitch_deg, sensors.pitch_deg.selected)
-            # p =  getattr(pitch_select, '_SensorData__data')
-
-            # roll_select = getattr(sensors.roll_deg, sensors.roll_deg.selected)
-            # r = getattr(roll_select, '_SensorData__data')
-
-            # heading_selected = getattr(sensors.heading_deg, sensors.heading_deg.selected)
-            # h = getattr(heading_select, 'data')
             p = getattr(sensors.pitch_deg, sensors.pitch_deg.selected).data
             r = getattr(sensors.roll_deg, sensors.roll_deg.selected).data
             h = getattr(sensors.heading_deg, sensors.heading_deg.selected).data
@@ -497,8 +488,7 @@ class WaterData(object):
                 sp = np.sin(np.deg2rad(p))
                 cr = np.cos(np.deg2rad(r))
                 sr = np.sin(np.deg2rad(r))
-                
-                # vel_changed = np.tile([np.nan], self.raw_vel_mps.shape)
+
                 n_ens = self.raw_vel_mps.shape[2]
                 
                 for ii in range(n_ens):
@@ -711,7 +701,7 @@ class WaterData(object):
                                               - np.deg2rad(repmat(heading, len(mag), 1)), mag)
         self.u_earth_no_ref_mps = u_nr_rotated
         self.v_earth_no_ref_mps = v_nr_rotated
-        # TODO need to check why this set nav reference for boat
+
         self.set_nav_reference(boat_vel)
             
     def apply_interpolation(self, transect, ens_interp='None', cells_interp='None'):
@@ -843,13 +833,11 @@ class WaterData(object):
         # After filters have been applied, interpolate to estimate values for invalid data.
         # self.apply_interpolation(transect=transect)
         
-    def sos_correction(self, transect, ratio):
+    def sos_correction(self, ratio):
         """Corrects water velocities for a change in speed of sound.
 
         Parameters
-        ---------_
-        transect: TransectData
-            Object of TransectData
+        ----------
         ratio: float
             Ratio of new speed of sound to old speed of sound
         """
@@ -860,9 +848,6 @@ class WaterData(object):
         self.u_earth_no_ref_mps = self.u_earth_no_ref_mps * ratio
         self.v_earth_no_ref_mps = self.v_earth_no_ref_mps * ratio
 
-        # Apply filters to new water velocities
-        # self.apply_filter(transect)
-        
     def adjust_side_lobe(self, transect):
         """Adjust the side lobe cutoff for vertical beam and interpolated depths.
 
@@ -959,6 +944,8 @@ class WaterData(object):
         ----------
         setting: int
             Setting for beam filter (3, 4, or -1)
+        transect: TransectData
+            Object of TransectData
         """
         
         self.beam_filter = setting
@@ -986,6 +973,14 @@ class WaterData(object):
             self.automatic_beam_filter_abba_interpolation(transect)
 
     def automatic_beam_filter_abba_interpolation(self, transect):
+        """Applies abba interpolation to allow comparison of interpolated and 3-beam solutions.
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+        """
+
         # Create array indicating which cells do not have 4-beam solutions and all cells below side lobe are nan
         temp = copy.deepcopy(self)
         temp.filter_beam(4)
@@ -1009,26 +1004,7 @@ class WaterData(object):
             interpolated_data = self.compute_abba_interpolation(wt_data=temp,
                                                                 valid=temp.valid_data[5, :, :],
                                                                 transect=transect)
-            # # Find cells with invalid data
-            # valid_cells = np.equal(self.valid_data[0, :, :].astype(int), self.valid_data[6, :, :].astype(int)).astype(
-            #     bool)
-            # boat_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
-            # boat_valid = boat_selected.valid_data[0]
-            #
-            # if not np.all(valid_cells) and np.nansum(boat_valid) > 1:
-            #     # Data needed for interpolation
-            #     distance_along_shiptrack = transect.boat_vel.compute_boat_track(transect)['distance_m']
-            #     depth_selected = getattr(transect.depths, transect.depths.selected)
-            #
-            #     # Interpolate values for cells with 3-beam solutions from neighboring data
-            #     interpolated_data = abba_idw_interpolation(data_list=[temp.u_mps, temp.v_mps],
-            #                                                valid_data=temp.valid_data[5, :, :],
-            #                                                cells_above_sl=temp.cells_above_sl,
-            #                                                y_centers=depth_selected.depth_cell_depth_m,
-            #                                                y_cell_size=depth_selected.depth_cell_size_m,
-            #                                                y_depth=depth_selected.depth_processed_m,
-            #                                                x_shiptrack=distance_along_shiptrack,
-            #                                                normalize=True)
+
             if interpolated_data is not None:
                 # Compute interpolated to measured ratios and apply filter criteria
                 for n in range(len(interpolated_data[0])):
@@ -1051,93 +1027,92 @@ class WaterData(object):
         self.all_valid_data()
 
     def filter_diff_vel(self, setting, threshold=None):
-            """Applies filter to difference velocity.
+        """Applies filter to difference velocity.
 
-            Applies either manual or automatic filtering of the difference (error)
-            velocity.  The automatic mode is based on the following:  This filter is
-            based on the assumption that the water error velocity should follow a gaussian
-            distribution.  Therefore, 5 standard deviations should encompass all of the
-            valid data.  The standard deviation and limits (multiplier*std dev) are computed
-            in an iterative process until filtering out additional data does not change the
-            computed standard deviation.
+        Applies either manual or automatic filtering of the difference (error)
+        velocity.  The automatic mode is based on the following:  This filter is
+        based on the assumption that the water error velocity should follow a gaussian
+        distribution.  Therefore, 5 standard deviations should encompass all of the
+        valid data.  The standard deviation and limits (multiplier*std dev) are computed
+        in an iterative process until filtering out additional data does not change the
+        computed standard deviation.
 
-            Parameters
-            ----------
-            setting: str
-                Filter setting (Auto, Off, Manual)
-            threshold: float
-                Threshold value for Manual setting.
-            """
+        Parameters
+        ----------
+        setting: str
+            Filter setting (Auto, Off, Manual)
+        threshold: float
+            Threshold value for Manual setting.
+        """
 
-            # Set difference filter properties
-            self.d_filter = setting
-            if threshold is not None:
-                self.d_filter_threshold = threshold
+        # Set difference filter properties
+        self.d_filter = setting
+        if threshold is not None:
+            self.d_filter_threshold = threshold
 
-            # Set multiplier
-            multiplier = 5
+        # Set multiplier
+        multiplier = 5
 
-            # Get difference data from object
-            d_vel = copy.deepcopy(self.d_mps)
+        # Get difference data from object
+        d_vel = copy.deepcopy(self.d_mps)
 
-            d_vel_min_ref = None
-            d_vel_max_ref = None
+        d_vel_min_ref = None
+        d_vel_max_ref = None
 
-            # Apply selected method
-            if self.d_filter == 'Manual':
-                d_vel_max_ref = np.abs(self.d_filter_threshold)
-                d_vel_min_ref = -1 * d_vel_max_ref
-            elif self.d_filter == 'Off':
-                d_vel_max_ref = np.nanmax(np.nanmax(d_vel)) + 1
-                d_vel_min_ref = np.nanmin(np.nanmin(d_vel)) - 1
-            elif self.d_filter == 'Auto':
-                # Initialize variables
-                d_vel_filtered = copy.deepcopy(d_vel)
-                std_diff = 1
-                i = -1
-                # Loop until no additional data are removed
-                while std_diff != 0 and i < 1000:
-                    i = i+1
+        # Apply selected method
+        if self.d_filter == 'Manual':
+            d_vel_max_ref = np.abs(self.d_filter_threshold)
+            d_vel_min_ref = -1 * d_vel_max_ref
+        elif self.d_filter == 'Off':
+            d_vel_max_ref = np.nanmax(np.nanmax(d_vel)) + 1
+            d_vel_min_ref = np.nanmin(np.nanmin(d_vel)) - 1
+        elif self.d_filter == 'Auto':
+            # Initialize variables
+            d_vel_filtered = copy.deepcopy(d_vel)
+            std_diff = 1
+            i = -1
+            # Loop until no additional data are removed
+            while std_diff != 0 and i < 1000:
+                i = i+1
 
-                    # Compute standard deviation
-                    d_vel_std = iqr(d_vel_filtered)
+                # Compute standard deviation
+                d_vel_std = iqr(d_vel_filtered)
 
-                    # Compute maximum and minimum thresholds
-                    d_vel_max_ref = np.nanmedian(d_vel_filtered) + multiplier * d_vel_std
-                    d_vel_min_ref = np.nanmedian(d_vel_filtered) - multiplier * d_vel_std
+                # Compute maximum and minimum thresholds
+                d_vel_max_ref = np.nanmedian(d_vel_filtered) + multiplier * d_vel_std
+                d_vel_min_ref = np.nanmedian(d_vel_filtered) - multiplier * d_vel_std
 
-                    # Identify valid and invalid data
-                    d_vel_bad_rows, d_vel_bad_cols = np.where(np.logical_or(np.greater(d_vel_filtered, d_vel_max_ref),
+                # Identify valid and invalid data
+                d_vel_bad_rows, d_vel_bad_cols = np.where(np.logical_or
+                                                          (np.greater(d_vel_filtered, d_vel_max_ref),
                                                            np.less(d_vel_filtered, d_vel_min_ref)))
-                    d_vel_good_rows, d_vel_good_cols = np.where(np.logical_or(np.less_equal(d_vel_filtered, d_vel_max_ref),
-                                                                np.greater_equal(d_vel_filtered, d_vel_min_ref)))
 
-                    # Update filtered data array
-                    d_vel_filtered[d_vel_bad_rows, d_vel_bad_cols] = np.nan
+                # Update filtered data array
+                d_vel_filtered[d_vel_bad_rows, d_vel_bad_cols] = np.nan
 
-                    # Determine differences due to last filter iteration
-                    if len(d_vel_filtered) > 0:
-                        d_vel_std2 = iqr(d_vel_filtered)
-                        std_diff = d_vel_std2 - d_vel_std
-                    else:
-                        std_diff = 0
+                # Determine differences due to last filter iteration
+                if len(d_vel_filtered) > 0:
+                    d_vel_std2 = iqr(d_vel_filtered)
+                    std_diff = d_vel_std2 - d_vel_std
+                else:
+                    std_diff = 0
 
-            # Set valid data row 2 for difference velocity filter results
-            bad_idx_rows, bad_idx_cols = np.where(np.logical_or(np.greater(d_vel, d_vel_max_ref),
-                                                  np.less(d_vel, d_vel_min_ref)))
-            valid = copy.deepcopy(self.cells_above_sl)
-            if len(bad_idx_rows) > 0:
-                valid[bad_idx_rows, bad_idx_cols] = False
-            #TODO Seems like if the difference velocity doesn't exist due to a 3-beam solution it shouldn't be flagged as invalid
-            # however this is the way it was in Matlab. Suggest changing this after comparisons complete.
-            # valid[np.isnan(self.d_mps)] = True
-            self.valid_data[2, :, :] = valid
+        # Set valid data row 2 for difference velocity filter results
+        bad_idx_rows, bad_idx_cols = np.where(np.logical_or(np.greater(d_vel, d_vel_max_ref),
+                                              np.less(d_vel, d_vel_min_ref)))
+        valid = copy.deepcopy(self.cells_above_sl)
+        if len(bad_idx_rows) > 0:
+            valid[bad_idx_rows, bad_idx_cols] = False
+        # TODO Seems like if the difference velocity doesn't exist due to a 3-beam solution it shouldn't be
+        #  flagged as invalid however this is the way it was in Matlab. May change this in future.
+        # valid[np.isnan(self.d_mps)] = True
+        self.valid_data[2, :, :] = valid
 
-            # Set threshold property
-            self.d_filter_threshold = d_vel_max_ref
+        # Set threshold property
+        self.d_filter_threshold = d_vel_max_ref
 
-            # Combine all filter data and update processed properties
-            self.all_valid_data()
+        # Combine all filter data and update processed properties
+        self.all_valid_data()
 
     def filter_vert_vel(self, setting, threshold=None):
         """Applies filter to vertical velocity.
@@ -1194,10 +1169,7 @@ class WaterData(object):
 
                 # Identify valid and invalid data
                 w_vel_bad_rows, w_vel_bad_cols = np.where(np.logical_or(np.greater(w_vel_filtered, w_vel_max_ref),
-                                                       np.less(w_vel_filtered, w_vel_min_ref)))
-                w_vel_good_rows, w_vel_good_cols = np.where(
-                    np.logical_or(np.less_equal(w_vel_filtered, w_vel_max_ref),
-                                  np.greater_equal(w_vel_filtered, w_vel_min_ref)))
+                                                                        np.less(w_vel_filtered, w_vel_min_ref)))
 
                 # Update filtered data array
                 w_vel_filtered[w_vel_bad_rows, w_vel_bad_cols] = np.nan
@@ -1329,7 +1301,7 @@ class WaterData(object):
         
         if setting == 'Auto':
             if self.snr_rng is not None:
-                bad_snr_idx = self.snr_rng > 12
+                bad_snr_idx = np.greater(self.snr_rng, 12)
                 valid = np.copy(self.cells_above_sl)
                 
                 bad_snr_array = np.tile(bad_snr_idx, (valid.shape[0], 1))
@@ -1394,7 +1366,13 @@ class WaterData(object):
 
     def interpolate_abba(self, transect):
         """" Interpolates all data marked invalid using the abba interpolation algorithm.
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
         """
+
         # Set properties
         self.interpolate_cells = 'abba'
         self.interpolate_ens = 'abba'
@@ -1410,35 +1388,8 @@ class WaterData(object):
         self.u_processed_mps[np.logical_not(valid)] = np.nan
         self.v_processed_mps[np.logical_not(valid)] = np.nan
 
-        interpolated_data = self.compute_abba_interpolation(wt_data=self,valid=valid, transect=transect)
-        # # Find cells with invalid data
-        # valid_cells = np.equal(self.valid_data[0, :, :].astype(int), self.valid_data[6, :, :].astype(int)).astype(bool)
-        # boat_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
-        # boat_valid = boat_selected.valid_data[0]
-        #
-        # if not np.all(valid_cells) and np.nansum(boat_valid) > 1:
-        #     # Compute distance along shiptrack to be used in interpolation
-        #     distance_along_shiptrack = transect.boat_vel.compute_boat_track(transect)['distance_m']
-        #
-        #     # Where there is invalid boat speed at beginning or end of transect mark the distance nan to avoid
-        #     # interpolating velocities that won't be used for discharge
-        #
-        #     distance_along_shiptrack[0:np.argmax(boat_valid==True)] = np.nan
-        #     end_nan = np.argmax(np.flip(boat_valid) == True)
-        #     if end_nan > 0:
-        #         distance_along_shiptrack[-1*end_nan:] = np. nan
-        #     if type(distance_along_shiptrack) is np.ndarray:
-        #         depth_selected = getattr(transect.depths, transect.depths.selected)
-        #
-        #         # Interpolate values for  invalid cells with from neighboring data
-        #         interpolated_data = abba_idw_interpolation(data_list=[self.u_processed_mps, self.v_processed_mps],
-        #                                                    valid_data=valid,
-        #                                                    cells_above_sl=self.valid_data[6, :, :],
-        #                                                    y_centers=depth_selected.depth_cell_depth_m,
-        #                                                    y_cell_size=depth_selected.depth_cell_size_m,
-        #                                                    y_depth=depth_selected.depth_processed_m,
-        #                                                    x_shiptrack=distance_along_shiptrack,
-        #                                                    normalize=True)
+        interpolated_data = self.compute_abba_interpolation(wt_data=self, valid=valid, transect=transect)
+
         if interpolated_data is not None:
             # Incorporate interpolated values in processed data
             for n in range(len(interpolated_data[0])):
@@ -1449,9 +1400,23 @@ class WaterData(object):
 
     @staticmethod
     def compute_abba_interpolation(wt_data, valid, transect):
+        """Computes the interpolated values for invalid cells using the abba method.
+
+        Parameters
+        ----------
+        wt_data: WaterData
+            Object of WaterData
+        valid: np.ndarray(bool)
+            Array indicating valid to be used for interpolation
+        transect: TransectData
+            Object of TransectData
+
+        Returns
+        -------
+        interpolated_data: np.ndarray(float)
+            Array of interpolated data
+        """
         # Find cells with invalid data
-        # Not sure why I used the following line. Replaced 2/25/2020 dsm
-        # valid_cells = np.equal(wt_data.valid_data[0, :, :].astype(int), wt_data.valid_data[6, :, :].astype(int)).astype(bool)
         valid_cells = wt_data.valid_data[0, :, :]
         boat_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
         boat_valid = boat_selected.valid_data[0]
@@ -1479,12 +1444,15 @@ class WaterData(object):
                                                            y_depth=depth_selected.depth_processed_m,
                                                            x_shiptrack=distance_along_shiptrack,
                                                            normalize=True)
-            return interpolated_data
+                return interpolated_data
+            else:
+                return None
         else:
             return None
 
     def interpolate_ens_next(self):
-        """Applies data from the next valid ensemble for ensembles with invalid water velocities."""
+        """Applies data from the next valid ensemble for ensembles with invalid water velocities.
+        """
 
         # Set interpolation property for ensembles
         self.interpolate_ens = 'ExpandedT'
@@ -1508,7 +1476,8 @@ class WaterData(object):
                 
     def interpolate_ens_hold_last(self):
         """Interpolates velocity data for invalid ensembles by repeating the
-        the last valid data until new valid data is found"""
+        the last valid data until new valid data is found
+        """
         
         self.interpolate_ens = 'HoldLast'
         
@@ -1539,7 +1508,7 @@ class WaterData(object):
 
         Interpolates velocity data for invalid ensembles by repeating the
         last valid data for up to 9 ensembles or until new valid data is
-        found. If more the 9 consectutive ensembles are invalid the
+        found. If more the 9 consecutive ensembles are invalid the
         ensembles beyond the 9th remain invalid. This is for
         compatibility with SonTek RiverSurveyor Live.
         """
@@ -1633,11 +1602,7 @@ class WaterData(object):
         # Initialize processed velocity data variables
         self.u_processed_mps = np.copy(self.u_mps)
         self.v_processed_mps = np.copy(self.v_mps)
-        
-        # Set invalid data to nan in processed velocity data variables
-        # self.u_processed_mps[valid[0] == False] = np.nan
-        # self.v_processed_mps[valid[0] == False] = np.nan
-                
+
         # Determine ensembles with valid data
         valid_ens = np.any(valid, 0)
         
@@ -1665,7 +1630,6 @@ class WaterData(object):
                     valid_z = np.isnan(z) == False
                     valid_combined = np.logical_and(valid, valid_z)
 
-                    # TODO Need to test, I would have assumed hstack
                     u = interpolate.griddata(np.vstack((z[valid_combined], track_array[valid_combined])).T,
                                              self.u_processed_mps[valid_combined],
                                              (z, track_array))
@@ -1692,7 +1656,6 @@ class WaterData(object):
             Object of TransectData
         """
 
-        # TODO Seems like this might be the best way to interpolate all invalid data.
         self.interpolate_ens = 'Linear'
 
         valid = self.valid_data[0, :, :]
@@ -1722,7 +1685,6 @@ class WaterData(object):
                 valid_z = np.isnan(z) == False
                 valid_combined = np.logical_and(valid, valid_z)
 
-                # TODO Need to evaluate other methods like natural neighbor, compare against Matlab
                 u = interpolate.griddata(np.array([z[valid_combined].ravel(),
                                                    track_array[valid_combined].ravel()]).T,
                                          self.u_processed_mps[valid_combined].ravel(),
@@ -1818,6 +1780,11 @@ class WaterData(object):
         ----------
         transect: TransectData
             Object of TransectData
+
+        Returns
+        -------
+        processed_valid_cells: np.ndarray(bool)
+           Estimated valid cells
         """
 
         processed_valid_cells = np.copy(self.valid_data[0])
@@ -1868,7 +1835,9 @@ class WaterData(object):
             snr_average = np.nanmean(snr_adjusted, 1)
             self.snr_rng = np.nanmax(snr_average, 0) - np.nanmin(snr_average, 0)
 
-    def automated_beam_filter_old(self, transect):
+    def automated_beam_filter_old(self):
+        """Older version of automatic beam filter. Not currently used.
+        """
 
         # Create array indicating which cells do not have 4-beam solutions and all cells below side lobe are nan
         temp = copy.deepcopy(self)
@@ -1880,23 +1849,16 @@ class WaterData(object):
         # Find cells with 3 beams solutions
         rows_3b, cols_3b = np.where(np.abs(valid) == 0)
         if len(rows_3b) > 0:
-            # # Find cells with 4 beams solutions
+            # Find cells with 4 beams solutions
             valid_rows, valid_cols = np.where(valid == 1)
-            #
-            # # Valid water u and v for cells with 4 beam solutions
-            # valid_u = np.tile(np.nan, valid.shape)
-            # valid_v = np.tile(np.nan, valid.shape)
-            # valid_u[valid_rows, valid_cols] = temp.u_mps[valid_rows, valid_cols]
-            # valid_v[valid_rows, valid_cols] = temp.v_mps[valid_rows, valid_cols]
+
             valid_u = temp.u_mps[valid == 1]
             valid_v = temp.v_mps[valid == 1]
             # Use interpolate water velocity of cells with 3 beam solutions
-            # TODO check out
 
             # The following code duplicates Matlab scatteredInterpolant which seems to only estimate along columns
             # as long as there is data in the ensemble above and below the value being estimated.
             row_numbers = np.linspace(0, valid.shape[0] - 1, valid.shape[0])
-            # # est_u=temp.u_mps
             n = 0
             for col in cols_3b:
                 # If the cell has valid data above and below it linearly interpolate using data in that ensemble.

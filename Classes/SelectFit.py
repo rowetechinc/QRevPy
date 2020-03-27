@@ -73,7 +73,7 @@ class SelectFit(object):
         self.z_auto = None
         self.residuals = np.array([])
         self.coef = 0
-        self.bot_method_auto = 'Power' # Selected extrapolation for top
+        self.bot_method_auto = 'Power'  # Selected extrapolation for top
         self.top_method_auto = 'Power'  # Selected extrapolation for bottom
         self.exponent_auto = 0.1667  # Selected exponent
         self.top_fit_r2 = 0  # Top fit custom r^2
@@ -110,6 +110,8 @@ class SelectFit(object):
         # Store data in properties to object
         self.fit_method = fit_method
         self.data_type = normalized.data_type
+
+        update_fd = FitData()
 
         if fit_method == 'Automatic':
             # Compute power fit with optimized exponent as reference to determine
@@ -155,16 +157,10 @@ class SelectFit(object):
                 y = normalized.unit_normalized_med[valid_data[:4]]
                 #             x = sm.add_constant(x)
                 x = normalized.unit_normalized_z[valid_data[:4]]
-                # x = sm.add_constant(x)
-                # lin_fit = sm.OLS(y, x)
-                # result = lin_fit.fit()
-                # dsmfitr2 = 1 - (np.sum(result.resid ** 2) / np.mean(np.abs(result.resid)))
-                # self.top_fit_r2 = dsmfitr2
-                # self.top_r2 = result.rsquared
 
                 coeffs = np.polyfit(x, y, 1)
                 resid = y - (coeffs[0]*x + coeffs[1])
-                corr = np.corrcoef(x, y)[0,1]
+                corr = np.corrcoef(x, y)[0, 1]
                 self.top_fit_r2 = 1 - (np.sum(resid ** 2) / np.mean(np.abs(resid)))
                 self.top_r2 = corr**2
 
@@ -277,14 +273,14 @@ class SelectFit(object):
 
             else:
 
-                # If the data are insufficient for a valid analysis use the power/power fit with the default 0.1667 exponent
+                # If the data are insufficient for a valid analysis use the power/power fit
+                # with the default 0.1667 exponent
                 self.top_method_auto = 'Power'
                 self.bot_method_auto = 'Power'
                 self.exponent_auto = 0.1667
                 self.ns_exponent = 0.1667
 
             # Update the fit using the automatically selected methods
-            update_fd = FitData()
             update_fd.populate_data(norm_data=normalized,
                                     top=self.top_method_auto,
                                     bot=self.bot_method_auto,
@@ -306,7 +302,6 @@ class SelectFit(object):
                 exponent = self.exponent
 
             # Update fit with manual settings
-            update_fd = FitData()
             update_fd.populate_data(norm_data=normalized,
                                     top=top,
                                     bot=bot,
@@ -353,6 +348,8 @@ class SelectFit(object):
         ----------
         mat_data: mat_struct
            Matlab data structure obtained from sio.loadmat
+        norm_data: NormData
+            Object of NormData
         """
 
         self.fit_method = mat_data.fitMethod

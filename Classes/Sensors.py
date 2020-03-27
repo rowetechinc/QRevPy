@@ -1,6 +1,5 @@
 from Classes.SensorStructure import SensorStructure
 import numpy as np
-# from Classes.SensorData import SensorData
 
 
 class Sensors(object):
@@ -54,7 +53,6 @@ class Sensors(object):
             if hasattr(transect.sensors, 'temperature_degC'):
                 self.temperature_deg_c.populate_from_qrev_mat(transect.sensors.temperature_degC)
 
-
     @staticmethod
     def speed_of_sound(temperature, salinity):
         """Computes speed of sound from temperature and salinity.
@@ -74,6 +72,14 @@ class Sensors(object):
 
     @staticmethod
     def avg_temperature(transects):
+        """Compute mean temperature from temperature data from all transects.
+
+        Parameters
+        ----------
+        transects: list
+            List of TransectData objects
+        """
+
         temps = np.array([])
         for transect in transects:
             if transect.checked:

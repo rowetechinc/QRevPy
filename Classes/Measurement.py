@@ -1,7 +1,6 @@
-from Classes.MMT_TRDI import MMT_TRDI
+from Classes.MMT_TRDI import MMTtrdi
 import numpy as np
 import os
-import scipy.io as sio
 from Classes.TransectData import TransectData, allocate_transects
 from Classes.PreMeasurement import PreMeasurement
 from Classes.MovingBedTests import MovingBedTests
@@ -13,9 +12,10 @@ from Classes.Uncertainty import Uncertainty
 from Classes.QAData import QAData
 from MiscLibs.common_functions import cart2pol, pol2cart, rad2azdeg, nans, azdeg2rad
 from Classes.BoatStructure import BoatStructure
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ETree
 from xml.dom.minidom import parseString
 import datetime
+
 
 class Measurement(object):
     """Class to hold all measurement details.
@@ -127,8 +127,6 @@ class Measurement(object):
                     self.mb_tests = MovingBedTests.auto_use_2_correct(
                         moving_bed_tests=self.mb_tests, boat_ref=ref)
 
-
-
                 # Set processing type
                 if proc_type == 'QRev':
                     # Apply QRev default settings
@@ -138,7 +136,7 @@ class Measurement(object):
 
                 elif proc_type == 'None':
                     # Processing with no filters and interpolation
-                    settings = self.no_filter_interp_settings()
+                    settings = self.no_filter_interp_settings(self)
                     settings['Processing'] = 'None'
                     self.apply_settings(settings)
 
@@ -168,7 +166,7 @@ class Measurement(object):
         """
 
         # Read mmt file
-        mmt = MMT_TRDI(mmt_file)
+        mmt = MMTtrdi(mmt_file)
 
         # Get properties if they exist, otherwise set them as blank strings
         self.station_name = str(mmt.site_info['Name'])
@@ -303,7 +301,7 @@ class Measurement(object):
         
         Parameters
         ----------
-        mmt: MMT_TRDI
+        mmt: MMTtrdi
             Object of MMT_TRDI
         """
 
@@ -467,20 +465,19 @@ class Measurement(object):
 
         # Compass Calibration
         compass_cal_folder = os.path.join(pathname, 'CompassCal')
+        time_stamp = None
         if os.path.isdir(compass_cal_folder):
             for file in os.listdir(compass_cal_folder):
                 valid_file = False
                 # G3 compasses
                 if file.endswith('.ccal'):
-                    # compass_cal_files.append(file)
                     time_stamp = file.split('_')
                     time_stamp = time_stamp[0] + '_' + time_stamp[1]
                     valid_file = True
 
                 # G2 compasses
                 elif file.endswith('.txt'):
-                    # compass_cal_files.append(file)
-                    time_stamp = file.split('l')[1].split('.')[0]
+                    time_stamp = file.split('l')[1].split(b'.')[0]
                     valid_file = True
 
             # for file in compass_cal_files:
@@ -490,9 +487,6 @@ class Measurement(object):
                         cal = PreMeasurement()
                         cal.populate_data(time_stamp, cal_data, 'SCC')
                         self.compass_cal.append(cal)
-        # else:
-        #     cal = PreMeasurement()
-        #     self.compass_cal.append(cal)
 
         # System Test
         system_test_folder = os.path.join(pathname, 'SystemTest')
@@ -531,15 +525,13 @@ class Measurement(object):
                 if file.lower().startswith('loop'):
                     self.mb_tests.append(MovingBedTests())
                     self.mb_tests[-1].populate_data(source='SonTek',
-                                                    file=os.path.join(pathname,
-                                                                      file),
+                                                    file=os.path.join(pathname, file),
                                                     test_type='Loop')
                 # Process Stationary test
                 elif file.lower().startswith('smba'):
                     self.mb_tests.append(MovingBedTests())
                     self.mb_tests[-1].populate_data(source='SonTek',
-                                                    file=os.path.join(pathname,
-                                                                      file),
+                                                    file=os.path.join(pathname, file),
                                                     test_type='Stationary')
 
     def load_qrev_mat(self, mat_data):
@@ -548,14 +540,9 @@ class Measurement(object):
 
         Parameters
         ----------
-        fullname: str
-            Fullname including path to *_QRev.mat files.
+        mat_data: dict
+            Dictionary containing Matlab data.
         """
-
-        # Read Matlab file and extract meas_struct
-        # mat_data = sio.loadmat(fullname,
-        #                        struct_as_record=False,
-        #                        squeeze_me=True)
 
         meas_struct = mat_data['meas_struct']
 
@@ -568,6 +555,7 @@ class Measurement(object):
         self.processing = meas_struct.processing
         if type(meas_struct.comments) == np.ndarray:
             self.comments = meas_struct.comments.tolist()
+
             # Needed to handle comments with blank lines
             for n, comment in enumerate(self.comments):
                 if type(comment) is not str:
@@ -580,17 +568,20 @@ class Measurement(object):
                     self.comments[n] = new_comment
         else:
             self.comments = [meas_struct.comments]
+
         # Check to make sure all comments are str
         for n, comment in enumerate(self.comments):
             if type(comment) is np.ndarray:
                 # Using comment =... didn't work but self.comments[n] does
                 self.comments[2] = np.array2string(comment)
+
         if hasattr(meas_struct, 'userRating'):
             self.user_rating = meas_struct.userRating
         else:
             self.user_rating = ''
 
         self.initial_settings = vars(meas_struct.initialSettings)
+
         # Update initial settings to agree with Python definitions
         if self.initial_settings['NavRef'] == 'btVel':
             self.initial_settings['NavRef'] = 'bt_vel'
@@ -614,6 +605,7 @@ class Measurement(object):
         self.ext_temp_chk = {'user': meas_struct.extTempChk.user,
                              'units': meas_struct.extTempChk.units,
                              'adcp': meas_struct.extTempChk.adcp}
+
         if type(self.ext_temp_chk['user']) is str:
             self.ext_temp_chk['user'] = np.nan
         if type(self.ext_temp_chk['adcp']) is str:
@@ -624,6 +616,7 @@ class Measurement(object):
             self.ext_temp_chk['adcp'] = np.nan
 
         self.system_tst = PreMeasurement.sys_test_qrev_mat_in(meas_struct)
+
         # no compass cal compassCal is mat_struct with len(data) = 0
         if type(meas_struct.compassCal) is np.ndarray:
             self.compass_cal = PreMeasurement.cc_qrev_mat_in(meas_struct)
@@ -631,17 +624,21 @@ class Measurement(object):
             self.compass_cal = PreMeasurement.cc_qrev_mat_in(meas_struct)
         else:
             self.compass_cal = []
+
         if type(meas_struct.compassEval) is np.ndarray:
             self.compass_eval = PreMeasurement.ce_qrev_mat_in(meas_struct)
         elif len(meas_struct.compassEval.data) > 0:
             self.compass_eval = PreMeasurement.ce_qrev_mat_in(meas_struct)
         else:
             self.compass_eval = []
+
         self.transects = TransectData.qrev_mat_in(meas_struct)
         self.mb_tests = MovingBedTests.qrev_mat_in(meas_struct)
         self.extrap_fit = ComputeExtrap()
         self.extrap_fit.populate_from_qrev_mat(meas_struct)
         self.discharge = QComp.qrev_mat_in(meas_struct)
+
+        # For compatibility with older QRev.mat files that didn't have this feature
         for n in range(len(self.transects)):
             if len(self.discharge[n].left_idx) == 0:
                 edge_q, self.discharge[n].left_idx = self.discharge[n].discharge_edge('left',
@@ -649,14 +646,17 @@ class Measurement(object):
                                                                                       top_method=None,
                                                                                       bot_method=None,
                                                                                       exponent=None)
+
             if len(self.discharge[n].right_idx) == 0:
                 edge_q, self.discharge[n].right_idx = self.discharge[n].discharge_edge('right',
                                                                                        self.transects[n],
                                                                                        top_method=None,
                                                                                        bot_method=None,
                                                                                        exponent=None)
+
             if type(self.discharge[n].correction_factor) is list:
                 self.discharge[n].correction_factor = self.discharge[n].total / self.discharge[n].total_uncorrected
+
         self.uncertainty = Uncertainty()
         self.uncertainty.populate_from_qrev_mat(meas_struct)
         self.qa = QAData(self, mat_struct=meas_struct, compute=False)
@@ -752,8 +752,7 @@ class Measurement(object):
         
         return depth_screening_setting
         
-    def change_sos(self, transect_idx=None, parameter=None, salinity=None,
-                   temperature=None, selected=None, speed=None):
+    def change_sos(self, transect_idx=None, parameter=None, salinity=None, temperature=None, selected=None, speed=None):
         """Applies a change in speed of sound to one or all transects
         and update the discharge and uncertainty computations
         
@@ -762,15 +761,13 @@ class Measurement(object):
         transect_idx: int
             Index of transect to change
         parameter: str
-            Speed of sound parameter to be changed ('temperatureSrc', 'temperature',
-            'salinity', 'sosSrc')
+            Speed of sound parameter to be changed ('temperatureSrc', 'temperature', 'salinity', 'sosSrc')
         salinity: float
             Salinity in ppt
         temperature: float
             Temperature in deg C
         selected: str
-            Selected speed of sound ('internal', 'computed', 'user') or
-            temperature ('internal', 'user')
+            Selected speed of sound ('internal', 'computed', 'user') or temperature ('internal', 'user')
         speed: float
             Manually supplied speed of sound for 'user' source
         """
@@ -795,15 +792,31 @@ class Measurement(object):
         self.apply_settings(s)
 
     def change_magvar(self, magvar, transect_idx=None):
+        """Coordinates changing the magnetic variation.
+
+        Parameters
+        ----------
+        magvar: float
+            Magnetic variation
+        transect_idx: int
+            Index of transect to which the change is applied. None is all transects.
+        """
+
+        # Get current settings
         s = self.current_settings()
+
+        # Initialize variables
         n_transects = len(self.transects)
         recompute = False
         n = 0
+
+        # If the internal compass is used the recompute is necessary
         while n < n_transects and recompute == False:
             if self.transects[n].sensors.heading_deg.selected == 'internal':
                 recompute = True
             n += 1
 
+        # Apply change
         if transect_idx is None:
             # Apply change to all transects
             for transect in self.transects:
@@ -811,33 +824,62 @@ class Measurement(object):
         else:
             self.transects[transect_idx].change_mag_var(magvar)
 
+        # Recompute is specified
         if recompute:
             self.apply_settings(s)
 
     def change_h_offset(self, h_offset, transect_idx=None):
+        """Coordinates changing the heading offset for external heading.
+
+        Parameters
+        ----------
+        h_offset: float
+            Heading offset
+        transect_idx: int
+            Index of transect to which the change is applied. None is all transects.
+        """
+
+        # Get current settings
         s = self.current_settings()
+
+        # Initialize variables
         n_transects = len(self.transects)
         recompute = False
         n = 0
+
+        # If external compass is used then a recompute is necessary
         while n < n_transects and recompute == False:
             if self.transects[n].sensors.heading_deg.selected == 'external':
                 recompute = True
             n += 1
 
+        # Apply change
         if transect_idx is None:
-            # Apply change to all transects
             for transect in self.transects:
                 transect.change_offset(h_offset)
         else:
             self.transects[transect_idx].change_offset(h_offset)
 
+        # Rcompute is specified
         if recompute:
             self.apply_settings(s)
 
     def change_h_source(self, h_source, transect_idx=None):
+        """Coordinates changing the heading source.
+
+        Parameters
+        ----------
+        h_source: str
+            Heading source (internal or external)
+        transect_idx: int
+            Index of transect to which the change is applied. None is all transects.
+        """
+
+        # Get current settings
         s = self.current_settings()
+
+        # Apply change
         if transect_idx is None:
-            # Apply change to all transects
             for transect in self.transects:
                 transect.change_heading_source(h_source)
         else:
@@ -846,9 +888,21 @@ class Measurement(object):
         self.apply_settings(s)
 
     def change_draft(self, draft, transect_idx=None):
+        """Coordinates changing the ADCP draft.
+
+        Parameters
+        ----------
+        draft: float
+            Draft of ADCP in m
+        transect_idx: int
+            Index of transect to which the change is applied. None is all transects.
+        """
+
+        # Get current settings
         s = self.current_settings()
+
+        # Apply change
         if transect_idx is None:
-            # Apply change to all transects
             for transect in self.transects:
                 transect.change_draft(draft)
         else:
@@ -858,6 +912,14 @@ class Measurement(object):
 
     @staticmethod
     def h_external_valid(meas):
+        """Determine if valid external heading data is included in the measurement.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of Measurement
+        """
+
         external = False
         for transect in meas.transects:
             if transect.sensors.heading_deg.external is not None:
@@ -872,6 +934,8 @@ class Measurement(object):
         ----------
         settings: dict
             Dictionary of reference, filter, and interpolation settings
+        force_abba: bool
+            Allows the above, below, before, after interpolation to be applied even when the data use another approach.
         """
 
         for transect in self.transects:
@@ -996,7 +1060,6 @@ class Measurement(object):
             wt_kwargs['wt_depth'] = settings['WTwtDepthFilter']
             wt_kwargs['excluded'] = settings['WTExcludedDistance']
 
-
             # Data loaded from old QRev.mat files will be set to use this new interpolation method. When reprocessing
             # any data the interpolation method should be 'abba'
             if force_abba:
@@ -1011,29 +1074,29 @@ class Measurement(object):
             transect.edges.rec_edge_method = settings['edgeRecEdgeMethod']
             transect.edges.vel_method = settings['edgeVelMethod']
 
-        # Recompute extrapolations
-        # NOTE: Extrapolations should be determined prior to WT
-        # interpolations because the TRDI approach for power/power
-        # using the power curve and exponent to estimate invalid cells.
+            # Recompute extrapolations
+            # NOTE: Extrapolations should be determined prior to WT
+            # interpolations because the TRDI approach for power/power
+            # using the power curve and exponent to estimate invalid cells.
 
-        if transect.w_vel.interpolate_cells == 'TRDI':
-            if self.extrap_fit is None :
-                self.extrap_fit = ComputeExtrap()
-                self.extrap_fit.populate_data(transects=self.transects, compute_sensitivity=False)
-                self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
-            elif self.extrap_fit.fit_method == 'Automatic':
-                self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
-            else:
-                if 'extrapTop' not in settings.keys():
-                    settings['extrapTop'] = self.extrap_fit.sel_fit[-1].top_method
-                    settings['extrapBot'] = self.extrap_fit.sel_fit[-1].bot_method
-                    settings['extrapExp'] = self.extrap_fit.sel_fit[-1].exponent
+            if self.transects[0].w_vel.interpolate_cells == 'TRDI':
+                if self.extrap_fit is None:
+                    self.extrap_fit = ComputeExtrap()
+                    self.extrap_fit.populate_data(transects=self.transects, compute_sensitivity=False)
+                    self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
+                elif self.extrap_fit.fit_method == 'Automatic':
+                    self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
+                else:
+                    if 'extrapTop' not in settings.keys():
+                        settings['extrapTop'] = self.extrap_fit.sel_fit[-1].top_method
+                        settings['extrapBot'] = self.extrap_fit.sel_fit[-1].bot_method
+                        settings['extrapExp'] = self.extrap_fit.sel_fit[-1].exponent
 
-            self.change_extrapolation(self.extrap_fit.fit_method,
-                                      top=settings['extrapTop'],
-                                      bot=settings['extrapBot'],
-                                      exp=settings['extrapExp'],
-                                      compute_q=False)
+                self.change_extrapolation(self.extrap_fit.fit_method,
+                                          top=settings['extrapTop'],
+                                          bot=settings['extrapBot'],
+                                          exp=settings['extrapExp'],
+                                          compute_q=False)
 
         for transect in self.transects:
 
@@ -1042,7 +1105,7 @@ class Measurement(object):
                                                ens_interp=settings['WTEnsInterpolation'],
                                                cells_interp=settings['WTCellInterpolation'])
 
-        if self.extrap_fit is None :
+        if self.extrap_fit is None:
             self.extrap_fit = ComputeExtrap()
             self.extrap_fit.populate_data(transects=self.transects, compute_sensitivity=False)
             self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
@@ -1192,7 +1255,8 @@ class Measurement(object):
         return settings
 
     def qrev_default_settings(self):
-        """QRev default and filter settings for a measurement"""
+        """QRev default and filter settings for a measurement.
+        """
 
         settings = dict()
 
@@ -1209,10 +1273,12 @@ class Measurement(object):
         settings['WTwFilter'] = 'Auto'
         settings['WTwFilterThreshold'] = np.nan
         settings['WTsmoothFilter'] = 'Off'
+
         if self.transects[0].adcp.manufacturer == 'TRDI':
             settings['WTsnrFilter'] = 'Off'
         else:
             settings['WTsnrFilter'] = 'Auto'
+
         temp = [x.w_vel for x in self.transects]
         excluded_dist = np.nanmin([x.excluded_dist_m for x in temp])
         if excluded_dist < 0.158 and self.transects[0].adcp.model == 'M9':
@@ -1264,7 +1330,6 @@ class Measurement(object):
                     settings['depthComposite'] = 'Off'
                     break
 
-
         # Interpolation settings
         settings = self.qrev_default_interpolation_methods(settings)
 
@@ -1279,6 +1344,7 @@ class Measurement(object):
 
         return settings
 
+    @staticmethod
     def no_filter_interp_settings(self):
         """Settings to turn off all filters and interpolations.
 
@@ -1359,18 +1425,22 @@ class Measurement(object):
         return settings
 
     def selected_transects_changed(self, selected_transects_idx):
+        """Handle changes in the transects selected for computing discharge.
 
+        Parameters
+        ----------
+        selected_transects_idx: list
+            List of indices of the transects used to compute discharge
+        """
+
+        # Update transect settings
         for n in range(len(self.transects)):
             if n in selected_transects_idx:
                 self.transects[n].checked = True
             else:
                 self.transects[n].checked = False
-        # Recompute extrapolations
-        # NOTE: Extrapolations should be determined prior to WT
-        # interpolations because the TRDI approach for power/power
-        # using the power curve and exponent to estimate invalid cells.
 
-        # if (self.extrap_fit is None) or (self.extrap_fit.fit_method == 'Automatic'):
+        # Changes in the transects selected may cause a change in extrapolation.
         self.extrap_fit = ComputeExtrap()
         self.extrap_fit.populate_data(transects=self.transects, compute_sensitivity=False)
         top = self.extrap_fit.sel_fit[-1].top_method
@@ -1382,12 +1452,16 @@ class Measurement(object):
         self.extrap_fit.q_sensitivity.populate_data(transects=self.transects,
                                                     extrap_fits=self.extrap_fit.sel_fit)
 
+        # Update computations
         self.compute_discharge()
         self.uncertainty = Uncertainty()
         self.uncertainty.compute_uncertainty(self)
         self.qa = QAData(self)
 
     def compute_discharge(self):
+        """Computes the discharge for all transects in the measurement.
+        """
+
         self.discharge = []
         for transect in self.transects:
             q = QComp()
@@ -1412,6 +1486,7 @@ class Measurement(object):
         # Get transect and discharge data
         transect = meas.transects[selected_idx]
         discharge = meas.discharge[selected_idx]
+
         # Sort the percents in ascending order
         percents.sort()
 
@@ -1443,10 +1518,10 @@ class Measurement(object):
 
         # Compute distance from start bank
         boat_vel_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
-        track_x = np.nancumsum(boat_vel_selected.u_processed_mps[transect.in_transect_idx] * \
-                  transect.date_time.ens_duration_sec[transect.in_transect_idx])
-        track_y = np.nancumsum(boat_vel_selected.v_processed_mps[transect.in_transect_idx] * \
-                  transect.date_time.ens_duration_sec[transect.in_transect_idx])
+        track_x = np.nancumsum(boat_vel_selected.u_processed_mps[transect.in_transect_idx] *
+                               transect.date_time.ens_duration_sec[transect.in_transect_idx])
+        track_y = np.nancumsum(boat_vel_selected.v_processed_mps[transect.in_transect_idx] *
+                               transect.date_time.ens_duration_sec[transect.in_transect_idx])
 
         dist = np.sqrt(track_x ** 2 + track_y ** 2) + start_dist
 
@@ -1472,10 +1547,11 @@ class Measurement(object):
                 lat.append('')
                 lon.append('')
             depth.append(depth_selected.depth_processed_m[ensemble])
+
             # The velocity is an average velocity for ensembles +/- 1% of the total ensembles
             # about the selected ensemble
-            u = np.nanmean(transect.w_vel.u_processed_mps[:, ensemble - n_pts_in_avg : ensemble + n_pts_in_avg + 1], 1)
-            v = np.nanmean(transect.w_vel.v_processed_mps[:, ensemble - n_pts_in_avg : ensemble + n_pts_in_avg + 1], 1)
+            u = np.nanmean(transect.w_vel.u_processed_mps[:, ensemble - n_pts_in_avg: ensemble + n_pts_in_avg + 1], 1)
+            v = np.nanmean(transect.w_vel.v_processed_mps[:, ensemble - n_pts_in_avg: ensemble + n_pts_in_avg + 1], 1)
             velocity.append(np.sqrt(np.nanmean(u)**2 + np.nanmean(v)**2))
 
         # Save computed results in a dictionary
@@ -1507,8 +1583,7 @@ class Measurement(object):
 
         return settings
 
-    def change_extrapolation(self, method, top=None, bot=None,
-                             exp=None, extents=None, threshold=None, compute_q=True):
+    def change_extrapolation(self, method, top=None, bot=None, exp=None, extents=None, threshold=None, compute_q=True):
         """Applies the selected extrapolation method to each transect.
 
         Parameters
@@ -1525,6 +1600,8 @@ class Measurement(object):
             Threshold as a percent for determining if a median is valid
         extents: list
             Percent of discharge, does not account for transect direction
+        compute_q: bool
+            Specifies if the discharge should be computed
         """
 
         if top is None:
@@ -1564,6 +1641,9 @@ class Measurement(object):
 
     @staticmethod
     def measurement_duration(self):
+        """Computes the duration of the measurement.
+        """
+
         duration = 0
         for transect in self.transects:
             if transect.checked:
@@ -1572,7 +1652,10 @@ class Measurement(object):
 
     @staticmethod
     def mean_discharges(self):
+        """Computes the mean discharge for the measurement.
+        """
 
+        # Initialize lists
         total_q = []
         uncorrected_q = []
         top_q = []
@@ -1608,21 +1691,9 @@ class Measurement(object):
         return discharge
 
     @staticmethod
-    def save_matlab_file(self, file_name):
-
-        from Classes.Python2Matlab import Python2Matlab
-        dsm_struct = {'dsm_struct': Python2Matlab(self).matlab_dict}
-        sio.savemat(file_name='C:/dsm/dsm_downloads/dsm_mat_test.mat',
-                    mdict=dsm_struct,
-                    appendmat=True,
-                    format='5',
-                    long_field_names=True,
-                    do_compression=False,
-                    oned_as='row')
-
-    @staticmethod
     def compute_measurement_properties(self):
-        """Computes characteristics of the measurement that assist in evaluating the consistency of the transects.
+        """Computes characteristics of the transects and measurement that assist in evaluating the consistency
+        of the transects.
 
         Returns
         -------
@@ -1652,6 +1723,7 @@ class Measurement(object):
                 99th percentile of water speed in mps
         """
 
+        # Initialize variables
         checked_idx = np.array([], dtype=int)
         n_transects = len(self.transects)
         trans_prop = {'width': np.array([np.nan] * (n_transects + 1)),
@@ -1659,13 +1731,14 @@ class Measurement(object):
                       'area': np.array([np.nan] * (n_transects + 1)),
                       'area_cov': np.array([np.nan] * (n_transects + 1)),
                       'avg_boat_speed': np.array([np.nan] * (n_transects + 1)),
-                      'avg_boat_course': np.array([np.nan] * (n_transects)),
+                      'avg_boat_course': np.array([np.nan] * n_transects),
                       'avg_water_speed': np.array([np.nan] * (n_transects + 1)),
                       'avg_water_dir': np.array([np.nan] * (n_transects + 1)),
                       'avg_depth': np.array([np.nan] * (n_transects + 1)),
                       'max_depth': np.array([np.nan] * (n_transects + 1)),
                       'max_water_speed': np.array([np.nan] * (n_transects + 1))}
 
+        # Process each transect
         for n, transect in enumerate(self.transects):
 
             # Compute boat track properties
@@ -1795,6 +1868,8 @@ class Measurement(object):
 
     @staticmethod
     def checked_transects(meas):
+        """Create a list of indices of the checked transects.
+        """
         checked_transect_idx = []
         for n in range(len(meas.transects)):
             if meas.transects[n].checked:
@@ -1803,37 +1878,50 @@ class Measurement(object):
 
     @staticmethod
     def compute_time_series(meas, variable=None):
+        """Computes the time series using serial time for any variable.
 
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        variable: np.ndarray()
+            Data for which the time series is requested
+        """
+
+        # Initialize variables
         data = np.array([])
         serial_time = np.array([])
         idx_transects = Measurement.checked_transects(meas)
+
+        # Process transects
         for idx in idx_transects:
             if variable == 'Temperature':
                 data = np.append(data, meas.transects[idx].sensors.temperature_deg_c.internal.data)
             ens_cum_time = np.nancumsum(meas.transects[idx].date_time.ens_duration_sec)
             ens_time = meas.transects[idx].date_time.start_serial_time + ens_cum_time
             serial_time = np.append(serial_time, ens_time)
+
         return data, serial_time
 
     def xml_output(self, version, file_name):
-        channel = ET.Element('Channel', QRevFilename=os.path.basename(file_name[:-4]), QRevVersion=version)
+        channel = ETree.Element('Channel', QRevFilename=os.path.basename(file_name[:-4]), QRevVersion=version)
 
         # (2) SiteInformation Node
         if self.station_name or self.station_number:
-            site_info = ET.SubElement(channel, 'SiteInformation')
+            site_info = ETree.SubElement(channel, 'SiteInformation')
 
             # (3) StationName Node
             if self.station_name:
-                ET.SubElement(site_info, 'StationName', type='char').text = self.station_name
+                ETree.SubElement(site_info, 'StationName', type='char').text = self.station_name
 
             # (3) SiteID Node
             if type(self.station_number) is str:
-                ET.SubElement(site_info, 'SiteID', type='char').text = self.station_number
+                ETree.SubElement(site_info, 'SiteID', type='char').text = self.station_number
             else:
-                ET.SubElement(site_info, 'SiteID', type='char').text = str(self.station_number)
+                ETree.SubElement(site_info, 'SiteID', type='char').text = str(self.station_number)
 
         # (2) QA Node
-        qa = ET.SubElement(channel, 'QA')
+        qa = ETree.SubElement(channel, 'QA')
 
         # (3) DiagnosticTestResult Node
         if len(self.system_tst) > 0:
@@ -1845,7 +1933,7 @@ class Measurement(object):
                 test_result = str(failed_idx) + ' Failed'
         else:
             test_result = 'None'
-        ET.SubElement(qa, 'DiagnosticTestResult', type='char').text = test_result
+        ETree.SubElement(qa, 'DiagnosticTestResult', type='char').text = test_result
 
         # (3) CompassCalibrationResult Node
         try:
@@ -1868,30 +1956,34 @@ class Measurement(object):
                 idx_end = idx_start + 10
                 comp_error = last_eval.data[idx_start:idx_end]
                 comp_error = ''.join([n for n in comp_error if n.isdigit() or n == '.'])
+
             # Evaluation could not be determined
             if not comp_error:
-                ET.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'Yes'
+                ETree.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'Yes'
             elif comp_error == '':
-                ET.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'No'
+                ETree.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'No'
             else:
-                ET.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'Max ' + comp_error
+                ETree.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'Max ' + comp_error
+
         except (IndexError, TypeError, AttributeError):
             try:
-                last_eval = self.compass_eval[-1]
-                ET.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'Yes'
+                if len(self.compass_eval) > 0:
+                    ETree.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'Yes'
+                else:
+                    ETree.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'No'
             except (IndexError, TypeError):
-                ET.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'No'
+                ETree.SubElement(qa, 'CompassCalibrationResult', type='char').text = 'No'
 
         # (3) MovingBedTestType Node
         if not self.mb_tests:
-            ET.SubElement(qa, 'MovingBedTestType', type='char').text = 'None'
+            ETree.SubElement(qa, 'MovingBedTestType', type='char').text = 'None'
         else:
             selected_idx = [i for (i, val) in enumerate(self.mb_tests) if val.selected is True]
             if len(selected_idx) >= 1:
                 temp = self.mb_tests[selected_idx[0]].type
             else:
                 temp = self.mb_tests[-1].type
-            ET.SubElement(qa, 'MovingBedTestType', type='char').text = str(temp)
+            ETree.SubElement(qa, 'MovingBedTestType', type='char').text = str(temp)
 
             # MovingBedTestResult Node
             temp = 'Unknown'
@@ -1902,15 +1994,15 @@ class Measurement(object):
                 elif self.mb_tests[idx].moving_bed == 'No':
                     temp = 'No'
 
-            ET.SubElement(qa, 'MovingBedTestResult', type='char').text = temp
+            ETree.SubElement(qa, 'MovingBedTestResult', type='char').text = temp
 
         # (3) DiagnosticTest and Text Node
         if self.system_tst:
             test_text = ''
             for test in self.system_tst:
                 test_text += test.data
-            diag_test = ET.SubElement(qa, 'DiagnosticTest')
-            ET.SubElement(diag_test, 'Text', type='char').text = test_text
+            diag_test = ETree.SubElement(qa, 'DiagnosticTest')
+            ETree.SubElement(diag_test, 'Text', type='char').text = test_text
 
         # (3) CompassCalibration and Text Node
         compass_text = ''
@@ -1934,99 +2026,100 @@ class Measurement(object):
             pass
 
         if len(compass_text) > 0:
-            comp_cal = ET.SubElement(qa, 'CompassCalibration')
-            ET.SubElement(comp_cal, 'Text', type='char').text = compass_text
+            comp_cal = ETree.SubElement(qa, 'CompassCalibration')
+            ETree.SubElement(comp_cal, 'Text', type='char').text = compass_text
 
         # (3) MovingBedTest Node
         if self.mb_tests:
             for each in self.mb_tests:
-                mbt = ET.SubElement(qa, 'MovingBedTest')
+                mbt = ETree.SubElement(qa, 'MovingBedTest')
 
                 # (4) Filename Node
-                ET.SubElement(mbt, 'Filename', type='char').text = each.transect.file_name
+                ETree.SubElement(mbt, 'Filename', type='char').text = each.transect.file_name
 
                 # (4) TestType Node
-                ET.SubElement(mbt, 'TestType', type='char').text = each.type
+                ETree.SubElement(mbt, 'TestType', type='char').text = each.type
 
                 # (4) Duration Node
-                ET.SubElement(mbt, 'Duration', type='double', unitsCode='sec').text = '{:.2f}'.format(each.duration_sec)
+                ETree.SubElement(mbt, 'Duration', type='double',
+                                 unitsCode='sec').text = '{:.2f}'.format(each.duration_sec)
 
                 # (4) PercentInvalidBT Node
-                ET.SubElement(mbt, 'PercentInvalidBT', type='double').text = '{:.4f}'.format(each.percent_invalid_bt)
+                ETree.SubElement(mbt, 'PercentInvalidBT', type='double').text = '{:.4f}'.format(each.percent_invalid_bt)
 
                 # (4) HeadingDifference Node
                 if each.compass_diff_deg:
                     temp = '{:.2f}'.format(each.compass_diff_deg)
                 else:
-                    temp =''
-                    ET.SubElement(mbt, 'HeadingDifference', type='double', unitsCode='deg').text = temp
+                    temp = ''
+                ETree.SubElement(mbt, 'HeadingDifference', type='double', unitsCode='deg').text = temp
 
                 # (4) MeanFlowDirection Node
                 if each.flow_dir:
                     temp = '{:.2f}'.format(each.flow_dir)
                 else:
                     temp = ''
-                ET.SubElement(mbt, 'MeanFlowDirection', type='double', unitsCode='deg').text = temp
+                ETree.SubElement(mbt, 'MeanFlowDirection', type='double', unitsCode='deg').text = temp
 
                 # (4) MovingBedDirection Node
                 if each.mb_dir:
                     temp = '{:.2f}'.format(each.mb_dir)
                 else:
                     temp = ''
-                ET.SubElement(mbt, 'MovingBedDirection', type='double', unitsCode='deg').text = temp
+                ETree.SubElement(mbt, 'MovingBedDirection', type='double', unitsCode='deg').text = temp
 
                 # (4) DistanceUpstream Node
-                ET.SubElement(mbt, 'DistanceUpstream', type='double', unitsCode='m').text = \
+                ETree.SubElement(mbt, 'DistanceUpstream', type='double', unitsCode='m').text = \
                     '{:.4f}'.format(each.dist_us_m)
 
                 # (4) MeanFlowSpeed Node
-                ET.SubElement(mbt, 'MeanFlowSpeed', type='double', unitsCode='mps').text = \
+                ETree.SubElement(mbt, 'MeanFlowSpeed', type='double', unitsCode='mps').text = \
                     '{:.4f}'.format(each.flow_spd_mps)
 
                 # (4) MovingBedSpeed Node
-                ET.SubElement(mbt, 'MovingBedSpeed', type='double', unitsCode='mps').text = \
+                ETree.SubElement(mbt, 'MovingBedSpeed', type='double', unitsCode='mps').text = \
                     '{:.4f}'.format(each.mb_spd_mps)
 
                 # (4) PercentMovingBed Node
-                ET.SubElement(mbt, 'PercentMovingBed', type='double').text = '{:.2f}'.format(each.percent_mb)
+                ETree.SubElement(mbt, 'PercentMovingBed', type='double').text = '{:.2f}'.format(each.percent_mb)
 
                 # (4) TestQuality Node
-                ET.SubElement(mbt, 'TestQuality', type='char').text = each.test_quality
+                ETree.SubElement(mbt, 'TestQuality', type='char').text = each.test_quality
 
                 # (4) MovingBedPresent Node
-                ET.SubElement(mbt, 'MovingBedPresent', type='char').text = each.moving_bed
+                ETree.SubElement(mbt, 'MovingBedPresent', type='char').text = each.moving_bed
 
                 # (4) UseToCorrect Node
                 if each.use_2_correct:
-                    ET.SubElement(mbt, 'UseToCorrect', type='char').text = 'Yes'
+                    ETree.SubElement(mbt, 'UseToCorrect', type='char').text = 'Yes'
                 else:
-                    ET.SubElement(mbt, 'UseToCorrect', type='char').text = 'No'
+                    ETree.SubElement(mbt, 'UseToCorrect', type='char').text = 'No'
 
                 # (4) UserValid Node
                 if each.user_valid:
-                    ET.SubElement(mbt, 'UserValid', type='char').text = 'Yes'
+                    ETree.SubElement(mbt, 'UserValid', type='char').text = 'Yes'
                 else:
-                    ET.SubElement(mbt, 'UserValid', type='char').text = 'No'
+                    ETree.SubElement(mbt, 'UserValid', type='char').text = 'No'
 
                 # (4) Message Node
                 if len(each.messages) > 0:
                     str_out = ''
                     for message in each.messages:
-                            str_out = str_out + message + '; '
-                    ET.SubElement(mbt, 'Message', type='char').text = str_out
+                        str_out = str_out + message + '; '
+                    ETree.SubElement(mbt, 'Message', type='char').text = str_out
 
         # (3) TemperatureCheck Node
-        temp_check = ET.SubElement(qa, 'TemperatureCheck')
+        temp_check = ETree.SubElement(qa, 'TemperatureCheck')
 
         # (4) VerificationTemperature Node
         if not np.isnan(self.ext_temp_chk['user']):
-            ET.SubElement(temp_check, 'VerificationTemperature', type='double', unitsCode='degC').text = \
+            ETree.SubElement(temp_check, 'VerificationTemperature', type='double', unitsCode='degC').text = \
                 '{:.2f}'.format(self.ext_temp_chk['user'])
 
         # (4) InstrumentTemperature Node
         if not np.isnan(self.ext_temp_chk['adcp']):
-            ET.SubElement(temp_check, 'InstrumentTemperature', type='double', unitsCode='degC').text = '{:.2f}'.format(
-                self.ext_temp_chk['adcp'])
+            ETree.SubElement(temp_check, 'InstrumentTemperature', type='double',
+                             unitsCode='degC').text = '{:.2f}'.format(self.ext_temp_chk['adcp'])
 
         # (4) TemperatureChange Node:
         temp_all = np.array([np.nan])
@@ -2045,7 +2138,8 @@ class Measurement(object):
                 temp_all = np.concatenate((temp_all, user_arr))
 
         t_range = np.nanmax(temp_all) - np.nanmin(temp_all)
-        ET.SubElement(temp_check, 'TemperatureChange', type='double', unitsCode='degC').text = '{:.2f}'.format(t_range)
+        ETree.SubElement(temp_check, 'TemperatureChange', type='double',
+                         unitsCode='degC').text = '{:.2f}'.format(t_range)
 
         # (3) QRev_Message Node
         qa_check_keys = ['bt_vel', 'compass', 'depths', 'edges', 'extrapolation', 'gga_vel', 'movingbed', 'system_tst',
@@ -2072,34 +2166,34 @@ class Measurement(object):
             temp = ''
             for message in messages:
                 temp = temp + message[0]
-            ET.SubElement(qa, 'QRev_Message', type='char').text = temp
+            ETree.SubElement(qa, 'QRev_Message', type='char').text = temp
 
         # (2) Instrument Node
-        instrument = ET.SubElement(channel, 'Instrument')
+        instrument = ETree.SubElement(channel, 'Instrument')
 
         # (3) Manufacturer Node
-        ET.SubElement(instrument, 'Manufacturer', type='char').text = self.transects[0].adcp.manufacturer
+        ETree.SubElement(instrument, 'Manufacturer', type='char').text = self.transects[0].adcp.manufacturer
 
         # (3) Model Node
-        ET.SubElement(instrument, 'Model', type='char').text = self.transects[0].adcp.model
+        ETree.SubElement(instrument, 'Model', type='char').text = self.transects[0].adcp.model
 
         # (3) SerialNumber Node
         sn = self.transects[0].adcp.serial_num
-        ET.SubElement(instrument, 'SerialNumber', type='char').text = str(sn)
+        ETree.SubElement(instrument, 'SerialNumber', type='char').text = str(sn)
 
         # (3) FirmwareVersion Node
         ver = self.transects[0].adcp.firmware
-        ET.SubElement(instrument, 'FirmwareVersion', type='char').text = str(ver)
+        ETree.SubElement(instrument, 'FirmwareVersion', type='char').text = str(ver)
 
         # (3) Frequency Node
         freq = self.transects[0].adcp.frequency_khz
         if type(freq) == np.ndarray:
             freq = "Multi"
-        ET.SubElement(instrument, 'Frequency', type='char', unitsCode='kHz').text = str(freq)
+        ETree.SubElement(instrument, 'Frequency', type='char', unitsCode='kHz').text = str(freq)
 
         # (3) BeamAngle Node
         ang = self.transects[0].adcp.beam_angle_deg
-        ET.SubElement(instrument, 'BeamAngle', type='double', unitsCode='deg').text = '{:.1f}'.format(ang)
+        ETree.SubElement(instrument, 'BeamAngle', type='double', unitsCode='deg').text = '{:.1f}'.format(ang)
 
         # (3) BlankingDistance Node
         w_vel = []
@@ -2114,7 +2208,7 @@ class Measurement(object):
                 temp = self.transects[0].w_vel.excluded_dist_m
         else:
             temp = self.transects[0].w_vel.excluded_dist_m
-        ET.SubElement(instrument, 'BlankingDistance', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
+        ETree.SubElement(instrument, 'BlankingDistance', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
 
         # (3) InstrumentConfiguration Node
         commands = ''
@@ -2122,32 +2216,33 @@ class Measurement(object):
             for each in self.transects[0].adcp.configuration_commands:
                 if type(each) is str:
                     commands += each + '  '
-            ET.SubElement(instrument, 'InstrumentConfiguration', type='char').text = commands
+            ETree.SubElement(instrument, 'InstrumentConfiguration', type='char').text = commands
 
         # (2) Processing Node
-        processing = ET.SubElement(channel, 'Processing')
+        processing = ETree.SubElement(channel, 'Processing')
 
         # (3) SoftwareVersion Node
-        ET.SubElement(processing, 'SoftwareVersion', type='char').text = version
+        ETree.SubElement(processing, 'SoftwareVersion', type='char').text = version
 
         # (3) Type Node
-        ET.SubElement(processing, 'Type', type='char').text = self.processing
+        ETree.SubElement(processing, 'Type', type='char').text = self.processing
 
         # (3) AreaComputationMethod Node
-        ET.SubElement(processing, 'AreaComputationMethod', type='char').text = 'Parallel'
+        ETree.SubElement(processing, 'AreaComputationMethod', type='char').text = 'Parallel'
 
         # (3) Navigation Node
-        navigation = ET.SubElement(processing, 'Navigation')
+        navigation = ETree.SubElement(processing, 'Navigation')
 
         # (4) Reference Node
-        ET.SubElement(navigation, 'Reference', type='char').text = self.transects[0].w_vel.nav_ref
+        ETree.SubElement(navigation, 'Reference', type='char').text = self.transects[0].w_vel.nav_ref
 
         # (4) CompositeTrack
-        ET.SubElement(navigation, 'CompositeTrack', type='char').text = self.transects[0].boat_vel.composite
+        ETree.SubElement(navigation, 'CompositeTrack', type='char').text = self.transects[0].boat_vel.composite
 
         # (4) MagneticVariation Node
         mag_var = self.transects[0].sensors.heading_deg.internal.mag_var_deg
-        ET.SubElement(navigation, 'MagneticVariation', type='double', unitsCode='deg').text = '{:.2f}'.format(mag_var)
+        ETree.SubElement(navigation, 'MagneticVariation', type='double',
+                         unitsCode='deg').text = '{:.2f}'.format(mag_var)
 
         # (4) BeamFilter
         nav_data = getattr(self.transects[0].boat_vel, self.transects[0].boat_vel.selected)
@@ -2156,58 +2251,58 @@ class Measurement(object):
             temp = 'Auto'
         else:
             temp = str(temp)
-        ET.SubElement(navigation, 'BeamFilter', type='char').text = temp
+        ETree.SubElement(navigation, 'BeamFilter', type='char').text = temp
 
         # (4) ErrorVelocityFilter Node
         evf = nav_data.d_filter
         if evf == 'Manual':
             evf = '{:.4f}'.format(nav_data.d_filter_threshold)
-        ET.SubElement(navigation, 'ErrorVelocityFilter', type='char', unitsCode='mps').text = evf
+        ETree.SubElement(navigation, 'ErrorVelocityFilter', type='char', unitsCode='mps').text = evf
 
         # (4) VerticalVelocityFilter Node
         vvf = nav_data.w_filter
         if vvf == 'Manual':
             vvf = '{:.4f}'.format(nav_data.w_filter_threshold)
-        ET.SubElement(navigation, 'VerticalVelocityFilter', type='char', unitsCode='mps').text = vvf
+        ETree.SubElement(navigation, 'VerticalVelocityFilter', type='char', unitsCode='mps').text = vvf
 
         # (4) OtherFilter Node
         o_f = nav_data.smooth_filter
-        ET.SubElement(navigation, 'OtherFilter', type='char').text = o_f
+        ETree.SubElement(navigation, 'OtherFilter', type='char').text = o_f
 
         # (4) GPSDifferentialQualityFilter Node
         temp = nav_data.gps_diff_qual_filter
         if temp:
             if isinstance(temp, int) or isinstance(temp, float):
                 temp = str(temp)
-            ET.SubElement(navigation, 'GPSDifferentialQualityFilter', type='char').text = temp
+            ETree.SubElement(navigation, 'GPSDifferentialQualityFilter', type='char').text = temp
 
         # (4) GPSAltitudeFilter Node
         temp = nav_data.gps_altitude_filter
         if temp:
             if temp == 'Manual':
                 temp = self.transects[0].boat_vel.gps_altitude_filter_change
-            ET.SubElement(navigation, 'GPSAltitudeFilter', type='char', unitsCode='m').text = str(temp)
+            ETree.SubElement(navigation, 'GPSAltitudeFilter', type='char', unitsCode='m').text = str(temp)
 
         # (4) HDOPChangeFilter
         temp = nav_data.gps_HDOP_filter
         if temp:
             if temp == 'Manual':
                 temp = '{:.2f}'.format(self.transects[0].boat_vel.gps_hdop_filter_change)
-            ET.SubElement(navigation, 'HDOPChangeFilter', type='char').text = temp
+            ETree.SubElement(navigation, 'HDOPChangeFilter', type='char').text = temp
 
         # (4) HDOPThresholdFilter
         temp = nav_data.gps_HDOP_filter
         if temp:
             if temp == 'Manual':
                 temp = '{:.2f}'.format(self.transects[0].boat_vel.gps_HDOP_filter_max)
-            ET.SubElement(navigation, 'HDOPThresholdFilter', type='char').text = temp
+            ETree.SubElement(navigation, 'HDOPThresholdFilter', type='char').text = temp
 
         # (4) InterpolationType Node
         temp = nav_data.interpolate
-        ET.SubElement(navigation, 'InterpolationType', type='char').text = temp
+        ETree.SubElement(navigation, 'InterpolationType', type='char').text = temp
 
         # (3) Depth Node
-        depth = ET.SubElement(processing, 'Depth')
+        depth = ETree.SubElement(processing, 'Depth')
 
         # (4) Reference Node
         if self.transects[0].depths.selected == 'bt_depths':
@@ -2216,15 +2311,15 @@ class Measurement(object):
             temp = 'VB'
         elif self.transects[0].depths.selected == 'ds_depths':
             temp = 'DS'
-        ET.SubElement(depth, 'Reference', type='char').text = temp
+        ETree.SubElement(depth, 'Reference', type='char').text = temp
 
         # (4) CompositeDepth Node
-        ET.SubElement(depth, 'CompositeDepth', type='char').text = self.transects[0].depths.composite
+        ETree.SubElement(depth, 'CompositeDepth', type='char').text = self.transects[0].depths.composite
 
-        depth_data = getattr(self.transects[0].depths, self.transects[0].depths.selected)
         # (4) ADCPDepth Node
+        depth_data = getattr(self.transects[0].depths, self.transects[0].depths.selected)
         temp = depth_data.draft_use_m
-        ET.SubElement(depth, 'ADCPDepth', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
+        ETree.SubElement(depth, 'ADCPDepth', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
 
         # (4) ADCPDepthConsistent Node
         drafts = []
@@ -2238,30 +2333,30 @@ class Measurement(object):
             temp = 'No'
         else:
             temp = 'Yes'
-        ET.SubElement(depth, 'ADCPDepthConsistent', type='boolean').text = temp
+        ETree.SubElement(depth, 'ADCPDepthConsistent', type='boolean').text = temp
 
         # (4) FilterType Node
         temp = depth_data.filter_type
-        ET.SubElement(depth, 'FilterType', type='char').text = temp
+        ETree.SubElement(depth, 'FilterType', type='char').text = temp
 
         # (4) InterpolationType Node
         temp = depth_data.interp_type
-        ET.SubElement(depth, 'InterpolationType', type='char').text = temp
+        ETree.SubElement(depth, 'InterpolationType', type='char').text = temp
 
         # (4) AveragingMethod Node
         temp = depth_data.avg_method
-        ET.SubElement(depth, 'AveragingMethod', type='char').text = temp
+        ETree.SubElement(depth, 'AveragingMethod', type='char').text = temp
 
         # (4) ValidDataMethod Node
         temp = depth_data.valid_data_method
-        ET.SubElement(depth, 'ValidDataMethod', type='char').text = temp
+        ETree.SubElement(depth, 'ValidDataMethod', type='char').text = temp
 
         # (3) WaterTrack Node
-        water_track = ET.SubElement(processing, 'WaterTrack')
+        water_track = ETree.SubElement(processing, 'WaterTrack')
 
         # (4) ExcludedDistance Node
         temp = self.transects[0].w_vel.excluded_dist_m
-        ET.SubElement(water_track, 'ExcludedDistance', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
+        ETree.SubElement(water_track, 'ExcludedDistance', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
 
         # (4) BeamFilter Node
         temp = self.transects[0].w_vel.beam_filter
@@ -2269,46 +2364,46 @@ class Measurement(object):
             temp = 'Auto'
         else:
             temp = str(temp)
-        ET.SubElement(water_track, 'BeamFilter', type='char').text = temp
+        ETree.SubElement(water_track, 'BeamFilter', type='char').text = temp
 
         # (4) ErrorVelocityFilter Node
         temp = self.transects[0].w_vel.d_filter
         if temp == 'Manual':
             temp = '{:.4f}'.format(self.transects[0].w_vel.d_filter_threshold)
-        ET.SubElement(water_track, 'ErrorVelocityFilter', type='char', unitsCode='mps').text = temp
+        ETree.SubElement(water_track, 'ErrorVelocityFilter', type='char', unitsCode='mps').text = temp
 
         # (4) VerticalVelocityFilter Node
         temp = self.transects[0].w_vel.w_filter
         if temp == 'Manual':
             temp = '{:.4f}'.format(self.transects[0].w_vel.w_filter_threshold)
-        ET.SubElement(water_track, 'VerticalVelocityFilter', type='char', unitsCode='mps').text = temp
+        ETree.SubElement(water_track, 'VerticalVelocityFilter', type='char', unitsCode='mps').text = temp
 
         # (4) OtherFilter Node
         temp = self.transects[0].w_vel.smooth_filter
-        ET.SubElement(water_track, 'OtherFilter', type='char').text = temp
+        ETree.SubElement(water_track, 'OtherFilter', type='char').text = temp
 
         # (4) SNRFilter Node
         temp = self.transects[0].w_vel.snr_filter
-        ET.SubElement(water_track, 'SNRFilter', type='char').text = temp
+        ETree.SubElement(water_track, 'SNRFilter', type='char').text = temp
 
         # (4) CellInterpolation Node
         temp = self.transects[0].w_vel.interpolate_cells
-        ET.SubElement(water_track, 'CellInterpolation', type='char').text = temp
+        ETree.SubElement(water_track, 'CellInterpolation', type='char').text = temp
 
         # (4) EnsembleInterpolation Node
         temp = self.transects[0].w_vel.interpolate_ens
-        ET.SubElement(water_track, 'EnsembleInterpolation', type='char').text = temp
+        ETree.SubElement(water_track, 'EnsembleInterpolation', type='char').text = temp
 
         # (3) Edge Node
-        edge = ET.SubElement(processing, 'Edge')
+        edge = ETree.SubElement(processing, 'Edge')
 
         # (4) RectangularEdgeMethod Node
         temp = self.transects[0].edges.rec_edge_method
-        ET.SubElement(edge, 'RectangularEdgeMethod', type='char').text = temp
+        ETree.SubElement(edge, 'RectangularEdgeMethod', type='char').text = temp
 
         # (4) VelocityMethod Node
         temp = self.transects[0].edges.vel_method
-        ET.SubElement(edge, 'VelocityMethod', type='char').text = temp
+        ETree.SubElement(edge, 'VelocityMethod', type='char').text = temp
 
         # (4) LeftType Node
         typ = []
@@ -2321,7 +2416,7 @@ class Measurement(object):
             temp = 'Varies'
         else:
             temp = typ[0]
-        ET.SubElement(edge, 'LeftType', type='char').text = temp
+        ETree.SubElement(edge, 'LeftType', type='char').text = temp
 
         # LeftEdgeCoefficient
         if temp == 'User Q':
@@ -2338,7 +2433,7 @@ class Measurement(object):
                 temp = 'Varies'
             else:
                 temp = '{:.4f}'.format(coef[0])
-        ET.SubElement(edge, 'LeftEdgeCoefficient', type='char').text = temp
+        ETree.SubElement(edge, 'LeftEdgeCoefficient', type='char').text = temp
 
         # (4) RightType Node
         typ = []
@@ -2351,7 +2446,7 @@ class Measurement(object):
             temp = 'Varies'
         else:
             temp = typ[0]
-        ET.SubElement(edge, 'RightType', type='char').text = temp
+        ETree.SubElement(edge, 'RightType', type='char').text = temp
 
         # RightEdgeCoefficient
         if temp == 'User Q':
@@ -2368,25 +2463,25 @@ class Measurement(object):
                 temp = 'Varies'
             else:
                 temp = '{:.4f}'.format(coef[0])
-        ET.SubElement(edge, 'RightEdgeCoefficient', type='char').text = temp
+        ETree.SubElement(edge, 'RightEdgeCoefficient', type='char').text = temp
 
         # (3) Extrapolation Node
-        extrap = ET.SubElement(processing, 'Extrapolation')
+        extrap = ETree.SubElement(processing, 'Extrapolation')
 
         # (4) TopMethod Node
         temp = self.transects[0].extrap.top_method
-        ET.SubElement(extrap, 'TopMethod', type='char').text = temp
+        ETree.SubElement(extrap, 'TopMethod', type='char').text = temp
 
         # (4) BottomMethod Node
         temp = self.transects[0].extrap.bot_method
-        ET.SubElement(extrap, 'BottomMethod', type='char').text = temp
+        ETree.SubElement(extrap, 'BottomMethod', type='char').text = temp
 
         # (4) Exponent Node
         temp = self.transects[0].extrap.exponent
-        ET.SubElement(extrap, 'Exponent', type='double').text = '{:.4f}'.format(temp)
+        ETree.SubElement(extrap, 'Exponent', type='double').text = '{:.4f}'.format(temp)
 
         # (3) Sensor Node
-        sensor = ET.SubElement(processing, 'Sensor')
+        sensor = ETree.SubElement(processing, 'Sensor')
 
         # (4) TemperatureSource Node
         temp = []
@@ -2399,7 +2494,7 @@ class Measurement(object):
             temp = 'Varies'
         else:
             temp = temp[0]
-        ET.SubElement(sensor, 'TemperatureSource', type='char').text = temp
+        ETree.SubElement(sensor, 'TemperatureSource', type='char').text = temp
 
         # (4) Salinity
         temp = np.array([])
@@ -2412,7 +2507,7 @@ class Measurement(object):
             temp = 'Varies'
         else:
             temp = '{:2.1f}'.format(values[0])
-        ET.SubElement(sensor, 'Salinity', type='char', unitsCode='ppt').text = temp
+        ETree.SubElement(sensor, 'Salinity', type='char', unitsCode='ppt').text = temp
 
         # (4) SpeedofSound Node
         temp = []
@@ -2426,191 +2521,183 @@ class Measurement(object):
             temp = temp[0]
         if temp == 'internal':
             temp = 'ADCP'
-        ET.SubElement(sensor, 'SpeedofSound', type='char', unitsCode='mps').text = temp
+        ETree.SubElement(sensor, 'SpeedofSound', type='char', unitsCode='mps').text = temp
 
         # (2) Transect Node
         other_prop = self.compute_measurement_properties(self)
         for n in range(len(self.transects)):
             if self.transects[n].checked:
-                transect = ET.SubElement(channel, 'Transect')
+                transect = ETree.SubElement(channel, 'Transect')
 
                 # (3) Filename Node
                 temp = self.transects[n].file_name
-                ET.SubElement(transect, 'Filename', type='char').text = temp
+                ETree.SubElement(transect, 'Filename', type='char').text = temp
 
                 # (3) StartDateTime Node
                 temp = int(self.transects[n].date_time.start_serial_time)
                 temp = datetime.datetime.utcfromtimestamp(temp).strftime('%m/%d/%Y %H:%M:%S')
-                ET.SubElement(transect, 'StartDateTime', type='char').text = temp
+                ETree.SubElement(transect, 'StartDateTime', type='char').text = temp
 
                 # (3) EndDateTime Node
                 temp = int(self.transects[n].date_time.end_serial_time)
                 temp = datetime.datetime.utcfromtimestamp(temp).strftime('%m/%d/%Y %H:%M:%S')
-                ET.SubElement(transect, 'EndDateTime', type='char').text = temp
+                ETree.SubElement(transect, 'EndDateTime', type='char').text = temp
 
                 # (3) Discharge Node
-                t_q = ET.SubElement(transect, 'Discharge')
+                t_q = ETree.SubElement(transect, 'Discharge')
 
                 # (4) Top Node
                 temp = self.discharge[n].top
-                ET.SubElement(t_q, 'Top', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+                ETree.SubElement(t_q, 'Top', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
 
                 # (4) Middle Node
                 temp = self.discharge[n].middle
-                ET.SubElement(t_q, 'Middle', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+                ETree.SubElement(t_q, 'Middle', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
 
                 # (4) Bottom Node
                 temp = self.discharge[n].bottom
-                ET.SubElement(t_q, 'Bottom', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+                ETree.SubElement(t_q, 'Bottom', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
 
                 # (4) Left Node
                 temp = self.discharge[n].left
-                ET.SubElement(t_q, 'Left', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+                ETree.SubElement(t_q, 'Left', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
 
                 # (4) Right Node
                 temp = self.discharge[n].right
-                ET.SubElement(t_q, 'Right', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+                ETree.SubElement(t_q, 'Right', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
 
                 # (4) Total Node
                 temp = self.discharge[n].total
-                ET.SubElement(t_q, 'Total', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+                ETree.SubElement(t_q, 'Total', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
 
                 # (4) MovingBedPercentCorrection Node
                 temp = ((self.discharge[n].total / self.discharge[n].total_uncorrected) - 1) * 100
-                ET.SubElement(t_q, 'MovingBedPercentCorrection', type='double').text = '{:.2f}'.format(temp)
+                ETree.SubElement(t_q, 'MovingBedPercentCorrection', type='double').text = '{:.2f}'.format(temp)
 
                 # (3) Edge Node
-                t_edge = ET.SubElement(transect, 'Edge')
+                t_edge = ETree.SubElement(transect, 'Edge')
 
                 # (4) StartEdge Node
                 temp = self.transects[n].start_edge
-                ET.SubElement(t_edge, 'StartEdge', type='char').text = temp
+                ETree.SubElement(t_edge, 'StartEdge', type='char').text = temp
 
                 # (4) RectangularEdgeMethod Node
                 temp = self.transects[n].edges.rec_edge_method
-                ET.SubElement(t_edge, 'RectangularEdgeMethod', type='char').text = temp
+                ETree.SubElement(t_edge, 'RectangularEdgeMethod', type='char').text = temp
 
                 # (4) VelocityMethod Node
                 temp = self.transects[n].edges.vel_method
-                ET.SubElement(t_edge, 'VelocityMethod', type='char').text = temp
+                ETree.SubElement(t_edge, 'VelocityMethod', type='char').text = temp
 
                 # (4) LeftType Node
                 temp = self.transects[n].edges.left.type
-                ET.SubElement(t_edge, 'LeftType', type='char').text = temp
+                ETree.SubElement(t_edge, 'LeftType', type='char').text = temp
 
                 # (4) LeftEdgeCoefficient Node
                 temp = '{:.4f}'.format(QComp.edge_coef('left', self.transects[n]))
-                ET.SubElement(t_edge, 'LeftEdgeCoefficient', type='double').text = temp
+                ETree.SubElement(t_edge, 'LeftEdgeCoefficient', type='double').text = temp
 
                 # (4) LeftDistance Node
                 temp = '{:.4f}'.format(self.transects[n].edges.left.distance_m)
-                ET.SubElement(t_edge, 'LeftDistance', type='double', unitsCode='m').text = temp
+                ETree.SubElement(t_edge, 'LeftDistance', type='double', unitsCode='m').text = temp
 
                 # (4) LeftNumberEnsembles
                 temp = '{:.0f}'.format(self.transects[n].edges.left.number_ensembles)
-                ET.SubElement(t_edge, 'LeftNumberEnsembles', type='double').text = temp
+                ETree.SubElement(t_edge, 'LeftNumberEnsembles', type='double').text = temp
 
                 # (4) RightType Node
                 temp = self.transects[n].edges.right.type
-                ET.SubElement(t_edge, 'RightType', type='char').text = temp
+                ETree.SubElement(t_edge, 'RightType', type='char').text = temp
 
                 # (4) RightEdgeCoefficient Node
                 temp = '{:.4f}'.format(QComp.edge_coef('right', self.transects[n]))
-                ET.SubElement(t_edge, 'RightEdgeCoefficient', type='double').text = temp
+                ETree.SubElement(t_edge, 'RightEdgeCoefficient', type='double').text = temp
 
                 # (4) RightDistance Node
                 temp = '{:.4f}'.format(self.transects[n].edges.right.distance_m)
-                ET.SubElement(t_edge, 'RightDistance', type='double', unitsCode='m').text = temp
+                ETree.SubElement(t_edge, 'RightDistance', type='double', unitsCode='m').text = temp
 
                 # (4) RightNumberEnsembles Node
                 temp = '{:.0f}'.format(self.transects[n].edges.right.number_ensembles)
-                ET.SubElement(t_edge, 'RightNumberEnsembles', type='double').text = temp
+                ETree.SubElement(t_edge, 'RightNumberEnsembles', type='double').text = temp
 
                 # (3) Sensor Node
-                t_sensor = ET.SubElement(transect, 'Sensor')
+                t_sensor = ETree.SubElement(transect, 'Sensor')
 
                 # (4) TemperatureSource Node
                 temp = self.transects[n].sensors.temperature_deg_c.selected
-                ET.SubElement(t_sensor, 'TemperatureSource', type='char').text = temp
+                ETree.SubElement(t_sensor, 'TemperatureSource', type='char').text = temp
 
                 # (4) MeanTemperature Node
                 dat = getattr(self.transects[n].sensors.temperature_deg_c,
                               self.transects[n].sensors.temperature_deg_c.selected)
                 temp = np.nanmean(dat.data)
                 temp = '{:.2f}'.format(temp)
-                ET.SubElement(t_sensor, 'MeanTemperature', type='double', unitsCode='degC').text = temp
+                ETree.SubElement(t_sensor, 'MeanTemperature', type='double', unitsCode='degC').text = temp
 
                 # (4) MeanSalinity
                 sal_data = getattr(self.transects[n].sensors.salinity_ppt,
                                    self.transects[n].sensors.salinity_ppt.selected)
                 temp = '{:.0f}'.format(np.nanmean(sal_data.data))
-                ET.SubElement(t_sensor, 'MeanSalinity', type='double', unitsCode='ppt').text = temp
+                ETree.SubElement(t_sensor, 'MeanSalinity', type='double', unitsCode='ppt').text = temp
 
                 # (4) SpeedofSoundSource Node
                 sos_selected = getattr(self.transects[n].sensors.speed_of_sound_mps,
                                        self.transects[n].sensors.speed_of_sound_mps.selected)
-                # if temp == 'internal':
-                #     temp = 'ADCP'
-                # elif temp == 'user':
-                #     sos_data = getattr(self.transects[n].sensors.speed_of_sound_mps,
-                #                        self.transects[n].sensors.speed_of_sound_mps.selected)
-                #     if sos_data.source == 'Calculated':
-                #         temp = 'Calc'
-                #     else:
-                #         temp = 'User'
                 temp = sos_selected.source
-                ET.SubElement(t_sensor, 'SpeedofSoundSource', type='char').text = temp
+                ETree.SubElement(t_sensor, 'SpeedofSoundSource', type='char').text = temp
 
                 # (4) SpeedofSound
                 sos_data = getattr(self.transects[n].sensors.speed_of_sound_mps,
                                    self.transects[n].sensors.speed_of_sound_mps.selected)
                 temp = '{:.4f}'.format(np.nanmean(sos_data.data))
-                ET.SubElement(t_sensor, 'SpeedofSound', type='double', unitsCode='mps').text = temp
+                ETree.SubElement(t_sensor, 'SpeedofSound', type='double', unitsCode='mps').text = temp
 
                 # (3) Other Node
-                t_other = ET.SubElement(transect, 'Other')
+                t_other = ETree.SubElement(transect, 'Other')
 
                 # (4) Duration Node
                 temp = '{:.2f}'.format(self.transects[n].date_time.transect_duration_sec)
-                ET.SubElement(t_other, 'Duration', type='double', unitsCode='sec').text = temp
+                ETree.SubElement(t_other, 'Duration', type='double', unitsCode='sec').text = temp
 
                 # (4) Width
                 temp = other_prop['width'][n]
-                ET.SubElement(t_other, 'Width', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
+                ETree.SubElement(t_other, 'Width', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
 
                 # (4) Area
                 temp = other_prop['area'][n]
-                ET.SubElement(t_other, 'Area', type='double', unitsCode='sqm').text = '{:.4f}'.format(temp)
+                ETree.SubElement(t_other, 'Area', type='double', unitsCode='sqm').text = '{:.4f}'.format(temp)
 
                 # (4) MeanBoatSpeed
                 temp = other_prop['avg_boat_speed'][n]
-                ET.SubElement(t_other, 'MeanBoatSpeed', type='double', unitsCode='mps').text = '{:.4f}'.format(temp)
+                ETree.SubElement(t_other, 'MeanBoatSpeed', type='double', unitsCode='mps').text = '{:.4f}'.format(temp)
 
                 # (4) QoverA
                 temp = other_prop['avg_water_speed'][n]
-                ET.SubElement(t_other, 'QoverA', type='double', unitsCode='mps').text = '{:.4f}'.format(temp)
+                ETree.SubElement(t_other, 'QoverA', type='double', unitsCode='mps').text = '{:.4f}'.format(temp)
 
                 # (4) CourseMadeGood
                 temp = other_prop['avg_boat_course'][n]
-                ET.SubElement(t_other, 'CourseMadeGood', type='double', unitsCode='deg').text = '{:.2f}'.format(temp)
+                ETree.SubElement(t_other, 'CourseMadeGood', type='double', unitsCode='deg').text = '{:.2f}'.format(temp)
 
                 # (4) MeanFlowDirection
                 temp = other_prop['avg_water_dir'][n]
-                ET.SubElement(t_other, 'MeanFlowDirection', type='double', unitsCode='deg').text = '{:.2f}'.format(temp)
+                ETree.SubElement(t_other, 'MeanFlowDirection', type='double',
+                                 unitsCode='deg').text = '{:.2f}'.format(temp)
 
                 # (4) NumberofEnsembles
                 temp = len(self.transects[n].boat_vel.bt_vel.u_processed_mps)
-                ET.SubElement(t_other, 'NumberofEnsembles', type='integer').text = str(temp)
+                ETree.SubElement(t_other, 'NumberofEnsembles', type='integer').text = str(temp)
 
                 # (4) PercentInvalidBins
                 valid_ens, valid_cells = TransectData.raw_valid_data(self.transects[n])
                 temp = (1 - (np.nansum(np.nansum(valid_cells))
                              / np.nansum(np.nansum(self.transects[n].w_vel.cells_above_sl)))) * 100
-                ET.SubElement(t_other, 'PercentInvalidBins', type='double').text = '{:.2f}'.format(temp)
+                ETree.SubElement(t_other, 'PercentInvalidBins', type='double').text = '{:.2f}'.format(temp)
 
                 # (4) PercentInvalidEnsembles
                 temp = (1 - (np.nansum(valid_ens) / len(self.transects[n].boat_vel.bt_vel.u_processed_mps))) * 100
-                ET.SubElement(t_other, 'PercentInvalidEns', type='double').text = '{:.2f}'.format(temp)
+                ETree.SubElement(t_other, 'PercentInvalidEns', type='double').text = '{:.2f}'.format(temp)
 
                 pitch_source_selected = getattr(self.transects[n].sensors.pitch_deg,
                                                 self.transects[n].sensors.pitch_deg.selected)
@@ -2619,287 +2706,286 @@ class Measurement(object):
 
                 # (4) MeanPitch
                 temp = np.nanmean(pitch_source_selected.data)
-                ET.SubElement(t_other, 'MeanPitch', type='double', unitsCode='deg').text = '{:.2f}'.format(temp)
+                ETree.SubElement(t_other, 'MeanPitch', type='double', unitsCode='deg').text = '{:.2f}'.format(temp)
 
                 # (4) MeanRoll
                 temp = np.nanmean(roll_source_selected.data)
-                ET.SubElement(t_other, 'MeanRoll', type='double', unitsCode='deg').text = '{:.2f}'.format(temp)
+                ETree.SubElement(t_other, 'MeanRoll', type='double', unitsCode='deg').text = '{:.2f}'.format(temp)
 
                 # (4) PitchStdDev
                 temp = np.nanstd(pitch_source_selected.data, ddof=1)
-                ET.SubElement(t_other, 'PitchStdDev', type='double', unitsCode='deg').text = '{:.2f}'.format(temp)
+                ETree.SubElement(t_other, 'PitchStdDev', type='double', unitsCode='deg').text = '{:.2f}'.format(temp)
 
                 # (4) RollStdDev
                 temp = np.nanstd(roll_source_selected.data, ddof=1)
-                ET.SubElement(t_other, 'RollStdDev', type='double', unitsCode='deg').text = '{:.2f}'.format(temp)
+                ETree.SubElement(t_other, 'RollStdDev', type='double', unitsCode='deg').text = '{:.2f}'.format(temp)
 
                 # (4) ADCPDepth
                 depth_source_selected = getattr(self.transects[n].depths,
                                                 self.transects[n].depths.selected)
                 temp = depth_source_selected.draft_use_m
-                ET.SubElement(t_other, 'ADCPDepth', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
+                ETree.SubElement(t_other, 'ADCPDepth', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
 
         # (2) ChannelSummary Node
-        summary = ET.SubElement(channel, 'ChannelSummary')
+        summary = ETree.SubElement(channel, 'ChannelSummary')
 
         # (3) Discharge Node
-        s_q = ET.SubElement(summary, 'Discharge')
+        s_q = ETree.SubElement(summary, 'Discharge')
         discharge = self.mean_discharges(self)
 
         # (4) Top
         temp = discharge['top_mean']
-        ET.SubElement(s_q, 'Top', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+        ETree.SubElement(s_q, 'Top', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
 
         # (4) Middle
         temp = discharge['mid_mean']
-        ET.SubElement(s_q, 'Middle', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+        ETree.SubElement(s_q, 'Middle', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
 
         # (4) Bottom
         temp = discharge['bot_mean']
-        ET.SubElement(s_q, 'Bottom', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+        ETree.SubElement(s_q, 'Bottom', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
 
         # (4) Left
         temp = discharge['left_mean']
-        ET.SubElement(s_q, 'Left', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+        ETree.SubElement(s_q, 'Left', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
 
         # (4) Right
         temp = discharge['right_mean']
-        ET.SubElement(s_q, 'Right', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+        ETree.SubElement(s_q, 'Right', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
 
         # (4) Total
         temp = discharge['total_mean']
-        ET.SubElement(s_q, 'Total', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+        ETree.SubElement(s_q, 'Total', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
 
         # (4) MovingBedPercentCorrection
         temp = ((discharge['total_mean'] / discharge['uncorrected_mean']) - 1) * 100
-        ET.SubElement(s_q, 'MovingBedPercentCorrection', type='double').text = '{:.2f}'.format(temp)
+        ETree.SubElement(s_q, 'MovingBedPercentCorrection', type='double').text = '{:.2f}'.format(temp)
 
         # (3) Uncertainty Node
-        s_u = ET.SubElement(summary, 'Uncertainty')
+        s_u = ETree.SubElement(summary, 'Uncertainty')
         uncertainty = self.uncertainty
 
         # (4) COV Node
         temp = uncertainty.cov
-        if np.isnan(temp) == False:
-            ET.SubElement(s_u, 'COV', type='double').text = '{:.1f}'.format(temp)
+        if not np.isnan(temp):
+            ETree.SubElement(s_u, 'COV', type='double').text = '{:.1f}'.format(temp)
 
         # (4) AutoRandom Node
         temp = uncertainty.cov_95
-        if np.isnan(temp) == False:
-            ET.SubElement(s_u, 'AutoRandom', type='double').text = '{:.1f}'.format(temp)
+        if not np.isnan(temp):
+            ETree.SubElement(s_u, 'AutoRandom', type='double').text = '{:.1f}'.format(temp)
 
         # (4) AutoInvalidData Node
         temp = uncertainty.invalid_95
-        ET.SubElement(s_u, 'AutoInvalidData', type='double').text = '{:.1f}'.format(temp)
+        ETree.SubElement(s_u, 'AutoInvalidData', type='double').text = '{:.1f}'.format(temp)
 
         # (4) AutoEdge Node
         temp = uncertainty.edges_95
-        ET.SubElement(s_u, 'AutoEdge', type='double').text = '{:.1f}'.format(temp)
+        ETree.SubElement(s_u, 'AutoEdge', type='double').text = '{:.1f}'.format(temp)
 
         # (4) AutoExtrapolation Node
         temp = uncertainty.extrapolation_95
-        ET.SubElement(s_u, 'AutoExtrapolation', type='double').text = '{:.1f}'.format(temp)
+        ETree.SubElement(s_u, 'AutoExtrapolation', type='double').text = '{:.1f}'.format(temp)
 
         # (4) AutoMovingBed
         temp = uncertainty.moving_bed_95
-        ET.SubElement(s_u, 'AutoMovingBed', type='double').text = '{:.1f}'.format(temp)
+        ETree.SubElement(s_u, 'AutoMovingBed', type='double').text = '{:.1f}'.format(temp)
 
         # (4) AutoSystematic
         temp = uncertainty.systematic
-        ET.SubElement(s_u, 'AutoSystematic', type='double').text = '{:.1f}'.format(temp)
+        ETree.SubElement(s_u, 'AutoSystematic', type='double').text = '{:.1f}'.format(temp)
 
         # (4) AutoTotal
         temp = uncertainty.total_95
-        if np.isnan(temp) == False:
-            ET.SubElement(s_u, 'AutoTotal', type='double').text = '{:.1f}'.format(temp)
+        if not np.isnan(temp):
+            ETree.SubElement(s_u, 'AutoTotal', type='double').text = '{:.1f}'.format(temp)
 
         # (4) UserRandom Node
         user_random = uncertainty.cov_95_user
         if user_random:
-            ET.SubElement(s_u, 'UserRandom', type='double').text = '{:.1f}'.format(user_random)
+            ETree.SubElement(s_u, 'UserRandom', type='double').text = '{:.1f}'.format(user_random)
 
         # (4) UserInvalidData Node
         user_invalid = uncertainty.invalid_95_user
         if user_invalid:
-            ET.SubElement(s_u, 'UserInvalidData', type='double').text = '{:.1f}'.format(user_invalid)
+            ETree.SubElement(s_u, 'UserInvalidData', type='double').text = '{:.1f}'.format(user_invalid)
 
         # (4) UserEdge
         user_edge = uncertainty.edges_95_user
         if user_edge:
-            ET.SubElement(s_u, 'UserEdge', type='double').text = '{:.1f}'.format(user_edge)
+            ETree.SubElement(s_u, 'UserEdge', type='double').text = '{:.1f}'.format(user_edge)
 
         # (4) UserExtrapolation
         user_extrap = uncertainty.extrapolation_95_user
         if user_extrap:
-            ET.SubElement(s_u, 'UserExtrapolation', type='double').text = '{:.1f}'.format(user_extrap)
+            ETree.SubElement(s_u, 'UserExtrapolation', type='double').text = '{:.1f}'.format(user_extrap)
 
         # (4) UserMovingBed
         user_mb = uncertainty.moving_bed_95_user
         if user_mb:
-            ET.SubElement(s_u, 'UserMovingBed', type='double').text = '{:.1f}'.format(user_mb)
+            ETree.SubElement(s_u, 'UserMovingBed', type='double').text = '{:.1f}'.format(user_mb)
 
         # (4) UserSystematic
         user_systematic = uncertainty.systematic_user
         if user_systematic:
-            ET.SubElement(s_u, 'UserSystematic', type='double').text = '{:.1f}'.format(user_systematic)
+            ETree.SubElement(s_u, 'UserSystematic', type='double').text = '{:.1f}'.format(user_systematic)
 
         # (4) UserTotal Node
         temp = uncertainty.total_95_user
-        if np.isnan(temp) == False:
-            ET.SubElement(s_u, 'UserTotal', type='double').text = '{:.1f}'.format(temp)
+        if not np.isnan(temp):
+            ETree.SubElement(s_u, 'UserTotal', type='double').text = '{:.1f}'.format(temp)
 
         # (4) Random
         if user_random:
             temp = user_random
         else:
             temp = uncertainty.cov_95
-        if np.isnan(temp) == False:
-            ET.SubElement(s_u, 'Random', type='double').text = '{:.1f}'.format(temp)
+        if not np.isnan(temp):
+            ETree.SubElement(s_u, 'Random', type='double').text = '{:.1f}'.format(temp)
 
         # (4) InvalidData
         if user_invalid:
             temp = user_invalid
         else:
             temp = uncertainty.invalid_95
-        ET.SubElement(s_u, 'InvalidData', type='double').text = '{:.1f}'.format(temp)
+        ETree.SubElement(s_u, 'InvalidData', type='double').text = '{:.1f}'.format(temp)
 
         # (4) Edge
         if user_edge:
             temp = user_edge
         else:
             temp = uncertainty.edges_95
-        ET.SubElement(s_u, 'Edge', type='double').text = '{:.1f}'.format(temp)
+        ETree.SubElement(s_u, 'Edge', type='double').text = '{:.1f}'.format(temp)
 
         # (4) Extrapolation
         if user_extrap:
             temp = user_extrap
         else:
             temp = uncertainty.extrapolation_95
-        ET.SubElement(s_u, 'Extrapolation', type='double').text = '{:.1f}'.format(temp)
+        ETree.SubElement(s_u, 'Extrapolation', type='double').text = '{:.1f}'.format(temp)
 
         # (4) MovingBed
         if user_mb:
             temp = user_mb
         else:
             temp = uncertainty.moving_bed_95
-        ET.SubElement(s_u, 'MovingBed', type='double').text = '{:.1f}'.format(temp)
+        ETree.SubElement(s_u, 'MovingBed', type='double').text = '{:.1f}'.format(temp)
 
         # (4) Systematic
         if user_systematic:
             temp = user_systematic
         else:
             temp = uncertainty.systematic
-        ET.SubElement(s_u, 'Systematic', type='double').text = '{:.1f}'.format(temp)
+        ETree.SubElement(s_u, 'Systematic', type='double').text = '{:.1f}'.format(temp)
 
         # (4) UserTotal Node
         temp = uncertainty.total_95_user
-        if np.isnan(temp) == False:
-            ET.SubElement(s_u, 'Total', type='double').text = '{:.1f}'.format(temp)
+        if not np.isnan(temp):
+            ETree.SubElement(s_u, 'Total', type='double').text = '{:.1f}'.format(temp)
 
         # (3) Other Node
-        s_o = ET.SubElement(summary, 'Other')
+        s_o = ETree.SubElement(summary, 'Other')
 
         # (4) MeanWidth
         temp = other_prop['width'][-1]
-        ET.SubElement(s_o, 'MeanWidth', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
+        ETree.SubElement(s_o, 'MeanWidth', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
 
         # (4) WidthCOV
         temp = other_prop['width_cov'][-1]
-        if np.isnan(temp) == False:
-            ET.SubElement(s_o, 'WidthCOV', type='double').text = '{:.4f}'.format(temp)
+        if not np.isnan(temp):
+            ETree.SubElement(s_o, 'WidthCOV', type='double').text = '{:.4f}'.format(temp)
 
         # (4) MeanArea
         temp = other_prop['area'][-1]
-        ET.SubElement(s_o, 'MeanArea', type='double', unitsCode='sqm').text = '{:.4f}'.format(temp)
+        ETree.SubElement(s_o, 'MeanArea', type='double', unitsCode='sqm').text = '{:.4f}'.format(temp)
 
         # (4) AreaCOV
         temp = other_prop['area_cov'][-1]
-        if np.isnan(temp) == False:
-            ET.SubElement(s_o, 'AreaCOV', type='double').text = '{:.2f}'.format(temp)
+        if not np.isnan(temp):
+            ETree.SubElement(s_o, 'AreaCOV', type='double').text = '{:.2f}'.format(temp)
 
         # (4) MeanBoatSpeed
         temp = other_prop['avg_boat_speed'][-1]
-        ET.SubElement(s_o, 'MeanBoatSpeed', type='double', unitsCode='mps').text = '{:.4f}'.format(temp)
+        ETree.SubElement(s_o, 'MeanBoatSpeed', type='double', unitsCode='mps').text = '{:.4f}'.format(temp)
 
         # (4) MeanQoverA
         temp = other_prop['avg_water_speed'][-1]
-        ET.SubElement(s_o, 'MeanQoverA', type='double', unitsCode='mps').text = '{:.4f}'.format(temp)
+        ETree.SubElement(s_o, 'MeanQoverA', type='double', unitsCode='mps').text = '{:.4f}'.format(temp)
 
         # (4) MeanCourseMadeGood
         temp = other_prop['avg_boat_course'][-1]
-        ET.SubElement(s_o, 'MeanCourseMadeGood', type='double', unitsCode='deg').text = '{:.2f}'.format(temp)
+        ETree.SubElement(s_o, 'MeanCourseMadeGood', type='double', unitsCode='deg').text = '{:.2f}'.format(temp)
 
         # (4) MeanFlowDirection
         temp = other_prop['avg_water_dir'][-1]
-        ET.SubElement(s_o, 'MeanFlowDirection', type='double', unitsCode='deg').text = '{:.2f}'.format(temp)
+        ETree.SubElement(s_o, 'MeanFlowDirection', type='double', unitsCode='deg').text = '{:.2f}'.format(temp)
 
         # (4) MeanDepth
         temp = other_prop['avg_depth'][-1]
-        ET.SubElement(s_o, 'MeanDepth', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
+        ETree.SubElement(s_o, 'MeanDepth', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
 
         # (4) MaximumDepth
         temp = other_prop['max_depth'][-1]
-        ET.SubElement(s_o, 'MaximumDepth', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
+        ETree.SubElement(s_o, 'MaximumDepth', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
 
         # (4) MaximumWaterSpeed
         temp = other_prop['max_water_speed'][-1]
-        ET.SubElement(s_o, 'MaximumWaterSpeed', type='double', unitsCode='mps').text = '{:.4f}'.format(temp)
+        ETree.SubElement(s_o, 'MaximumWaterSpeed', type='double', unitsCode='mps').text = '{:.4f}'.format(temp)
 
         # (4) NumberofTransects
         temp = len(self.checked_transects(self))
-        ET.SubElement(s_o, 'NumberofTransects', type='integer').text = str(temp)
+        ETree.SubElement(s_o, 'NumberofTransects', type='integer').text = str(temp)
 
         # (4) Duration
         temp = self.measurement_duration(self)
-        ET.SubElement(s_o, 'Duration', type='double', unitsCode='sec').text = '{:.2f}'.format(temp)
+        ETree.SubElement(s_o, 'Duration', type='double', unitsCode='sec').text = '{:.2f}'.format(temp)
 
         # (4) LeftQPer
         temp = 100 * discharge['left_mean'] / discharge['total_mean']
-        ET.SubElement(s_o, 'LeftQPer', type='double').text = '{:.2f}'.format(temp)
+        ETree.SubElement(s_o, 'LeftQPer', type='double').text = '{:.2f}'.format(temp)
 
         # (4) RightQPer
         temp = 100 * discharge['right_mean'] / discharge['total_mean']
-        ET.SubElement(s_o, 'RightQPer', type='double').text = '{:.2f}'.format(temp)
+        ETree.SubElement(s_o, 'RightQPer', type='double').text = '{:.2f}'.format(temp)
 
         # (4) InvalidCellsQPer
         temp = 100 * discharge['int_cells_mean'] / discharge['total_mean']
-        ET.SubElement(s_o, 'InvalidCellsQPer', type='double').text = '{:.2f}'.format(temp)
+        ETree.SubElement(s_o, 'InvalidCellsQPer', type='double').text = '{:.2f}'.format(temp)
 
         # (4) InvalidEnsQPer
         temp = 100 * discharge['int_ensembles_mean'] / discharge['total_mean']
-        ET.SubElement(s_o, 'InvalidEnsQPer', type='double').text = '{:.2f}'.format(temp)
+        ETree.SubElement(s_o, 'InvalidEnsQPer', type='double').text = '{:.2f}'.format(temp)
 
         # (4) UserRating
         if self.user_rating:
             temp = self.user_rating
         else:
             temp = 'Not Rated'
-        ET.SubElement(s_o, 'UserRating', type='char').text = temp
+        ETree.SubElement(s_o, 'UserRating', type='char').text = temp
 
         # (4) DischargePPDefault
         temp = self.extrap_fit.q_sensitivity.q_pp_mean
-        ET.SubElement(s_o, 'DischargePPDefault', type='double').text = '{:.2f}'.format(temp)
+        ETree.SubElement(s_o, 'DischargePPDefault', type='double').text = '{:.2f}'.format(temp)
 
         # (4) UserComment
         if len(self.comments) > 1:
             temp = ''
             for comment in self.comments:
                 temp = temp + comment.replace('\n', ' |||') + ' |||'
-            ET.SubElement(s_o, 'UserComment', type='char').text = temp
+            ETree.SubElement(s_o, 'UserComment', type='char').text = temp
 
         # Create xml output file
         with open(file_name, 'wb') as xml_file:
             # Create binary coded output file
-            et = ET.ElementTree(channel)
+            et = ETree.ElementTree(channel)
             root = et.getroot()
-            xml_out = ET.tostring(root)
+            xml_out = ETree.tostring(root)
             # Add stylesheet instructions
             xml_out = b'<?xml-stylesheet type= "text/xsl" href="QRevStylesheet.xsl"?>' + xml_out
             # Add tabs to make output more readable and apply utf-8 encoding
             xml_out = parseString(xml_out).toprettyxml(encoding='utf-8')
             # Write file
             xml_file.write(xml_out)
-
 
 
 if __name__ == '__main__':

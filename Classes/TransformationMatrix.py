@@ -93,7 +93,7 @@ class TransformationMatrix(object):
             if idx != -1:
                 cell_matrix = np.fromstring(data_in[idx + 50:idx + 356], dtype=np.float64, sep=' ')
                 try:
-                    self.matrix = np.reshape(cell_matrix,(-1,8))[:, 0:4]
+                    self.matrix = np.reshape(cell_matrix, (-1, 8))[:, 0:4]
 
                     self.source = 'ADCP'
                 except ValueError:
@@ -116,28 +116,27 @@ class TransformationMatrix(object):
                 temp_str = temp_str[:temp_str.find('>')]
                 cell_matrix = np.fromstring(temp_str, dtype=np.float64, sep=' ')
                 try:
-                    self.matrix = cell_matrix.reshape(4,4)
+                    self.matrix = cell_matrix.reshape(4, 4)
                     self.source = 'ADCP'
                 except ValueError:
                     pass
-
 
     def riverray(self, data_in):
         """Process RiverRay test data for transformation matrix.
 
         Parameters
         ----------
-        data_in:
+        data_in: str
             System test data
         """
         if data_in is not None:
             idx = data_in.find('Instrument Transformation Matrix')
             if idx != -1:
                 idx2 = data_in[idx:].find(':')
-                idx3 = idx + idx2[0]
+                idx3 = idx + idx2
                 if idx2 != -1:
                     idx4 = data_in[idx3:].find('>')
-                    idx5 = idx3 + idx4[0] - 2
+                    idx5 = idx3 + idx4 - 2
                     if idx4 != -1:
                         self.matrix = float(data_in[idx3:idx5])
                         self.source = 'ADCP'
@@ -147,17 +146,17 @@ class TransformationMatrix(object):
 
         Parameters
         ----------
-        data_in:
+        data_in: str
             System test data
         """
         if data_in is not None:
             idx = data_in.find('Instrument Transformation Matrix')
             if idx != -1:
                 idx2 = data_in[idx:].find(':')
-                idx3 = idx + idx2[0]
+                idx3 = idx + idx2
                 if idx2 != -1:
                     idx4 = data_in[idx3:].find('Has V-Beam')
-                    idx5 = idx3 + idx4[0] - 2
+                    idx5 = idx3 + idx4 - 2
                     if idx4 != -1:
                         self.matrix = float(data_in[idx3:idx5])
                         self.source = 'ADCP'
@@ -175,10 +174,10 @@ class TransformationMatrix(object):
             idx = data_in.find('Instrument Transformation Matrix')
             if idx != -1:
                 idx2 = data_in[idx:].find(':')
-                idx3 = idx + idx2[0]
+                idx3 = idx + idx2
                 if idx2 != -1:
                     idx4 = data_in[idx3:].find('Has V-Beam')
-                    idx5 = idx3 + idx4[0] - 2
+                    idx5 = idx3 + idx4 - 2
                     if idx4 != -1:
                         self.matrix = float(data_in[idx3:idx5])
                         self.source = 'ADCP'
@@ -201,6 +200,3 @@ class TransformationMatrix(object):
     def populate_from_qrev_mat(self, tmatrix):
         self.matrix = tmatrix.matrix
         self.source = tmatrix.source
-        # if len(tmatrix.matrix.shape) == 3:
-        #     self.matrix = np.moveaxis(tmatrix.matrix, 0, 2)
-        #     self.source = tmatrix.source

@@ -83,10 +83,6 @@ class QComp(object):
             Extrapolation exponent
         """
 
-        # Determine type of object in data_in
-        # if isinstance(data_in, TransectData):
-        # data_in = data_in
-
         # Use bottom track interpolation settings to determine the appropriate algorithms to apply
         if data_in.boat_vel.bt_vel.interpolate == 'None':
             processing = 'WR2'
@@ -95,14 +91,6 @@ class QComp(object):
         else:
             processing = 'RSL'
 
-        # else:
-        #     #If the data in is a Measurement assign variables
-        #     meas = data_in
-        #     data_in = meas.transects
-        #     processing = meas.processing
-
-        # correction_flag = False
-        
         # Compute cross product
         x_prod = QComp.cross_product(data_in)
         
@@ -151,7 +139,7 @@ class QComp(object):
         
         # Compute interpolated cell and ensemble discharge from computed
         # measured discharge
-        self.interpolateNoCells(data_in)
+        self.interpolate_no_cells(data_in)
         self.middle = np.nansum(self.middle_ens)
         self.int_cells, self.int_ens = QComp.discharge_interpolated(self.top_ens, self.middle_cells,
                                                                     self.bottom_ens, data_in)
@@ -172,11 +160,7 @@ class QComp(object):
             
         # Compute moving-bed correction, if applicable.  Two checks are used to account for the
         # way the meas object is created.
-        
-        # Check to see if the mb_tests property of Measurement exists
-        # try:
-        #     getattr(data_in, 'mb_tests')
-        #     moving_bed_data = meas.mb_tests
+
         # Moving-bed corrections are only applied to bottom track referenced computations
         if data_in.boat_vel.selected == 'bt_vel':
             if moving_bed_data is not None:
@@ -200,12 +184,6 @@ class QComp(object):
                                                                                  self.bottom, data_in,
                                                                                  moving_bed_data[use_2_correct == True],
                                                                                  delta_t)
-                    # else:
-                    #     # Set a flag to generate a warning
-                    #     raise ReferenceError('To apply moving-bed correction composite tracks must be turned off.')
-        # except:
-        #     pass
-
 
         self.total_uncorrected = self.left + self.right + self.middle + self.bottom + self.top
 
@@ -250,9 +228,10 @@ class QComp(object):
 
         Parameters
         ----------
-        q_in: object
+        q_in: mat_struct
             mat_struct_object containing QComp class data
         """
+
         self.top = q_in.top
         self.middle = q_in.middle
         self.bottom = q_in.bottom
@@ -270,7 +249,7 @@ class QComp(object):
         self.int_cells = q_in.intCells
         self.int_ens = q_in.intEns
 
-    def interpolateNoCells(self, transData):
+    def interpolate_no_cells(self, transect_data):
         """Computes discharge for ensembles where the depth is too
            shallow for any valid depth cells. The computation is done
            using interpolation of unit discharge defined as the ensemble
@@ -283,9 +262,8 @@ class QComp(object):
 
            Parameters
            ----------
-           transData: TransectData
+           transect_data: TransectData
                 Object of TransectData
-            % obj: object of clsQComp
         """
 
         # Compute the discharge in each ensemble
@@ -296,20 +274,17 @@ class QComp(object):
 
             if len(idx) > 0:
 
-                # ID ensembles with valid discharge
-                valid_q = np.isnan(q_ensemble) == False
-
                 # Compute the unit discharge by depth for each ensemble
-                depth_selected = getattr(transData.depths, transData.depths.selected)
-                unit_q_depth = (q_ensemble / depth_selected.depth_processed_m[transData.in_transect_idx]) \
-                               / transData.date_time.ens_duration_sec[transData.in_transect_idx]
+                depth_selected = getattr(transect_data.depths, transect_data.depths.selected)
+                unit_q_depth = (q_ensemble / depth_selected.depth_processed_m[transect_data.in_transect_idx]) \
+                    / transect_data.date_time.ens_duration_sec[transect_data.in_transect_idx]
 
                 # Compute boat track
-                boat_track = BoatStructure.compute_boat_track(transData, transData.boat_vel.selected)
+                boat_track = BoatStructure.compute_boat_track(transect_data, transect_data.boat_vel.selected)
 
                 # Create strict monotonic vector for 1-D interpolation
                 q_mono = unit_q_depth
-                x_mono = boat_track['distance_m'][transData.in_transect_idx]
+                x_mono = boat_track['distance_m'][transect_data.in_transect_idx]
 
                 # Identify duplicate values, and replace with an average
                 dups = self.group_consecutives(x_mono)
@@ -326,19 +301,21 @@ class QComp(object):
 
                 # Interpolate unit q
                 if np.any(valid):
-                    unit_q_int = np.interp(boat_track['distance_m'][transData.in_transect_idx], x_mono[valid],
+                    unit_q_int = np.interp(boat_track['distance_m'][transect_data.in_transect_idx], x_mono[valid],
                                            q_mono[valid], left=np.nan, right=np.nan)
                 else:
                     unit_q_int = 0
 
                 # Compute the discharge in each ensemble based on interpolated data
-                q_int = unit_q_int * depth_selected.depth_processed_m[transData.in_transect_idx] \
-                    * transData.date_time.ens_duration_sec[transData.in_transect_idx]
+                q_int = unit_q_int * depth_selected.depth_processed_m[transect_data.in_transect_idx] \
+                    * transect_data.date_time.ens_duration_sec[transect_data.in_transect_idx]
                 self.middle_ens[idx] = q_int[idx]
 
     @staticmethod
     def group_consecutives(vals):
-        """Return list of consecutive lists of numbers from vals (number list)."""
+        """Return list of consecutive lists of numbers from vals (number list).
+        """
+
         run = []
         result = []
         expect = vals[0]
@@ -403,18 +380,10 @@ class QComp(object):
 
             start_edge = transect.start_edge
 
-        # else:
-        #
-        #     #Assign data arrays to local variables
-        #     w_vel_x = kargs[0]
-        #     w_vel_y = kargs[1]
-        #     b_vel_x = kargs[2]
-        #     b_vel_y = kargs[3]
-        #     start_edge = kargs[4]
-
         # Compute the cross product
         xprod = np.multiply(w_vel_x, b_vel_y) - np.multiply(w_vel_y, b_vel_x)
 
+        # Correct the sign of the cross product based on the start edge
         if start_edge == 'Right':
             direction = 1
         else:
@@ -448,11 +417,7 @@ class QComp(object):
         cell_size = trans_select.depth_cell_size_m
 
         # Determine is xprod contains edge data and process appropriately
-        # DSM 2/8/2018 the if statement seems unnecessary.
-        # if len(xprod) > len(in_transect_idx):
         q_mid_cells = np.multiply(xprod[:, in_transect_idx] * cell_size[:, in_transect_idx], delta_t)
-        # else:
-        #     q_mid_cells = np.multiply(xprod * cell_size[:, in_transect_idx], delta_t)
 
         return q_mid_cells
 
@@ -515,8 +480,7 @@ class QComp(object):
         return q_top
 
     @staticmethod
-    def discharge_top(top_method, exponent, idx_top, idx_top_3, top_rng,
-                      component, cell_size, cell_depth,
+    def discharge_top(top_method, exponent, idx_top, idx_top_3, top_rng, component, cell_size, cell_depth,
                       depth_ens, delta_t, z):
         """Computes the top extrapolated value of the provided component.
 
@@ -671,7 +635,7 @@ class QComp(object):
         Returns
         -------
         q_bot: np.array(float)
-            Bottom extrpaolated discharge for each ensemble
+            Bottom extrapolated discharge for each ensemble
         """
 
         # Determine extrapolation methods and exponent
@@ -809,7 +773,7 @@ class QComp(object):
 
         # Preallocate variables
         n_ensembles = valid_data.shape[1]
-        idx_bot = np.tile(-1,(valid_data.shape[1])).astype(int)
+        idx_bot = np.tile(-1, (valid_data.shape[1])).astype(int)
         bot_rng = np.tile([np.nan], n_ensembles)
 
         for n in range(n_ensembles):
@@ -1172,7 +1136,7 @@ class QComp(object):
                                            np.greater(above_sl_profile, 0))
 
                 # Compute the number of cells above the side lobe cutoff
-                remaining_depth = sl_depth - cell_depth_edge[idx_first_valid_cell]
+                # remaining_depth = sl_depth - cell_depth_edge[idx_first_valid_cell]
                 idx = np.where(np.isnan(cell_size) == False)[0]
                 # TODO this is not consistent with Matlab code
                 n_cells = 0
@@ -1338,9 +1302,9 @@ class QComp(object):
 
         # Initialize local variables
         n_ensembles = len(edge_idx)
-        vel_ensembles = np.tile(np.nan, n_ensembles.shape)
-        u = np.tile(np.nan, n_ensembles.shape)
-        v = np.tile(np.nan, n_ensembles.shape)
+        vel_ensembles = np.tile(np.nan, n_ensembles)
+        u = np.tile(np.nan, n_ensembles)
+        v = np.tile(np.nan, n_ensembles)
         v_unit = np.array([np.nan, np.nan])
 
         # Process each ensemble
@@ -1375,8 +1339,8 @@ class QComp(object):
                 # Compute coefficient for 1/6th power curve
                 b = 1.0 / 6.0
                 a = (b + 1) * (np.nansum((v_projected_mag * depth_cell_size))
-                                         / (np.nansum(((z + 0.5 * depth_cell_size)**(b + 1))
-                                                      - ((z - 0.5 * depth_cell_size)**(b + 1)))))
+                               / (np.nansum(((z + 0.5 * depth_cell_size)**(b + 1))
+                                  - ((z - 0.5 * depth_cell_size)**(b + 1)))))
 
                 # Compute mean water speed by integrating power curve
                 vel_ensembles[n] = ((a / (b + 1)) * (depth**(b + 1))) / depth
@@ -1397,12 +1361,6 @@ class QComp(object):
 
         # Compute the dge velocity magnitude
         edge_vel_dir, edge_vel_mag = cart2pol(u_avg, v_avg)
-
-        # If no heading (no compass) compute mean from magnitudes
-        # heading=transect.sensors.heading_deg.(transect.sensors.heading_deg.selected).data;
-        # if length(unique(heading))<2
-        #     edgeVelMag=nanmean(vEns);
-        # end
 
         # TODO this is the same as for TRDI need to put in separate method
         # Compute unit vector to help determine sign
@@ -1461,9 +1419,9 @@ class QComp(object):
             coef = 0.3535
 
         elif edge_select.type == 'Rectangular':
-            #Rectangular edge coefficient depends on the rec_edge_method.
-            #'Fixed' is compatible with the method used by TRDI.
-            #'Variable is compatible with the method used by SonTek
+            # Rectangular edge coefficient depends on the rec_edge_method.
+            # 'Fixed' is compatible with the method used by TRDI.
+            # 'Variable is compatible with the method used by SonTek
 
             if transect.edges.rec_edge_method == 'Fixed':
                 # Fixed Method
@@ -1678,13 +1636,13 @@ class QComp(object):
 
         Returns
         -------
-        nb_U: np.array(float)
+        nb_u: np.array(float)
             Near-bed velocity in the x-direction, in m/s.
-        nb_V: np.array(float)
+        nb_v: np.array(float)
             Near-bed velocity in the y-direction, in m/s.
-        unit_NBU: np.array(float)
+        unit_nbu: np.array(float)
             Unit vector component of near-bed velocity in x-direction.
-        unit_NBV: np.array(float)
+        unit_nbv: np.array(float)
             Unit vector component of near-bed velocity in y-direction.
         """
 
@@ -1693,10 +1651,10 @@ class QComp(object):
 
         # Begin computing near-bed velocities
         n_ensembles = u.shape[1]
-        nb_U = np.tile([np.nan], n_ensembles)
-        nb_V = np.tile([np.nan], n_ensembles)
-        unit_NBU = np.tile([np.nan], n_ensembles)
-        unit_NBV = np.tile([np.nan], n_ensembles)
+        nb_u = np.tile([np.nan], n_ensembles)
+        nb_v = np.tile([np.nan], n_ensembles)
+        unit_nbu = np.tile([np.nan], n_ensembles)
+        unit_nbv = np.tile([np.nan], n_ensembles)
         z_depth = np.tile([np.nan], n_ensembles)
         u_mean = np.tile([np.nan], n_ensembles)
         v_mean = np.tile([np.nan], n_ensembles)
@@ -1710,13 +1668,13 @@ class QComp(object):
                 z_depth[n] = depth[n] - np.nanmean(bin_depth[idx, n], 0)
                 u_mean[n] = np.nanmean(u[idx, n], 0)
                 v_mean[n] = np.nanmean(v[idx, n], 0)
-                nb_U[n] = (u_mean[n] / z_depth[n] ** (1. / 6.)) * (z_near_bed[n] ** (1. / 6.))
-                nb_V[n] = (v_mean[n] / z_depth[n] ** (1. / 6.)) * (z_near_bed[n] ** (1. / 6.))
-                speed_near_bed[n] = np.sqrt(nb_U[n] ** 2 + nb_V[n] ** 2)
-                unit_NBU[n] = nb_U[n] / speed_near_bed[n]
-                unit_NBV[n] = nb_V[n] / speed_near_bed[n]
+                nb_u[n] = (u_mean[n] / z_depth[n] ** (1. / 6.)) * (z_near_bed[n] ** (1. / 6.))
+                nb_v[n] = (v_mean[n] / z_depth[n] ** (1. / 6.)) * (z_near_bed[n] ** (1. / 6.))
+                speed_near_bed[n] = np.sqrt(nb_u[n] ** 2 + nb_v[n] ** 2)
+                unit_nbu[n] = nb_u[n] / speed_near_bed[n]
+                unit_nbv[n] = nb_v[n] / speed_near_bed[n]
 
-        return nb_U, nb_V, unit_NBU, unit_NBV
+        return nb_u, nb_v, unit_nbu, unit_nbv
 
     @staticmethod
     def valid_edge_ens(trans_data):
@@ -1727,7 +1685,7 @@ class QComp(object):
         
         Parameters
         ----------
-        transData: TransectData
+        trans_data: TransectData
             Object of TransectData
         
         Returns
@@ -1805,7 +1763,8 @@ class QComp(object):
                 idx_next_valid += 1
 
                 # Sum discharge in valid ensembles following invalid ensemble
-                q_int_ens = np.nansum(q_mid_cells[:, idx_next_valid]) + q_bot_ens[idx_next_valid] + q_top_ens[idx_next_valid]
+                q_int_ens = np.nansum(q_mid_cells[:, idx_next_valid]) \
+                    + q_bot_ens[idx_next_valid] + q_top_ens[idx_next_valid]
 
                 # Determine number of invalid ensembles preceding valid ensemble
                 run_length_false, _ = QComp.compute_run_length(valid_ens)
@@ -1815,7 +1774,7 @@ class QComp(object):
                     run_length_false = run_length_false[:-1]
 
                 # Adjust discharge to remove the discharge that would have been measured in the valid ensemble
-                q_int_ens = np.nansum(q_int_ens *(run_length_false / (run_length_false+1)))
+                q_int_ens = np.nansum(q_int_ens * (run_length_false / (run_length_false+1)))
 
         else:
             # Compute discharge in invalid ensembles where all data were interpolated
@@ -1844,7 +1803,7 @@ class QComp(object):
         """
 
         # Compute the indices of where changes occur
-        valid_run = np.where(np.diff(np.hstack((-1, bool_vector, -1)))!= 0 )[0]
+        valid_run = np.where(np.diff(np.hstack((-1, bool_vector, -1))) != 0)[0]
         # Determine length of each run
         run_length = np.diff(valid_run)
 

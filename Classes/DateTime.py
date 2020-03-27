@@ -1,15 +1,3 @@
-"""
-Created on Sep 6, 2017
-
-@author: gpetrochenkov
-
-Modified DSM 2/2/2018
-    - Added numpy docstrings
-    - Changed time_2_serial_time to properly handle SonTek to Python serial time
-    - Cleaned up PEP8
-"""
-
-
 class DateTime(object):
     """This stores the date and time data in Python compatible format.
 
@@ -67,8 +55,8 @@ class DateTime(object):
         """
 
         if hasattr(transect, 'dateTime'):
-            seconds_day = (60 * 60 * 24)
-            time_correction = 719528.8333333337 + 14400 / seconds_day
+            seconds_day = 86400
+            time_correction = 733928.8333333337 / seconds_day
 
             self.date = transect.dateTime.date
             self.start_serial_time = (transect.dateTime.startSerialTime - time_correction) * seconds_day

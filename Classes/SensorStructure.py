@@ -2,6 +2,7 @@ from Classes.HeadingData import HeadingData
 from Classes.SensorData import SensorData
 import numpy as np
 
+
 class SensorStructure(object):
     """Class to store sensor data from various sources.
 
@@ -32,8 +33,12 @@ class SensorStructure(object):
         ----------
         mat_data: mat_struct
            Matlab data structure obtained from sio.loadmat
+        heading: bool
+            Determines if mat_data is heading data
         """
+
         if not heading:
+            # Non-heading sensors
             if not type(mat_data.external) is np.ndarray:
                 self.external = SensorData()
                 self.external.populate_from_qrev_mat(mat_data.external)
@@ -45,6 +50,7 @@ class SensorStructure(object):
                 self.user.populate_from_qrev_mat(mat_data.user)
             self.selected = mat_data.selected
         else:
+            # Heading data
             if not type(mat_data.external) is np.ndarray:
                 self.external = HeadingData()
                 self.external.populate_from_qrev_mat(mat_data.external)

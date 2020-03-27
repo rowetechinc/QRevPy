@@ -17,6 +17,8 @@ class Edges(object):
     """
     
     def __init__(self):
+        """Initialize Edges.
+        """
 
         self.rec_edge_method = None
         self.vel_method = None
@@ -73,17 +75,3 @@ class Edges(object):
         else:
             temp = getattr(self, edge)
             temp.change_property(prop, setting)
-
-    # DSM 1/31/2018 this method is not needed.
-    # def create_edge(self, edge_loc, edge_type, dist, kargs=None):
-    #     """Create Edge property which is an object of EdgeData for each edge
-    #
-    #     Input:
-    #     edge_loc: left or right
-    #     edge_type: type of edge (Triangular, Rectangular, Custom, User Q)
-    #     dist: distance to shore
-    #     kargs: value of cefficient for custom or discharge for User Q
-    #     """
-    #
-    #     temp = getattr(self, '_Edges__'+edge_loc)
-    #     temp.populate_data(edge_type, dist, kargs)

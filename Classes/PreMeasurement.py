@@ -43,13 +43,9 @@ class PreMeasurement(object):
         # Process data depending on data type and store result
         if data_type[1] == 'C':
             self.compass_read()
-        # elif data_type == 'TCE':
-        #     self.compass_read()
         elif data_type == 'TST':
             self.sys_test_read()
             self.pt3_data()
-        # elif data_type == 'SCC':
-        #     self.compass_read()
         elif data_type == 'SST':
             self.sys_test_read()
 
@@ -111,9 +107,9 @@ class PreMeasurement(object):
         ce = []
         if hasattr(meas_struct, 'compassEval'):
             if type(meas_struct.compassEval) is np.ndarray:
-                for eval in meas_struct.compassEval:
+                for comp_eval in meas_struct.compassEval:
                     pm = PreMeasurement()
-                    pm.compass_populate_from_qrev_mat(eval)
+                    pm.compass_populate_from_qrev_mat(comp_eval)
                     ce.append(pm)
             elif len(meas_struct.compassEval.data) > 0:
                 pm = PreMeasurement()
@@ -126,7 +122,7 @@ class PreMeasurement(object):
 
         Parameters
         ----------
-        data_in: object
+        data_in: mat_struct
             mat_struct_object containing compass cal/eval data
         """
         self.data = data_in.data
@@ -189,7 +185,7 @@ class PreMeasurement(object):
 
         Parameters
         ----------
-        test_in: object
+        test_in: mat_struct
             mat_struct_object containing system test data
         """
         try:
@@ -197,7 +193,6 @@ class PreMeasurement(object):
             self.time_stamp = test_in.timeStamp
             self.result = {'sysTest': {'n_failed': test_in.result.sysTest.nFailed}}
             self.result['sysTest']['n_tests'] = test_in.result.sysTest.nTests
-
 
             if hasattr(test_in.result, 'pt3'):
                 data_types = {'corr_table': np.array([]), 'sdc': np.array([]), 'cdc': np.array([]),
@@ -297,7 +292,8 @@ class PreMeasurement(object):
                 numbers = re.findall('\d+\.*\d*', lag_match)
 
                 # Create array from data in table
-                corr_data = np.array(numbers[(bm_count * 4):(bm_count * 44)], dtype=int).reshape([8, (bm_count * 4) + 1])[:, 1::]
+                corr_data = np.array(numbers[(bm_count * 4):(bm_count * 44)],
+                                     dtype=int).reshape([8, (bm_count * 4) + 1])[:, 1::]
 
                 # Only one pt3 test. Typical of Rio Grande and Streampro
                 if bm_count == 1:

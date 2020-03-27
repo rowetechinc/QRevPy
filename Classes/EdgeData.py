@@ -16,6 +16,8 @@ class EdgeData(object):
     """
     
     def __init__(self):
+        """Initialize EdgeData.
+        """
         
         self.type = None       # Shape of edge: 'Triangular', 'Rectangular', 'Custom, 'User Q'
         self.distance_m = None          # Distance to shore
@@ -62,7 +64,6 @@ class EdgeData(object):
         self.user_discharge_cms = mat_data.userQ_cms
         if type(mat_data.custCoef) is float:
             self.cust_coef = mat_data.custCoef
-
 
     def change_property(self, prop, setting):
         """Change edge data property

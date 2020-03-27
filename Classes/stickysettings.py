@@ -39,7 +39,6 @@ class StickySettings(object):
 
         """
         # Construct filename from user input.
-        # self.settings_file = '{0}\\{1}.{2}'.format(os.getenv('APPDATA'), arg, 'json')
         self.settings_file = os.path.join(os.getenv('APPDATA'), arg + '.json')
         if os.path.isfile(self.settings_file):
             # Read json into dictionary

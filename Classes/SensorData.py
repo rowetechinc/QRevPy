@@ -44,6 +44,7 @@ class SensorData(object):
         mat_data: mat_struct
            Matlab data structure obtained from sio.loadmat
         """
+
         if np.isnan(mat_data.data).all():
             self.data = np.array([])
         else:
@@ -61,6 +62,7 @@ class SensorData(object):
         ----------
         data_in: np.array(float)
         """
+
         self.data = data_in
         
     def set_source(self, source_in):

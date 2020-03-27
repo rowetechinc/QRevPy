@@ -1,6 +1,3 @@
-#
-# Created DSM 2/2/2018
-#
 import re
 
 
@@ -37,8 +34,6 @@ class CompassCal(object):
         self.time_stamp = time_stamp
         self.data = data_in
 
-        # TODO modified to work for Sontek. Need to check for TRDI
-        # match regex for compass evaluation error:
         splits = re.split('(Total error:|Double Cycle Errors:|Error from calibration:)', data_in)
         if len(splits) > 1:
             self.error = re.search('\d+\.*\d*', splits[2])[0]

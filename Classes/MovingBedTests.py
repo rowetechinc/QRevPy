@@ -6,6 +6,7 @@ from MiscLibs.common_functions import cart2pol, sind, pol2cart, rad2azdeg
 from Classes.MatSonTek import MatSonTek
 import copy
 
+
 class MovingBedTests(object):
     """Stores and processes moving-bed tests.
 
@@ -77,7 +78,7 @@ class MovingBedTests(object):
         self.messages = None  # Cell array of warning and error messages based on data processing
         self.near_bed_speed_mps = np.nan  # Mean near-bed water speed for test in mps
         self.stationary_us_track = np.array([])  # Upstream component of the bottom track referenced ship track
-        self.stationary_cs_track = np.array([]) # Cross=stream component of the bottom track referenced ship track
+        self.stationary_cs_track = np.array([])  # Cross=stream component of the bottom track referenced ship track
         self.stationary_mb_vel = np.array([])  # Moving-bed velocity by ensemble
         
     def populate_data(self, source, file=None, test_type=None):
@@ -136,11 +137,13 @@ class MovingBedTests(object):
         mb_tests = []
         if hasattr(meas_struct, 'mbTests'):
             try:
+                # If there are multiple test the Matlab structure will be an array
                 if type(meas_struct.mbTests) == np.ndarray:
                     for test in meas_struct.mbTests:
                         temp = MovingBedTests()
                         temp.populate_from_qrev_mat(test)
                         mb_tests.append(temp)
+                # If only one test, that test is not stored in an array
                 else:
                     temp = MovingBedTests()
                     temp.populate_from_qrev_mat(meas_struct.mbTests)
@@ -163,18 +166,25 @@ class MovingBedTests(object):
         self.transect.populate_from_qrev_mat(mat_data.transect)
         self.duration_sec = mat_data.duration_sec
         self.percent_invalid_bt = mat_data.percentInvalidBT
-        if type (mat_data.compassDiff_deg) is float:
+
+        # Handle situation for one or more tests
+        if type(mat_data.compassDiff_deg) is float:
             self.compass_diff_deg = mat_data.compassDiff_deg
         else:
             self.compass_diff_deg = self.make_list(mat_data.compassDiff_deg)
+
+        # Handle situation for one or more tests
         if type(mat_data.flowDir_deg) is float:
             self.flow_dir = mat_data.flowDir_deg
         else:
             self.flow_dir = self.make_list(mat_data.flowDir_deg)
+
+        # Handle situation for one or more tests
         if type(mat_data.mbDir_deg) is float:
             self.mb_dir = mat_data.mbDir_deg
         else:
             self.mb_dir = self.make_list(mat_data.mbDir_deg)
+
         self.dist_us_m = mat_data.distUS_m
         self.flow_spd_mps = mat_data.flowSpd_mps
         self.mb_spd_mps = mat_data.mbSpd_mps
@@ -184,23 +194,38 @@ class MovingBedTests(object):
         self.test_quality = mat_data.testQuality
         self.use_2_correct = bool(mat_data.use2Correct)
         self.selected = bool(mat_data.selected)
+
+        # Handle situation for one or more messages
         if type(mat_data.messages) == np.ndarray:
             self.messages = mat_data.messages.tolist()
         else:
             self.messages = [mat_data.messages]
+
+        # Handle situation for one or more tests
         if type(mat_data.nearBedSpeed_mps) is np.ndarray:
             self.near_bed_speed_mps = np.nan
         else:
             self.near_bed_speed_mps = mat_data.nearBedSpeed_mps
+
         self.stationary_us_track = mat_data.stationaryUSTrack
         self.stationary_cs_track = mat_data.stationaryCSTrack
         self.stationary_mb_vel = mat_data.stationaryMBVel
 
     @staticmethod
     def make_list(array_in):
+        """Method to make list from several special cases that can occur in the Matlab data.
+
+        Parameters
+        ----------
+        array_in: np.ndarray
+            Input that needs to be convert to a list
+        """
+
+        # This traps messages with the associated codes
         if array_in.size > 3:
             list_out = array_in.tolist()
         else:
+            # Create a list of lists
             temp = array_in.tolist()
             if len(temp) > 0:
                 internal_list = []
@@ -283,6 +308,7 @@ class MovingBedTests(object):
             se = np.nansum(np.nansum(wt_u * wght)) / np.nansum(np.nansum(wght))
             sn = np.nansum(np.nansum(wt_v * wght)) / np.nansum(np.nansum(wght))
             direct, flow_speed_q = cart2pol(se, sn)
+
             # Compute flow speed and direction
             self.flow_dir = rad2azdeg(direct)
             
@@ -294,7 +320,6 @@ class MovingBedTests(object):
             se = np.nansum(np.nansum(wt_u[idx] * wght_area[idx])) / np.nansum(np.nansum(wght_area[idx]))
             sn = np.nansum(np.nansum(wt_v[idx] * wght_area[idx])) / np.nansum(np.nansum(wght_area[idx]))
             dir_a, self.flow_spd_mps = cart2pol(se, sn)
-            # flow_dir_a = rad2azdeg(dir_a)
 
             # Compute closure distance and direction
             bt_x = np.nancumsum(bt_u * ens_duration)
@@ -478,7 +503,8 @@ class MovingBedTests(object):
             self.moving_bed = 'Unknown'
 
     def stationary_test(self):
-        """Processed the stationary moving-bed tests."""
+        """Processed the stationary moving-bed tests.
+        """
 
         # Assign data from transect to local variables
         trans_data = copy.deepcopy(self.transect)
@@ -718,21 +744,10 @@ class MovingBedTests(object):
             # Determine if there are valid loop tests
             # This is the code in matlab but I don't think it is correct. I the valid loop should also have a valid
             # flow speed, if not then a stationary test, if available could be used.
-            # if np.any(lidx_valid_loop) and np.any(lidx_flow_speed):
-            #     lidx_loops_2_select = np.all(np.vstack((lidx_flow_speed, lidx_valid_loop)), 0)
             lidx_loops_2_select = np.all(np.vstack((lidx_flow_speed, lidx_valid_loop)), 0)
             if np.any(lidx_loops_2_select):
                 # Select last loop
                 idx_select = np.where(lidx_loops_2_select)[0][-1]
-                # idx_select = np.where(lidx_loops_2_select == True)[0]
-                # if len(idx_select) > 0:
-                #     idx = np.where(np.array(lidx_loop) == True)[0]
-                #     idx_select = idx[idx_select[-1]]
-                # else:
-                #     # I think this is the correct code (dsm 6/13/2019)
-                #     idx_select = np.where(lidx_valid_loop)[0][-1]
-                #     # This was the code in matlab. However, the last test could be a stationary test
-                #     idx_select = len(moving_bed_tests)
                 test_select = moving_bed_tests[idx_select]
                 test_select.selected = True
 

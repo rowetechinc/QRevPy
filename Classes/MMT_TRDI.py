@@ -3,7 +3,7 @@ import os
 import re
 
 
-class MMT_TRDI(object):
+class MMTtrdi(object):
     """Class to read and store data from a WinRiver 2 mmt file.
 
     Attributes
@@ -102,7 +102,7 @@ class MMT_TRDI(object):
         # Create a Transect class for each transect found under Site_Discharge
         for i in range(len(trans)):
             if 'File' in trans[i]:
-                self.transects.append(MMT_Transect(trans[i]))
+                self.transects.append(MMTtransect(trans[i]))
 
         # Discharge Summary
         if 'Discharge_Summary' in win_river['Project']['Site_Discharge'].keys():
@@ -152,7 +152,7 @@ class MMT_TRDI(object):
 
         # Process each transect dictionary
         for tsect in transects:
-            transect = MMT_Transect(tsect)
+            transect = MMTtransect(tsect)
 
             # Determine type of moving-bed test
             if '@MBTType' in tsect:
@@ -169,8 +169,8 @@ class MMT_TRDI(object):
                 elif file_name[fidx-3:fidx] == 'LBT':
                     transect.moving_bed_type = 'Loop'
                 else:
-                    # TODO how to handle user input from here, assume need to call back to gui
-                    print('question')
+                    # If type can't be determined process as stationary
+                    transect.moving_bed_type = 'Stationary'
 
             self.mbt_transects.append(transect)
 
@@ -220,7 +220,7 @@ class MMT_TRDI(object):
         return sum_dict
 
 
-class MMT_Transect(object):
+class MMTtransect(object):
     """Class to hold properties of MMT transect dictionary attributes.
 
     Attributes

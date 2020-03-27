@@ -191,6 +191,21 @@ class Uncertainty(object):
 
     @staticmethod
     def get_array_attr(list_in, prop):
+        """Create an array of the requested attribute from a list of objects containing the requested attribute.
+
+        Parameters
+        ----------
+        list_in: list
+            List of objects
+        prop: str
+            Attribute requested
+
+        Returns
+        -------
+        data: np.ndarray()
+            Array of the requested attributes from each object in list_in
+
+        """
         # Create array of specified attribute
         data = []
         for item in list_in:
@@ -282,8 +297,6 @@ class Uncertainty(object):
         extrapolation_uncertainty: float
             95% uncertainty due to top and bottom extrapolation estimates
         """
-
-
 
         # Compute mean total uncorrected discharge
         q_selected = np.nanmean(Uncertainty.get_array_attr(discharges, 'total_uncorrected'))
@@ -399,6 +412,5 @@ class Uncertainty(object):
         else:
             # GPS used as boat velocity reference
             moving_bed_uncertainty = 0
-
 
         return moving_bed_uncertainty

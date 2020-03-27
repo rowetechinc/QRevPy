@@ -1,14 +1,3 @@
-"""
-Created on Sep 14, 2017
-
-@author: gpetrochenkov
-Modified DSM 2/1/2018
-    - Added numpy docstrings
-    - Removed need for kargs
-    - Removed need for def set_PR_limits
-    - Cleaned up PEP8
-
-"""
 import numpy as np
 from _operator import xor
 
@@ -71,18 +60,21 @@ class HeadingData(object):
         roll_limit: np.array(float)
             Roll limit of compass calibration (SonTek only)
         """
+
         self.original_data = data_in
         self.source = source_in
         self.mag_var_deg = float(magvar)
         self.mag_var_orig_deg = float(magvar)
         self.align_correction_deg = align
         self.mag_error = mag_error
+
         if pitch_limit is not None and len(pitch_limit.shape) > 1:
             self.pitch_limit = pitch_limit[0, :]
         else:
             self.pitch_limit = pitch_limit
+
         if roll_limit is not None and len(roll_limit.shape) > 1:
-            self.roll_limit = roll_limit [0, :]
+            self.roll_limit = roll_limit[0, :]
         else:
             self.roll_limit = roll_limit
 
@@ -99,16 +91,23 @@ class HeadingData(object):
         mat_data: mat_struct
            Matlab data structure obtained from sio.loadmat
         """
+
         self.data = mat_data.data
         self.original_data = mat_data.originalData
         self.source = mat_data.source
         self.mag_var_deg = float(mat_data.magVar_deg)
         self.mag_var_orig_deg = float(mat_data.magVarOrig_deg)
         self.align_correction_deg = mat_data.alignCorrection_deg
+
+        # Only available for SonTek G3 compass
         if len(mat_data.magError) > 0:
             self.mag_error = mat_data.magError
+
+        # Only available for SonTek G3 compass
         if len(mat_data.pitchLimit) > 0:
             self.pitch_limit = mat_data.pitchLimit
+
+        # Only available for SonTek G3 compass
         if len(mat_data.rollLimit) > 0:
             self.roll_limit = mat_data.rollLimit
             
@@ -136,18 +135,18 @@ class HeadingData(object):
         align_correction: float
             Alignment correction, in degrees
         h_source: str
-            Heading source (internal or external)"""
+            Heading source (internal or external)
+        """
+
         self.align_correction_deg = align_correction
         if h_source == 'external':
             self.data = self.original_data + self.align_correction_deg
             self.fix_upper_limit()
 
-    # DSM I don't think this is need. Changed populate data to support. 2/1/2018
-    # def set_PR_Limit(self, type_prop, limits):
-    #     setattr(self, type_prop, limits)
-        
     def fix_upper_limit(self):
-        """Fixes heading when magvar and or alignment are applied resulting in heading greater than 360 degrees."""
+        """Fixes heading when magvar and or alignment are applied resulting in heading greater than 360 degrees.
+        """
+
         idx = np.where(self.data > 360)[0]
         if len(idx) > 0:
             self.data[idx] = self.data[idx] - 360   
@@ -157,7 +156,8 @@ class HeadingData(object):
         valid values on either side of the invalid heading. If the invalid heading
         occurs at the beginning of the time series, back fill using the 1st valid.
         If the invalid heading occurs at the end of the time series, forward fill
-        with the last valid self.data"""
+        with the last valid self.data.
+        """
         
         idx_invalid = np.where(np.isnan(self.data))[0]
         
@@ -174,9 +174,11 @@ class HeadingData(object):
                 # If invalid self.data is beginning back fill
                 if len(before_idx) < 1:
                     self.data[idx_invalid[n]] = self.data[first_valid_idx]
+
                 # If invalid self.data is at end forward fill
                 elif len(after_idx) < 1:
                     self.data[idx_invalid[n]] = self.data[last_valid_idx]
+
                 # If invalid self.data is in middle interpolate
                 else:
                     before_idx = before_idx[-1]

@@ -41,7 +41,7 @@ class QAData(object):
     edges: dict
         Dictionary of quality assurance checks on edges
     """
-    
+
     def __init__(self, meas, mat_struct=None, compute=True):
         """Checks the measurement for all quality assurance issues.
 
@@ -93,10 +93,15 @@ class QAData(object):
 
         Parameters
         ----------
+        meas: Measurement
+            Object of Measurement
         meas_struct: mat_struct
            Matlab data structure obtained from sio.loadmat
         """
 
+        # Generate a new QA object using the measurement data and the current QA code.
+        # When QA checks from the current QA are not available from old QRev files, these
+        # checks will be included to supplement the old QRev file data.
         new_qa = QAData(meas)
         if hasattr(meas_struct, 'qa'):
             # Set default thresholds
@@ -123,11 +128,13 @@ class QAData(object):
             self.compass['status1'] = meas_struct.qa.compass.status1
             self.compass['status2'] = meas_struct.qa.compass.status2
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa.compass, 'magvar'):
                 self.compass['magvar'] = meas_struct.qa.compass.magvar
             else:
                 self.compass['magvar'] = new_qa.compass['magvar']
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa.compass, 'magvarIdx'):
                 self.compass['magvar_idx'] = self.make_array(meas_struct.qa.compass.magvarIdx)
             else:
@@ -136,31 +143,37 @@ class QAData(object):
             # Changed mag_error_idx from bool to int array in QRevPy
             self.compass['mag_error_idx'] = new_qa.compass['mag_error_idx']
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa.compass, 'pitchMeanWarningIdx'):
                 self.compass['pitch_mean_warning_idx'] = self.make_array(meas_struct.qa.compass.pitchMeanWarningIdx)
             else:
                 self.compass['pitch_mean_warning_idx'] = new_qa.compass['pitch_mean_warning_idx']
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa.compass, 'rollMeanWarningIdx'):
                 self.compass['roll_mean_warning_idx'] = self.make_array(meas_struct.qa.compass.rollMeanWarningIdx)
             else:
                 self.compass['roll_mean_warning_idx'] = new_qa.compass['roll_mean_warning_idx']
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa.compass, 'pitchMeanCautionIdx'):
                 self.compass['pitch_mean_caution_idx'] = self.make_array(meas_struct.qa.compass.pitchMeanCautionIdx)
             else:
                 self.compass['pitch_mean_caution_idx'] = new_qa.compass['pitch_mean_caution_idx']
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa.compass, 'rollMeanCautionIdx'):
                 self.compass['roll_mean_caution_idx'] = self.make_array(meas_struct.qa.compass.rollMeanCautionIdx)
             else:
                 self.compass['roll_mean_caution_idx'] = new_qa.compass['roll_mean_caution_idx']
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa.compass, 'pitchStdCautionIdx'):
                 self.compass['pitch_std_caution_idx'] = self.make_array(meas_struct.qa.compass.pitchStdCautionIdx)
             else:
                 self.compass['pitch_std_caution_idx'] = new_qa.compass['pitch_std_caution_idx']
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa.compass, 'rollStdCautionIdx'):
                 self.compass['roll_std_caution_idx'] = self.make_array(meas_struct.qa.compass.rollStdCautionIdx)
             else:
@@ -179,24 +192,34 @@ class QAData(object):
             self.user['sta_number'] = bool(meas_struct.qa.user.staNumber)
             self.user['status'] = meas_struct.qa.user.status
 
+            # If QA check not available, get check from new QA
             self.depths = self.create_qa_dict(self, meas_struct.qa.depths)
-            if not 'draft' in self.depths:
+            if 'draft' not in self.depths:
                 self.depths['draft'] = new_qa.depths['draft']
-            if not 'all_invalid' in self.depths:
+
+            if 'all_invalid' not in self.depths:
                 self.depths['all_invalid'] = new_qa.depths['all_invalid']
 
+            # If QA check not available, get check from new QA
             self.bt_vel = self.create_qa_dict(self, meas_struct.qa.btVel)
-            if not 'all_invalid' in self.bt_vel:
+            if 'all_invalid' not in self.bt_vel:
                 self.bt_vel['all_invalid'] = new_qa.bt_vel['all_invalid']
+
+            # If QA check not available, get check from new QA
             self.gga_vel = self.create_qa_dict(self, meas_struct.qa.ggaVel)
-            if not 'all_invalid' in self.gga_vel:
+            if 'all_invalid' not in self.gga_vel:
                 self.gga_vel['all_invalid'] = new_qa.gga_vel['all_invalid']
+
+            # If QA check not available, get check from new QA
             self.vtg_vel = self.create_qa_dict(self, meas_struct.qa.vtgVel)
-            if not 'all_invalid' in self.vtg_vel:
+            if 'all_invalid' not in self.vtg_vel:
                 self.vtg_vel['all_invalid'] = new_qa.vtg_vel['all_invalid']
+
+            # If QA check not available, get check from new QA
             self.w_vel = self.create_qa_dict(self, meas_struct.qa.wVel)
-            if not 'all_invalid' in self.w_vel:
+            if 'all_invalid' not in self.w_vel:
                 self.w_vel['all_invalid'] = new_qa.w_vel['all_invalid']
+
             self.extrapolation = dict()
             self.extrapolation['messages'] = self.make_list(meas_struct.qa.extrapolation.messages)
             self.extrapolation['status'] = meas_struct.qa.extrapolation.status
@@ -212,42 +235,50 @@ class QAData(object):
             self.edges['left_type'] = meas_struct.qa.edges.leftType
             self.edges['right_type'] = meas_struct.qa.edges.rightType
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa, 'right_dist_moved_idx'):
                 self.edges['right_dist_moved_idx'] = self.make_array(meas_struct.qa.edges.rightDistMovedIdx)
             else:
                 self.edges['right_dist_moved_idx'] = new_qa.edges['right_dist_moved_idx']
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa, 'left_dist_moved_idx'):
                 self.edges['left_dist_moved_idx'] = self.make_array(meas_struct.qa.edges.leftDistMovedIdx)
             else:
                 self.edges['left_dist_moved_idx'] = new_qa.edges['left_dist_moved_idx']
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa, 'leftQIdx'):
                 self.edges['left_q_idx'] = self.make_array(meas_struct.qa.edges.leftQIdx)
             else:
                 self.edges['left_q_idx'] = new_qa.edges['left_q_idx']
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa, 'rightQIdx'):
                 self.edges['right_q_idx'] = self.make_array(meas_struct.qa.edges.rightQIdx)
             else:
                 self.edges['right_q_idx'] = new_qa.edges['right_q_idx']
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa, 'leftZeroIdx'):
                 self.edges['left_zero_idx'] = self.make_array(meas_struct.qa.edges.leftZeroIdx)
             else:
                 self.edges['left_zero_idx'] = new_qa.edges['left_zero_idx']
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa, 'rightZeroIdx'):
                 self.edges['right_zero_idx'] = self.make_array(meas_struct.qa.edges.rightZeroIdx)
             else:
                 self.edges['right_zero_idx'] = new_qa.edges['right_zero_idx']
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa, 'invalid_transect_left_idx'):
                 self.edges['invalid_transect_left_idx'] = \
                     self.make_array(meas_struct.qa.edges.invalid_transect_left_idx)
             else:
                 self.edges['invalid_transect_left_idx'] = new_qa.edges['invalid_transect_left_idx']
 
+            # If QA check not available, get check from new QA
             if hasattr(meas_struct.qa, 'invalid_transect_right_idx'):
                 self.edges['invalid_transect_right_idx'] = \
                     self.make_array(meas_struct.qa.edges.invalid_transect_right_idx)
@@ -256,15 +287,34 @@ class QAData(object):
 
     @staticmethod
     def create_qa_dict(self, mat_data):
+        """Creates the dictionary used to store QA checks associated with the percent of discharge estimated
+        by interpolation. This dictionary is used by BT, GPS, Depth, and WT.
+
+        Parameters
+        ----------
+        self: QAData
+            Object of QAData
+        mat_data: mat_struct
+            Matlab data from QRev file
+        """
+
+        # Initialize dictionary
         qa_dict = dict()
+
+        # Populate dictionary from Matlab data
         qa_dict['messages'] = QAData.make_list(mat_data.messages)
+
+        # allInvalid not available in older QRev data
         if hasattr(mat_data, 'allInvalid'):
             qa_dict['all_invalid'] = self.make_array(mat_data.allInvalid).astype(bool)
+
         qa_dict['q_max_run_caution'] = self.make_array(mat_data.qRunCaution).astype(bool)
         qa_dict['q_max_run_warning'] = self.make_array(mat_data.qRunWarning).astype(bool)
         qa_dict['q_total_caution'] = self.make_array(mat_data.qTotalCaution).astype(bool)
         qa_dict['q_total_warning'] = self.make_array(mat_data.qTotalWarning).astype(bool)
         qa_dict['status'] = mat_data.status
+
+        # q_max_run and q_total not available in older QRev data
         try:
             qa_dict['q_max_run'] = self.make_array(mat_data.qMaxRun)
             qa_dict['q_total'] = self.make_array(mat_data.qTotal)
@@ -275,6 +325,12 @@ class QAData(object):
 
     @staticmethod
     def make_array(num_in):
+        """Ensures that num_in is an array and if not makes it an array.
+
+        num_in: any
+            Any value or array
+        """
+
         if type(num_in) is np.ndarray:
             return num_in
         else:
@@ -282,13 +338,27 @@ class QAData(object):
 
     @staticmethod
     def make_list(array_in):
+        """Converts a string or array to a list.
 
+        Parameters
+        ----------
+        array_in: any
+            Data to be converted to list.
+
+        Returns
+        -------
+        list_out: list
+            List of array_in data
+        """
+
+        list_out = []
+        # Convert string to list
         if type(array_in) is str:
             list_out = [array_in]
         else:
             # Empty array
             if array_in.size == 0:
-                    list_out = []
+                list_out = []
             # Single message with integer codes at end
             elif array_in.size == 3:
                 if type(array_in[1]) is int or len(array_in[1].strip()) == 1:
@@ -303,7 +373,6 @@ class QAData(object):
             # Either multiple messages with or without integer codes
             else:
                 list_out = array_in.tolist()
-
 
         return list_out
 
@@ -327,9 +396,12 @@ class QAData(object):
         self.transects['number'] = 0
         self.transects['uncertainty'] = 0
 
+        # Initialize lists
         checked = []
         discharges = []
         start_edge = []
+
+        # Populate lists
         for n in range(len(meas.transects)):
             checked.append(meas.transects[n].checked)
             if meas.transects[n].checked:
@@ -442,7 +514,7 @@ class QAData(object):
         self.system_tst['messages'] = []
         self.system_tst['status'] = 'good'
 
-        # Determine is a system test was recorded
+        # Determine if a system test was recorded
         if not meas.system_tst:
             # No system test data recorded
             self.system_tst['status'] = 'warning'
@@ -454,6 +526,8 @@ class QAData(object):
 
             for test in meas.system_tst:
                 if hasattr(test, 'result'):
+
+                    # Check for presence of pt3 test
                     if 'pt3' in test.result and test.result['pt3'] is not None:
 
                         # Check hard_limit, high gain, wide bandwidth
@@ -475,6 +549,7 @@ class QAData(object):
                     if test.result['sysTest']['n_failed'] is not None and test.result['sysTest']['n_failed'] > 0:
                         num_tests_with_failure += 1
 
+            # pt3 test failure message
             if pt3_fail:
                 self.system_tst['status'] = 'caution'
                 self.system_tst['messages'].append(
@@ -511,7 +586,7 @@ class QAData(object):
         else:
             heading = np.array([0])
 
-        # Intialize variable as if ADCP has no compass
+        # Initialize variable as if ADCP has no compass
         self.compass['status'] = 'inactive'
         self.compass['status1'] = 'good'
         self.compass['status2'] = 'good'
@@ -527,7 +602,7 @@ class QAData(object):
 
         if len(heading) > 1 and np.any(np.not_equal(heading, 0)):
             # ADCP has a compass
-            # A compass calibration is required is a loop test or GPS are used
+            # A compass calibration is required if a loop test or GPS are used
 
             # Check for loop test
             loop = False
@@ -538,7 +613,7 @@ class QAData(object):
             # Check for GPS data
             gps = False
             if meas.transects[checked.index(True)].boat_vel.gga_vel is not None or \
-               meas.transects[checked.index(True)].boat_vel.vtg_vel is not None:
+                    meas.transects[checked.index(True)].boat_vel.vtg_vel is not None:
                 gps = True
 
             if gps or loop:
@@ -598,7 +673,7 @@ class QAData(object):
                     # Compass was calibrated and evaluated
                     self.compass['status1'] = 'good'
 
-            # Check for consistent magvar
+            # Check for consistent magvar and pitch and roll mean and variation
             magvar = []
             mag_error_exceeded = []
             pitch_mean = []
@@ -624,7 +699,6 @@ class QAData(object):
                     roll_std.append(np.nanstd(roll_source_selected.data, ddof=1))
 
                     # SonTek G3 compass provides pitch, roll, and magnetic error parameters that can be checked
-                    # if meas.transects[checked.index(True)].adcp.manufacturer == 'SonTek':
                     if transect.adcp.manufacturer == 'SonTek':
                         if heading_source_selected.pitch_limit is not None:
                             # Check for bug in SonTek data where pitch and roll was n x 3 use n x 1
@@ -655,7 +729,7 @@ class QAData(object):
                             idx_max = np.where(heading_source_selected.mag_error > 2)[0]
                             if len(idx_max) > 0:
                                 mag_error_exceeded.append(n)
-
+            # Check magvar consistency
             if len(np.unique(magvar)) > 1:
                 self.compass['status2'] = 'caution'
                 self.compass['messages'].append(
@@ -798,8 +872,8 @@ class QAData(object):
         if temp_range > 2:
             check[0] = 3
             self.temperature['messages'].append(['TEMPERATURE: Temperature range is '
-                                                + '{:3.1f}'.format(temp_range)
-                                                + ' degrees C which is greater than 2 degrees;', 1, 5])
+                                                 + '{:3.1f}'.format(temp_range)
+                                                 + ' degrees C which is greater than 2 degrees;', 1, 5])
         elif temp_range > 1:
             check[0] = 2
             self.temperature['messages'].append(['TEMPERATURE: Temperature range is '
@@ -812,7 +886,7 @@ class QAData(object):
         if 'user' in meas.ext_temp_chk:
             try:
                 user = float(meas.ext_temp_chk['user'])
-            except (ValueError, TypeError) as e:
+            except (ValueError, TypeError):
                 user = None
             if user is None or np.isnan(user):
                 # No independent temperature reading
@@ -871,7 +945,6 @@ class QAData(object):
             # Moving-bed tests available
             mb_data = meas.mb_tests
 
-            # Are tests valid according to the user
             user_valid_test = []
             file_names = []
             idx_selected = []
@@ -880,7 +953,9 @@ class QAData(object):
             mb = []
             mb_test_type = []
             loop = []
+
             for n, test in enumerate(mb_data):
+                # Are tests valid according to the user
                 if test.user_valid:
                     user_valid_test.append(True)
                     file_names.append(test.transect.file_name)
@@ -1129,6 +1204,7 @@ class QAData(object):
 
         for dt_key, dt_value in data_type.items():
             boat = getattr(self, dt_value['class'])
+
             # Initialize dictionaries for each data type
             boat['q_total_caution'] = np.tile(False, (n_transects, 6))
             boat['q_max_run_caution'] = np.tile(False, (n_transects, 6))
@@ -1187,8 +1263,8 @@ class QAData(object):
 
                             # Check boat velocity for vtg data
                             if dt_key is 'VTG' and transect.boat_vel.selected is 'vtg_vel' and avg_speed_check == 0:
-                                avg_speed = np.nanmean((transect.boat_vel.vtg_vel.u_mps**2
-                                                        + transect.boat_vel.vtg_vel.v_mps**2)**0.5)
+                                avg_speed = np.nanmean((transect.boat_vel.vtg_vel.u_mps ** 2
+                                                        + transect.boat_vel.vtg_vel.v_mps ** 2) ** 0.5)
                                 if avg_speed < 0.24:
                                     boat['q_total_caution'][n, dt_filter[1]] = True
                                     boat['messages'].append(
@@ -1204,8 +1280,8 @@ class QAData(object):
                         module_code = 8
                     boat['messages'].append(
                         [dt_value['warning'] + dt_filter[0] +
-                            'Int. Q for consecutive invalid ensembles exceeds ' +
-                            '%3.1f' % self.q_run_threshold_warning + '%;', 1, module_code])
+                         'Int. Q for consecutive invalid ensembles exceeds ' +
+                         '%3.1f' % self.q_run_threshold_warning + '%;', 1, module_code])
                     status_switch = 2
                 elif boat['q_max_run_caution'][:, dt_filter[1]].any():
                     if dt_key is 'BT':
@@ -1214,8 +1290,8 @@ class QAData(object):
                         module_code = 8
                     boat['messages'].append(
                         [dt_value['caution'] + dt_filter[0] +
-                            'Int. Q for consecutive invalid ensembles exceeds ' +
-                            '%3.1f' % self.q_run_threshold_caution + '%;', 2, module_code])
+                         'Int. Q for consecutive invalid ensembles exceeds ' +
+                         '%3.1f' % self.q_run_threshold_caution + '%;', 2, module_code])
                     if status_switch < 1:
                         status_switch = 1
 
@@ -1227,8 +1303,8 @@ class QAData(object):
                         module_code = 8
                     boat['messages'].append(
                         [dt_value['warning'] + dt_filter[0] +
-                            'Int. Q for invalid ensembles in a transect exceeds ' +
-                            '%3.1f' % self.q_total_threshold_warning + '%;', 1, module_code])
+                         'Int. Q for invalid ensembles in a transect exceeds ' +
+                         '%3.1f' % self.q_total_threshold_warning + '%;', 1, module_code])
                     status_switch = 2
                 elif boat['q_total_caution'][:, dt_filter[1]].any():
                     if dt_key is 'BT':
@@ -1237,8 +1313,8 @@ class QAData(object):
                         module_code = 8
                     boat['messages'].append(
                         [dt_value['caution'] + dt_filter[0] +
-                            'Int. Q for invalid ensembles in a transect exceeds ' +
-                            '%3.1f' % self.q_total_threshold_caution + '%;', 2, module_code])
+                         'Int. Q for invalid ensembles in a transect exceeds ' +
+                         '%3.1f' % self.q_total_threshold_caution + '%;', 2, module_code])
                     if status_switch < 1:
                         status_switch = 1
 
@@ -1251,7 +1327,7 @@ class QAData(object):
                     module_code = 8
                 boat['messages'].append(
                     [dt_value['warning'] + dt_value['filter'][0][0] +
-                        'There are no valid data for one or more transects.;', 1, module_code])
+                     'There are no valid data for one or more transects.;', 1, module_code])
 
             # Set status
             if status_switch == 2:
@@ -1446,7 +1522,6 @@ class QAData(object):
         right_type = []
         transect_idx = []
 
-
         for n, transect in enumerate(meas.transects):
             checked.append(transect.checked)
 
@@ -1473,7 +1548,7 @@ class QAData(object):
             # Check left edge q > 5%
             self.edges['left_q'] = 0
 
-            left_q_percent = (np.nanmean(left_q) / mean_total_q ) * 100
+            left_q_percent = (np.nanmean(left_q) / mean_total_q) * 100
             temp_idx = np.where(left_q / mean_total_q > 0.05)[0]
             if len(temp_idx) > 0:
                 self.edges['left_q_idx'] = np.array(transect_idx)[temp_idx]
@@ -1485,7 +1560,8 @@ class QAData(object):
                 self.edges['left_q'] = 1
             elif len(self.edges['left_q_idx']) > 0:
                 self.edges['status'] = 'caution'
-                self.edges['messages'].append(['Edges: One or more transects have a left edge Q greater than 5%;', 1, 13])
+                self.edges['messages'].append(
+                    ['Edges: One or more transects have a left edge Q greater than 5%;', 1, 13])
                 self.edges['left_q'] = 1
 
             # Check right edge q > 5%
@@ -1502,7 +1578,8 @@ class QAData(object):
                 self.edges['right_q'] = 1
             elif len(self.edges['right_q_idx']) > 0:
                 self.edges['status'] = 'caution'
-                self.edges['messages'].append(['Edges: One or more transects have a right edge Q greater than 5%;', 1, 13])
+                self.edges['messages'].append(
+                    ['Edges: One or more transects have a right edge Q greater than 5%;', 1, 13])
                 self.edges['right_q'] = 1
 
             # Check for consistent sign
@@ -1563,11 +1640,11 @@ class QAData(object):
                     if np.any(ens_invalid):
                         if transect.start_edge == 'Left':
                             invalid_left = ens_invalid[0:int(transect.edges.left.number_ensembles)]
-                            invalid_right =ens_invalid[-int(transect.edges.right.number_ensembles):]
+                            invalid_right = ens_invalid[-int(transect.edges.right.number_ensembles):]
                         else:
                             invalid_right = ens_invalid[0:int(transect.edges.right.number_ensembles)]
                             invalid_left = ens_invalid[-int(transect.edges.left.number_ensembles):]
-                        # if np.any(invalid_left) or np.any(invalid_right):
+
                         left_invalid_percent = sum(invalid_left) / len(invalid_left)
                         right_invalid_percent = sum(invalid_right) / len(invalid_right)
                         max_invalid_percent = max([left_invalid_percent, right_invalid_percent]) * 100
@@ -1584,7 +1661,7 @@ class QAData(object):
 
             # Check edges for zero discharge
             self.edges['left_zero'] = 0
-            temp_idx =  np.where(np.round(left_q, 4) == 0)[0]
+            temp_idx = np.where(np.round(left_q, 4) == 0)[0]
             if len(temp_idx) > 0:
                 self.edges['left_zero_idx'] = np.array(transect_idx)[temp_idx]
                 self.edges['status'] = 'warning'
@@ -1658,12 +1735,12 @@ class QAData(object):
 
         n_runs = len(run_length0)
 
-        if valid[0] == True:
+        if valid[0]:
             n_start = 1
         else:
             n_start = 0
 
-        n_end = len(valid_run)-1
+        n_end = len(valid_run) - 1
 
         if n_runs > 1:
             m = 0
@@ -1671,7 +1748,7 @@ class QAData(object):
             for n in range(n_start, n_end, 2):
                 m += 1
                 idx_start = valid_run[n]
-                idx_end = valid_run[n+1]
+                idx_end = valid_run[n + 1]
                 q_invalid_run.append(np.nansum(discharge.middle_ens[idx_start:idx_end])
                                      + np.nansum(discharge.top_ens[idx_start:idx_end])
                                      + np.nansum(discharge.bottom_ens[idx_start:idx_end]))
@@ -1717,7 +1794,7 @@ class QAData(object):
         # Compute boat coordinates
         x_processed = np.nancumsum(u_processed * ens_duration)
         y_processed = np.nancumsum(v_processed * ens_duration)
-        dmg = (x_processed[-1]**2 + y_processed[-1]**2)**0.5
+        dmg = (x_processed[-1] ** 2 + y_processed[-1] ** 2) ** 0.5
 
         # Compute left distance moved
         # TODO should be a dist moved function
@@ -1725,7 +1802,7 @@ class QAData(object):
         if len(left_edge_idx) > 0:
             boat_x = x_processed[left_edge_idx[-1]] - x_processed[left_edge_idx[0]]
             boat_y = y_processed[left_edge_idx[-1]] - y_processed[left_edge_idx[0]]
-            left_dist_moved = (boat_x**2 + boat_y**2)**0.5
+            left_dist_moved = (boat_x ** 2 + boat_y ** 2) ** 0.5
         else:
             left_dist_moved = np.nan
 

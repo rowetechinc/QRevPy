@@ -1,7 +1,6 @@
 import copy
 import numpy as np
 from numpy.matlib import repmat
-
 from MiscLibs.common_functions import iqr
 from MiscLibs.robust_loess import rloess
 
@@ -60,6 +59,9 @@ class DepthData(object):
     """
     
     def __init__(self):
+        """Initialize attributes.
+        """
+
         self.depth_orig_m = None  # Original multi-beam depth data from transect file (includes draft_orig) in meters
         self.depth_beams_m = None  # Depth data from transect file adjusted for any draft changes, in meters
         self.depth_processed_m = None  # Depth data filtered and interpolated
@@ -141,10 +143,13 @@ class DepthData(object):
 
         self.depth_processed_m = mat_data.depthProcessed_m
         self.depth_freq_kHz = mat_data.depthFreq_Hz
+
+        # Support for older files that may not have had invalid index
         if len(mat_data.depthInvalidIndex) > 0:
             self.depth_invalid_index = mat_data.depthInvalidIndex
         else:
             self.depth_invalid_index = None
+
         self.depth_source = mat_data.depthSource
         self.depth_source_ens = mat_data.depthSourceEns
         self.draft_orig_m = mat_data.draftOrig_m
@@ -153,6 +158,7 @@ class DepthData(object):
         self.depth_cell_depth_m = mat_data.depthCellDepth_m
         self.depth_cell_size_orig_m = mat_data.depthCellSizeOrig_m
         self.depth_cell_size_m = mat_data.depthCellSize_m
+
         # Configure arrays properly for VB and DS
         if mat_data.depthSource == 'BT':
             self.depth_beams_m = mat_data.depthBeams_m
@@ -166,15 +172,19 @@ class DepthData(object):
             self.smooth_depth = mat_data.smoothDepth.reshape(1, -1)
             self.smooth_upper_limit = mat_data.smoothUpperLimit.reshape(1, -1)
             self.smooth_lower_limit = mat_data.smoothLowerLimit.reshape(1, -1)
+
         self.avg_method = mat_data.avgMethod
         self.filter_type = mat_data.filterType
         self.interp_type = mat_data.interpType
         self.valid_data_method = mat_data.validDataMethod
         self.valid_data = mat_data.validData.astype(bool)
+
+        # Reshape array for vertical beam and depth sounder
         if len(mat_data.validBeams.shape) < 2:
             self.valid_beams = mat_data.validBeams.reshape(1, -1)
         else:
             self.valid_beams = mat_data.validBeams
+
         self.valid_beams = self.valid_beams.astype(bool)
 
     def change_draft(self, draft):
@@ -212,8 +222,11 @@ class DepthData(object):
 
     def compute_avg_bt_depth(self, method=None):
         """Computes average depth for BT_Depths
-        
-        method: averaging method (Simple or IDW)
+
+        Parameters
+        ----------
+        method: str
+            Averaging method (Simple or IDW)
         """
 
         if method is not None:
@@ -240,15 +253,12 @@ class DepthData(object):
             Type of filter to apply (None, Smooth, TRDI).
         """
 
-        # if filter_type is not None:
-        #     self.filter_type = filter_type
-
         # Compute selected filter
         if filter_type == 'Off' or filter_type is None:
             # No filter
             self.filter_none()
         elif filter_type == 'Smooth':
-            # R smooth filter
+            # Smooth filter
             self.filter_smooth(transect)
         elif filter_type == 'TRDI' and self.depth_source == 'BT':
             # TRDI filter for multiple returns
@@ -286,12 +296,15 @@ class DepthData(object):
         # No filtering
         if method == 'None':
             self.interpolate_none()
+
         # Hold last valid depth indefinitely
         elif method == 'HoldLast':
             self.interpolate_hold_last()
+
         # Use values form a Loess smooth
         elif method == 'Smooth':
             self.interpolate_smooth()
+
         # Linear interpolation
         else:
             self.interpolate_linear(transect=transect)
@@ -306,7 +319,7 @@ class DepthData(object):
                 self.depth_source_ens[idx[idx2]] = 'IN'
         
     def apply_composite(self, comp_depth, comp_source):
-        """Applies the data from CompDepth compted in DepthStructure
+        """Applies the data from CompDepth computed in DepthStructure
         to DepthData object
 
         Parameters
@@ -347,7 +360,8 @@ class DepthData(object):
         self.depth_cell_depth_m = self.draft_use_m + np.multiply(self.depth_cell_depth_m - self.draft_use_m, ratio)
         
     def valid_mean_data(self):
-        """Determines if raw data are sufficient to compute a valid depth without interpolation."""
+        """Determines if raw data are sufficient to compute a valid depth without interpolation.
+        """
         
         if self.depth_source == 'BT':
             self.valid_data = np.tile(True, self.valid_beams.shape[1])
@@ -358,10 +372,11 @@ class DepthData(object):
             else:
                 self.valid_data[nvalid < 2] = False
         else:
-            self.valid_data = self.valid_beams[0,:]
+            self.valid_data = self.valid_beams[0, :]
             
     def filter_none(self):
-        """Applies no filter to depth data. Removes filter if one was applied."""
+        """Applies no filter to depth data. Removes filter if one was applied.
+        """
         
         # Set all ensembles to have valid data
         if len(self.depth_beams_m.shape) > 1:
@@ -504,6 +519,7 @@ class DepthData(object):
             depth_raw = np.reshape(self.depth_orig_m, (1, n_ensembles))
 
         depth_res = repmat([np.nan], n_beams, n_ensembles)
+
         # Set bad depths to nan
         depth = repmat(np.nan, depth_raw.shape[0], depth_raw.shape[1])
         depth[depth_raw > 0] = depth_raw[depth_raw > 0]
@@ -524,7 +540,8 @@ class DepthData(object):
             self.valid_beams[j, bad_idx] = False
 
     def interpolate_none(self):
-        """Applies no interpolation"""
+        """Applies no interpolation.
+        """
         
         # Compute processed depth without interpolation
         if self.depth_source == 'BT':
@@ -540,7 +557,8 @@ class DepthData(object):
         self.interp_type = 'None'
         
     def interpolate_hold_last(self):
-        """This function holds the last valid value until the next valid data point."""
+        """This function holds the last valid value until the next valid data point.
+        """
         
         # Get number of ensembles
         n_ensembles = len(self.depth_processed_m)
@@ -553,7 +571,8 @@ class DepthData(object):
                 self.depth_processed_m[n] = self.depth_processed_m[n-1]
 
     def interpolate_smooth(self):
-        """Apply interpolation based on the robust loess smooth"""
+        """Apply interpolation based on the robust loess smooth
+        """
         
         self.interp_type = 'Smooth'
         
@@ -577,7 +596,8 @@ class DepthData(object):
             self.depth_processed_m = depth_new[0, :]
             
     def interpolate_linear(self, transect):
-        """Apply linear interpolation"""
+        """Apply linear interpolation
+        """
         
         # Set interpolation type
         self.interp_type = 'Linear'
@@ -620,7 +640,7 @@ class DepthData(object):
         idx0 = np.where(np.diff(x) == 0)[0]
         if len(idx0) > 0:
             if len(idx0) > 1:
-                # Split array in to subarrays in proper sequence e.g [[2,3,4],[7,8,9]] etc.
+                # Split array into subarrays in proper sequence e.g [[2,3,4],[7,8,9]] etc.
                 idx1 = np.add(np.where(np.diff(idx0) != 1)[0], 1)
                 group = np.split(idx0, idx1)
 
@@ -653,10 +673,6 @@ class DepthData(object):
                 depth_int = np.interp(x_mono, x_mono[valid], depth_mono[n, valid], left=np.nan, right=np.nan)
                 # Fill in invalid data with interpolated data
                 depth_new[n, np.logical_not(self.valid_beams[n])] = depth_int[np.logical_not(self.valid_beams[n])]
-
-            # else:
-            #     # No valid data
-            #     depth_int[n, :] = np.tile(np.nan, len(valid))
 
         if self.depth_source == 'BT':
             # Bottom track depths
@@ -745,7 +761,8 @@ class DepthData(object):
         return np.array(iqr_array)
         
     def filter_trdi(self):
-        """Filter used by TRDI to filter out multiple reflections that get digitized as depth."""
+        """Filter used by TRDI to filter out multiple reflections that get digitized as depth.
+        """
 
         # Assign raw depth data to local variable
         depth_raw = np.copy(self.depth_orig_m)
@@ -760,7 +777,7 @@ class DepthData(object):
         self.filter_type = 'TRDI'
 
         for n in range(n_beams):
-            depth_ratio =  depth_raw[n, :] / depth_raw
+            depth_ratio = depth_raw[n, :] / depth_raw
             exceeded = depth_ratio > 1.75
             exceeded_ens = np.nansum(exceeded, 0)
             self.valid_beams[n, exceeded_ens > 0] = False
