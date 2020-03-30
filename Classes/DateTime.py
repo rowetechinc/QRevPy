@@ -56,7 +56,7 @@ class DateTime(object):
 
         if hasattr(transect, 'dateTime'):
             seconds_day = 86400
-            time_correction = 733928.8333333337 / seconds_day
+            time_correction = 719529.0000000003
 
             self.date = transect.dateTime.date
             self.start_serial_time = (transect.dateTime.startSerialTime - time_correction) * seconds_day

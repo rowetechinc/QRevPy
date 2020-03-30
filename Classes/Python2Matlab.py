@@ -634,8 +634,8 @@ class Python2Matlab(object):
                 transect.adcp.configuration_commands = transect.adcp.configuration_commands.reshape(-1, 1)
 
             # Adjust serial time to Matlab convention
-            seconds_day = (60 * 60 * 24)
-            time_correction = 719528.8333333337 + 14400 / seconds_day
+            seconds_day = 86400
+            time_correction = 719529.0000000003
             transect.date_time.start_serial_time = (transect.date_time.start_serial_time / seconds_day) \
                 + time_correction
             transect.date_time.end_serial_time = (transect.date_time.end_serial_time / seconds_day) + time_correction
