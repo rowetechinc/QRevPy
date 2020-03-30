@@ -5601,7 +5601,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     def change_altitude_threshold(self):
         """Coordinates application of a user specified error velocity threshold.
         """
-        self.ed_gps_altitude_threshold.signalsBlocked(True)
+        self.ed_gps_altitude_threshold.blockSignals(True)
         with self.wait_cursor():
             # Get threshold and convert to SI units
             threshold = self.check_numeric_input(self.ed_gps_altitude_threshold)
@@ -5621,13 +5621,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     self.update_gps_tab(s)
                     self.change = True
 
-        self.ed_gps_altitude_threshold.signalsBlocked(False)
+        self.ed_gps_altitude_threshold.blockSignals(False)
 
     @QtCore.pyqtSlot()
     def change_hdop_threshold(self):
         """Coordinates application of a user specified vertical velocity threshold.
         """
-        self.ed_gps_hdop_threshold.signalsBlocked(True)
+        self.ed_gps_hdop_threshold.blockSignals(True)
         with self.wait_cursor():
             # Get threshold and convert to SI units
             threshold = self.check_numeric_input(self.ed_gps_hdop_threshold)
@@ -5646,7 +5646,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     self.update_gps_tab(s)
                     self.change = True
 
-        self.ed_gps_hdop_threshold.signalsBlocked(False)
+        self.ed_gps_hdop_threshold.blockSignals(False)
 
     def gps_comments_messages(self):
         """Displays comments and messages associated with gps filters in Messages tab.
@@ -6998,7 +6998,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Coordinates application of a user specified error velocity threshold.
         """
 
-        self.ed_wt_error_vel_threshold.signalsBlocked(True)
+        self.ed_wt_error_vel_threshold.blockSignals(True)
         with self.wait_cursor():
             # Get threshold and convert to SI units
             threshold = self.check_numeric_input(self.ed_wt_error_vel_threshold)
@@ -7016,14 +7016,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     # Update measurement and display
                     self.update_wt_tab(s)
                     self.change = True
-        self.ed_wt_error_vel_threshold.signalsBlocked(False)
+        self.ed_wt_error_vel_threshold.blockSignals(False)
 
     @QtCore.pyqtSlot()
     def change_wt_vert_vel_threshold(self):
         """Coordinates application of a user specified vertical velocity threshold.
         """
 
-        self.ed_wt_vert_vel_threshold.signalsBlocked(True)
+        self.ed_wt_vert_vel_threshold.blockSignals(True)
         with self.wait_cursor():
             # Get threshold and convert to SI units
             threshold = self.check_numeric_input(self.ed_wt_vert_vel_threshold)
@@ -7042,14 +7042,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     # Update measurement and display
                     self.update_wt_tab(s)
                     self.change = True
-        self.ed_wt_vert_vel_threshold.signalsBlocked(False)
+        self.ed_wt_vert_vel_threshold.blockSignals(False)
 
     @QtCore.pyqtSlot()
     def change_wt_excluded_dist(self):
         """Coordinates application of a user specified excluded distance.
         """
 
-        self.ed_wt_excluded_dist.signalsBlocked(True)
+        self.ed_wt_excluded_dist.blockSignals(True)
         with self.wait_cursor():
             # Get threshold and convert to SI units
             threshold = self.check_numeric_input(self.ed_wt_excluded_dist)
@@ -7067,7 +7067,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     # Update measurement and display
                     self.update_wt_tab(s)
                     self.change = True
-        self.ed_wt_excluded_dist.signalsBlocked(False)
+        self.ed_wt_excluded_dist.blockSignals(False)
 
     def wt_comments_messages(self):
         """Displays comments and messages associated with bottom track filters in Messages tab.
@@ -7618,7 +7618,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Allows the user to change the threshold and then updates the data and display.
         """
 
-        self.ed_extrap_threshold.signalsBlocked(True)
+        self.ed_extrap_threshold.blockSignals(True)
 
         # If data entered.
         with self.wait_cursor():
@@ -7637,7 +7637,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             else:
                 self.ed_extrap_threshold.setText('{:3.0f}'.format(self.meas.extrap_fit.threshold))
 
-        self.ed_extrap_threshold.signalsBlocked(False)
+        self.ed_extrap_threshold.blockSignals(False)
 
     @QtCore.pyqtSlot()
     def change_subsection(self):
@@ -7751,7 +7751,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Coordinates user initiated changing the bottom method.
         """
 
-        self.ed_extrap_exponent.signalsBlocked(True)
+        self.ed_extrap_exponent.blockSignals(True)
 
         with self.wait_cursor():
             exponent = self.check_numeric_input(self.ed_extrap_exponent)
@@ -7769,7 +7769,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             else:
                 self.ed_extrap_exponent.setText('{:6.4f}'.format(self.meas.extrap_fit.sel_fit[self.idx].exponent))
 
-        self.ed_extrap_exponent.signalsBlocked(False)
+        self.ed_extrap_exponent.blockSignals(False)
 
     @QtCore.pyqtSlot(int)
     def sensitivity_change_fit(self, row):
@@ -8807,7 +8807,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl = self.tbl_edi_results
 
         # Add data to table
-        for row in range(tbl.rowCount()):
+        for row in range(len(self.edi_results['percent'])):
             col = 0
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:2.0f}'.format(self.edi_results['percent'][row])))
 
