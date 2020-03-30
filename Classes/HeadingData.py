@@ -79,9 +79,9 @@ class HeadingData(object):
             self.roll_limit = roll_limit
 
         # Correct the original data for the magvar and alignment
-        if source_in == 'Int. Sensor':
+        if source_in == 'internal':
             self.data = self.original_data + self.mag_var_deg
-        elif source_in == 'GPS':
+        else:
                 self.data = self.original_data + self.align_correction_deg
         self.fix_upper_limit()
         self.interp_heading()

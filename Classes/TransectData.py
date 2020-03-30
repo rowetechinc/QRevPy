@@ -469,7 +469,7 @@ class TransectData(object):
             # Internal Heading
             self.sensors.heading_deg.internal = HeadingData()
             self.sensors.heading_deg.internal.populate_data(data_in=pd0_data.Sensor.heading_deg.T,
-                                                            source_in=pd0_data.Cfg.head_src[0],
+                                                            source_in='internal',
                                                             magvar=mmt_config['Offsets_Magnetic_Variation'],
                                                             align=mmt_config['Ext_Heading_Offset'])
 
@@ -496,7 +496,7 @@ class TransectData(object):
                 # Create external heading sensor
                 self.sensors.heading_deg.external = HeadingData()
                 self.sensors.heading_deg.external.populate_data(data_in=ext_heading_deg,
-                                                                source_in='GPS',
+                                                                source_in='external',
                                                                 magvar=mmt_config['Offsets_Magnetic_Variation'],
                                                                 align=mmt_config['Ext_Heading_Offset'])
 
@@ -935,7 +935,7 @@ class TransectData(object):
             pitch_limit = None
             roll_limit = None
         self.sensors.heading_deg.internal.populate_data(data_in=rsdata.System.Heading,
-                                                        source_in='Internal',
+                                                        source_in='internal',
                                                         magvar=rsdata.Setup.magneticDeclination,
                                                         mag_error=mag_error,
                                                         pitch_limit=pitch_limit,
@@ -946,7 +946,7 @@ class TransectData(object):
         if np.nansum(np.abs(np.diff(ext_heading))) > 0:
             self.sensors.heading_deg.external = HeadingData()
             self.sensors.heading_deg.external.populate_data(data_in=ext_heading,
-                                                            source_in='GPS',
+                                                            source_in='external',
                                                             magvar=rsdata.Setup.magneticDeclination,
                                                             align=rsdata.Setup.hdtHeadingCorrection)
 
