@@ -8805,7 +8805,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.tab_all.setEnabled(True)
         self.actionSave.setEnabled(True)
         self.actionComment.setEnabled(True)
-        self.actionCheck.setEnabled(True)
+        if not hasattr(self, 'groupings'):
+            self.actionCheck.setEnabled(True)
+
         self.actionBT.setDisabled(True)
         self.actionGGA.setDisabled(True)
         self.actionVTG.setDisabled(True)
