@@ -8501,6 +8501,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.groupings = groupings
             self.checked_transects_idx = Measurement.checked_transects(self.meas)
             self.h_external_valid = Measurement.h_external_valid(self.meas)
+            self.transect_row = 0
 
             # Process first pairing
             self.group_idx = 0
@@ -8570,12 +8571,19 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Save data in Matlab format
         if self.save_all:
-            Python2Matlab.save_matlab_file(self.meas, save_file.full_Name)
+            Python2Matlab.save_matlab_file(self.meas, save_file.full_Name,
+                                           self.QRev_version)
         else:
-            Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, checked=self.groupings[self.group_idx])
+            Python2Matlab.save_matlab_file(self.meas, save_file.full_Name,
+                                           self.QRev_version,
+                                           checked=self.groupings[self.group_idx])
 
         self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml')
-        QtWidgets.QMessageBox.about(self, "Save", "Files (*_QRev.mat and *_QRev.xml) have been saved.")
+        QtWidgets.QMessageBox.about(self, "Save", "Group " +
+                                    str(self.group_idx + 1) + " of " +
+                                    str(len(self.groupings)) +
+                                    "\n Files (*_QRev.mat and " \
+                                           "*_QRev.xml) have been saved.")
 
         # Create a summary of the processed discharges
         discharge = Measurement.mean_discharges(self.meas)
