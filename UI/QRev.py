@@ -362,6 +362,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.current_tab = 0
         self.transect_row = 0
 
+        # Initialize emtpy tab setting dict
+        self.tab_settings = {}
+
         # Connect toolbar button to methods
         self.actionOpen.triggered.connect(self.select_measurement)
         self.actionComment.triggered.connect(self.add_comment)
@@ -638,6 +641,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.config_gui()
                 self.change = True
                 self.tab_manager(tab_idx=0)
+                self.set_tab_color()
 
     def save_measurement(self):
         """Save measurement in Matlab format.
@@ -1490,6 +1494,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         for key in qa_check_keys:
             qa_type = getattr(qa, key)
             self.set_icon(key, qa_type['status'])
+        self.set_tab_color()
 
     def set_icon(self, key, status):
         """Set tab icon based on qa check status.
@@ -1585,6 +1590,29 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tab_base.tabBar().setTabTextColor(tab_base.indexOf(tab_base.findChild(QtWidgets.QWidget, tab)),
                                               QtGui.QColor(255, 77, 77))
         tab_base.setIconSize(QtCore.QSize(15, 15))
+
+    def set_tab_color(self):
+
+        """Updates tab font to Blue if a setting was changed from the
+        default settings."""
+
+        # Update tab setting dict
+        self.check_bt_settings()
+        self.check_wt_settings()
+        self.check_depth_settings()
+        self.check_extrap_settings()
+        self.check_tempsal_settings()
+        if self.tab_all.isTabEnabled(6) is True:
+            self.check_gps_settings()
+
+        for tab in self.tab_settings:
+
+            if self.tab_settings[tab] == 'Custom':
+
+                self.tab_all.tabBar().setTabTextColor(
+                    self.tab_all.indexOf(
+                        self.tab_all.findChild(QtWidgets.QWidget, tab)),
+                    QtGui.QColor(0, 0, 255))
 
     def comments_tab(self):
         """Display comments in comments tab.
@@ -3378,6 +3406,49 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Display comments and messages in messages tab
         self.tempsal_comments_messages()
 
+    def check_tempsal_settings(self):
+        """Checks the temp and salinity settings to see if they are still on
+        the default settings."""
+
+        t_source = []
+        s_sound = []
+
+        for row in range(len(self.checked_transects_idx)):
+
+            transect_id = self.checked_transects_idx[row]
+
+            # Temperature source
+            if self.meas.transects[transect_id].\
+                    sensors.temperature_deg_c.selected == 'user':
+                source = 'Custom'
+
+            else:
+                source = 'Default'
+
+            t_source.append(source)
+
+            # Speed of Sound
+            if self.meas.transects[transect_id].\
+                    sensors.speed_of_sound_mps.selected == 'internal':
+
+                source = 'Default'
+
+            else:
+                source = 'Custom'
+
+            s_sound.append(source)
+
+        if 'Custom' in t_source:
+
+            self.tab_settings['tab_tempsal'] = 'Custom'
+
+        elif 'Custom' in s_sound:
+
+            self.tab_settings['tab_tempsal'] = 'Custom'
+
+        else:
+            self.tab_settings['tab_tempsal'] = 'Default'
+
     @QtCore.pyqtSlot(int, int)
     def tempsal_table_clicked(self, row, column):
         """Coordinates changes to the temperature, salinity, and speed of sound settings based on the column in
@@ -3849,12 +3920,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # User valid
         if column == 0:
             if tbl.item(row, 0).checkState() == QtCore.Qt.Checked:
-                # tbl.item(row, 0).setCheckState(QtCore.Qt.Unchecked)
                 self.meas.mb_tests[row].user_valid = False
                 self.add_comment()
             else:
-                # tbl.item(row, 0).setCheckState(QtCore.Qt.Checked)
                 self.meas.mb_tests[row].user_valid = True
+                self.add_comment()
 
             self.meas.mb_tests = MovingBedTests.auto_use_2_correct(
                 moving_bed_tests=self.meas.mb_tests,
@@ -4714,6 +4784,31 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Update plots
         self.bt_plots()
 
+    def check_bt_settings(self):
+        """Checks the bt settings to see if they are still on the default
+                settings."""
+
+        s = self.meas.current_settings()
+        d = self.meas.qrev_default_settings()
+
+        beam_sol = s['BTbeamFilter']
+        bt_error = s['BTdFilter']
+        bt_vert = s['BTwFilter']
+        other = s['BTsmoothFilter']
+
+        d_beam_sol = d['BTbeamFilter']
+        d_bt_error = d['BTdFilter']
+        d_bt_vert = d['BTwFilter']
+        d_other = d['BTsmoothFilter']
+
+        settings = [beam_sol, bt_error, bt_vert, other]
+        default = [d_beam_sol, d_bt_error, d_bt_vert, d_other]
+
+        if settings == default:
+            self.tab_settings['tab_bt'] = 'Default'
+        else:
+            self.tab_settings['tab_bt'] = 'Custom'
+
     @QtCore.pyqtSlot(str)
     def change_bt_beam(self, text):
         """Coordinates user initiated change to the beam settings.
@@ -5491,6 +5586,31 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Update plots
         self.gps_plots()
 
+    def check_gps_settings(self):
+        """Checks the gps settings to see if they are still on the default
+        settings."""
+
+        s = self.meas.current_settings()
+        d = self.meas.qrev_default_settings()
+
+        quality = s['ggaDiffQualFilter']
+        alt_change = s['ggaAltitudeFilter']
+        hdop = s['GPSHDOPFilter']
+        other = s['GPSSmoothFilter']
+
+        d_quality = d['ggaDiffQualFilter']
+        d_alt_change = d['ggaAltitudeFilter']
+        d_hdop = d['GPSHDOPFilter']
+        d_other = d['GPSSmoothFilter']
+
+        settings = [quality, alt_change, hdop, other]
+        default = [d_quality, d_alt_change, d_hdop, d_other]
+
+        if settings == default:
+            self.tab_settings['tab_gps'] = 'Default'
+        else:
+            self.tab_settings['tab_gps'] = 'Custom'
+
     @QtCore.pyqtSlot(str)
     def change_quality(self, text):
         """Coordinates user initiated change to the minumum GPS quality.
@@ -6171,6 +6291,29 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.depth_plots()
 
         self.depth_comments_messages()
+
+    def check_depth_settings(self):
+        """Checks the comboboxes to see if they are still on the default
+                settings."""
+
+        s = self.meas.current_settings()
+        d = self.meas.qrev_default_settings()
+
+        depth_ref = s['depthReference']
+        bt_average = s['depthAvgMethod']
+        s_filter = s['depthFilterType']
+
+        d_depth_ref = d['depthReference']
+        d_bt_average = d['depthAvgMethod']
+        d_filter = d['depthFilterType']
+
+        settings = [depth_ref, bt_average, s_filter]
+        default = [d_depth_ref, d_bt_average, d_filter]
+
+        if settings == default:
+            self.tab_settings['tab_depth'] = 'Default'
+        else:
+            self.tab_settings['tab_depth'] = 'Custom'
 
     @QtCore.pyqtSlot()
     def depth_top_plot_change(self):
@@ -6886,6 +7029,35 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Update plots
         self.wt_plots()
 
+    def check_wt_settings(self):
+        """Checks the comboboxes to see if they are still on the default
+        settings."""
+
+        s = self.meas.current_settings()
+        d = self.meas.qrev_default_settings()
+
+        # beam_sol = self.combo_wt_3beam.currentText()
+        # wt_error = self.combo_wt_error_velocity.currentText()
+        # wt_vert = self.combo_wt_vert_velocity.currentText()
+
+        beam_sol = s['WTbeamFilter']
+        wt_error = s['WTdFilter']
+        wt_vert = s['WTwFilter']
+        wt_snr = s['WTsnrFilter']
+
+        d_beam_sol = d['WTbeamFilter']
+        d_wt_error = d['WTdFilter']
+        d_wt_vert = d['WTwFilter']
+        d_wt_snr = d['WTsnrFilter']
+
+        settings = [beam_sol, wt_error, wt_vert, wt_snr]
+        default = [d_beam_sol, d_wt_error, d_wt_vert, d_wt_snr]
+
+        if settings == default:
+            self.tab_settings['tab_wt'] = 'Default'
+        else:
+            self.tab_settings['tab_wt'] = 'Custom'
+
     @QtCore.pyqtSlot(str)
     def change_wt_beam(self, text):
         """Coordinates user initiated change to the beam settings.
@@ -7210,6 +7382,35 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.n_points_table()
         self.set_fit_options()
         self.extrap_plot()
+
+    def check_extrap_settings(self):
+        """Checks the comboboxes to see if they are still on the default
+        settings."""
+
+        # Check fit parameters
+        if self.meas.extrap_fit.sel_fit[0].fit_method == 'Automatic':
+            fit = 'Automatic'
+        else:
+            fit = 'Manual'
+
+        # Check subsection parameters
+        if self.meas.extrap_fit.sel_fit[-1].data_type.lower() != 'q':
+            d_used = 'Manual'
+        elif self.meas.extrap_fit.threshold != 20:
+            d_used = 'Manual'
+        elif self.meas.extrap_fit.subsection[0] != 0 or \
+                self.meas.extrap_fit.subsection[1] != 100:
+            d_used = 'Manual'
+        else:
+            d_used = 'Automatic'
+
+        settings = [fit, d_used]
+        default = ['Automatic', 'Automatic']
+
+        if settings == default:
+            self.tab_settings['tab_extrap'] = 'Default'
+        else:
+            self.tab_settings['tab_extrap'] = 'Custom'
 
     def extrap_index(self, row):
         """Converts the row value to a transect index.
@@ -9087,8 +9288,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         QtWidgets.QMessageBox.about(self, "Save", "Group " +
                                     str(self.group_idx + 1) + " of " +
                                     str(len(self.groupings)) +
-                                    "\n Files (*_QRev.mat and " \
-                                           "*_QRev.xml) have been saved.")
+                                    "\n Files (*_QRev.mat and "
+                                    "*_QRev.xml) have been saved.")
 
         # Create a summary of the processed discharges
         discharge = Measurement.mean_discharges(self.meas)

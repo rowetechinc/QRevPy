@@ -564,8 +564,8 @@ class Python2Matlab(object):
             File name of saved Matlab file
         version: str
             QRev version
-        checked: bool
-            Determines if all or only checked files are saved
+        checked: list
+            Identifies which transects should be saved.
         """
 
         if checked is None:
