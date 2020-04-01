@@ -9008,6 +9008,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.groupings = groupings
             self.checked_transects_idx = Measurement.checked_transects(self.meas)
             self.h_external_valid = Measurement.h_external_valid(self.meas)
+            self.transect_row = 0
 
             # Process first pairing
             self.group_idx = 0
@@ -9083,7 +9084,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml')
 
         # Notify user when save complete
-        QtWidgets.QMessageBox.about(self, "Save", "Files (*_QRev.mat and *_QRev.xml) have been saved.")
+        QtWidgets.QMessageBox.about(self, "Save", "Group " +
+                                    str(self.group_idx + 1) + " of " +
+                                    str(len(self.groupings)) +
+                                    "\n Files (*_QRev.mat and " \
+                                           "*_QRev.xml) have been saved.")
 
         # Create a summary of the processed discharges
         discharge = Measurement.mean_discharges(self.meas)
@@ -9358,9 +9363,19 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.tab_all.setEnabled(True)
         self.actionSave.setEnabled(True)
         self.actionComment.setEnabled(True)
-        self.actionCheck.setEnabled(True)
+        if hasattr(self, 'groupings'):
+            self.actionCheck.setEnabled(False)
+        else:
+            self.actionCheck.setEnabled(True)
         self.actionBT.setEnabled(True)
         self.actionOptions.setEnabled(True)
+        self.actionBT.setDisabled(True)
+        self.actionGGA.setDisabled(True)
+        self.actionVTG.setDisabled(True)
+        self.actionOFF.setDisabled(True)
+        self.actionON.setDisabled(True)
+        self.actionOptions.setDisabled(True)
+        self.actionGoogle_Earth.setDisabled(True)
 
         # Set tab text and icons to default
         for tab_idx in range(self.tab_all.count() - 1):
