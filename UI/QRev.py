@@ -323,7 +323,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.setupUi(self)
 
         # Set version of QRev
-        self.QRev_version = 'QRevPy 4.08'
+        self.QRev_version = 'QRevPy 4.09'
         self.setWindowTitle(self.QRev_version)
 
         # Disable ability to hide toolbar
@@ -3483,6 +3483,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 t_source_dialog.rb_user.setChecked(True)
                 t_source_dialog.ed_user_temp.setText(
                     '{:3.1f}'.format(self.meas.transects[transect_id].sensors.temperature_deg_c.user.data[0]))
+            if self.rb_f.isChecked():
+                t_source_dialog.rb_user.setText('User (F)')
+            else:
+                t_source_dialog.rb_user.setText('User (C)')
             t_source_entered = t_source_dialog.exec_()
 
             if t_source_entered:
@@ -3494,6 +3498,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     elif t_source_dialog.rb_user.isChecked():
                         t_source = 'user'
                         user_temp = float(t_source_dialog.ed_user_temp.text())
+                        if self.rb_f.isChecked():
+                            user_temp = convert_temperature(user_temp, units_in='F', units_out='C')
 
                     # Apply change to all or only selected transect based on user input
                     if t_source_dialog.rb_all.isChecked():
@@ -9634,7 +9640,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         close = QtWidgets.QMessageBox()
         close.setIcon(QtWidgets.QMessageBox.Warning)
         close.setWindowTitle("Close")
-        close.setText("You sure you want to Close?")
+        close.setText("If you haven't saved your data, changes will be lost. \n Are you sure you want to Close? ")
         close.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
         close = close.exec()
 
