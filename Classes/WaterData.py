@@ -1419,7 +1419,10 @@ class WaterData(object):
         # Find cells with invalid data
         valid_cells = wt_data.valid_data[0, :, :]
         boat_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
-        boat_valid = boat_selected.valid_data[0]
+        if boat_selected is not None:
+            boat_valid = boat_selected.valid_data[0]
+        else:
+            boat_valid = 0
 
         if not np.all(valid_cells) and np.nansum(boat_valid) > 1:
             # Compute distance along shiptrack to be used in interpolation

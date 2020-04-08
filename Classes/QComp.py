@@ -240,9 +240,17 @@ class QComp(object):
         self.middle_ens = q_in.middleEns
         self.bottom_ens = q_in.bottomEns
         self.left = q_in.left
-        self.left_idx = q_in.leftidx
+        # If only one value, it will be read in as int but needs to be an array of len 1
+        if type(q_in.leftidx) is int:
+            self.left_idx = np.array([q_in.leftidx])
+        else:
+            self.left_idx = q_in.leftidx
         self.right = q_in.right
-        self.right_idx = q_in.rightidx
+        # If only one value, it will be read in as int but needs to be an array of len 1
+        if type(q_in.rightidx) is int:
+            self.right_idx = np.array([q_in.rightidx])
+        else:
+            self.right_idx = q_in.rightidx
         self.total_uncorrected = q_in.totalUncorrected
         self.total = q_in.total
         self.correction_factor = q_in.correctionFactor
@@ -994,8 +1002,8 @@ class QComp(object):
             b_vel_x = trans_selected.u_processed_mps
             b_vel_y = trans_selected.v_processed_mps
         else:
-            b_vel_x = np.tile([np.nan], transect.boat_vel.u_processed_mps.shape)
-            b_vel_y = np.tile([np.nan], transect.boat_vel.v_processed_mps.shape)
+            b_vel_x = np.tile([np.nan], transect.boat_vel.bt_vel.u_processed_mps.shape)
+            b_vel_y = np.tile([np.nan], transect.boat_vel.bt_vel.v_processed_mps.shape)
 
         track_x = np.nancumsum(b_vel_x[in_transect_idx] * ens_delta_time[in_transect_idx])
         track_y = np.nancumsum(b_vel_y[in_transect_idx] * ens_delta_time[in_transect_idx])

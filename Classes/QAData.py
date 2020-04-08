@@ -1263,14 +1263,15 @@ class QAData(object):
 
                             # Check boat velocity for vtg data
                             if dt_key is 'VTG' and transect.boat_vel.selected is 'vtg_vel' and avg_speed_check == 0:
-                                avg_speed = np.nanmean((transect.boat_vel.vtg_vel.u_mps ** 2
-                                                        + transect.boat_vel.vtg_vel.v_mps ** 2) ** 0.5)
-                                if avg_speed < 0.24:
-                                    boat['q_total_caution'][n, dt_filter[1]] = True
-                                    boat['messages'].append(
-                                        ['vtg-AvgSpeed: VTG data may not be accurate for average boat speed less than'
-                                         + '0.24 m/s (0.8 ft/s);', 2, 8])
-                                    avg_speed_check = 1
+                                if transect.boat_vel.vtg_vel.u_mps is not None:
+                                    avg_speed = np.nanmean((transect.boat_vel.vtg_vel.u_mps ** 2
+                                                            + transect.boat_vel.vtg_vel.v_mps ** 2) ** 0.5)
+                                    if avg_speed < 0.24:
+                                        boat['q_total_caution'][n, dt_filter[1]] = True
+                                        boat['messages'].append(
+                                            ['vtg-AvgSpeed: VTG data may not be accurate for average boat speed less than'
+                                             + '0.24 m/s (0.8 ft/s);', 2, 8])
+                                        avg_speed_check = 1
 
                 # Create message for consecutive invalid discharge
                 if boat['q_max_run_warning'][:, dt_filter[1]].any():

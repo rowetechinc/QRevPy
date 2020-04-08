@@ -641,18 +641,22 @@ class Measurement(object):
         # For compatibility with older QRev.mat files that didn't have this feature
         for n in range(len(self.transects)):
             if len(self.discharge[n].left_idx) == 0:
-                edge_q, self.discharge[n].left_idx = self.discharge[n].discharge_edge('left',
-                                                                                      self.transects[n],
-                                                                                      top_method=None,
-                                                                                      bot_method=None,
-                                                                                      exponent=None)
+                self.discharge[n].left_idx = self.discharge[n].edge_ensembles(edge_loc='left',
+                                                                              transect=self.transects[n])
+                # edge_q, self.discharge[n].left_idx = self.discharge[n].discharge_edge('left',
+                #                                                                       self.transects[n],
+                #                                                                       top_method=None,
+                #                                                                       bot_method=None,
+                #                                                                       exponent=None)
 
             if len(self.discharge[n].right_idx) == 0:
-                edge_q, self.discharge[n].right_idx = self.discharge[n].discharge_edge('right',
-                                                                                       self.transects[n],
-                                                                                       top_method=None,
-                                                                                       bot_method=None,
-                                                                                       exponent=None)
+                self.discharge[n].right_idx = self.discharge[n].edge_ensembles(edge_loc='right',
+                                                                               transect=self.transects[n])
+                # edge_q, self.discharge[n].right_idx = self.discharge[n].discharge_edge('right',
+                #                                                                        self.transects[n],
+                #                                                                        top_method=None,
+                #                                                                        bot_method=None,
+                #                                                                        exponent=None)
 
             if type(self.discharge[n].correction_factor) is list:
                 self.discharge[n].correction_factor = self.discharge[n].total / self.discharge[n].total_uncorrected
@@ -2594,7 +2598,10 @@ class Measurement(object):
                 ETree.SubElement(t_edge, 'LeftType', type='char').text = temp
 
                 # (4) LeftEdgeCoefficient Node
-                temp = '{:.4f}'.format(QComp.edge_coef('left', self.transects[n]))
+                if temp == 'User Q':
+                    temp = ''
+                else:
+                    temp = '{:.4f}'.format(QComp.edge_coef('left', self.transects[n]))
                 ETree.SubElement(t_edge, 'LeftEdgeCoefficient', type='double').text = temp
 
                 # (4) LeftDistance Node
@@ -2610,7 +2617,10 @@ class Measurement(object):
                 ETree.SubElement(t_edge, 'RightType', type='char').text = temp
 
                 # (4) RightEdgeCoefficient Node
-                temp = '{:.4f}'.format(QComp.edge_coef('right', self.transects[n]))
+                if temp == 'User Q':
+                    temp = ''
+                else:
+                    temp = '{:.4f}'.format(QComp.edge_coef('right', self.transects[n]))
                 ETree.SubElement(t_edge, 'RightEdgeCoefficient', type='double').text = temp
 
                 # (4) RightDistance Node

@@ -191,7 +191,7 @@ class BoatStructure(object):
                 v_vtg = np.tile([np.nan], v_bt.shape)
 
             # Process bt as primary
-            if self.bt_vel is not None:
+            if self.selected == 'bt_vel':
                 # Initialize composite source
                 comp_source = np.tile(np.nan, u_bt.shape)
 
@@ -226,7 +226,7 @@ class BoatStructure(object):
                 self.bt_vel.interpolate_composite(transect)
 
             # Process gga as primary
-            if self.gga_vel is not None:
+            elif self.selected == 'gga_vel':
                 # Initialize the composite source
                 comp_source = np.tile([np.nan], u_bt.shape)
 
@@ -254,15 +254,21 @@ class BoatStructure(object):
                 v_comp = v_gga
                 v_comp[np.isnan(v_comp)] = v_vtg[np.isnan(v_comp)]
                 v_comp[np.isnan(v_comp)] = v_bt[np.isnan(v_comp)]
-                v_comp[np.isnan(v_comp)] = self.gga_vel.v_processed_mps[np.isnan(v_comp)]
+                # v_comp[np.isnan(v_comp)] = self.gga_vel.v_processed_mps[np.isnan(v_comp)]
 
                 # Apply the composite settings to the gga BoatData object
-                # Apply the composite settings to the bottom track Boatdata objects
+                # For the situation where the transect has no GGA data but other transects do and composite tracks
+                # has been turned on, create the gga_vel object and populate only the u and v processed, comp_source,
+                # and valid_data attributes.
+                if self.gga_vel is None:
+                    self.gga_vel = BoatData()
+                    self.gga_vel.processed_source = np.array([''] * comp_source.shape[0], dtype=object)
+                    self.gga_vel.valid_data = np.full((6, comp_source.shape[0]), False)
                 self.gga_vel.apply_composite(u_comp, v_comp, comp_source)
                 self.gga_vel.interpolate_composite(transect)
 
             # Process vtg as primary
-            if self.vtg_vel is not None:
+            elif self.selected == 'vtg_vel':
                 # Initialize the composite source
                 comp_source = np.tile([np.nan], u_bt.shape)
 
@@ -291,10 +297,16 @@ class BoatStructure(object):
                 # DSM wrong in Matlab version 1/29/2018 v_comp[np.isnan(v_comp)] = v_vtg[np.isnan(v_comp)]
                 v_comp[np.isnan(v_comp)] = v_gga[np.isnan(v_comp)]
                 v_comp[np.isnan(v_comp)] = v_bt[np.isnan(v_comp)]
-                v_comp[np.isnan(v_comp)] = self.vtg_vel.v_processed_mps[np.isnan(v_comp)]
+                # v_comp[np.isnan(v_comp)] = self.vtg_vel.v_processed_mps[np.isnan(v_comp)]
 
                 # Apply the composite settings to the gga BoatData object
-                # Apply the composite settings to the bottom track Boatdata objects
+                # For the situation where the transect has no GGA data but other transects do and composite tracks
+                # has been turned on, create the gga_vel object and populate only the u and v processed, comp_source,
+                # and valid_data attributes.
+                if self.vtg_vel is None:
+                    self.vtg_vel = BoatData()
+                    self.vtg_vel.processed_source = np.array([''] * comp_source.shape[0], dtype=object)
+                    self.vtg_vel.valid_data = np.full((6, comp_source.shape[0]), False)
                 self.vtg_vel.apply_composite(u_comp, v_comp, comp_source)
                 self.vtg_vel.interpolate_composite(transect)
         else:
@@ -315,29 +327,39 @@ class BoatStructure(object):
 
             # Use only interpolations for gga
             if self.gga_vel is not None:
-                self.gga_vel.apply_interpolation(transect=transect,
-                                                 interpolation_method=transect.boat_vel.gga_vel.interpolate)
-                comp_source = np.tile(np.nan, self.gga_vel.u_processed_mps.shape)
-                comp_source[self.gga_vel.valid_data[0, :]] = 2
-                comp_source[np.logical_and(np.isnan(comp_source),
-                                           (np.isnan(self.gga_vel.u_processed_mps) == False))] = 0
-                comp_source[np.isnan(comp_source)] = -1
-                self.gga_vel.apply_composite(u_composite=self.gga_vel.u_processed_mps,
-                                             v_composite=self.gga_vel.v_processed_mps,
-                                             composite_source=comp_source)
+                # This if statement handles the situation where there is no GPS data for a transect but there is GPS
+                # data for other transects and the user has turned on / off composite tracks.
+                if self.gga_vel.u_mps is not None:
+                    self.gga_vel.apply_interpolation(transect=transect,
+                                                     interpolation_method=transect.boat_vel.gga_vel.interpolate)
+                    comp_source = np.tile(np.nan, self.gga_vel.u_processed_mps.shape)
+                    comp_source[self.gga_vel.valid_data[0, :]] = 2
+                    comp_source[np.logical_and(np.isnan(comp_source),
+                                               (np.isnan(self.gga_vel.u_processed_mps) == False))] = 0
+                    comp_source[np.isnan(comp_source)] = -1
+                    self.gga_vel.apply_composite(u_composite=self.gga_vel.u_processed_mps,
+                                                 v_composite=self.gga_vel.v_processed_mps,
+                                                 composite_source=comp_source)
+                else:
+                    self.gga_vel = None
 
             # Use only interpolations for vtg
             if self.vtg_vel is not None:
-                self.vtg_vel.apply_interpolation(transect=transect,
-                                                 interpolation_method=transect.boat_vel.vtg_vel.interpolate)
-                comp_source = np.tile(np.nan, self.vtg_vel.u_processed_mps.shape)
-                comp_source[self.vtg_vel.valid_data[0, :]] = 3
-                comp_source[np.logical_and(np.isnan(comp_source),
-                                           (np.isnan(self.vtg_vel.u_processed_mps) == False))] = 0
-                comp_source[np.isnan(comp_source)] = -1
-                self.vtg_vel.apply_composite(u_composite=self.vtg_vel.u_processed_mps,
-                                             v_composite=self.vtg_vel.v_processed_mps,
-                                             composite_source=comp_source)
+                # This if statement handles the situation where there is no GPS data for a transect but there is GPS
+                # data for other transects and the user has turned on / off composite tracks.
+                if self.vtg_vel.u_mps is not None:
+                    self.vtg_vel.apply_interpolation(transect=transect,
+                                                     interpolation_method=transect.boat_vel.vtg_vel.interpolate)
+                    comp_source = np.tile(np.nan, self.vtg_vel.u_processed_mps.shape)
+                    comp_source[self.vtg_vel.valid_data[0, :]] = 3
+                    comp_source[np.logical_and(np.isnan(comp_source),
+                                               (np.isnan(self.vtg_vel.u_processed_mps) == False))] = 0
+                    comp_source[np.isnan(comp_source)] = -1
+                    self.vtg_vel.apply_composite(u_composite=self.vtg_vel.u_processed_mps,
+                                                 v_composite=self.vtg_vel.v_processed_mps,
+                                                 composite_source=comp_source)
+                else:
+                    self.vtg_vel = None
 
     @staticmethod
     def compute_boat_track(transect, ref=None):

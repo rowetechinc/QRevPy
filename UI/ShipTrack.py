@@ -2,6 +2,7 @@ from PyQt5 import QtCore
 import numpy as np
 
 
+
 class Shiptrack(object):
     """Class to generate shiptrack plot. If checkboxes for the boat reference
         (BT, GGA, VTG) are available they can be used to control what references are plotted.
@@ -340,10 +341,11 @@ class Shiptrack(object):
             u_mean = np.nanmean(u, axis=0)
             v_mean = np.nanmean(v, axis=0)
 
+        max_speed = np.nanmax(np.sqrt(u_mean**2 + v_mean**2) * units['V'])
         # Plot water vectors
         self.vectors = self.fig.ax.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
                                           u_mean * units['V'], v_mean * units['V'], units='dots', width=1,
-                                          scale_units='width', scale=20)
+                                          scale_units='width', scale=4*max_speed)
         if control['vectors']:
             self.vectors.set_visible(True)
         else:

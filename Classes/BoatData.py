@@ -619,47 +619,48 @@ class BoatData(object):
         """
 
         # Reset processed data
-        self.u_processed_mps = np.copy(self.u_mps)
-        self.v_processed_mps = np.copy(self.v_mps)
-        self.u_processed_mps[self.valid_data[0, :] == False] = np.nan
-        self.v_processed_mps[self.valid_data[0, :] == False] = np.nan
+        if self.u_mps is not None:
+            self.u_processed_mps = np.copy(self.u_mps)
+            self.v_processed_mps = np.copy(self.v_mps)
+            self.u_processed_mps[self.valid_data[0, :] == False] = np.nan
+            self.v_processed_mps[self.valid_data[0, :] == False] = np.nan
 
-        # Determine interpolation methods to apply
-        if interpolation_method is None:
-            interpolation_method = self.interpolate
-        else:
-            self.interpolate = interpolation_method
+            # Determine interpolation methods to apply
+            if interpolation_method is None:
+                interpolation_method = self.interpolate
+            else:
+                self.interpolate = interpolation_method
 
-        # Apply specified interpolation method
+            # Apply specified interpolation method
 
-        if interpolation_method == 'None':
-            # Sets invalid data to nan with no interpolation
-            self.interpolate_none()
+            if interpolation_method == 'None':
+                # Sets invalid data to nan with no interpolation
+                self.interpolate_none()
 
-        elif interpolation_method == 'ExpandedT':
-            # Set interpolate to none as the interpolation done is in the QComp
-            self.interpolate_next()
+            elif interpolation_method == 'ExpandedT':
+                # Set interpolate to none as the interpolation done is in the QComp
+                self.interpolate_next()
 
-        elif interpolation_method == 'Hold9':
-            # Interpolates using SonTek method of holding last valid for up to 9 samples
-            self.interpolate_hold_9()
+            elif interpolation_method == 'Hold9':
+                # Interpolates using SonTek method of holding last valid for up to 9 samples
+                self.interpolate_hold_9()
 
-        elif interpolation_method == 'HoldLast':
-            # Interpolates by holding last valid indefinitely
-            self.interpolate_hold_last()
+            elif interpolation_method == 'HoldLast':
+                # Interpolates by holding last valid indefinitely
+                self.interpolate_hold_last()
 
-        elif interpolation_method == 'Linear':
-            # Interpolates using linear interpolation
-            self.interpolate_linear(transect)
+            elif interpolation_method == 'Linear':
+                # Interpolates using linear interpolation
+                self.interpolate_linear(transect)
 
-        elif interpolation_method == 'Smooth':
-            # Interpolates using smooth interpolation
-            self.interpolate_smooth(transect)
+            elif interpolation_method == 'Smooth':
+                # Interpolates using smooth interpolation
+                self.interpolate_smooth(transect)
 
-        elif interpolation_method == 'TRDI':
-            # TRDI interpolation is done in discharge.
-            # For TRDI the interpolation is done on discharge not on velocities
-            self.interpolate_none()
+            elif interpolation_method == 'TRDI':
+                # TRDI interpolation is done in discharge.
+                # For TRDI the interpolation is done on discharge not on velocities
+                self.interpolate_none()
 
     def apply_composite(self, u_composite, v_composite, composite_source):
         """Stores composite velocities and sources.

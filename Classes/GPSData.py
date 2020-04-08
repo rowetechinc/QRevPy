@@ -382,7 +382,6 @@ class GPSData(object):
             self.gga_lat_ens_deg = np.tile(np.nan, gga_lat_deg.shape[0])
             self.gga_lon_ens_deg = np.tile(np.nan, gga_lon_deg.shape[0])
             for n in range(n_ensembles):
-                # DSM changed 1/30/2018    idx = np.where(np.isnan(gga_lat_deg[n,:]))[0][-1]
                 idx = np.argwhere(~np.isnan(gga_lat_deg[n, :]))
                 if idx.size < 1:
                     idx = 0

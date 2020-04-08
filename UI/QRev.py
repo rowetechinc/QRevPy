@@ -682,11 +682,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Add comment triggered by actionComment
         """
         # Initialize comment dialog
-        comment = Comment()
+        tab_idx = self.current_tab
+        tab_name = self.tab_all.tabText(tab_idx)
+        comment = Comment(tab_name)
         comment_entered = comment.exec_()
 
         # If comment entered and measurement open, save comment, and update comments tab.
         if comment_entered:
+
             if self.meas is not None:
                 self.meas.comments.append(comment.text_edit_comment.toPlainText())
             self.change = True
@@ -1251,6 +1254,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.clear_zphd()
                 # Update contour and shiptrack plot
                 self.contour_shiptrack(transect_id=transect_id)
+        self.tab_all.setFocus()
 
     def select_transect(self, row, column):
         """Update contour and shiptrack plots based on transect selected in main_summary_table.
@@ -1286,6 +1290,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Update contour and shiptrack plot
                 self.contour_shiptrack(transect_id=transect_id)
+        self.tab_all.setFocus()
 
     def contour_shiptrack(self, transect_id=0):
         """Generates the color contour and shiptrack plot for the main tab.
@@ -3477,7 +3482,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             else:
                 t_source_dialog.rb_user.setChecked(True)
                 t_source_dialog.ed_user_temp.setText(
-                    '{:3.1f}'.format(self.meas.transects[transect_id].sensors.temperatuer_deg_c.user.data[0]))
+                    '{:3.1f}'.format(self.meas.transects[transect_id].sensors.temperature_deg_c.user.data[0]))
             t_source_entered = t_source_dialog.exec_()
 
             if t_source_entered:
@@ -4747,7 +4752,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if column == 0:
             self.transect_row = row
             self.bt_plots()
-            self.tab_bt_2_data.setFocus()
+        self.tab_bt_2_data.setFocus()
 
     @QtCore.pyqtSlot()
     def bt_plot_change(self):
@@ -5065,7 +5070,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.cb_gps_vectors.setCheckState(QtCore.Qt.Checked)
 
         # Transect selected for display
-        self.transect = self.meas.transects[self.checked_transects_idx[self.transect_row]]
+        for idx in self.checked_transects_idx:
+            if self.meas.transects[idx].boat_vel.gga_vel is not None:
+                self.transect = self.meas.transects[idx]
+                break
 
         # Set gps quality filter
         if self.transect.boat_vel.gga_vel.gps_diff_qual_filter == 1:
@@ -5162,13 +5170,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # Identify transect associated with the row
                 transect_id = self.checked_transects_idx[row]
                 transect = self.meas.transects[transect_id]
-
-                # Assignment to local variables
-                valid_data = transect.boat_vel.gga_vel.valid_data
-                num_ensembles = len(valid_data[0, :])
-
+                num_ensembles = len(transect.boat_vel.bt_vel.u_processed_mps)
                 # Determine GPS characteristics for gga
                 if transect.boat_vel.gga_vel is not None:
+                    valid_data = transect.boat_vel.gga_vel.valid_data
+                    num_other_invalid = np.nansum(np.logical_not(valid_data[4, :]))
                     num_invalid_gga = np.nansum(np.logical_not(valid_data[0, :]))
                     num_altitude_invalid = np.nansum(np.logical_not(valid_data[3, :]))
                     num_quality_invalid = np.nansum(np.logical_not(valid_data[2, :]))
@@ -5185,14 +5191,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     num_altitude_invalid = -1
                     num_quality_invalid = -1
                     num_hdop_invalid = -1
+                    num_sat_changes = -1
+                    num_other_invalid = -1
 
                 # Determine characteristics for vtg
                 if transect.boat_vel.vtg_vel is not None:
                     num_invalid_vtg = np.nansum(np.logical_not(transect.boat_vel.vtg_vel.valid_data[0, :]))
                 else:
                     num_invalid_vtg = -1
-
-                num_other_invalid = np.nansum(np.logical_not(valid_data[4, :]))
 
                 # File/transect name
                 col = 0
@@ -5214,6 +5220,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     item = 'N/A'
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
                 if self.meas.qa.gga_vel['q_total_warning'][transect_id, 1] or \
                         self.meas.qa.gga_vel['q_max_run_warning'][transect_id, 1] or \
                         self.meas.qa.gga_vel['all_invalid'][transect_id]:
@@ -5392,18 +5399,28 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Determine transect selected
             transect_id = self.checked_transects_idx[self.transect_row]
             self.transect = self.meas.transects[transect_id]
-            self.invalid_gps = np.logical_not(self.transect.boat_vel.gga_vel.valid_data)
+            if self.transect.boat_vel.gga_vel is not None:
+                self.invalid_gps = np.logical_not(self.transect.boat_vel.gga_vel.valid_data)
 
-            # Identify transect to be plotted in table
-            for row in range(nrows):
-                self.table_gps.item(row, 0).setFont(self.font_normal)
-            # Set selected file to bold font
-            self.table_gps.item(self.transect_row, 0).setFont(self.font_bold)
+                # Identify transect to be plotted in table
+                for row in range(nrows):
+                    self.table_gps.item(row, 0).setFont(self.font_normal)
+                # Set selected file to bold font
+                self.table_gps.item(self.transect_row, 0).setFont(self.font_bold)
 
-            # Update plots
-            self.gps_shiptrack()
-            self.gps_boat_speed()
-            self.gps_filter_plots()
+                # Update plots
+                self.gps_shiptrack()
+                self.gps_boat_speed()
+                self.gps_filter_plots()
+
+            else:
+                if self.gps_shiptrack_fig is not None:
+                    self.gps_shiptrack_fig.fig.clear()
+                    self.gps_shiptrack_canvas.draw()
+                    self.gps_top_fig.fig.clear()
+                    self.gps_top_canvas.draw()
+                    self.gps_bottom_fig.fig.clear()
+                    self.gps_bottom_canvas.draw()
 
             # Update list of figs
             self.figs = [self.gps_shiptrack_fig, self.gps_top_fig, self.gps_bottom_fig]
@@ -5550,7 +5567,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if column == 0:
             self.transect_row = row
             self.gps_plots()
-            self.tab_gps_2_data.setFocus()
+        self.tab_gps_2_data.setFocus()
 
     @QtCore.pyqtSlot()
     def gps_plot_change(self):
@@ -6995,7 +7012,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if column == 0:
             self.transect_row = row
             self.wt_plots()
-            self.tab_wt_2_data.setFocus()
+        self.tab_wt_2_data.setFocus()
 
     @QtCore.pyqtSlot()
     def wt_plot_change(self):
@@ -7679,8 +7696,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
-    # @QtCore.pyqtSlot(int, int)
-    # def fit_list_table_clicked(self, selected_row, selected_col):
     @QtCore.pyqtSlot(int)
     def fit_list_table_clicked(self, selected_row):
         """Selects data to display and fit from list of transects and composite measurements.
@@ -9564,19 +9579,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.tab_all.setEnabled(True)
         self.actionSave.setEnabled(True)
         self.actionComment.setEnabled(True)
-        if hasattr(self, 'groupings'):
+        if self.groupings is not None:
             self.actionCheck.setEnabled(False)
         else:
             self.actionCheck.setEnabled(True)
         self.actionBT.setEnabled(True)
         self.actionOptions.setEnabled(True)
-        self.actionBT.setDisabled(True)
         self.actionGGA.setDisabled(True)
         self.actionVTG.setDisabled(True)
         self.actionOFF.setDisabled(True)
         self.actionON.setDisabled(True)
-        self.actionOptions.setDisabled(True)
-        self.actionGoogle_Earth.setDisabled(True)
 
         # Set tab text and icons to default
         for tab_idx in range(self.tab_all.count() - 1):
@@ -9610,6 +9622,26 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.tab_all.setTabEnabled(2, True)
         else:
             self.tab_all.setTabEnabled(2, False)
+
+    def closeEvent(self, event):
+        """Warns user when closing QRev.
+
+        Parameters
+        ----------
+        event: QCloseEvent
+            Object of QCloseEvent
+        """
+        close = QtWidgets.QMessageBox()
+        close.setIcon(QtWidgets.QMessageBox.Warning)
+        close.setWindowTitle("Close")
+        close.setText("You sure you want to Close?")
+        close.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
+        close = close.exec()
+
+        if close == QtWidgets.QMessageBox.Yes:
+            event.accept()
+        else:
+            event.ignore()
 
     # Command line functions
     # ======================
