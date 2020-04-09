@@ -323,8 +323,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.setupUi(self)
 
         # Set version of QRev
-        self.QRev_version = 'QRevPy 4.09'
+        self.QRev_version = 'QRev 4.09'
         self.setWindowTitle(self.QRev_version)
+        self.setWindowIcon(QtGui.QIcon('QRev.ico'))
 
         # Disable ability to hide toolbar
         self.toolBar.toggleViewAction().setEnabled(False)
