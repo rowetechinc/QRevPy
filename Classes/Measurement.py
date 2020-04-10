@@ -96,7 +96,10 @@ class Measurement(object):
             self.load_qrev_mat(mat_data=in_file)
             if proc_type == 'QRev':
                 # Apply QRev default settings
-                settings = self.qrev_default_settings()
+                # settings = self.qrev_default_settings()
+                settings = self.current_settings()
+                settings['WTEnsInterpolation'] = 'abba'
+                settings['WTCellInterpolation'] = 'abba'
                 settings['Processing'] = 'QRev'
                 self.apply_settings(settings)
 
