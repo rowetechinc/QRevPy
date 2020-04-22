@@ -183,7 +183,7 @@ class GPSFilters (object):
             if transect.boat_vel.selected == 'gga_vel':
                 boat_selected = transect.boat_vel.gga_vel
             elif transect.boat_vel.selected == 'vtg_vel':
-                boat_selected = transect.boat_vel.gga_vel
+                boat_selected = transect.boat_vel.vtg_vel
             else:
                 boat_selected = transect.boat_vel.bt_vel
 

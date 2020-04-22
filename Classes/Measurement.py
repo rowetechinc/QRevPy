@@ -2134,7 +2134,7 @@ class Measurement(object):
             # Check for situation where user has entered a constant temperature
             temperature_selected = getattr(each.sensors.temperature_deg_c, each.sensors.temperature_deg_c.selected)
             temperature = temperature_selected.data
-            if len(temperature) > 1:
+            if each.sensors.temperature_deg_c.selected != 'user':
                 # Temperatures for ADCP.
                 temp_all = np.concatenate((temp_all, temperature))
             else:

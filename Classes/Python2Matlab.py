@@ -94,7 +94,10 @@ class Python2Matlab(object):
             data_type = []
             for key in keys:
                 if new_key_dict is not None and key in new_key_dict:
-                    data_type.append((new_key_dict[key], list))
+                    if new_key_dict[key] is None:
+                        data_type.append((np.nan, list))
+                    else:
+                        data_type.append((new_key_dict[key], list))
                 else:
                     data_type.append((key, list))
 
@@ -642,10 +645,14 @@ class Python2Matlab(object):
 
         # Adjust 1-D array to be row based
         for fit in meas_mat.extrap_fit.sel_fit:
-            fit.u = fit.u.reshape(-1, 1)
-            fit.u_auto = fit.u_auto.reshape(-1, 1)
-            fit.z = fit.z.reshape(-1, 1)
-            fit.z_auto = fit.z_auto.reshape(-1, 1)
+            if fit.u is None:
+                fit.u = np.nan
+                fit.z = np.nan
+            else:
+                fit.u = fit.u.reshape(-1, 1)
+                fit.u_auto = fit.u_auto.reshape(-1, 1)
+                fit.z = fit.z.reshape(-1, 1)
+                fit.z_auto = fit.z_auto.reshape(-1, 1)
 
         # Adjust norm_data indices from 0 base to 1 base
         for dat in meas_mat.extrap_fit.norm_data:

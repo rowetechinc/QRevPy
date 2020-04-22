@@ -863,8 +863,8 @@ class WaterData(object):
         
         # Compute cutoff for vertical beam depths
         if selected == 'vb_depths':
-            sl_cutoff_vb = depth_selected.depth_processed_m - \
-                depth_selected.draft_use_m * np.cos(np.deg2rad(transect.adcp.beam_angle_deg)) \
+            sl_cutoff_vb = (depth_selected.depth_processed_m - depth_selected.draft_use_m) \
+                 * np.cos(np.deg2rad(transect.adcp.beam_angle_deg)) \
                 - self.sl_lag_effect_m + depth_selected.draft_use_m
             cells_above_slvb = np.round(depth_selected.depth_cell_depth_m, 2) < np.round(sl_cutoff_vb, 2)
             idx = np.where(transect.depths.bt_depths.valid_data == False)
@@ -1109,7 +1109,10 @@ class WaterData(object):
         self.valid_data[2, :, :] = valid
 
         # Set threshold property
-        self.d_filter_threshold = d_vel_max_ref
+        if np.ma.is_masked(d_vel_max_ref):
+            self.d_filter_threshold = np.nan
+        else:
+            self.d_filter_threshold = d_vel_max_ref
 
         # Combine all filter data and update processed properties
         self.all_valid_data()
@@ -1190,7 +1193,10 @@ class WaterData(object):
         self.valid_data[3, :, :] = valid
 
         # Set threshold property
-        self.w_filter_threshold = w_vel_max_ref
+        if np.ma.is_masked(w_vel_max_ref):
+            self.w_filter_threshold = np.nan
+        else:
+            self.w_filter_threshold = w_vel_max_ref
 
         # Combine all filter data and update processed properties
         self.all_valid_data()
@@ -1430,12 +1436,12 @@ class WaterData(object):
 
             # Where there is invalid boat speed at beginning or end of transect mark the distance nan to avoid
             # interpolating velocities that won't be used for discharge
-
-            distance_along_shiptrack[0:np.argmax(boat_valid == True)] = np.nan
-            end_nan = np.argmax(np.flip(boat_valid) == True)
-            if end_nan > 0:
-                distance_along_shiptrack[-1 * end_nan:] = np.nan
             if type(distance_along_shiptrack) is np.ndarray:
+                distance_along_shiptrack[0:np.argmax(boat_valid == True)] = np.nan
+                end_nan = np.argmax(np.flip(boat_valid) == True)
+                if end_nan > 0:
+                    distance_along_shiptrack[-1 * end_nan:] = np.nan
+            # if type(distance_along_shiptrack) is np.ndarray:
                 depth_selected = getattr(transect.depths, transect.depths.selected)
 
                 # Interpolate values for  invalid cells with from neighboring data

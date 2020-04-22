@@ -217,11 +217,11 @@ class GPSData(object):
         self.raw_gga_lon_deg[np.isnan(self.raw_gga_lat_deg)] = np.nan
         self.raw_gga_altitude_m = raw_gga_alt
         self.raw_gga_altitude_m[np.isnan(self.raw_gga_lat_deg)] = np.nan
-        self.raw_gga_differential = raw_gga_diff
+        self.raw_gga_differential = raw_gga_diff.astype('float')
         self.raw_gga_differential[np.isnan(self.raw_gga_lat_deg)] = np.nan
-        self.raw_gga_hdop = raw_gga_hdop
+        self.raw_gga_hdop = raw_gga_hdop.astype('float')
         self.raw_gga_hdop[np.isnan(self.raw_gga_lat_deg)] = np.nan
-        self.raw_gga_num_sats = raw_gga_num_sats
+        self.raw_gga_num_sats = raw_gga_num_sats.astype('float')
         self.raw_gga_num_sats[np.isnan(self.raw_gga_lat_deg)] = np.nan
         self.raw_gga_serial_time[np.isnan(self.raw_gga_lat_deg)] = np.nan
 

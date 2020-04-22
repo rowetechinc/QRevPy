@@ -67,7 +67,7 @@ class Shiptrack(object):
 
     def create(self, transect, units,
                cb=False, cb_bt=None, cb_gga=None, cb_vtg=None, cb_vectors=None,
-               invalid_bt=None, invalid_gps=None, n_ensembles=None, edge_start=None):
+               n_ensembles=None, edge_start=None):
         """Create the axes and lines for the figure.
 
         Parameters
@@ -86,10 +86,6 @@ class Shiptrack(object):
             Name of QCheckBox for VTG
         cb_vectors: QCheckBox
             Name of QCheckBox for vectors
-        invalid_bt: np.array(bool)
-            Boolean array of invalid data based on filters for bottom track
-        invalid_gps: np.array(bool)
-            Boolean array of invalid data based on filters for gps data
         n_ensembles: int
             Number of ensembles to plot. Used in edges tab.
         edge_start: int
@@ -129,10 +125,13 @@ class Shiptrack(object):
         min_y_gga = np.nan
 
         # Plot shiptrack based on bottom track
+        invalid_bt = np.logical_not(transect.boat_vel.bt_vel.valid_data)
+        invalid_bt = invalid_bt[:, transect.in_transect_idx]
         ship_data_bt = transect.boat_vel.compute_boat_track(transect, ref='bt_vel')
         if edge_start is not None and n_ensembles is not None:
             ship_data_bt['track_x_m'] = self.subsection(ship_data_bt['track_x_m'], n_ensembles, edge_start)
             ship_data_bt['track_y_m'] = self.subsection(ship_data_bt['track_y_m'], n_ensembles, edge_start)
+            invalid_bt = self.subsection_2d(invalid_bt, n_ensembles, edge_start)
 
         self.bt = self.fig.ax.plot(ship_data_bt['track_x_m'] * units['L'], ship_data_bt['track_y_m'] * units['L'],
                                    color='r',
@@ -147,6 +146,7 @@ class Shiptrack(object):
                                                 ship_data_bt['track_y_m'][-1] * units['L'], 'sk')[0])
 
         # Plot invalid data points using a symbol to represent what caused the data to be invalid
+
         if invalid_bt is not None and not np.alltrue(np.isnan(ship_data_bt['track_x_m'])):
             self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][invalid_bt[1]] * units['L'],
                                             ship_data_bt['track_y_m'][invalid_bt[1]] * units['L'],
@@ -181,9 +181,12 @@ class Shiptrack(object):
         # Plot shiptrack based on vtg, if available
         if transect.boat_vel.vtg_vel is not None:
             ship_data_vtg = transect.boat_vel.compute_boat_track(transect, ref='vtg_vel')
+            invalid_gps = np.logical_not(transect.boat_vel.vtg_vel.valid_data)
+            invalid_gps = invalid_gps[:, transect.in_transect_idx]
             if edge_start is not None and n_ensembles is not None:
                 ship_data_vtg['track_x_m'] = self.subsection(ship_data_vtg['track_x_m'], n_ensembles, edge_start)
                 ship_data_vtg['track_y_m'] = self.subsection(ship_data_vtg['track_y_m'], n_ensembles, edge_start)
+                invalid_gps = self.subsection_2d(invalid_gps, n_ensembles, edge_start)
             self.vtg = self.fig.ax.plot(ship_data_vtg['track_x_m'] * units['L'],
                                         ship_data_vtg['track_y_m'] * units['L'],
                                         color='g', label='VTG')
@@ -226,9 +229,12 @@ class Shiptrack(object):
         # Plot shiptrack based on gga, if available
         if transect.boat_vel.gga_vel is not None:
             ship_data_gga = transect.boat_vel.compute_boat_track(transect, ref='gga_vel')
+            invalid_gps = np.logical_not(transect.boat_vel.gga_vel.valid_data)
+            invalid_gps = invalid_gps[:, transect.in_transect_idx]
             if edge_start is not None and n_ensembles is not None:
                 ship_data_gga['track_x_m'] = self.subsection(ship_data_gga['track_x_m'], n_ensembles, edge_start)
                 ship_data_gga['track_y_m'] = self.subsection(ship_data_gga['track_y_m'], n_ensembles, edge_start)
+                invalid_gps = self.subsection_2d(invalid_gps, n_ensembles, edge_start)
             self.gga = self.fig.ax.plot(ship_data_gga['track_x_m'] * units['L'],
                                         ship_data_gga['track_y_m'] * units['L'],
                                         color='b', label='GGA')
@@ -245,6 +251,7 @@ class Shiptrack(object):
                     pass
 
             # Plot invalid data points using a symbol to represent what caused the data to be invalid
+
             if invalid_gps is not None and not np.alltrue(np.isnan(ship_data_gga['track_x_m'])):
                 self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[1]] * units['L'],
                                                  ship_data_gga['track_y_m'][invalid_gps[1]] * units['L'],
@@ -407,13 +414,43 @@ class Shiptrack(object):
             Identifies start bank
         """
 
-        if np.all(np.isnan(data)):
-            data_out = data
-        else:
+        # if np.all(np.isnan(data)):
+        #     data_out = data
+        # else:
+        #     if edge_start:
+        #         data_out = data[:int(n_ensembles)]
+        #     else:
+        #         data_out = data[-int(n_ensembles):]
+
+        if data is not np.nan and len(data) > int(n_ensembles):
             if edge_start:
                 data_out = data[:int(n_ensembles)]
             else:
                 data_out = data[-int(n_ensembles):]
+        else:
+            data_out = data
+        return data_out
+
+    @staticmethod
+    def subsection_2d(data, n_ensembles, edge_start):
+        """Subsections data for shiptrack of edge ensembles.
+
+        Parameters
+        ----------
+        data: np.ndarray(float)
+            Shiptrack coordinate
+        n_ensembles: int
+            Number of ensembles in subsection
+        edge_start: int
+            Identifies start bank
+        """
+        if data.shape[1] > int(n_ensembles):
+            if edge_start:
+                data_out = data[:,:int(n_ensembles)]
+            else:
+                data_out = data[:,-int(n_ensembles):]
+        else:
+            data_out = data
         return data_out
 
     def checkbox_control(self, transect):

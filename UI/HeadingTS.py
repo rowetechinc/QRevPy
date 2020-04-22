@@ -120,6 +120,7 @@ class HeadingTS(object):
                         mag_chng = np.flip(mag_chng)
                     ensembles = range(1, len(mag_chng) + 1)
                     self.merror.append(self.fig.axm.plot(ensembles, mag_chng, 'k-')[0])
+                    self.merror.append(self.fig.axm.plot([ensembles[0], ensembles[-1]], [2, 2], 'k--')[0])
                 else:
                     self.merror = None
 

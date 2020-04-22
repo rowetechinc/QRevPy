@@ -1109,7 +1109,11 @@ class BoatData(object):
         self.valid_data[2, d_vel_good_idx] = True
         self.valid_data[2, self.valid_data[1, :] == False] = True
         self.valid_data[2, np.isnan(self.d_mps)] = True
-        self.d_filter_threshold = d_vel_max_ref
+        if np.ma.is_masked(d_vel_max_ref):
+            self.d_filter_threshold = np.nan
+        else:
+            self.d_filter_threshold = d_vel_max_ref
+
 
         # Combine all filter data to composite filter data
         self.valid_data[0, :] = np.all(self.valid_data[1:, :], 0)
@@ -1195,7 +1199,10 @@ class BoatData(object):
         w_vel_good_idx = list(np.intersect1d(w_vel_less_idx, w_vel_greater_idx))
         self.valid_data[3, w_vel_good_idx] = True
         self.valid_data[3, self.valid_data[1, :] == False] = True
-        self.w_filter_threshold = w_vel_max_ref
+        if np.ma.is_masked(w_vel_max_ref):
+            self.w_filter_threshold = np.nan
+        else:
+            self.w_filter_threshold = w_vel_max_ref
 
         # Combine all filter data to composite valid data
         self.valid_data[0, :] = np.all(self.valid_data[1:, :], 0)

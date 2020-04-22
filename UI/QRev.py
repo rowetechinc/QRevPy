@@ -1452,6 +1452,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         else:
                             messages.append([message, 2])
                     else:
+                        if type(message[1]) is str:
+                            message[1] = int(message[1])
                         messages.append(message)
             self.set_icon(key, qa_type['status'])
 
@@ -4613,7 +4615,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Determine transect selected
             transect_id = self.checked_transects_idx[self.transect_row]
             self.transect = self.meas.transects[transect_id]
-            self.invalid_bt = np.logical_not(self.transect.boat_vel.bt_vel.valid_data)
+            # self.invalid_bt = np.logical_not(self.transect.boat_vel.bt_vel.valid_data)
 
             # Update plots
             self.bt_shiptrack()
@@ -4654,8 +4656,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                      cb_bt=self.cb_bt_bt,
                                      cb_gga=self.cb_bt_gga,
                                      cb_vtg=self.cb_bt_vtg,
-                                     cb_vectors=self.cb_bt_vectors,
-                                     invalid_bt=self.invalid_bt)
+                                     cb_vectors=self.cb_bt_vectors)
 
         # Draw canvas
         self.bt_shiptrack_canvas.draw()
@@ -4685,8 +4686,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                   cb=True,
                                   cb_bt=self.cb_bt_bt,
                                   cb_gga=self.cb_bt_gga,
-                                  cb_vtg=self.cb_bt_vtg,
-                                  invalid_bt=self.invalid_bt)
+                                  cb_vtg=self.cb_bt_vtg)
 
         # Draw canvas
         self.bt_bottom_canvas.draw()
@@ -5407,7 +5407,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             transect_id = self.checked_transects_idx[self.transect_row]
             self.transect = self.meas.transects[transect_id]
             if self.transect.boat_vel.gga_vel is not None:
-                self.invalid_gps = np.logical_not(self.transect.boat_vel.gga_vel.valid_data)
+                # self.invalid_gps = np.logical_not(self.transect.boat_vel.gga_vel.valid_data)
 
                 # Identify transect to be plotted in table
                 for row in range(nrows):
@@ -5463,8 +5463,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                       cb_bt=self.cb_gps_bt,
                                       cb_gga=self.cb_gps_gga,
                                       cb_vtg=self.cb_gps_vtg,
-                                      cb_vectors=self.cb_gps_vectors,
-                                      invalid_gps=self.invalid_gps)
+                                      cb_vectors=self.cb_gps_vectors)
 
         # Draw canvas
         self.gps_shiptrack_canvas.draw()
@@ -5495,8 +5494,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                    cb=True,
                                    cb_bt=self.cb_gps_bt,
                                    cb_gga=self.cb_gps_gga,
-                                   cb_vtg=self.cb_gps_vtg,
-                                   invalid_gps=self.invalid_gps)
+                                   cb_vtg=self.cb_gps_vtg)
 
         # Draw canvas
         self.gps_bottom_canvas.draw()
@@ -5916,6 +5914,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             self.depth_initialized = True
 
+        self.combo_depth_ref.blockSignals(True)
         depth_ref_options = ['4-Beam Avg']
         # Setup depth reference combo box for vertical beam
         if self.meas.transects[self.checked_transects_idx[self.transect_row]].depths.vb_depths is not None:
@@ -5953,7 +5952,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         depth_composite = self.transect.depths.composite
 
         # Turn signals off
-        self.combo_depth_ref.blockSignals(True)
         self.combo_depth_avg.blockSignals(True)
         self.combo_depth_filter.blockSignals(True)
 

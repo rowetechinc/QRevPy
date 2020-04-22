@@ -180,10 +180,11 @@ class QComp(object):
                                                                                        self.bottom, data_in,
                                                                                        moving_bed_data, delta_t)
                         else:
-                            self.correction_factor = self.loop_correction_factor(self.top, self.middle,
-                                                                                 self.bottom, data_in,
-                                                                                 moving_bed_data[use_2_correct == True],
-                                                                                 delta_t)
+                            self.correction_factor = \
+                                self.loop_correction_factor(self.top, self.middle,
+                                                            self.bottom, data_in,
+                                                            moving_bed_data[use_2_correct.index(True)],
+                                                            delta_t)
 
         self.total_uncorrected = self.left + self.right + self.middle + self.bottom + self.top
 
