@@ -323,7 +323,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.setupUi(self)
 
         # Set version of QRev
-        self.QRev_version = 'QRev 4.09'
+        self.QRev_version = 'QRev 4.10'
         self.setWindowTitle(self.QRev_version)
         self.setWindowIcon(QtGui.QIcon('QRev.ico'))
 
@@ -3484,12 +3484,23 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 t_source_dialog.rb_internal.setChecked(True)
             else:
                 t_source_dialog.rb_user.setChecked(True)
-                t_source_dialog.ed_user_temp.setText(
-                    '{:3.1f}'.format(self.meas.transects[transect_id].sensors.temperature_deg_c.user.data[0]))
+
             if self.rb_f.isChecked():
                 t_source_dialog.rb_user.setText('User (F)')
+                if self.meas.transects[transect_id].sensors.temperature_deg_c.user is not None:
+                    display_temp = convert_temperature(
+                        self.meas.transects[transect_id].sensors.temperature_deg_c.user.data[0],
+                        units_in='C',
+                        units_out='F')
+                else:
+                    display_temp = ''
             else:
                 t_source_dialog.rb_user.setText('User (C)')
+                display_temp = self.meas.transects[transect_id].sensors.temperature_deg_c.user.data[0]
+            if type(display_temp) is str:
+                t_source_dialog.ed_user_temp.setText(display_temp)
+            else:
+                t_source_dialog.ed_user_temp.setText('{:3.1f}'.format(display_temp))
             t_source_entered = t_source_dialog.exec_()
 
             if t_source_entered:
