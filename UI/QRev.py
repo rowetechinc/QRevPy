@@ -4918,7 +4918,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.ed_bt_vert_vel_threshold.setText('')
                 self.update_bt_tab(s)
                 self.change = True
-                self.combo_bt_vert_velocity.blockSignals(False)
+            self.combo_bt_vert_velocity.blockSignals(False)
 
     @QtCore.pyqtSlot(str)
     def change_bt_other(self, text):

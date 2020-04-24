@@ -1,5 +1,5 @@
 import scipy.io as sio
-
+import numpy as np
 
 class MatSonTek(object):
     """Read SonTek Matlab files and returns a dictionary of mat_struct.
@@ -21,6 +21,11 @@ class MatSonTek(object):
         # Convert data to SI units if in English units
         if mat_data['BottomTrack'].Units.BT_Depth == 'ft':
             self.convert2metric(mat_data)
+
+        if hasattr(mat_data['RawGPSData'], 'VtgMode'):
+            mat_data['RawGPSData'].VtgMode[np.isnan(mat_data['RawGPSData'].VtgMode)] = 0
+            mat_data['RawGPSData'].VtgMode = \
+                np.array([chr(x) for x in range(127)])[mat_data['RawGPSData'].VtgMode.astype(int)]
 
         # Create structure from dictionary
         vars(self).update(mat_data)

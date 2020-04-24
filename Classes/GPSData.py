@@ -243,7 +243,7 @@ class GPSData(object):
         else:
             self.raw_vtg_delta_time = raw_vtg_delta_time
 
-        self.raw_vtg_mode_indicator = raw_vtg_mode_indicator
+        self.raw_vtg_mode_indicator = np.array(raw_vtg_mode_indicator)
         
         # Assign input data to ensemble values computed by other software
         self.ext_gga_utc = ext_gga_utc
@@ -295,7 +295,22 @@ class GPSData(object):
                 self.raw_vtg_course_deg = transect.gps.rawVTGCourse_deg
                 self.raw_vtg_speed_mps = transect.gps.rawVTGSpeed_mps
                 self.raw_vtg_delta_time = transect.gps.rawVTGDeltaTime
-                self.raw_vtg_mode_indicator = transect.gps.rawVTGModeIndicator
+
+                # Older versions of QRev and RSL Matlab files represented the VTG mode differently.
+                try:
+                    if transect.gps.rawVTGModeIndicator.ndim == 2 and \
+                            type(transect.gps.rawVTGModeIndicator[0][0]) is np.float64:
+                        self.raw_vtg_mode_indicator = \
+                            np.array([chr(x) for x in range(127)])[transect.gps.rawVTGModeIndicator.astype(int)]
+                    else:
+                        raw_vtg_mode_indicator = transect.gps.rawVTGModeIndicator.tolist()
+                        new_list = []
+                        for row in raw_vtg_mode_indicator:
+                            new_list.append(list(row))
+                        self.raw_vtg_mode_indicator = np.array(new_list)
+                except AttributeError:
+                    self.raw_vtg_mode_indicator = transect.gps.rawVTGModeIndicator
+
                 self.raw_gga_delta_time = transect.gps.rawGGADeltaTime
 
                 # Manufacturer assigned ensemble values
@@ -539,8 +554,8 @@ class GPSData(object):
         vtg_course_deg = np.copy(self.raw_vtg_course_deg)
         vtg_delta_time = np.copy(self.raw_vtg_delta_time)
 
-        # VTG mode indicator is a letter but is coming in as the ASCII value. 78 is the value for N.
-        idx = np.where(self.raw_vtg_mode_indicator == 78)[0]
+        # Use mode indicator to identify invalid original data
+        idx = np.where(self.raw_vtg_mode_indicator == 'N')
         vtg_speed_mps[idx] = np.nan
         vtg_course_deg[idx] = np.nan
         vtg_delta_time[idx] = np.nan
