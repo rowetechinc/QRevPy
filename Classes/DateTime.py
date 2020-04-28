@@ -1,3 +1,5 @@
+import numpy as np
+
 class DateTime(object):
     """This stores the date and time data in Python compatible format.
 
@@ -62,7 +64,10 @@ class DateTime(object):
             self.start_serial_time = (transect.dateTime.startSerialTime - time_correction) * seconds_day
             self.end_serial_time = (transect.dateTime.endSerialTime - time_correction) * seconds_day
             self.transect_duration_sec = float(transect.dateTime.transectDuration_sec)
-            self.ens_duration_sec = transect.dateTime.ensDuration_sec.astype(float)
+            try:
+                self.ens_duration_sec = transect.dateTime.ensDuration_sec.astype(float)
+            except AttributeError:
+                self.ens_duration_sec = np.array([np.nan])
 
             #
             # self.date = transect.dateTime.date

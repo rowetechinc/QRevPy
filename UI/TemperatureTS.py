@@ -78,7 +78,7 @@ class TemperatureTS(object):
         self.fig.ax.xaxis.label.set_fontsize(12)
         self.fig.ax.yaxis.label.set_fontsize(12)
         self.fig.ax.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
-        self.fig.ax.set_ylim([np.nanmax(temp) + 2, np.nanmin(temp) - 2])
+        self.fig.ax.set_ylim([np.nanmin(temp) - 2, np.nanmax(temp) + 2])
         self.fig.ax.grid()
 
         # Initialize annotation for data cursor

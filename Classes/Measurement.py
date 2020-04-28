@@ -480,7 +480,8 @@ class Measurement(object):
 
                 # G2 compasses
                 elif file.endswith('.txt'):
-                    time_stamp = file.split('l')[1].split(b'.')[0]
+                    prefix, _ = os.path.splitext(file)
+                    time_stamp = prefix.split('l')[1]
                     valid_file = True
 
             # for file in compass_cal_files:
