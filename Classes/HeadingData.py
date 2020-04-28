@@ -82,7 +82,7 @@ class HeadingData(object):
         if source_in == 'internal':
             self.data = self.original_data + self.mag_var_deg
         else:
-                self.data = self.original_data + self.align_correction_deg
+            self.data = self.original_data + self.align_correction_deg
         self.fix_upper_limit()
         self.interp_heading()
 
