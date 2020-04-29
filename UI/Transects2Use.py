@@ -1,6 +1,6 @@
+from datetime import datetime
 from PyQt5 import QtWidgets, QtCore
 from UI import wTransects2Use
-from datetime import datetime
 
 
 class Transects2Use(QtWidgets.QDialog, wTransects2Use.Ui_Transects2Use):

@@ -1,6 +1,6 @@
 import numpy as np
-from MiscLibs.common_functions import cart2pol, pol2cart
 import scipy.stats as sp
+from MiscLibs.common_functions import cart2pol, pol2cart
 
 
 class NormData(object):

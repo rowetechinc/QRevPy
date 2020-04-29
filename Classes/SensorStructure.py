@@ -1,6 +1,6 @@
+import numpy as np
 from Classes.HeadingData import HeadingData
 from Classes.SensorData import SensorData
-import numpy as np
 
 
 class SensorStructure(object):

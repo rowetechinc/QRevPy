@@ -1,5 +1,5 @@
-import numpy as np
 import utm
+import numpy as np
 from MiscLibs.common_functions import azdeg2rad, pol2cart, nans
 
 

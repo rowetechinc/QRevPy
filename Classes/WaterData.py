@@ -1,10 +1,10 @@
+import copy
 import numpy as np
 from numpy.matlib import repmat
+from scipy import interpolate
+from Classes.BoatData import BoatData
 from MiscLibs.common_functions import cart2pol, pol2cart, iqr
 from MiscLibs.robust_loess import rloess
-from Classes.BoatData import BoatData
-from scipy import interpolate
-import copy
 from MiscLibs.abba_2d_interpolation import abba_idw_interpolation
 
 

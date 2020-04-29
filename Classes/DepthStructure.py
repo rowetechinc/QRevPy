@@ -1,5 +1,5 @@
-from Classes.DepthData import DepthData
 import numpy as np
+from Classes.DepthData import DepthData
 
 
 class DepthStructure(object):

@@ -1,6 +1,6 @@
-import numpy as np
 import re
 import copy
+import numpy as np
 
 
 class PreMeasurement(object):

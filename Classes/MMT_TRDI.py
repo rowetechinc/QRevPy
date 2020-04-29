@@ -1,6 +1,6 @@
-import xmltodict
 import os
 import re
+import xmltodict
 
 
 class MMTtrdi(object):

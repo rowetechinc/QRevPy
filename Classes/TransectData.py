@@ -1,8 +1,9 @@
-import numpy as np
 import os
+import numpy as np
+from datetime import datetime
+from datetime import timezone
 from Classes.Pd0TRDI import Pd0TRDI
 from Classes.DepthStructure import DepthStructure
-from MiscLibs.common_functions import cosd, arctand, tand, nans
 from Classes.WaterData import WaterData
 from Classes.BoatStructure import BoatStructure
 from Classes.GPSData import GPSData
@@ -14,9 +15,7 @@ from Classes.HeadingData import HeadingData
 from Classes.DateTime import DateTime
 from Classes.InstrumentData import InstrumentData
 from Classes.MultiThread import MultiThread
-from datetime import datetime
-from datetime import timezone
-from MiscLibs.common_functions import nandiff
+from MiscLibs.common_functions import nandiff, cosd, arctand, tand, nans
 
 
 class TransectData(object):
