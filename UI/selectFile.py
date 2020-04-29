@@ -1,8 +1,8 @@
 import os
+import datetime as datetime
 from PyQt5 import QtWidgets
 from Classes.stickysettings import StickySettings as SSet
 from UI import wSelectFile
-import datetime as datetime
 
 
 class OpenMeasurementDialog(QtWidgets.QDialog, wSelectFile.Ui_selectFile):

@@ -1,5 +1,5 @@
-from Classes.SensorStructure import SensorStructure
 import numpy as np
+from Classes.SensorStructure import SensorStructure
 
 
 class Sensors(object):

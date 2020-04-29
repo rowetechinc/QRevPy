@@ -1,7 +1,7 @@
 import numpy as np
-from MiscLibs.common_functions import convert_temperature
 from datetime import datetime
 import matplotlib.dates as mdates
+from MiscLibs.common_functions import convert_temperature
 
 
 class TemperatureTS(object):

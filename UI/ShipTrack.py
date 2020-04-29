@@ -1,6 +1,5 @@
-from PyQt5 import QtCore
 import numpy as np
-
+from PyQt5 import QtCore
 
 
 class Shiptrack(object):

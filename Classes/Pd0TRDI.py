@@ -1,7 +1,7 @@
-import numpy as np
-import struct
 import os
 import re
+import numpy as np
+import struct
 from MiscLibs.common_functions import pol2cart, valid_number, nans
 
 

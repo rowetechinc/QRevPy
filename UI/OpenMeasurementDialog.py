@@ -1,7 +1,7 @@
 import os
+import scipy.io as sio
 from PyQt5 import QtWidgets
 from Classes.stickysettings import StickySettings as SSet
-import scipy.io as sio
 
 
 class OpenMeasurementDialog(QtWidgets.QDialog):

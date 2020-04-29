@@ -1,13 +1,3 @@
-"""
-Created on Sep 14, 2017
-
-@author: gpetrochenkov
-Modified DSM 1/31/2018
-    - Added numpy docstrings
-    - Cleaned up PEP8
-"""
-
-
 class ExtrapData(object):
     """Class to store both original and modified extrapolation settings.
 

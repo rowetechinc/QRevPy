@@ -1,7 +1,7 @@
+import getpass
+from datetime import datetime
 from PyQt5 import QtWidgets, QtGui
 from UI import wComment
-from datetime import datetime
-import getpass
 
 
 class Comment(QtWidgets.QDialog, wComment.Ui_Comment):

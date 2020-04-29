@@ -1,6 +1,5 @@
-from PyQt5 import QtCore
 import numpy as np
-
+from PyQt5 import QtCore
 
 class BoatSpeed(object):
     """Class to generate boat speed time series plot. If checkboxes for the boat speed reference

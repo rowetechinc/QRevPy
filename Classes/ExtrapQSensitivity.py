@@ -1,5 +1,5 @@
-from Classes.QComp import QComp
 import numpy as np
+from Classes.QComp import QComp
 
 
 class ExtrapQSensitivity(object):

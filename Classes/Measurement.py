@@ -1,6 +1,9 @@
-from Classes.MMT_TRDI import MMTtrdi
-import numpy as np
 import os
+import datetime
+import numpy as np
+import xml.etree.ElementTree as ETree
+from xml.dom.minidom import parseString
+from Classes.MMT_TRDI import MMTtrdi
 from Classes.TransectData import TransectData, allocate_transects
 from Classes.PreMeasurement import PreMeasurement
 from Classes.MovingBedTests import MovingBedTests
@@ -10,11 +13,8 @@ from Classes.ComputeExtrap import ComputeExtrap
 from Classes.ExtrapQSensitivity import ExtrapQSensitivity
 from Classes.Uncertainty import Uncertainty
 from Classes.QAData import QAData
-from MiscLibs.common_functions import cart2pol, pol2cart, rad2azdeg, nans, azdeg2rad
 from Classes.BoatStructure import BoatStructure
-import xml.etree.ElementTree as ETree
-from xml.dom.minidom import parseString
-import datetime
+from MiscLibs.common_functions import cart2pol, pol2cart, rad2azdeg, nans, azdeg2rad
 
 
 class Measurement(object):

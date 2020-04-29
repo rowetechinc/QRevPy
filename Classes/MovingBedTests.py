@@ -1,10 +1,10 @@
+import copy
 import numpy as np
 from Classes.TransectData import adjusted_ensemble_duration
 from Classes.TransectData import TransectData
 from Classes.QComp import QComp
-from MiscLibs.common_functions import cart2pol, sind, pol2cart, rad2azdeg
 from Classes.MatSonTek import MatSonTek
-import copy
+from MiscLibs.common_functions import cart2pol, sind, pol2cart, rad2azdeg
 
 
 class MovingBedTests(object):

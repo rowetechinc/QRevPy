@@ -1,10 +1,3 @@
-from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import pyqtSignal, QRegExp
-from datetime import datetime
-from contextlib import contextmanager
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-import numpy as np
-import scipy.io as sio
 import sys
 import copy
 import os
@@ -12,6 +5,13 @@ import shutil
 import simplekml
 import webbrowser
 import getpass
+import numpy as np
+import scipy.io as sio
+from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5.QtCore import pyqtSignal, QRegExp
+from datetime import datetime
+from contextlib import contextmanager
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from MiscLibs.common_functions import units_conversion, convert_temperature
 from Classes.stickysettings import StickySettings as SSet
 from Classes.Measurement import Measurement
