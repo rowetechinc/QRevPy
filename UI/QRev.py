@@ -9675,17 +9675,20 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         event: QCloseEvent
             Object of QCloseEvent
         """
-        close = QtWidgets.QMessageBox()
-        close.setIcon(QtWidgets.QMessageBox.Warning)
-        close.setWindowTitle("Close")
-        close.setText("If you haven't saved your data, changes will be lost. \n Are you sure you want to Close? ")
-        close.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
-        close = close.exec()
+        if self.groupings is None:
+            close = QtWidgets.QMessageBox()
+            close.setIcon(QtWidgets.QMessageBox.Warning)
+            close.setWindowTitle("Close")
+            close.setText("If you haven't saved your data, changes will be lost. \n Are you sure you want to Close? ")
+            close.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
+            close = close.exec()
 
-        if close == QtWidgets.QMessageBox.Yes:
-            event.accept()
+            if close == QtWidgets.QMessageBox.Yes:
+                event.accept()
+            else:
+                event.ignore()
         else:
-            event.ignore()
+            event.accept()
 
     # Command line functions
     # ======================

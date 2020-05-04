@@ -1113,7 +1113,10 @@ class TransectData(object):
         self.date_time = DateTime()
         self.date_time.populate_from_qrev_mat(transect)
         self.checked = bool(transect.checked)
-        self.in_transect_idx = transect.inTransectIdx - 1
+        if type(transect.inTransectIdx) is int:
+            self.in_transect_idx = np.array([transect.inTransectIdx - 1])
+        else:
+            self.in_transect_idx = transect.inTransectIdx - 1
 
     @staticmethod
     def compute_cell_data(pd0):

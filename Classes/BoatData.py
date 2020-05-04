@@ -240,7 +240,7 @@ class BoatData(object):
         """
 
         # Variables passed to the constructor
-        self.raw_vel_mps = mat_data.rawVel_mps
+
         if type(mat_data.frequency_hz) is np.ndarray:
             self.frequency_khz = mat_data.frequency_hz
         elif np.isnan(mat_data.frequency_hz):
@@ -250,20 +250,48 @@ class BoatData(object):
         self.orig_coord_sys = mat_data.origCoordSys
         self.nav_ref = mat_data.navRef
 
-        # Coordinate transformed data
-        self.coord_sys = mat_data.coordSys
-        self.u_mps = mat_data.u_mps
-        self.v_mps = mat_data.v_mps
-        self.w_mps = mat_data.w_mps
-        self.d_mps = mat_data.d_mps
+        # Data requiring manipulation if only 1 ensemble
+        if type(mat_data.u_mps) is float:
+            self.raw_vel_mps = mat_data.rawVel_mps.reshape(mat_data.rawVel_mps.shape[0], 1)
+            # Coordinate transformed data
+            self.coord_sys = np.array([mat_data.coordSys])
+            self.u_mps = np.array([mat_data.u_mps])
+            self.v_mps = np.array([mat_data.v_mps])
+            self.w_mps = np.array([mat_data.w_mps])
+            self.d_mps = np.array([mat_data.d_mps])
+
+            self.bottom_mode = np.array([mat_data.bottomMode])
+
+            # Processed data
+            self.u_processed_mps = np.array([mat_data.uProcessed_mps])
+            self.v_processed_mps = np.array([mat_data.vProcessed_mps])
+            self.processed_source = np.array([mat_data.processedSource])
+            self.valid_data = np.array([ mat_data.validData]).astype(bool)
+            self.valid_data = self.valid_data.reshape(-1, 1)
+            self.smooth_speed = np.array([mat_data.smoothSpeed])
+            self.smooth_upper_limit = np.array([mat_data.smoothUpperLimit])
+            self.smooth_lower_limit = np.array([mat_data.smoothLowerLimit])
+        else:
+            self.raw_vel_mps = mat_data.rawVel_mps
+            # Coordinate transformed data
+            self.coord_sys = mat_data.coordSys
+            self.u_mps = mat_data.u_mps
+            self.v_mps = mat_data.v_mps
+            self.w_mps = mat_data.w_mps
+            self.d_mps = mat_data.d_mps
+
+            self.bottom_mode = mat_data.bottomMode
+
+            # Processed data
+            self.u_processed_mps = mat_data.uProcessed_mps
+            self.v_processed_mps = mat_data.vProcessed_mps
+            self.processed_source = mat_data.processedSource
+            self.valid_data = mat_data.validData.astype(bool)
+            self.smooth_speed = mat_data.smoothSpeed
+            self.smooth_upper_limit = mat_data.smoothUpperLimit
+            self.smooth_lower_limit = mat_data.smoothLowerLimit
+
         self.num_invalid = mat_data.numInvalid
-        self.bottom_mode = mat_data.bottomMode
-
-        # Processed data
-        self.u_processed_mps = mat_data.uProcessed_mps
-        self.v_processed_mps = mat_data.vProcessed_mps
-        self.processed_source = mat_data.processedSource
-
         # Error velocity filter
         if type(mat_data.dFilter) is np.ndarray:
             self.d_filter = None
@@ -326,12 +354,9 @@ class BoatData(object):
 
         # Other filters
         self.smooth_filter = mat_data.smoothFilter
-        self.smooth_speed = mat_data.smoothSpeed
-        self.smooth_upper_limit = mat_data.smoothUpperLimit
-        self.smooth_lower_limit = mat_data.smoothLowerLimit
         self.interpolate = mat_data.interpolate
         self.beam_filter = mat_data.beamFilter
-        self.valid_data = mat_data.validData.astype(bool)
+
 
     def change_coord_sys(self, new_coord_sys, sensors, adcp):
         """This function allows the coordinate system to be changed.

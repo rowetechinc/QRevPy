@@ -69,11 +69,11 @@ class DepthStructure(object):
         """
         if hasattr(transect, 'depths'):
 
-            try:
-                self.bt_depths = DepthData()
-                self.bt_depths.populate_from_qrev_mat(transect.depths.btDepths)
-            except AttributeError:
-                self.bt_depths = None
+            # try:
+            self.bt_depths = DepthData()
+            self.bt_depths.populate_from_qrev_mat(transect.depths.btDepths)
+            # except AttributeError:
+            #     self.bt_depths = None
 
             try:
                 self.vb_depths = DepthData()
@@ -179,10 +179,10 @@ class DepthStructure(object):
                 comp_source[np.logical_and((np.isnan(comp_depth) == False), (np.isnan(comp_source) == True))] = 1
                 comp_depth[np.isnan(comp_depth)] = np.squeeze(self.ds_depths.depth_processed_m[np.isnan(comp_depth)])
                 comp_source[np.logical_and((np.isnan(comp_depth) == False), (np.isnan(comp_source) == True))] = 4
-               
+
             # Save composite depth to depth_processed of selected primary reference
             selected_data = getattr(self, ref)
-            selected_data.apply_composite(comp_depth, comp_source)
+            selected_data.apply_composite(comp_depth, comp_source.astype(int))
                 
         else:
             selected_data = getattr(self, ref)
@@ -198,7 +198,7 @@ class DepthStructure(object):
 
             selected_data.apply_interpolation(transect)
             comp_depth = selected_data.depth_processed_m
-            selected_data.apply_composite(comp_depth, comp_source)
+            selected_data.apply_composite(comp_depth, comp_source.astype(int))
 
     def set_draft(self, target, draft):
         """This function will change the ref_depth draft.

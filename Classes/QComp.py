@@ -1720,14 +1720,20 @@ class QComp(object):
             nav_valid = np.tile(False, len(in_transect_idx))
 
         # Depending on type of interpolation determine the valid water track ensembles
-        water_valid = np.any(trans_data.w_vel.valid_data[0, :, in_transect_idx], 1)
+        if len(in_transect_idx) > 1:
+            water_valid = np.any(trans_data.w_vel.valid_data[0, :, in_transect_idx], 1)
+        else:
+            water_valid = np.any(trans_data.w_vel.valid_data[0, :, in_transect_idx])
 
         # Determine the ensembles with valid depth
         depths_select = getattr(trans_data.depths, trans_data.depths.selected)
-        depth_valid = np.logical_not(np.isnan(depths_select.depth_processed_m[in_transect_idx]))
+        if depths_select is not None:
+            depth_valid = np.logical_not(np.isnan(depths_select.depth_processed_m[in_transect_idx]))
 
-        # Determine the ensembles with valid depth, navigation, and water data
-        valid_ens = np.all(np.vstack((nav_valid, water_valid, depth_valid)), 0)
+            # Determine the ensembles with valid depth, navigation, and water data
+            valid_ens = np.all(np.vstack((nav_valid, water_valid, depth_valid)), 0)
+        else:
+            valid_ens = []
 
         return valid_ens
 

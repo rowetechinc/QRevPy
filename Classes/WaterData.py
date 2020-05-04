@@ -366,36 +366,70 @@ class WaterData(object):
             Matlab data structure obtained from sio.loadmat
         """
 
-        # Data input to this class
-        self.raw_vel_mps = np.moveaxis(transect.wVel.rawVel_mps, 2, 0)
+        # Data requiring manipulation (special case for 1 ensemble)
+        if len(transect.wVel.rawVel_mps.shape) == 2:
+            self.raw_vel_mps = np.moveaxis(transect.wVel.rawVel_mps, 1, 0)
+            self.raw_vel_mps = self.raw_vel_mps.reshape(self.raw_vel_mps.shape[0], self.raw_vel_mps.shape[1], 1)
+            self.corr = np.moveaxis(transect.wVel.corr, 1, 0)
+            self.corr = self.corr.reshape(self.corr.shape[0], self.corr.shape[1], 1)
+            self.rssi = np.moveaxis(transect.wVel.rssi, 1, 0)
+            self.rssi = self.rssi.reshape(self.rssi.shape[0], self.rssi.shape[1], 1)
+            self.valid_data = np.moveaxis(transect.wVel.validData, 1, 0)
+            self.valid_data = self.valid_data.reshape(self.valid_data.shape[0], self.valid_data.shape[1], 1)
+            self.u_earth_no_ref_mps = transect.wVel.uEarthNoRef_mps
+            self.u_earth_no_ref_mps = self.u_earth_no_ref_mps.reshape(self.u_earth_no_ref_mps.shape[0], 1)
+            self.v_earth_no_ref_mps = transect.wVel.vEarthNoRef_mps
+            self.v_earth_no_ref_mps = self.v_earth_no_ref_mps.reshape(self.v_earth_no_ref_mps.shape[0], 1)
+            self.u_mps = transect.wVel.u_mps
+            self.u_mps = self.u_mps.reshape(self.u_mps.shape[0], 1)
+            self.v_mps = transect.wVel.v_mps
+            self.v_mps = self.v_mps.reshape(self.v_mps.shape[0], 1)
+            self.u_processed_mps = transect.wVel.uProcessed_mps
+            self.u_processed_mps = self.u_processed_mps.reshape(self.u_processed_mps.shape[0], 1)
+            self.v_processed_mps = transect.wVel.vProcessed_mps
+            self.v_processed_mps = self.v_processed_mps.reshape(self.v_processed_mps.shape[0], 1)
+            self.w_mps = transect.wVel.w_mps
+            self.w_mps = self.w_mps.reshape(self.w_mps.shape[0], 1)
+            self.d_mps = transect.wVel.d_mps
+            self.d_mps = self.d_mps.reshape(self.d_mps.shape[0], 1)
+            self.snr_rng = transect.wVel.snrRng
+            self.snr_rng = self.snr_rng.reshape(self.snr_rng.shape[0], 1)
+            self.cells_above_sl = transect.wVel.cellsAboveSL.astype(bool)
+            self.cells_above_sl = self.cells_above_sl.reshape(self.cells_above_sl.shape[0], 1)
+            self.cells_above_sl_bt = transect.wVel.cellsAboveSLbt.astype(bool)
+            self.cells_above_sl_bt = self.cells_above_sl_bt.reshape(self.cells_above_sl_bt.shape[0], 1)
+            self.sl_lag_effect_m = np.array([transect.wVel.slLagEffect_m])
+
+        else:
+            self.raw_vel_mps = np.moveaxis(transect.wVel.rawVel_mps, 2, 0)
+            self.corr = np.moveaxis(transect.wVel.corr, 2, 0)
+            self.rssi = np.moveaxis(transect.wVel.rssi, 2, 0)
+            self.valid_data = np.moveaxis(transect.wVel.validData, 2, 0)
+            self.u_earth_no_ref_mps = transect.wVel.uEarthNoRef_mps
+            self.v_earth_no_ref_mps = transect.wVel.vEarthNoRef_mps
+            self.u_mps = transect.wVel.u_mps
+            self.v_mps = transect.wVel.v_mps
+            self.u_processed_mps = transect.wVel.uProcessed_mps
+            self.v_processed_mps = transect.wVel.vProcessed_mps
+            self.w_mps = transect.wVel.w_mps
+            self.d_mps = transect.wVel.d_mps
+            self.snr_rng = transect.wVel.snrRng
+            self.cells_above_sl = transect.wVel.cellsAboveSL.astype(bool)
+            self.cells_above_sl_bt = transect.wVel.cellsAboveSLbt.astype(bool)
+            self.sl_lag_effect_m = transect.wVel.slLagEffect_m
+
+        self.valid_data = self.valid_data.astype(bool)
         self.frequency = transect.wVel.frequency
         self.orig_coord_sys = transect.wVel.origCoordSys
         self.orig_nav_ref = transect.wVel.origNavRef
-        self.corr = np.moveaxis(transect.wVel.corr, 2, 0)
-        self.rssi = np.moveaxis(transect.wVel.rssi, 2, 0)
         self.rssi_units = transect.wVel.rssiUnits
         self.water_mode = transect.wVel.waterMode
         self.blanking_distance_m = transect.wVel.blankingDistance_m
-        self.cells_above_sl = transect.wVel.cellsAboveSL.astype(bool)
-        self.cells_above_sl_bt = transect.wVel.cellsAboveSLbt.astype(bool)
-        self.sl_lag_effect_m = transect.wVel.slLagEffect_m
-
-        # Data computed in this class
-        self.u_earth_no_ref_mps = transect.wVel.uEarthNoRef_mps
-        self.v_earth_no_ref_mps = transect.wVel.vEarthNoRef_mps
-        self.u_mps = transect.wVel.u_mps
-        self.v_mps = transect.wVel.v_mps
-        self.u_processed_mps = transect.wVel.uProcessed_mps
-        self.v_processed_mps = transect.wVel.vProcessed_mps
-        self.w_mps = transect.wVel.w_mps
-        self.d_mps = transect.wVel.d_mps
         self.invalid_index = transect.wVel.invalidIndex
         if type(transect.wVel.numInvalid) is np.ndarray:
             self.num_invalid = transect.wVel.numInvalid.tolist()
         else:
             self.num_invalid = transect.wVel.numInvalid
-        self.valid_data = np.moveaxis(transect.wVel.validData, 2, 0)
-        self.valid_data = self.valid_data.astype(bool)
 
         # Settings
         self.beam_filter = transect.wVel.beamFilter
@@ -409,7 +443,6 @@ class WaterData(object):
         self.smooth_upper_limit = transect.wVel.smoothUpperLimit
         self.smooth_lower_limit = transect.wVel.smoothLowerLimit
         self.snr_filter = transect.wVel.snrFilter
-        self.snr_rng = transect.wVel.snrRng
         self.wt_depth_filter = transect.wVel.wtDepthFilter
         self.interpolate_ens = transect.wVel.interpolateEns
         self.interpolate_cells = transect.wVel.interpolateCells

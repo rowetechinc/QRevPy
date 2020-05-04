@@ -177,15 +177,32 @@ class DepthData(object):
         self.filter_type = mat_data.filterType
         self.interp_type = mat_data.interpType
         self.valid_data_method = mat_data.validDataMethod
-        self.valid_data = mat_data.validData.astype(bool)
+        if type(mat_data.validData) is int:
+            self.valid_data = np.array([mat_data.validData]).astype(bool)
+        else:
+            self.valid_data = mat_data.validData.astype(bool)
 
         # Reshape array for vertical beam and depth sounder
         if len(mat_data.validBeams.shape) < 2:
             self.valid_beams = mat_data.validBeams.reshape(1, -1)
         else:
-            self.valid_beams = mat_data.validBeams
+            self.valid_beams = mat_data.validBeams.reshape(-1, 1)
 
         self.valid_beams = self.valid_beams.astype(bool)
+
+        if len(self.depth_beams_m.shape) == 1:
+            self.depth_beams_m = self.depth_beams_m.reshape(self.depth_beams_m.shape[0], 1)
+            self.depth_cell_depth_m = self.depth_cell_depth_m.reshape(self.depth_cell_depth_m.shape[0], 1)
+            self.depth_cell_depth_orig_m = self.depth_cell_depth_orig_m.reshape(self.depth_cell_depth_orig_m.shape[0], 1)
+            self.depth_cell_size_m = self.depth_cell_size_m.reshape(self.depth_cell_size_m.shape[0], 1)
+            self.depth_cell_size_orig_m = self.depth_cell_size_orig_m.reshape(self.depth_cell_size_orig_m.shape[0], 1)
+            self.depth_orig_m = self.depth_orig_m.reshape(self.depth_orig_m.shape[0], 1)
+            self.depth_processed_m = np.array([self.depth_processed_m])
+            self.smooth_depth = self.smooth_depth.reshape(self.smooth_depth.shape[0], 1)
+            self.smooth_lower_limit = self.smooth_lower_limit.reshape(self.smooth_lower_limit.shape[0], 1)
+            self.smooth_upper_limit = self.smooth_upper_limit.reshape(self.smooth_upper_limit.shape[0], 1)
+            self.valid_data = np.array([self.valid_data])
+            self.depth_source_ens = np.array([mat_data.depthSourceEns])
 
     def change_draft(self, draft):
         """Changes the draft for object
@@ -311,7 +328,7 @@ class DepthData(object):
             
         # Identify ensembles with interpolated depths
         idx = np.where(self.valid_data[:] == False)
-        if len(idx) > 0:
+        if len(idx[0]) > 0:
             idx = idx[0]
             idx2 = np.where(np.isnan(self.depth_processed_m[idx]) == False)
             if len(idx2) > 0:
