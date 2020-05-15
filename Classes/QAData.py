@@ -236,52 +236,58 @@ class QAData(object):
             self.edges['right_type'] = meas_struct.qa.edges.rightType
 
             # If QA check not available, get check from new QA
-            if hasattr(meas_struct.qa, 'right_dist_moved_idx'):
+            if hasattr(meas_struct.qa.edges, 'rightDistMovedIdx'):
                 self.edges['right_dist_moved_idx'] = self.make_array(meas_struct.qa.edges.rightDistMovedIdx)
             else:
                 self.edges['right_dist_moved_idx'] = new_qa.edges['right_dist_moved_idx']
 
             # If QA check not available, get check from new QA
-            if hasattr(meas_struct.qa, 'left_dist_moved_idx'):
+            if hasattr(meas_struct.qa.edges, 'leftDistMovedIdx'):
                 self.edges['left_dist_moved_idx'] = self.make_array(meas_struct.qa.edges.leftDistMovedIdx)
             else:
                 self.edges['left_dist_moved_idx'] = new_qa.edges['left_dist_moved_idx']
 
             # If QA check not available, get check from new QA
-            if hasattr(meas_struct.qa, 'leftQIdx'):
+            if hasattr(meas_struct.qa.edges, 'leftQIdx'):
                 self.edges['left_q_idx'] = self.make_array(meas_struct.qa.edges.leftQIdx)
             else:
                 self.edges['left_q_idx'] = new_qa.edges['left_q_idx']
 
             # If QA check not available, get check from new QA
-            if hasattr(meas_struct.qa, 'rightQIdx'):
+            if hasattr(meas_struct.qa.edges, 'rightQIdx'):
                 self.edges['right_q_idx'] = self.make_array(meas_struct.qa.edges.rightQIdx)
             else:
                 self.edges['right_q_idx'] = new_qa.edges['right_q_idx']
 
             # If QA check not available, get check from new QA
-            if hasattr(meas_struct.qa, 'leftZeroIdx'):
+            if hasattr(meas_struct.qa.edges, 'leftZeroIdx'):
                 self.edges['left_zero_idx'] = self.make_array(meas_struct.qa.edges.leftZeroIdx)
             else:
                 self.edges['left_zero_idx'] = new_qa.edges['left_zero_idx']
 
             # If QA check not available, get check from new QA
-            if hasattr(meas_struct.qa, 'rightZeroIdx'):
+            if hasattr(meas_struct.qa.edges, 'rightZeroIdx'):
                 self.edges['right_zero_idx'] = self.make_array(meas_struct.qa.edges.rightZeroIdx)
             else:
                 self.edges['right_zero_idx'] = new_qa.edges['right_zero_idx']
 
             # If QA check not available, get check from new QA
-            if hasattr(meas_struct.qa, 'invalid_transect_left_idx'):
+            if hasattr(meas_struct.qa.edges, 'invalid_transect_left_idx'):
                 self.edges['invalid_transect_left_idx'] = \
                     self.make_array(meas_struct.qa.edges.invalid_transect_left_idx)
+            elif hasattr(meas_struct.qa.edges, 'invalidTransLeftIdx'):
+                self.edges['invalid_transect_left_idx'] = \
+                    self.make_array(meas_struct.qa.edges.invalidTransLeftIdx)
             else:
                 self.edges['invalid_transect_left_idx'] = new_qa.edges['invalid_transect_left_idx']
 
             # If QA check not available, get check from new QA
-            if hasattr(meas_struct.qa, 'invalid_transect_right_idx'):
+            if hasattr(meas_struct.qa.edges, 'invalid_transect_right_idx'):
                 self.edges['invalid_transect_right_idx'] = \
                     self.make_array(meas_struct.qa.edges.invalid_transect_right_idx)
+            elif hasattr(meas_struct.qa, 'invalidTransRightIdx'):
+                self.edges['invalid_transect_right_idx'] = \
+                    self.make_array(meas_struct.qa.edges.invalidTransRightIdx)
             else:
                 self.edges['invalid_transect_right_idx'] = new_qa.edges['invalid_transect_right_idx']
 
@@ -876,9 +882,9 @@ class QAData(object):
                                                  + ' degrees C which is greater than 2 degrees;', 1, 5])
         elif temp_range > 1:
             check[0] = 2
-            self.temperature['messages'].append(['TEMPERATURE: Temperature range is '
+            self.temperature['messages'].append(['Temperature: Temperature range is '
                                                  + '{:3.1f}'.format(temp_range)
-                                                 + ' degrees C which is greater than 1 degrees;', 2, 5])
+                                                 + ' degrees C which is greater than 1 degree;', 2, 5])
         else:
             check[0] = 1
 
@@ -1442,7 +1448,7 @@ class QAData(object):
                 # Generate message for total_invalid Q
                 if np.any(self.w_vel['q_total_warning'][:, filter_idx]):
                     self.w_vel['messages'].append(['WT-' + prefix[prefix_idx]
-                                                   + 'Int. Q for invalid ensembles in a transect exceeds '
+                                                   + 'Int. Q for invalid cells and ensembles in a transect exceeds '
                                                    + '%3.0f' % self.q_total_threshold_warning
                                                    + '%;', 1, 11])
                     status_switch = 2

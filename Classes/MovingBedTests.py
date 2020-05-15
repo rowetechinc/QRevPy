@@ -622,7 +622,7 @@ class MovingBedTests(object):
                 
             # Determine if the test indicates a moving bed
             if self.test_quality != 'Errors':
-                if self.percent_mb > 1:
+                if self.percent_mb >= 1:
                     self.moving_bed = 'Yes'
                 else:
                     self.moving_bed = 'No'

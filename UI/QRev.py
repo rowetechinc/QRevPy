@@ -664,7 +664,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             user_name = getpass.getuser()
             discharge = Measurement.mean_discharges(self.meas)
             text = '[' + time_stamp + ', ' + user_name + ']: File Saved Q = ' \
-                   + '{:8.2f}'.format(discharge['total_mean'] * self.units['Q']) + ' ' + self.units['label_Q'][1:-1]
+                   + '{:8.2f}'.format(discharge['total_mean'] * self.units['Q']) + ' ' + self.units['label_Q'][1:-1]\
+                   + ' (Uncertainty: ' + '{:4.1f}'.format(self.meas.uncertainty.total_95_user) + '%)'
             self.meas.comments.append(text)
             self.comments_tab()
 
@@ -897,13 +898,30 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         kml.save(fullname)
         os.startfile(fullname)
 
-    @staticmethod
-    def help():
+    def help(self):
         """Opens pdf help file user's default pdf viewer.
         """
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Question)
+        msg.addButton(self.tr('Users Manual'), msg.ActionRole)
+        msg.addButton(self.tr('Technical Manual'), msg.ActionRole)
+        msg.addButton(self.tr('About'), msg.ActionRole)
+        msg.addButton(self.tr('Cancel'), msg.ActionRole)
+        # msg.setInformativeText('Select option:')
+        msg.setWindowTitle("Help Documents")
+        msg.setWindowIcon(QtGui.QIcon('QRev.ico'))
+        msg.exec_()
+
         help_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Help')
-        help_file = os.path.join(help_file, 'QRev_Help.pdf')
-        webbrowser.open('file:///' + help_file, new=2, autoraise=True)
+        if msg.clickedButton().text() == 'Users Manual':
+            help_file = os.path.join(help_file, 'QRev_Users.pdf')
+            webbrowser.open('file:///' + help_file, new=2, autoraise=True)
+        elif msg.clickedButton().text() == 'Technical Manual':
+            help_file = os.path.join(help_file, 'QRev_Tech.pdf')
+            webbrowser.open('file:///' + help_file, new=2, autoraise=True)
+        elif msg.clickedButton().text() == 'About':
+            help_file = os.path.join(help_file, 'QRev_About.pdf')
+            webbrowser.open('file:///' + help_file, new=2, autoraise=True)
 
     # Main tab
     # ========

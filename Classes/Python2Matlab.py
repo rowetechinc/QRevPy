@@ -457,6 +457,7 @@ class Python2Matlab(object):
                          'sl_cutoff_number': 'slCutoffNum',
                          'sl_cutoff_percent': 'slCutoffPer',
                          'sl_cutoff_type': 'slCutoffType',
+                         'sl_cutoff_m': 'slCutoff_m',
                          'smooth_depth': 'smoothDepth',
                          'smooth_filter': 'smoothFilter',
                          'smooth_lower_limit': 'smoothLowerLimit',
@@ -551,7 +552,10 @@ class Python2Matlab(object):
                          'roll_mean_caution_idx': 'rollMeanCautionIdx',
                          'roll_std_caution_idx': 'rollStdCautionIdx',
                          'magvar_idx': 'magvarIdx',
-                         'mag_error_idx': 'magErrorIdx'}
+                         'mag_error_idx': 'magErrorIdx',
+                         'invalid_transect_left_idx': 'invalidTransLeftIdx',
+                         'invalid_transect_right_idx': 'invalidTransLeftIdx',
+                         }
         return py_2_mat_dict
 
     @staticmethod

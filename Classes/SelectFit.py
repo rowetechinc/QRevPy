@@ -152,7 +152,7 @@ class SelectFit(object):
                 self.top_method_auto = 'Power'
                 self.bot_method_auto = 'Power'
 
-                # Evaluate difference in data and power fit at water surface using a linear fit throught the top 4
+                # Evaluate difference in data and power fit at water surface using a linear fit through the top 4
                 # median cells and save results
                 y = normalized.unit_normalized_med[valid_data[:4]]
                 #             x = sm.add_constant(x)
@@ -220,7 +220,7 @@ class SelectFit(object):
                 # the difference between and optimized no slip fit
                 # and the selected best power fit of the whole profile
                 # is greater than 10% and (b) the optimized on slip fit has
-                # and r^2 greater than 0.6.
+                # an r^2 greater than 0.6.
                 bottom_condition = ((np.abs(self.bot_diff) > 0.1) and self.bot_r2 > 0.6)
 
                 # OR

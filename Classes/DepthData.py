@@ -186,7 +186,7 @@ class DepthData(object):
         if len(mat_data.validBeams.shape) < 2:
             self.valid_beams = mat_data.validBeams.reshape(1, -1)
         else:
-            self.valid_beams = mat_data.validBeams.reshape(-1, 1)
+            self.valid_beams = mat_data.validBeams
 
         self.valid_beams = self.valid_beams.astype(bool)
 
