@@ -326,7 +326,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.setupUi(self)
 
         # Set version of QRev
-        self.QRev_version = 'QRev 4.12'
+        self.QRev_version = 'QRev 4.13'
         self.setWindowTitle(self.QRev_version)
         self.setWindowIcon(QtGui.QIcon('QRev.ico'))
 
@@ -3522,7 +3522,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     display_temp = ''
             else:
                 t_source_dialog.rb_user.setText('User (C)')
-                display_temp = self.meas.transects[transect_id].sensors.temperature_deg_c.user.data[0]
+                if self.meas.transects[transect_id].sensors.temperature_deg_c.user is not None:
+                    display_temp = self.meas.transects[transect_id].sensors.temperature_deg_c.user.data[0]
+                else:
+                    display_temp = ''
             if type(display_temp) is str:
                 t_source_dialog.ed_user_temp.setText(display_temp)
             else:

@@ -2981,12 +2981,12 @@ class Measurement(object):
         temp = self.extrap_fit.q_sensitivity.q_pp_mean
         ETree.SubElement(s_o, 'DischargePPDefault', type='double').text = '{:.2f}'.format(temp)
 
-        # (4) UserComment
+        # (2) UserComment
         if len(self.comments) > 1:
             temp = ''
             for comment in self.comments:
                 temp = temp + comment.replace('\n', ' |||') + ' |||'
-            ETree.SubElement(s_o, 'UserComment', type='char').text = temp
+            ETree.SubElement(channel, 'UserComment', type='char').text = temp
 
         # Create xml output file
         with open(file_name, 'wb') as xml_file:
