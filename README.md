@@ -1,6 +1,6 @@
+# QRev 4
 
-
-**QRevPy** is a Python port of the Matlab code QRev developed by the USGS to to compute the discharge from a moving-boat ADCP measurement using data collected with any of the Teledyne RD Instrument (TRDI) or SonTek bottom tracking ADCPs. QRev improves the consistency and efficiency of processing streamflow measurements by providing:
+**QRev** version 4 is a Python port of the Matlab code QRev developed by the USGS to to compute the discharge from a moving-boat ADCP measurement using data collected with any of the Teledyne RD Instrument (TRDI) or SonTek bottom tracking ADCPs. QRev improves the consistency and efficiency of processing streamflow measurements by providing:
 
 * Automated data quality checks with feedback to the user
 * Automated data filtering
@@ -10,7 +10,7 @@
 * An estimated uncertainty to help guide the user in rating the measurement
 
 
-**For a full description and instructions on the use of QRevclick** **[HERE](https://hydroacoustics.usgs.gov/movingboat/QRev.shtml)** **to view the QRev web page.**
+**For a full description and instructions on the use of QRev click** **[HERE](https://hydroacoustics.usgs.gov/movingboat/QRev.shtml)** **to view the QRev web page.**
 
 ***
 
@@ -90,7 +90,7 @@ Endorsement: In some jurisdictions, wrongfully implying that an author, publishe
 # Suggested citation
 Mueller, D.S., 2020, QRev, U.S. Geological Survey software release, https://doi.org/10.5066/P9OZ8QDL.
 
-## Author
+# Author
 David S Mueller  
 U.S. Geological Survey  
 9818 Bluegrass Parkway  
