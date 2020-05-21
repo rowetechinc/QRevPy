@@ -10,54 +10,68 @@
 * An estimated uncertainty to help guide the user in rating the measurement
 
 
-**For a full description and instructions on the use of QRev for Matlab click** **[HERE](https://hydroacoustics.usgs.gov/movingboat/QRev.shtml)** **to view the QRev page on the USGS Office of Surface Water Hydroacoustics website.**
+**For a full description and instructions on the use of QRevclick** **[HERE](https://hydroacoustics.usgs.gov/movingboat/QRev.shtml)** **to view the QRev web page.**
 
 ***
 
 # Development
-**QRevPy** is an active project and is undergoing continuous development. Versions available on this repository may be versions that are being tested. Currently the computational engine is functional but the user interface consist of only a couple of buttons to load and save processed data. Work is ongoing to provide loading of QRev Matlab output and saving an xml file consistent with QRev Matlab. Conceptual mockups of the new user interface are shown in the QRev_Python_User_Interface_Design.pptx file in this repository. If you would like to contribute, please use the pull request process to provide new or improved code. 
+**QRevPy** has been approved for release (IP-118174) and has been assigned a digital object identifier of 10.5066/P9OZ8QDL. Additional development of features in QRev are expected. Versions available in the master branch of this repository are currently in use by the USGS, however, no warranty, expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related material nor shall the fact of release constitute any such warranty. If you would like to contribute, please use the pull request process to provide new or improved code. 
 
 ## Requirements and Dependencies
 ### Source Code
 
-QRevPy is currently being developed using Python 3.6.6 and makes use the following packages:
+QRevPy is currently being developed using Python 3.6.6 and makes use of the following packages:
 
+PyInstaller==3.5	
+PyQt5==5.13.1
+PyQt5-sip==4.19.19
+PyQt5-stubs==5.13.1.3
+altgraph==0.16.1
 atomicwrites==1.3.0
 attrs==19.1.0
-Click==7.0
 colorama==0.4.1
 cycler==0.10.0
+future==0.17.1
+importlib-metadata==0.23
 kiwisolver==1.1.0
-matplotlib==3.0.3
-more-itertools==7.0.0
-numpy==1.15.2
-pandas==0.23.4
+macholib==1.11
+matplotlib==3.1.1
+more-itertools==7.2.0
+numpy==1.17.2
+packaging==19.2
+pandas==0.25.1
 patsy==0.5.1
-pluggy==0.11.0
+pefile==2019.4.18
+pip==20.1
+pluggy==0.13.0
 py==1.8.0
-pyparsing==2.4.0
-PyQt5==5.12.2
-PyQt5-sip==4.19.17
+pyparsing==2.4.2
 pyqt5-tools==5.12.1.1.5rc4
-pytest==3.8.2
+pytest==5.1.3
 python-dateutil==2.8.0
-python-dotenv==0.10.2
-pytz==2019.1
-scipy==1.1.0
+python-dotenv==0.10.3
+pytz==2019.2
+pywin32-ctypes==0.2.0
+scipy==1.3.1
+setuptools==41.2.0
 sip==4.19.8
 six==1.12.0
-statsmodels==0.9.0
-utm==0.4.2
-xmltodict==0.11.0
+utm==0.5.0
+wcwidth==0.1.7
+xmltodict==0.12.0
+zipp==0.6.0
+simplekml==1.3.1
 
 
 ## Bugs
 Please report all bugs with appropriate instructions and files to reproduce the issue and add this to the issues tracking feature in this repository.
 
-## Disclaimer
-The Matlab version of this software has been approved for release by the U.S. Geological Survey (USGS). The Python version is under development. Although the software has been subjected to rigorous review, the USGS reserves the right to update the software as needed pursuant to further analysis and review. No warranty, expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related material nor shall the fact of release constitute any such warranty. Furthermore, the software is released on condition that neither the USGS nor the U.S. Government shall be held liable for any damages resulting from its authorized or unauthorized use.
+# Disclaimer
+This software has been approved for release by the U.S. Geological Survey (USGS), IP-118174. Although the software has been subjected to rigorous review, the USGS reserves the right to update the software as needed pursuant to further analysis and review. No warranty, expressed or implied, is made by the USGS or the U.S. Government as to the functionality of the software and related material nor shall the fact of release constitute any such warranty. Furthermore, the software is released on condition that neither the USGS nor the U.S. Government shall be held liable for any damages resulting from its authorized or unauthorized use.
 
-## License
+# License
+
+Unless otherwise noted, This project is in the public domain in the United States because it contains materials that originally came from the United States Geological Survey, an agency of the United States Department of Interior. For more information, see the official USGS copyright policy at https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits Additionally, we waive copyright and related rights in the work worldwide through the CC0 1.0 Universal public domain dedication.
 
 Copyright / License - CC0 1.0: The person who associated a work with this deed has dedicated the work to the public domain by waiving all of his or her rights to the work worldwide under copyright law, including all related and neighboring rights, to the extent allowed by law. You can copy, modify, distribute and perform the work, even for commercial purposes, all without asking permission. 
 
@@ -72,6 +86,9 @@ Publicity or privacy: The use of a work free of known copyright restrictions may
 Endorsement: In some jurisdictions, wrongfully implying that an author, publisher or anyone else endorses your use of a work may be unlawful.
 
 3rd party code is covered by the copyright and license associated with those codes.
+
+# Suggested citation
+Mueller, D.S., 2020, QRev, U.S. Geological Survey software release, https://doi.org/10.5066/P9OZ8QDL.
 
 ## Author
 David S Mueller  
