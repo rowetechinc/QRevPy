@@ -3,22 +3,22 @@
     "name": "QRev",
     "organization": "U.S. Geological Survey",
     "description": "Python versions of QRev",
-    "version": "4.09",
-    "status": "In Development",
+    "version": "4.13",
+    "status": "Development",
 
     "permissions": {
       "usageType": "openSource",
       "licenses": [
         {
           "name": "Public Domain, CC0-1.0",
-          "URL": "https://code.usgs.gov/QRev/QRevPy/-/blob/master/LICENSE"
+          "URL": "https://code.usgs.gov/QRev/QRevPy/-/blob/master/LICENSE.md"
         }
       ]
     },
 
     "homepageURL": "https://code.usgs.gov/QRev/QRevPy",
     "downloadURL": "https://code.usgs.gov/QRev/QRevPy.git",
-    "disclaimerURL": "https://code.usgs.gov/QRev/QRevPy/-/blob/master/LICENSE",
+    "disclaimerURL": "https://code.usgs.gov/QRev/QRevPy/-/blob/master/DISCLAIMER.md",
     "repositoryURL": "https://code.usgs.gov/QRev/QRevPy.git",
     "vcs": "git",
 
@@ -41,7 +41,7 @@
     },
 
     "date": {
-      "metadataLastUpdated": "2020-04-08"
+      "metadataLastUpdated": "2020-05-26"
     }
   }
 ]
