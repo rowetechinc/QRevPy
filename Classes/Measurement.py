@@ -1188,33 +1188,33 @@ class Measurement(object):
         settings['BTInterpolation'] = self.transects[first_idx].boat_vel.bt_vel.interpolate
         
         # Gps Settings
-        if transect.gps is not None:
+        # if transect.gps is not None:
 
-            # GGA settings
-            if transect.boat_vel.gga_vel is not None:
-                settings['ggaDiffQualFilter'] = transect.boat_vel.gga_vel.gps_diff_qual_filter
-                settings['ggaAltitudeFilter'] = transect.boat_vel.gga_vel.gps_altitude_filter
-                settings['ggaAltitudeFilterChange'] = \
-                    transect.boat_vel.gga_vel.gps_altitude_filter_change
-                settings['GPSHDOPFilter'] = transect.boat_vel.gga_vel.gps_HDOP_filter
-                settings['GPSHDOPFilterMax'] = transect.boat_vel.gga_vel.gps_HDOP_filter_max
-                settings['GPSHDOPFilterChange'] = transect.boat_vel.gga_vel.gps_HDOP_filter_change
-                settings['GPSSmoothFilter'] = transect.boat_vel.gga_vel.smooth_filter
-                settings['GPSInterpolation'] = transect.boat_vel.gga_vel.interpolate
-            else:
-                settings['ggaDiffQualFilter'] = 1
-                settings['ggaAltitudeFilter'] = 'Off'
-                settings['ggaAltitudeFilterChange'] = []
-                
-                settings['ggaSmoothFilter'] = 'Off'
-                if 'GPSInterpolation' not in settings.keys():
-                    settings['GPSInterpolation'] = 'None'
-                if 'GPSHDOPFilter' not in settings.keys():
-                    settings['GPSHDOPFilter'] = 'Off'
-                    settings['GPSHDOPFilterMax'] = []
-                    settings['GPSHDOPFilterChange'] = []
-                if 'GPSSmoothFilter' not in settings.keys():
-                    settings['GPSSmoothFilter'] = 'Off'
+        # GGA settings
+        if transect.boat_vel.gga_vel is not None:
+            settings['ggaDiffQualFilter'] = transect.boat_vel.gga_vel.gps_diff_qual_filter
+            settings['ggaAltitudeFilter'] = transect.boat_vel.gga_vel.gps_altitude_filter
+            settings['ggaAltitudeFilterChange'] = \
+                transect.boat_vel.gga_vel.gps_altitude_filter_change
+            settings['GPSHDOPFilter'] = transect.boat_vel.gga_vel.gps_HDOP_filter
+            settings['GPSHDOPFilterMax'] = transect.boat_vel.gga_vel.gps_HDOP_filter_max
+            settings['GPSHDOPFilterChange'] = transect.boat_vel.gga_vel.gps_HDOP_filter_change
+            settings['GPSSmoothFilter'] = transect.boat_vel.gga_vel.smooth_filter
+            settings['GPSInterpolation'] = transect.boat_vel.gga_vel.interpolate
+        else:
+            settings['ggaDiffQualFilter'] = 1
+            settings['ggaAltitudeFilter'] = 'Off'
+            settings['ggaAltitudeFilterChange'] = []
+
+            settings['ggaSmoothFilter'] = 'Off'
+            if 'GPSInterpolation' not in settings.keys():
+                settings['GPSInterpolation'] = 'None'
+            if 'GPSHDOPFilter' not in settings.keys():
+                settings['GPSHDOPFilter'] = 'Off'
+                settings['GPSHDOPFilterMax'] = []
+                settings['GPSHDOPFilterChange'] = []
+            if 'GPSSmoothFilter' not in settings.keys():
+                settings['GPSSmoothFilter'] = 'Off'
 
         # VTG settings
         if transect.boat_vel.vtg_vel is not None:

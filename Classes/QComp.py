@@ -169,13 +169,15 @@ class QComp(object):
                 use_2_correct = []
                 for mb_idx, test in enumerate(moving_bed_data):
                     use_2_correct.append(test.use_2_correct)
+                    if use_2_correct:
+                        mb_type = test.type
 
                 if any(use_2_correct):
 
                     # Make sure composite tracks are turned off
                     if data_in.boat_vel.composite == 'Off':
                         # Apply appropriate moving-bed test correction method
-                        if np.sum(moving_bed_data[use_2_correct == True].type == 'Stationary') > 0:
+                        if mb_type == 'Stationary':
                             self.correction_factor = self.stationary_correction_factor(self.top, self.middle,
                                                                                        self.bottom, data_in,
                                                                                        moving_bed_data, delta_t)
