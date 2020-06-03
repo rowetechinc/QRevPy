@@ -177,7 +177,7 @@ class QComp(object):
                     # Make sure composite tracks are turned off
                     if data_in.boat_vel.composite == 'Off':
                         # Apply appropriate moving-bed test correction method
-                        if mb_type == 'Stationary' > 0:
+                        if mb_type == 'Stationary':
                             self.correction_factor = self.stationary_correction_factor(self.top, self.middle,
                                                                                        self.bottom, data_in,
                                                                                        moving_bed_data, delta_t)
