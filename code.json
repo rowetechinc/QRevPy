@@ -17,7 +17,7 @@
     },
 
     "homepageURL": "https://code.usgs.gov/QRev/QRevPy",
-    "downloadURL": "https://code.usgs.gov/QRev/QRevPy.git",
+    "downloadURL": "https://code.usgs.gov/QRev/QRevPy/-/archive/master/QRevPy-master.zip",
     "disclaimerURL": "https://code.usgs.gov/QRev/QRevPy/-/blob/master/DISCLAIMER.md",
     "repositoryURL": "https://code.usgs.gov/QRev/QRevPy.git",
     "vcs": "git",
