@@ -3,7 +3,7 @@
     "name": "QRev",
     "organization": "U.S. Geological Survey",
     "description": "Python versions of QRev",
-    "version": "4.13",
+    "version": "4.15",
     "status": "Development",
 
     "permissions": {
@@ -41,7 +41,7 @@
     },
 
     "date": {
-      "metadataLastUpdated": "2020-05-26"
+      "metadataLastUpdated": "2020-06-03"
     }
   }
 ]
