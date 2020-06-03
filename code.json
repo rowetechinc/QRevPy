@@ -3,13 +3,8 @@
     "name": "QRev",
     "organization": "U.S. Geological Survey",
     "description": "Python versions of QRev",
-<<<<<<< HEAD
-    "version": "4.13",
-    "status": "In Development",
-=======
     "version": "4.15",
     "status": "Development",
->>>>>>> dsm_dev
 
     "permissions": {
       "usageType": "openSource",
