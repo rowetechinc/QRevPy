@@ -274,7 +274,7 @@ class BoatStructure(object):
 
                 # Process the u velocity component
                 u_comp = u_vtg
-                comp_source[np.isnan(u_comp) == False] = 2
+                comp_source[np.isnan(u_comp) == False] = 3
 
                 # If VTG data are not valid try GGA and set composite source
                 u_comp[np.isnan(u_comp)] = u_gga[np.isnan(u_comp)]
