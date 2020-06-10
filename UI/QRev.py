@@ -614,10 +614,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 mat_data = sio.loadmat(select.fullName[0],
                                        struct_as_record=False,
                                        squeeze_me=True)
-                # mat_data = sio.loadmat(select.fullName[0],
-                #                        struct_as_record=True,
-                #                        squeeze_me=False,
-                #                        chars_as_strings=True)
 
                 # Check QRev version and display message for update if appropriate
                 if not self.QRev_version == mat_data['version']:
@@ -2479,20 +2475,42 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Status of PT3 tests
                 col += 1
-                if len(self.meas.qa.system_tst['messages']) > 0:
-                    if self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'TRDI':
-                        if any("PT3" in item for item in self.meas.qa.system_tst['messages']):
-                            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Failed'))
-                            tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
-                        else:
-                            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Pass'))
-                            tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
-                    else:
-                        tbl.setItem(row, col, QtWidgets.QTableWidgetItem('N/A'))
-                        tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
-                elif self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'TRDI':
-                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Pass'))
-                    tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
+                if 'pt3' in test.result:
+                    if 'hard_limit' in test.result['pt3']:
+                        if 'high_wide' in test.result['pt3']['hard_limit']:
+                            if 'corr_table' in test.result['pt3']['hard_limit']['high_wide']:
+                                corr_table = test.result['pt3']['hard_limit']['high_wide']['corr_table']
+                                if len(corr_table) > 0:
+                                    # All lags past lag 2 should be less than 50% of lag 0
+                                    qa_threshold = corr_table[0, :] * 0.5
+                                    all_lag_check = np.greater(corr_table[3::, :], qa_threshold)
+
+                                    # Lag 7 should be less than 25% of lag 0
+                                    lag_7_check = np.greater(corr_table[7, :], corr_table[0, :] * 0.25)
+
+                                    # If either condition is met for any beam the test fails
+                                    if np.sum(np.sum(all_lag_check)) + np.sum(lag_7_check) > 1:
+                                        tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Failed'))
+                                        tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
+                                    else:
+                                        tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Pass'))
+                                        tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
+
+
+                    # if self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'TRDI':
+                    #     if any("PT3" in item[0] for item in self.meas.qa.system_tst['messages']):
+                    #         tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Failed'))
+                    #         tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
+                    #     else:
+                    #         tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Pass'))
+                    #         tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
+                    # else:
+                    #     tbl.setItem(row, col, QtWidgets.QTableWidgetItem('N/A'))
+                    #     tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
+
+                # elif self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'TRDI':
+                #     tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Pass'))
+                #     tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
                 else:
                     tbl.setItem(row, col, QtWidgets.QTableWidgetItem('N/A'))
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 255, 255))
@@ -8538,7 +8556,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         self.edges_graphics()
 
         # Right edge type and coefficient
-        elif col == 9 or col == 10 or col == 15:
+        elif col == 9 or col == 10 or col == 14:
             # Initialize dialog
             type_dialog = EdgeType()
             type_dialog.rb_transect.setChecked(True)
@@ -9362,20 +9380,20 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
              'xml_file': save_file.full_Name[:-4] + '.xml'}
         self.processed_data.append(q)
 
+        # Create summary of all processed transects
+        for idx in self.groupings[self.group_idx]:
+            q_trans = {'transect_id': idx,
+                       'transect_file': self.meas.transects[idx].file_name[:-4],
+                       'start_serial_time': self.meas.transects[idx].date_time.start_serial_time,
+                       'end_serial_time': self.meas.transects[idx].date_time.end_serial_time,
+                       'duration': self.meas.transects[idx].date_time.transect_duration_sec,
+                       'processed_discharge': self.meas.discharge[idx].total}
+            self.processed_transects.append(q_trans)
         # Load next pairing
         self.group_idx += 1
 
         # If all pairings have been processed return control to the function initiating QRev.
         if self.group_idx > len(self.groupings) - 1:
-            # Create summary of all processed transects
-            for idx in range(len(self.meas.transects)):
-                q_trans = {'transect_id': idx,
-                           'transect_file': self.meas.transects[idx].file_name[:-4],
-                           'start_serial_time': self.meas.transects[idx].date_time.start_serial_time,
-                           'end_serial_time': self.meas.transects[idx].date_time.end_serial_time,
-                           'duration': self.meas.transects[idx].date_time.transect_duration_sec,
-                           'processed_discharge': self.meas.discharge[idx].total}
-                self.processed_transects.append(q_trans)
             self.caller.processed_meas = self.processed_data
             self.caller.processed_transects = self.processed_transects
             self.caller.Show_RIVRS()
@@ -9574,6 +9592,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # EDI tab
         elif tab_idx == 11:
             self.edi_tab()
+
+        self.set_tab_color()
 
     def update_comments(self, tab_idx=None):
         """Manages the initialization of content for each tab and updates that information as necessary.

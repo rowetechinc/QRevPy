@@ -1273,7 +1273,9 @@ class QAData(object):
                                     avg_speed = np.nanmean((transect.boat_vel.vtg_vel.u_mps ** 2
                                                             + transect.boat_vel.vtg_vel.v_mps ** 2) ** 0.5)
                                     if avg_speed < 0.24:
-                                        boat['q_total_caution'][n, dt_filter[1]] = True
+                                        boat['q_total_caution'][n, 2] = True
+                                        if status_switch < 1:
+                                            status_switch = 1
                                         boat['messages'].append(
                                             ['vtg-AvgSpeed: VTG data may not be accurate for average boat speed less than'
                                              + '0.24 m/s (0.8 ft/s);', 2, 8])

@@ -59,7 +59,7 @@ class RIVRS_Demo(QtWidgets.QMainWindow, wRIVRS_Demo.Ui_RIVRS_Demo):
             self.meas = Measurement(in_file=select.fullName[0], source='QRev')
 
         # groupings would be determined by the user using the RIVRS interface. These are provided as a demo test.
-        self.groupings = [[0,1], [1,2], [0,2]]
+        self.groupings = [[0,1], [2,3], [4,5]]
 
         # This is to show the processed transects are available to RIVRS. Demo purposes only.
         self.raw_data_table()
