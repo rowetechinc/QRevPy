@@ -116,4 +116,8 @@ class StickySettings(object):
             Data type stored in key 'item'.
 
         """
+
+        with open(self.settings_file, 'r') as f:
+            self.settings = json.load(f)
+
         return self.settings[item]
