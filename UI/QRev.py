@@ -567,6 +567,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.split_initialization(groupings=groupings, data=data)
             self.actionSave.triggered.connect(self.split_save)
             self.config_gui()
+            self.change = True
+            self.tab_manager(tab_idx=0)
+            self.set_tab_color()
             self.processed_data = []
             self.processed_transects = []
         else:
@@ -9349,7 +9352,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # If data entered.
         with self.wait_cursor():
             if rating_entered:
-                print(rating_entered)
                 if rating_dialog.rb_excellent.isChecked():
                     rating = 'Excellent'
                 elif rating_dialog.rb_good.isChecked():
