@@ -8810,19 +8810,22 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 item.set_visible(False)
         # GGA
         if transect.w_vel.nav_ref == 'GGA':
-            for item in self.left_edge_st_fig.gga:
-                item.set_visible(True)
+            if self.left_edge_st_fig.gga is not None:
+                for item in self.left_edge_st_fig.gga:
+                    item.set_visible(True)
         elif transect.boat_vel.gga_vel is not None:
             if self.left_edge_st_fig.gga is not None:
                 for item in self.left_edge_st_fig.gga:
                     item.set_visible(False)
         # VTG
         if transect.w_vel.nav_ref == 'VTG':
-            for item in self.left_edge_st_fig.vtg:
-                item.set_visible(True)
+            if self.left_edge_st_fig.vtg is not None:
+                for item in self.left_edge_st_fig.vtg:
+                    item.set_visible(True)
         elif transect.boat_vel.vtg_vel is not None:
-            for item in self.left_edge_st_fig.vtg:
-                item.set_visible(False)
+            if self.left_edge_st_fig.vtg is not None:
+                for item in self.left_edge_st_fig.vtg:
+                    item.set_visible(False)
 
         self.left_edge_st_canvas.draw()
 
@@ -8868,19 +8871,22 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 item.set_visible(False)
         # GGA
         if transect.w_vel.nav_ref == 'GGA':
-            for item in self.right_edge_st_fig.gga:
-                item.set_visible(True)
+            if self.right_edge_st_fig.gga is not None:
+                for item in self.right_edge_st_fig.gga:
+                    item.set_visible(True)
         elif transect.boat_vel.gga_vel is not None:
             if self.right_edge_st_fig.gga is not None:
                 for item in self.right_edge_st_fig.gga:
                     item.set_visible(False)
         # VTG
         if transect.w_vel.nav_ref == 'VTG':
-            for item in self.right_edge_st_fig.vtg:
-                item.set_visible(True)
+            if self.right_edge_st_fig.vtg is not None:
+                for item in self.right_edge_st_fig.vtg:
+                    item.set_visible(True)
         elif transect.boat_vel.vtg_vel is not None:
-            for item in self.right_edge_st_fig.vtg:
-                item.set_visible(False)
+            if self.right_edge_st_fig.vtg is not None:
+                for item in self.right_edge_st_fig.vtg:
+                    item.set_visible(False)
 
         self.right_edge_st_canvas.draw()
 
