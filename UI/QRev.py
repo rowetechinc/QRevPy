@@ -8813,8 +8813,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             for item in self.left_edge_st_fig.gga:
                 item.set_visible(True)
         elif transect.boat_vel.gga_vel is not None:
-            for item in self.left_edge_st_fig.gga:
-                item.set_visible(False)
+            if self.left_edge_st_fig.gga is not None:
+                for item in self.left_edge_st_fig.gga:
+                    item.set_visible(False)
         # VTG
         if transect.w_vel.nav_ref == 'VTG':
             for item in self.left_edge_st_fig.vtg:
@@ -8870,8 +8871,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             for item in self.right_edge_st_fig.gga:
                 item.set_visible(True)
         elif transect.boat_vel.gga_vel is not None:
-            for item in self.right_edge_st_fig.gga:
-                item.set_visible(False)
+            if self.right_edge_st_fig.gga is not None:
+                for item in self.right_edge_st_fig.gga:
+                    item.set_visible(False)
         # VTG
         if transect.w_vel.nav_ref == 'VTG':
             for item in self.right_edge_st_fig.vtg:
