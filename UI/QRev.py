@@ -9349,6 +9349,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # If data entered.
         with self.wait_cursor():
             if rating_entered:
+                print(rating_entered)
                 if rating_dialog.rb_excellent.isChecked():
                     rating = 'Excellent'
                 elif rating_dialog.rb_good.isChecked():
@@ -9359,59 +9360,60 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     rating = 'Poor'
 
         # Create default file name
-        save_file = SaveMeasurementDialog(parent=self)
+        if rating_entered:
+            save_file = SaveMeasurementDialog(parent=self)
 
-        if len(save_file.full_Name) > 0:
+            if len(save_file.full_Name) > 0:
 
-            # Save data in Matlab format
-            if self.save_all:
-                Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, self.QRev_version)
-            else:
-                Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, self.QRev_version,
-                                               checked=self.groupings[self.group_idx])
+                # Save data in Matlab format
+                if self.save_all:
+                    Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, self.QRev_version)
+                else:
+                    Python2Matlab.save_matlab_file(self.meas, save_file.full_Name, self.QRev_version,
+                                                   checked=self.groupings[self.group_idx])
 
-            # Save xml file
-            self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml')
+                # Save xml file
+                self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml')
 
-            # Notify user when save complete
-            QtWidgets.QMessageBox.about(self, "Save", "Group " +
-                                        str(self.group_idx + 1) + " of " +
-                                        str(len(self.groupings)) +
-                                        "\n Files (*_QRev.mat and "
-                                        "*_QRev.xml) have been saved.")
+                # Notify user when save complete
+                QtWidgets.QMessageBox.about(self, "Save", "Group " +
+                                            str(self.group_idx + 1) + " of " +
+                                            str(len(self.groupings)) +
+                                            "\n Files (*_QRev.mat and "
+                                            "*_QRev.xml) have been saved.")
 
-            # Create a summary of the processed discharges
-            discharge = Measurement.mean_discharges(self.meas)
-            q = {'group': self.groupings[self.group_idx],
-                 'start_serial_time': self.meas.transects[self.groupings[self.group_idx][0]].date_time.start_serial_time,
-                 'end_serial_time': self.meas.transects[self.groupings[self.group_idx][-1]].date_time.end_serial_time,
-                 'processed_discharge': discharge['total_mean'],
-                 'rating': rating,
-                 'xml_file': save_file.full_Name[:-4] + '.xml'}
-            self.processed_data.append(q)
+                # Create a summary of the processed discharges
+                discharge = Measurement.mean_discharges(self.meas)
+                q = {'group': self.groupings[self.group_idx],
+                     'start_serial_time': self.meas.transects[self.groupings[self.group_idx][0]].date_time.start_serial_time,
+                     'end_serial_time': self.meas.transects[self.groupings[self.group_idx][-1]].date_time.end_serial_time,
+                     'processed_discharge': discharge['total_mean'],
+                     'rating': rating,
+                     'xml_file': save_file.full_Name[:-4] + '.xml'}
+                self.processed_data.append(q)
 
-            # Create summary of all processed transects
-            for idx in self.groupings[self.group_idx]:
-                q_trans = {'transect_id': idx,
-                           'transect_file': self.meas.transects[idx].file_name[:-4],
-                           'start_serial_time': self.meas.transects[idx].date_time.start_serial_time,
-                           'end_serial_time': self.meas.transects[idx].date_time.end_serial_time,
-                           'duration': self.meas.transects[idx].date_time.transect_duration_sec,
-                           'processed_discharge': self.meas.discharge[idx].total}
-                self.processed_transects.append(q_trans)
-            # Load next pairing
-            self.group_idx += 1
+                # Create summary of all processed transects
+                for idx in self.groupings[self.group_idx]:
+                    q_trans = {'transect_id': idx,
+                               'transect_file': self.meas.transects[idx].file_name[:-4],
+                               'start_serial_time': self.meas.transects[idx].date_time.start_serial_time,
+                               'end_serial_time': self.meas.transects[idx].date_time.end_serial_time,
+                               'duration': self.meas.transects[idx].date_time.transect_duration_sec,
+                               'processed_discharge': self.meas.discharge[idx].total}
+                    self.processed_transects.append(q_trans)
+                # Load next pairing
+                self.group_idx += 1
 
-            # If all pairings have been processed return control to the function initiating QRev.
-            if self.group_idx > len(self.groupings) - 1:
-                self.caller.processed_meas = self.processed_data
-                self.caller.processed_transects = self.processed_transects
-                self.caller.Show_RIVRS()
-                self.close()
+                # If all pairings have been processed return control to the function initiating QRev.
+                if self.group_idx > len(self.groupings) - 1:
+                    self.caller.processed_meas = self.processed_data
+                    self.caller.processed_transects = self.processed_transects
+                    self.caller.Show_RIVRS()
+                    self.close()
 
-            else:
-                self.checked_transects_idx = self.groupings[self.group_idx]
-                self.split_processing(self.checked_transects_idx)
+                else:
+                    self.checked_transects_idx = self.groupings[self.group_idx]
+                    self.split_processing(self.checked_transects_idx)
 
     # Support functions
     # =================
