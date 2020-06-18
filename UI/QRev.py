@@ -2022,8 +2022,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             if len(self.meas.compass_eval) == 0:
                 tbl.setItem(1, 3, QtWidgets.QTableWidgetItem(self.tr('No')))
             else:
-                tbl.setItem(1, 3, QtWidgets.QTableWidgetItem(
-                    '{:3.1f}'.format(self.meas.compass_eval[-1].result['compass']['error'])))
+                if self.meas.compass_eval[-1].result['compass']['error'] != 'N/A':
+                    tbl.setItem(1, 3, QtWidgets.QTableWidgetItem(
+                        '{:3.1f}'.format(self.meas.compass_eval[-1].result['compass']['error'])))
+                else:
+                    tbl.setItem(1, 3, QtWidgets.QTableWidgetItem(
+                        str(self.meas.compass_eval[-1].result['compass']['error'])))
             tbl.item(1, 3).setFlags(QtCore.Qt.ItemIsEnabled)
 
             # Moving-Bed Test
