@@ -110,6 +110,9 @@ class Measurement(object):
             elif source == 'SonTek':
                 self.load_sontek(in_file)
 
+            elif source == 'Nortek':
+                self.load_sontek(in_file)
+
             # Process TRDI and SonTek data
             if len(self.transects) > 0:
 

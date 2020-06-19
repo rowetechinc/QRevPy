@@ -63,6 +63,9 @@ class InstrumentData(object):
         elif manufacturer == 'SonTek':
             self.manufacturer = manufacturer
             self.sontek(rs=raw_data)
+        elif manufacturer == 'Nortek':
+            self.manufacturer = manufacturer
+            self.nortek(rs=raw_data)
 
     def trdi(self, pd0, mmt_transect, mmt):
         """Populates the variables with data from TRDI ADCPs.
@@ -197,6 +200,23 @@ class InstrumentData(object):
             self.model = 'M9'
         else:
             self.model = 'S5'
+        if hasattr(rs, 'SystemHW'):
+            revision = str(rs.SystemHW.FirmwareRevision)
+            if len(revision) < 2:
+                revision = '0' + revision
+            self.firmware = str(rs.SystemHW.FirmwareVersion) + '.' + revision
+        else:
+            self.firmware = ''
+        self.beam_angle_deg = 25
+        self.beam_pattern = 'Convex'
+        self.t_matrix = TransformationMatrix()
+        self.t_matrix.populate_data('SonTek', data_in=rs.Transformation_Matrices.Matrix)
+        self.configuration_commands = None
+
+    def nortek(self, rs):
+        self.serial_num = rs.System.SerialNumber
+        self.frequency_khz = rs.Transformation_Matrices.Frequency
+        self.model = rs.System.InstrumentModel
         if hasattr(rs, 'SystemHW'):
             revision = str(rs.SystemHW.FirmwareRevision)
             if len(revision) < 2:

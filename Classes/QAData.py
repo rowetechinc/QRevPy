@@ -1653,9 +1653,14 @@ class QAData(object):
                         else:
                             invalid_right = ens_invalid[0:int(transect.edges.right.number_ensembles)]
                             invalid_left = ens_invalid[-int(transect.edges.left.number_ensembles):]
-
-                        left_invalid_percent = sum(invalid_left) / len(invalid_left)
-                        right_invalid_percent = sum(invalid_right) / len(invalid_right)
+                        if len(invalid_left) > 0:
+                            left_invalid_percent = sum(invalid_left) / len(invalid_left)
+                        else:
+                            left_invalid_percent = 0
+                        if len(invalid_right) > 0:
+                            right_invalid_percent = sum(invalid_right) / len(invalid_right)
+                        else:
+                            right_invalid_percent = 0
                         max_invalid_percent = max([left_invalid_percent, right_invalid_percent]) * 100
                         if max_invalid_percent > 25:
                             self.edges['status'] = 'caution'

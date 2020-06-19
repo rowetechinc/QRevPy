@@ -604,6 +604,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     # Create measurement object
                     self.meas = Measurement(in_file=select.fullName, source='SonTek', proc_type='QRev')
 
+            # Load and process Sontek data
+            if select.type == 'Nortek':
+                with self.wait_cursor():
+                    # Show folder name in GUI header
+                    self.setWindowTitle(self.QRev_version + ': ' + select.pathName)
+                    # Create measurement object
+                    self.meas = Measurement(in_file=select.fullName, source='Nortek', proc_type='QRev')
+
             # Load and process TRDI data
             elif select.type == 'TRDI':
                 with self.wait_cursor():
@@ -2329,6 +2337,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.item(2, 0).setFont(self.font_bold)
             if self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'SonTek':
                 item = 'Variable'
+            elif self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'Nortek':
+                item = '{:4.0f}'.format(self.meas.transects[self.checked_transects_idx[0]].adcp.frequency_khz[0])
             else:
                 item = '{:4.0f}'.format(self.meas.transects[self.checked_transects_idx[0]].adcp.frequency_khz)
             tbl.setItem(2, 1, QtWidgets.QTableWidgetItem(item))
@@ -2358,6 +2368,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.item(3, 0).setFont(self.font_bold)
             if self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'SonTek':
                 item = 'Variable'
+            elif self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'Nortek':
+                item = 'Variable'
             else:
                 item = '{:2.0f}'.format(self.meas.transects[self.checked_transects_idx[0]].w_vel.water_mode)
             tbl.setItem(3, 1, QtWidgets.QTableWidgetItem(item))
@@ -2368,6 +2380,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.item(3, 2).setFlags(QtCore.Qt.ItemIsEnabled)
             tbl.item(3, 2).setFont(self.font_bold)
             if self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'SonTek':
+                item = 'Variable'
+            elif self.meas.transects[self.checked_transects_idx[0]].adcp.manufacturer == 'Nortek':
                 item = 'Variable'
             else:
                 item = '{:2.0f}'.format(self.meas.transects[self.checked_transects_idx[0]].boat_vel.bt_vel.bottom_mode)
