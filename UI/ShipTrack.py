@@ -114,6 +114,10 @@ class Shiptrack(object):
         self.fig.ax.yaxis.label.set_fontsize(12)
 
         # Initialize max/min trackers
+        max_x_bt = np.nan
+        max_y_bt = np.nan
+        min_x_bt = np.nan
+        min_y_bt = np.nan
         max_x_vtg = np.nan
         max_y_vtg = np.nan
         min_x_vtg = np.nan
@@ -136,7 +140,9 @@ class Shiptrack(object):
                                    color='r',
                                    label='BT')
 
-        if edge_start is not None and not np.alltrue(np.isnan(ship_data_bt['track_x_m'])):
+        if edge_start is not None \
+                and not np.alltrue(np.isnan(ship_data_bt['track_x_m'])) \
+                and len(ship_data_bt['track_x_m']) > 0:
             if edge_start:
                 self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][0] * units['L'],
                                                 ship_data_bt['track_y_m'][0] * units['L'], 'sk')[0])
@@ -146,7 +152,9 @@ class Shiptrack(object):
 
         # Plot invalid data points using a symbol to represent what caused the data to be invalid
 
-        if invalid_bt is not None and not np.alltrue(np.isnan(ship_data_bt['track_x_m'])):
+        if invalid_bt is not None \
+                and not np.alltrue(np.isnan(ship_data_bt['track_x_m'])) \
+                and len(ship_data_bt['track_x_m']) > 0:
             self.bt.append(self.fig.ax.plot(ship_data_bt['track_x_m'][invalid_bt[1]] * units['L'],
                                             ship_data_bt['track_y_m'][invalid_bt[1]] * units['L'],
                                             'k', linestyle='', marker='$O$')[0])
@@ -164,10 +172,11 @@ class Shiptrack(object):
                                             'k', linestyle='', marker='$B$')[0])
 
         ship_data = ship_data_bt
-        max_x_bt = np.nanmax(ship_data_bt['track_x_m'])
-        max_y_bt = np.nanmax(ship_data_bt['track_y_m'])
-        min_x_bt = np.nanmin(ship_data_bt['track_x_m'])
-        min_y_bt = np.nanmin(ship_data_bt['track_y_m'])
+        if len(ship_data_bt['track_x_m']) > 0:
+            max_x_bt = np.nanmax(ship_data_bt['track_x_m'])
+            max_y_bt = np.nanmax(ship_data_bt['track_y_m'])
+            min_x_bt = np.nanmin(ship_data_bt['track_x_m'])
+            min_y_bt = np.nanmin(ship_data_bt['track_y_m'])
 
         # Based on checkbox control make bt visible or not
         if control['bt']:
@@ -191,40 +200,41 @@ class Shiptrack(object):
                                             ship_data_vtg['track_y_m'] * units['L'],
                                             color='g', label='VTG')
 
-                if edge_start is not None:
-                    if edge_start:
-                        self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][0] * units['L'],
-                                                         ship_data_vtg['track_y_m'][0] * units['L'], 'sk')[0])
+                if len(ship_data_vtg['track_x_m']) > 0:
+                    if edge_start is not None:
+                        if edge_start:
+                            self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][0] * units['L'],
+                                                             ship_data_vtg['track_y_m'][0] * units['L'], 'sk')[0])
+                        else:
+                            self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][-1] * units['L'],
+                                                             ship_data_vtg['track_y_m'][-1] * units['L'], 'sk')[0])
+
+                    # Plot invalid data points using a symbol to represent what caused the data to be invalid
+                    if invalid_gps is not None and not np.alltrue(np.isnan(ship_data_vtg['track_x_m'])):
+                        self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][invalid_gps[1]] * units['L'],
+                                                         ship_data_vtg['track_y_m'][invalid_gps[1]] * units['L'],
+                                                         'k', linestyle='', marker='$O$')[0])
+                        self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][invalid_gps[4]] * units['L'],
+                                                         ship_data_vtg['track_y_m'][invalid_gps[4]] * units['L'],
+                                                         'k', linestyle='', marker='$S$')[0])
+                        self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][invalid_gps[5]] * units['L'],
+                                                         ship_data_vtg['track_y_m'][invalid_gps[5]] * units['L'],
+                                                         'k', linestyle='', marker='$H$')[0])
+
+                    if transect.boat_vel.selected == 'vtg_vel':
+                        ship_data = ship_data_vtg
+
+                    if control['vtg']:
+                        for item in self.vtg:
+                            item.set_visible(True)
                     else:
-                        self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][-1] * units['L'],
-                                                         ship_data_vtg['track_y_m'][-1] * units['L'], 'sk')[0])
+                        for item in self.vtg:
+                            item.set_visible(False)
 
-                # Plot invalid data points using a symbol to represent what caused the data to be invalid
-                if invalid_gps is not None and not np.alltrue(np.isnan(ship_data_vtg['track_x_m'])):
-                    self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][invalid_gps[1]] * units['L'],
-                                                     ship_data_vtg['track_y_m'][invalid_gps[1]] * units['L'],
-                                                     'k', linestyle='', marker='$O$')[0])
-                    self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][invalid_gps[4]] * units['L'],
-                                                     ship_data_vtg['track_y_m'][invalid_gps[4]] * units['L'],
-                                                     'k', linestyle='', marker='$S$')[0])
-                    self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][invalid_gps[5]] * units['L'],
-                                                     ship_data_vtg['track_y_m'][invalid_gps[5]] * units['L'],
-                                                     'k', linestyle='', marker='$H$')[0])
-
-                if transect.boat_vel.selected == 'vtg_vel':
-                    ship_data = ship_data_vtg
-
-                if control['vtg']:
-                    for item in self.vtg:
-                        item.set_visible(True)
-                else:
-                    for item in self.vtg:
-                        item.set_visible(False)
-
-                max_x_vtg = np.nanmax(ship_data_vtg['track_x_m'])
-                max_y_vtg = np.nanmax(ship_data_vtg['track_y_m'])
-                min_x_vtg = np.nanmin(ship_data_vtg['track_x_m'])
-                min_y_vtg = np.nanmin(ship_data_vtg['track_y_m'])
+                    max_x_vtg = np.nanmax(ship_data_vtg['track_x_m'])
+                    max_y_vtg = np.nanmax(ship_data_vtg['track_y_m'])
+                    min_x_vtg = np.nanmin(ship_data_vtg['track_x_m'])
+                    min_y_vtg = np.nanmin(ship_data_vtg['track_y_m'])
 
         # Plot shiptrack based on gga, if available
         if transect.boat_vel.gga_vel is not None:
@@ -240,50 +250,51 @@ class Shiptrack(object):
                                             ship_data_gga['track_y_m'] * units['L'],
                                             color='b', label='GGA')
 
-                if edge_start is not None:
-                    try:
-                        if edge_start:
-                            self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][0] * units['L'],
-                                                             ship_data_gga['track_y_m'][0] * units['L'], 'sk')[0])
-                        else:
-                            self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][-1] * units['L'],
-                                                             ship_data_gga['track_y_m'][-1] * units['L'], 'sk')[0])
-                    except TypeError:
-                        pass
+                if len(ship_data_gga['track_x_m']) > 0:
+                    if edge_start is not None:
+                        try:
+                            if edge_start:
+                                self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][0] * units['L'],
+                                                                 ship_data_gga['track_y_m'][0] * units['L'], 'sk')[0])
+                            else:
+                                self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][-1] * units['L'],
+                                                                 ship_data_gga['track_y_m'][-1] * units['L'], 'sk')[0])
+                        except TypeError:
+                            pass
 
-                # Plot invalid data points using a symbol to represent what caused the data to be invalid
+                    # Plot invalid data points using a symbol to represent what caused the data to be invalid
 
-                if invalid_gps is not None and not np.alltrue(np.isnan(ship_data_gga['track_x_m'])):
-                    self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[1]] * units['L'],
-                                                     ship_data_gga['track_y_m'][invalid_gps[1]] * units['L'],
-                                                     'k', linestyle='', marker='$O$')[0])
-                    self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[2]] * units['L'],
-                                                     ship_data_gga['track_y_m'][invalid_gps[2]] * units['L'],
-                                                     'k', linestyle='', marker='$Q$')[0])
-                    self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[3]] * units['L'],
-                                                     ship_data_gga['track_y_m'][invalid_gps[3]] * units['L'],
-                                                     'k', linestyle='', marker='$A$')[0])
-                    self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[4]] * units['L'],
-                                                     ship_data_gga['track_y_m'][invalid_gps[4]] * units['L'],
-                                                     'k', linestyle='', marker='$S$')[0])
-                    self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[5]] * units['L'],
-                                                     ship_data_gga['track_y_m'][invalid_gps[5]] * units['L'],
-                                                     'k', linestyle='', marker='$H$')[0])
+                    if invalid_gps is not None and not np.alltrue(np.isnan(ship_data_gga['track_x_m'])):
+                        self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[1]] * units['L'],
+                                                         ship_data_gga['track_y_m'][invalid_gps[1]] * units['L'],
+                                                         'k', linestyle='', marker='$O$')[0])
+                        self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[2]] * units['L'],
+                                                         ship_data_gga['track_y_m'][invalid_gps[2]] * units['L'],
+                                                         'k', linestyle='', marker='$Q$')[0])
+                        self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[3]] * units['L'],
+                                                         ship_data_gga['track_y_m'][invalid_gps[3]] * units['L'],
+                                                         'k', linestyle='', marker='$A$')[0])
+                        self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[4]] * units['L'],
+                                                         ship_data_gga['track_y_m'][invalid_gps[4]] * units['L'],
+                                                         'k', linestyle='', marker='$S$')[0])
+                        self.gga.append(self.fig.ax.plot(ship_data_gga['track_x_m'][invalid_gps[5]] * units['L'],
+                                                         ship_data_gga['track_y_m'][invalid_gps[5]] * units['L'],
+                                                         'k', linestyle='', marker='$H$')[0])
 
-                if transect.boat_vel.selected == 'gga_vel':
-                    ship_data = ship_data_gga
+                    if transect.boat_vel.selected == 'gga_vel':
+                        ship_data = ship_data_gga
 
-                if control['gga']:
-                    for item in self.gga:
-                        item.set_visible(True)
-                else:
-                    for item in self.gga:
-                        item.set_visible(False)
+                    if control['gga']:
+                        for item in self.gga:
+                            item.set_visible(True)
+                    else:
+                        for item in self.gga:
+                            item.set_visible(False)
 
-                max_x_gga = np.nanmax(ship_data_gga['track_x_m'])
-                max_y_gga = np.nanmax(ship_data_gga['track_y_m'])
-                min_x_gga = np.nanmin(ship_data_gga['track_x_m'])
-                min_y_gga = np.nanmin(ship_data_gga['track_y_m'])
+                    max_x_gga = np.nanmax(ship_data_gga['track_x_m'])
+                    max_y_gga = np.nanmax(ship_data_gga['track_y_m'])
+                    min_x_gga = np.nanmin(ship_data_gga['track_x_m'])
+                    min_y_gga = np.nanmin(ship_data_gga['track_y_m'])
 
         # Customize axes
         self.fig.ax.set_xlabel(self.canvas.tr('Distance East ') + units['label_L'])
@@ -349,15 +360,20 @@ class Shiptrack(object):
             u_mean = np.nanmean(u, axis=0)
             v_mean = np.nanmean(v, axis=0)
 
-        max_speed = np.nanmax(np.sqrt(u_mean**2 + v_mean**2) * units['V'])
-        # Plot water vectors
-        self.vectors = self.fig.ax.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
-                                          u_mean * units['V'], v_mean * units['V'], units='dots', width=1,
-                                          scale_units='width', scale=4*max_speed)
-        if control['vectors']:
-            self.vectors.set_visible(True)
+        speed = np.sqrt(u_mean**2 + v_mean**2) * units['V']
+        if len(speed) > 0:
+            max_speed = np.nanmax(speed)
         else:
-            self.vectors.set_visible(False)
+            max_speed = 0
+        # Plot water vectors
+        if len(ship_data['track_x_m']) > 0:
+            self.vectors = self.fig.ax.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
+                                              u_mean * units['V'], v_mean * units['V'], units='dots', width=1,
+                                              scale_units='width', scale=4*max_speed)
+            if control['vectors']:
+                self.vectors.set_visible(True)
+            else:
+                self.vectors.set_visible(False)
 
         # Initialize annotation for data cursor
         self.annot = self.fig.ax.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
@@ -422,14 +438,16 @@ class Shiptrack(object):
         #         data_out = data[:int(n_ensembles)]
         #     else:
         #         data_out = data[-int(n_ensembles):]
-
-        if data is not np.nan and len(data) > int(n_ensembles):
-            if edge_start:
-                data_out = data[:int(n_ensembles)]
+        if n_ensembles > 0:
+            if data is not np.nan and len(data) > int(n_ensembles):
+                if edge_start:
+                    data_out = data[:int(n_ensembles)]
+                else:
+                    data_out = data[-int(n_ensembles):]
             else:
-                data_out = data[-int(n_ensembles):]
+                data_out = data
         else:
-            data_out = data
+            data_out = np.array([])
         return data_out
 
     @staticmethod

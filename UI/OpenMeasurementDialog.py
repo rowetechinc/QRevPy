@@ -99,26 +99,35 @@ class OpenMeasurementDialog(QtWidgets.QDialog):
                 if checked_transect_dialog == QtWidgets.QMessageBox.Yes:
                     self.checked == True
 
-            # SonTek or QRev file
+            # SonTek, Nortek, or QRev file
             else:
                 mat_data = sio.loadmat(self.fullName[0], struct_as_record=False, squeeze_me=True)
                 if 'version' in mat_data:
                     self.type = 'QRev'
+                elif hasattr(mat_data['System'], 'InstrumentModel'):
+                    self.type = 'Nortek'
                 else:
                     self.type = 'SonTek'
 
         else:
-            # If multiple files are selected they must all be SonTek files
+            # If multiple files are selected they must all be SonTek or Nortek files
             for name in self.fileName:
                 file_name, file_extension = os.path.splitext(name)
                 if file_extension == '.mmt':
                     self.popup_message("Selected files contain an mmt file. An mmt file must be loaded separately")
                     break
                 elif file_extension == '.mat':
-                    if file_name[-4:] == 'QRev':
+                    mat_data = sio.loadmat(self.fullName[0], struct_as_record=False, squeeze_me=True)
+                    if 'version' in mat_data:
                         self.popup_message("Selected files contain a QRev file. A QRev file must be opened separately")
                         break
-                    self.type = 'SonTek'
+                    elif hasattr(mat_data['System'], 'InstrumentModel'):
+                        self.type = 'Nortek'
+                        break
+                    else:
+                        self.type = 'SonTek'
+                        break
+
 
     def default_folder(self):
         """Returns default folder.

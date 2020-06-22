@@ -642,7 +642,10 @@ class TransectData(object):
         # ADCP instrument information
         # ---------------------------
         self.adcp = InstrumentData()
-        self.adcp.populate_data(manufacturer='SonTek', raw_data=rsdata)
+        if hasattr(rsdata.System, 'InstrumentModel'):
+            self.adcp.populate_data(manufacturer='Nortek', raw_data=rsdata)
+        else:
+            self.adcp.populate_data(manufacturer='SonTek', raw_data=rsdata)
 
         # Depth
         # -----
@@ -824,12 +827,13 @@ class TransectData(object):
                                        gga_v_method='End',
                                        vtg_method='Average')
             else:
+                # Nortek data
                 rows = rsdata.RawGPSData.GgaLatitude.shape[0]
-                self.gps.populate_data(raw_gga_utc=rsdata.RawGPSData.GgaUTC.reshape(rows, 1),
-                                       raw_gga_lat=rsdata.RawGPSData.GgaLatitude.reshape(rows, 1),
-                                       raw_gga_lon=rsdata.RawGPSData.GgaLongitude.reshape(rows, 1),
-                                       raw_gga_alt=rsdata.RawGPSData.GgaAltitude.reshape(rows, 1),
-                                       raw_gga_diff=rsdata.RawGPSData.GgaQuality.reshape(rows, 1),
+                self.gps.populate_data(raw_gga_utc=rsdata.GPS.Utc.reshape(rows, 1),
+                                       raw_gga_lat=rsdata.GPS.Latitude.reshape(rows, 1),
+                                       raw_gga_lon=rsdata.GPS.Longitude.reshape(rows, 1),
+                                       raw_gga_alt=rsdata.GPS.Altitude.reshape(rows, 1),
+                                       raw_gga_diff=rsdata.GPS.GPS_Quality.reshape(rows, 1),
                                        raw_gga_hdop=rsdata.GPS.HDOP.reshape(rows, 1),
                                        raw_gga_num_sats=rsdata.GPS.Satellites.reshape(rows, 1),
                                        raw_gga_delta_time=None,

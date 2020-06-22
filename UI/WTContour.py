@@ -74,86 +74,87 @@ class WTContour(object):
 
         # Set margins and padding for figure
         self.fig.subplots_adjust(left=0.08, bottom=0.2, right=1, top=0.97, wspace=0.1, hspace=0)
-
-        if edge_start is None:
-            x_plt, cell_plt, speed_plt, ensembles, depth = self.color_contour_data_prep(transect=transect,
-                                                                                        data_type='Processed',
-                                                                                        invalid_data=invalid_data,
-                                                                                        n_ensembles=n_ensembles)
-        else:
-            x_plt, cell_plt, speed_plt, ensembles, depth = self.color_contour_data_prep(transect=transect,
-                                                                                        data_type='Raw',
-                                                                                        invalid_data=invalid_data,
-                                                                                        n_ensembles=n_ensembles,
-                                                                                        edge_start=edge_start)
-        self.x_plt = x_plt + 1
-        self.cell_plt = cell_plt * self.units['L']
-        self.speed_plt = speed_plt * self.units['V']
-        # Determine limits for color map
-
-        min_limit = 0
-        if max_limit == 0:
-            if np.sum(speed_plt[speed_plt > -900]) > 0:
-                max_limit = np.percentile(speed_plt[speed_plt > -900] * units['V'], 99)
+        if n_ensembles is None or n_ensembles > 0:
+            if edge_start is None:
+                x_plt, cell_plt, speed_plt, ensembles, depth = self.color_contour_data_prep(transect=transect,
+                                                                                            data_type='Processed',
+                                                                                            invalid_data=invalid_data,
+                                                                                            n_ensembles=n_ensembles)
             else:
-                max_limit = 1
+                x_plt, cell_plt, speed_plt, ensembles, depth = self.color_contour_data_prep(transect=transect,
+                                                                                            data_type='Raw',
+                                                                                            invalid_data=invalid_data,
+                                                                                            n_ensembles=n_ensembles,
+                                                                                            edge_start=edge_start)
+            self.x_plt = x_plt + 1
+            self.cell_plt = cell_plt * self.units['L']
+            self.speed_plt = speed_plt * self.units['V']
+            # Determine limits for color map
 
-        # Create color map
-        cmap = cm.get_cmap('viridis')
-        cmap.set_under('white')
+            min_limit = 0
+            if max_limit == 0:
+                if np.sum(speed_plt[speed_plt > -900]) > 0:
+                    max_limit = np.percentile(speed_plt[speed_plt > -900] * units['V'], 99)
+                else:
+                    max_limit = 1
 
-        # Generate color contour
-        c = self.fig.ax.pcolormesh(self.x_plt, self.cell_plt, self.speed_plt, cmap=cmap, vmin=min_limit,
-                                   vmax=max_limit)
+            # Create color map
+            cmap = cm.get_cmap('viridis')
+            cmap.set_under('white')
 
-        # Add color bar and axis labels
-        cb = self.fig.colorbar(c, pad=0.02)
-        cb.ax.set_ylabel(self.canvas.tr('Water Speed ') + units['label_V'])
-        cb.ax.yaxis.label.set_fontsize(12)
-        cb.ax.tick_params(labelsize=12)
-        # self.fig.ax.set_title(self.canvas.tr('Water Speed ') + units['label_V'])
-        self.fig.ax.invert_yaxis()
-        self.fig.ax.plot(ensembles+1, depth * units['L'], color='k')
-        if transect.w_vel.sl_cutoff_m is not None:
-            depth_obj = getattr(transect.depths, transect.depths.selected)
-            last_valid_cell = np.nansum(transect.w_vel.cells_above_sl, axis=0) - 1
-            last_depth_cell_size = depth_obj.depth_cell_size_m[last_valid_cell,
-                                                               np.arange(depth_obj.depth_cell_size_m.shape[1])]
-            y_plt_sl = (transect.w_vel.sl_cutoff_m + (last_depth_cell_size * 0.5)) * units['L']
-            y_plt_top = (depth_obj.depth_cell_depth_m[0, :] - (depth_obj.depth_cell_size_m[0, :] * 0.5)) * units['L']
+            # Generate color contour
+            c = self.fig.ax.pcolormesh(self.x_plt, self.cell_plt, self.speed_plt, cmap=cmap, vmin=min_limit,
+                                       vmax=max_limit)
 
-            if edge_start is True:
-                y_plt_sl = y_plt_sl[:int(n_ensembles)]
-                y_plt_top = y_plt_top[:int(n_ensembles)]
-            elif edge_start is False:
-                y_plt_sl = y_plt_sl[-int(n_ensembles):]
-                y_plt_top = y_plt_top[-int(n_ensembles):]
+            # Add color bar and axis labels
+            cb = self.fig.colorbar(c, pad=0.02)
+            cb.ax.set_ylabel(self.canvas.tr('Water Speed ') + units['label_V'])
+            cb.ax.yaxis.label.set_fontsize(12)
+            cb.ax.tick_params(labelsize=12)
+            # self.fig.ax.set_title(self.canvas.tr('Water Speed ') + units['label_V'])
+            self.fig.ax.invert_yaxis()
+            self.fig.ax.plot(ensembles+1, depth * units['L'], color='k')
+            if transect.w_vel.sl_cutoff_m is not None:
+                depth_obj = getattr(transect.depths, transect.depths.selected)
+                last_valid_cell = np.nansum(transect.w_vel.cells_above_sl, axis=0) - 1
+                last_depth_cell_size = depth_obj.depth_cell_size_m[last_valid_cell,
+                                                                   np.arange(depth_obj.depth_cell_size_m.shape[1])]
+                y_plt_sl = (transect.w_vel.sl_cutoff_m + (last_depth_cell_size * 0.5)) * units['L']
+                y_plt_top = (depth_obj.depth_cell_depth_m[0, :] - (depth_obj.depth_cell_size_m[0, :] * 0.5)) * units['L']
 
-            self.fig.ax.plot(ensembles+1, y_plt_sl, color='r', linewidth=0.5)
-            # Plot upper bound of measured depth cells
-            self.fig.ax.plot(ensembles+1, y_plt_top, color='r', linewidth=0.5)
-        self.fig.ax.set_xlabel(self.canvas.tr('Ensembles'))
-        self.fig.ax.set_ylabel(self.canvas.tr('Depth ') + units['label_L'])
-        self.fig.ax.xaxis.label.set_fontsize(12)
-        self.fig.ax.yaxis.label.set_fontsize(12)
-        self.fig.ax.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
-        self.fig.ax.set_ylim(top=0, bottom=np.ceil(np.nanmax(depth * units['L'])))
-        lower_limit = ensembles[0] - max([len(ensembles) * 0.02, 1])
-        upper_limit = ensembles[-1] + max([len(ensembles) * 0.02, 2])
-        self.fig.ax.set_xlim(left=lower_limit, right=upper_limit)
-        if transect.start_edge == 'Right':
-            self.fig.ax.invert_xaxis()
-            self.fig.ax.set_xlim(right=lower_limit, left=upper_limit)
+                if edge_start is True:
+                    y_plt_sl = y_plt_sl[:int(n_ensembles)]
+                    y_plt_top = y_plt_top[:int(n_ensembles)]
+                elif edge_start is False:
+                    y_plt_sl = y_plt_sl[-int(n_ensembles):]
+                    y_plt_top = y_plt_top[-int(n_ensembles):]
 
-        # Initialize annotation for data cursor
-        self.annot = self.fig.ax.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
-                                          bbox=dict(boxstyle="round", fc="w"),
-                                          arrowprops=dict(arrowstyle="->"))
+                self.fig.ax.plot(ensembles+1, y_plt_sl, color='r', linewidth=0.5)
+                # Plot upper bound of measured depth cells
+                self.fig.ax.plot(ensembles+1, y_plt_top, color='r', linewidth=0.5)
+            self.fig.ax.set_xlabel(self.canvas.tr('Ensembles'))
+            self.fig.ax.set_ylabel(self.canvas.tr('Depth ') + units['label_L'])
+            self.fig.ax.xaxis.label.set_fontsize(12)
+            self.fig.ax.yaxis.label.set_fontsize(12)
+            self.fig.ax.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+            self.fig.ax.set_ylim(top=0, bottom=np.ceil(np.nanmax(depth * units['L'])))
+            lower_limit = ensembles[0] - max([len(ensembles) * 0.02, 1])
+            upper_limit = ensembles[-1] + max([len(ensembles) * 0.02, 2])
+            self.fig.ax.set_xlim(left=lower_limit, right=upper_limit)
+            if transect.start_edge == 'Right':
+                self.fig.ax.invert_xaxis()
+                self.fig.ax.set_xlim(right=lower_limit, left=upper_limit)
 
-        self.annot.set_visible(False)
+            # Initialize annotation for data cursor
+            self.annot = self.fig.ax.annotate("", xy=(0, 0), xytext=(-20, 20), textcoords="offset points",
+                                              bbox=dict(boxstyle="round", fc="w"),
+                                              arrowprops=dict(arrowstyle="->"))
 
-        self.canvas.draw()
+            self.annot.set_visible(False)
 
+            self.canvas.draw()
+        else:
+            max_limit = 0
         return max_limit
 
     @staticmethod
@@ -262,8 +263,12 @@ class WTContour(object):
         # Center ensembles in grid
         for n in range(n_ensembles):
             if n == 0:
-                half_back = np.abs(0.5 * (x[:, n + 1] - x[:, n]))
-                half_forward = half_back
+                try:
+                    half_back = np.abs(0.5 * (x[:, n + 1] - x[:, n]))
+                    half_forward = half_back
+                except IndexError:
+                    half_back = x[:,0] - 0.5
+                    half_forward = x[:,0] + 0.5
             elif n == n_ensembles - 1:
                 half_forward = np.abs(0.5 * (x[:, n] - x[:, n - 1]))
                 half_back = half_forward

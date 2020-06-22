@@ -420,6 +420,8 @@ class PreMeasurement(object):
 
                         pt3['linear']['low_narrow']['corr_table'] = corr_data[:, 12::]
                         pt3['linear']['low_narrow']['noise_floor'] = rssi_array[(n + 6) * 4: (n + 7) * 4]
+            self.result['pt3'] = pt3
         except Exception:
-            pt3 = None
-        self.result['pt3'] = pt3
+            pass
+        #     pt3 = None
+        # self.result['pt3'] = pt3
