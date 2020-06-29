@@ -36,7 +36,7 @@ interpolated_v_values = interpolated_data[1]
 import numpy as np
 
 
-def find_neighbors(valid_data, cells_above_sl, y_cell_centers, y_cell_size, y_depth, normalize=False):
+def find_neighbors(valid_data, cells_above_sl, y_cell_centers, y_cell_size, y_depth, search_loc, normalize=False):
     """ Finds the nearest valid cells above, below, before, and after each invalid cell. The before and after
     Cells must have data in the same y range as the invalid cell.
 
@@ -84,27 +84,32 @@ def find_neighbors(valid_data, cells_above_sl, y_cell_centers, y_cell_size, y_de
         points = []
         target = (cell, ens)
 
-        # Identify indices of cells above and below target
-        above = find_above(target, valid_data)
-        if above is not None:
-            points.append(above)
+        if 'above' in search_loc:
+            # Identify indices of cells above and below target
+            above = find_above(target, valid_data)
+            if above is not None:
+                points.append(above)
 
-        below = find_below(target, valid_data)
-        if below is not None:
-            points.append(below)
+        if 'below' in search_loc:
+            below = find_below(target, valid_data)
+            if below is not None:
+                points.append(below)
 
         # Find all cells in ensembles before or after the target ensemble that overlap the target cell
         # This is a change implemented on 2/27/2020 - dsm
         y_match = np.logical_and(y_top[target] <= y_bottom, y_bottom[target] >= y_top)
         y_match = np.logical_and(y_match, valid_data)
 
-        # Identify indices of cells before and after target
-        before = find_before(target, y_match, y_depth, y_bottom_actual)
-        if before:
-            points = points + before
-        after = find_after(target, y_match, y_depth, y_bottom_actual)
-        if after:
-            points = points + after
+        if 'before' in search_loc:
+            # Identify indices of cells before and after target
+            before = find_before(target, y_match, y_depth, y_bottom_actual)
+            if before:
+                points = points + before
+
+        if 'after' in search_loc:
+            after = find_after(target, y_match, y_depth, y_bottom_actual)
+            if after:
+                points = points + after
 
         neighbors.append({'target': target, 'neighbors': points})
 
@@ -342,7 +347,7 @@ def idw_interpolation(data, neighbor_indices, distances):
 
 
 def abba_idw_interpolation(data_list, valid_data, cells_above_sl, y_centers, y_cell_size, y_depth,
-                           x_shiptrack, normalize):
+                           x_shiptrack, normalize, search_loc=['above', 'below', 'before', 'after']):
     """ Interpolates values for invalid cells using the neighboring cells above, below, before, and after and
     and inverse distance averaging.
 
@@ -383,6 +388,7 @@ def abba_idw_interpolation(data_list, valid_data, cells_above_sl, y_centers, y_c
                                               y_cell_centers=y_centers,
                                               y_cell_size=y_cell_size,
                                               y_depth=y_depth,
+                                              search_loc=search_loc,
                                               normalize=normalize)
 
         # Process each target
