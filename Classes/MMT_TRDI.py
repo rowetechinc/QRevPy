@@ -100,9 +100,12 @@ class MMTtrdi(object):
         trans = win_river['Project']['Site_Discharge']['Transect']
 
         # Create a Transect class for each transect found under Site_Discharge
-        for i in range(len(trans)):
-            if 'File' in trans[i]:
-                self.transects.append(MMTtransect(trans[i]))
+        if type(trans) == list:
+            for i in range(len(trans)):
+                if 'File' in trans[i]:
+                    self.transects.append(MMTtransect(trans[i]))
+        else:
+            self.transects = [MMTtransect(trans)]
 
         # Discharge Summary
         if 'Discharge_Summary' in win_river['Project']['Site_Discharge'].keys():

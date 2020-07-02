@@ -137,6 +137,12 @@ class InstrumentData(object):
                 self.configuration_commands = np.array(['Fixed'], dtype=object)
                 self.configuration_commands = np.append(self.configuration_commands, ' ')
 
+        else:
+            self.model = 'Unknown'
+            if 'Fixed_Commands' in mmt_config.keys():
+                self.configuration_commands = np.array(['Fixed'], dtype=object)
+                self.configuration_commands = np.append(self.configuration_commands, mmt_config['Fixed_Commands'])
+
         if 'Wizard_Commands' in mmt_config.keys():
             self.configuration_commands = np.append(self.configuration_commands, ['Wizard'])
             self.configuration_commands = np.append(self.configuration_commands,

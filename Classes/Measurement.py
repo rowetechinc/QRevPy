@@ -14,6 +14,8 @@ from Classes.ExtrapQSensitivity import ExtrapQSensitivity
 from Classes.Uncertainty import Uncertainty
 from Classes.QAData import QAData
 from Classes.BoatStructure import BoatStructure
+from Classes.Oursin import Oursin
+from Classes.Oursin_orig import Oursin_orig
 from MiscLibs.common_functions import cart2pol, pol2cart, rad2azdeg, nans, azdeg2rad
 
 
@@ -157,6 +159,10 @@ class Measurement(object):
                 self.uncertainty = Uncertainty()
                 self.uncertainty.compute_uncertainty(self)
                 self.qa = QAData(self)
+                # self.oursin = Oursin()
+                # self.oursin.compute_oursin(self)
+                # self.oursin_orig = Oursin_orig()
+                # self.oursin_orig.compute_oursin(self)
 
     def load_trdi(self, mmt_file, transect_type='Q', checked=False):
         """Method to load TRDI data.

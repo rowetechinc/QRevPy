@@ -1955,8 +1955,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.label_site_name.setStyleSheet('background: #ffcc00')
         else:
             self.label_site_name.setStyleSheet('background: white')
-
-        self.ed_site_number.setText(self.meas.station_number)
+        try:
+            self.ed_site_number.setText(self.meas.station_number)
+        except TypeError:
+            self.ed_site_number.setText('')
         if self.meas.qa.user['sta_number']:
             self.label_site_number.setStyleSheet('background: #ffcc00')
         else:
@@ -2399,7 +2401,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Creates custom header than can span multiple rows and columns.
 
         Parameters
-        ==========
+        ----------
         tbl: QTableWidget
             Reference to table
         row: int

@@ -1073,7 +1073,12 @@ class QAData(object):
 
         # Check for Station Number
         self.user['sta_number'] = False
-        if meas.station_number is None or len(meas.station_number.strip()) < 1:
+        try:
+            if meas.station_number is None or len(meas.station_number.strip()) < 1:
+                self.user['messages'].append(['Site Info: Station number not entered;', 2, 2])
+                self.user['status'] = 'caution'
+                self.user['sta_number'] = True
+        except AttributeError:
             self.user['messages'].append(['Site Info: Station number not entered;', 2, 2])
             self.user['status'] = 'caution'
             self.user['sta_number'] = True

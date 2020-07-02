@@ -1427,7 +1427,10 @@ class WaterData(object):
         self.u_processed_mps[np.logical_not(valid)] = np.nan
         self.v_processed_mps[np.logical_not(valid)] = np.nan
 
-        interpolated_data = self.compute_abba_interpolation(wt_data=self, valid=valid, transect=transect)
+        interpolated_data = self.compute_abba_interpolation(wt_data=self,
+                                                            valid=valid,
+                                                            transect=transect,
+                                                            search_loc=search_loc)
 
         if interpolated_data is not None:
             # Incorporate interpolated values in processed data
@@ -1438,7 +1441,7 @@ class WaterData(object):
                     interpolated_data[1][n][1]
 
     @staticmethod
-    def compute_abba_interpolation(wt_data, valid, transect, search_loc):
+    def compute_abba_interpolation(wt_data, valid, transect, search_loc=['above', 'below', 'before', 'after']):
         """Computes the interpolated values for invalid cells using the abba method.
 
         Parameters
