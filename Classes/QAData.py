@@ -71,6 +71,7 @@ class QAData(object):
         self.w_vel = dict()
         self.extrapolation = dict()
         self.edges = dict()
+        self.settings_dict = dict()
 
         if compute:
             # Apply QA checks
@@ -1830,3 +1831,258 @@ class QAData(object):
             right_dist_moved = np.nan
 
         return right_dist_moved, left_dist_moved, dmg
+    
+    # check for user changes
+    def check_bt_setting(self, meas):
+        """Checks the bt settings to see if they are still on the default
+                        settings."""
+
+        s = meas.current_settings()
+        d = meas.qrev_default_settings()
+
+        beam_sol = s['BTbeamFilter']
+        bt_error = s['BTdFilter']
+        bt_vert = s['BTwFilter']
+        other = s['BTsmoothFilter']
+
+        d_beam_sol = d['BTbeamFilter']
+        d_bt_error = d['BTdFilter']
+        d_bt_vert = d['BTwFilter']
+        d_other = d['BTsmoothFilter']
+
+        settings = [beam_sol, bt_error, bt_vert, other]
+        default = [d_beam_sol, d_bt_error, d_bt_vert, d_other]
+
+        if settings == default:
+            self.settings_dict['bt_settings'] = 'Default'
+        else:
+            self.settings_dict['bt_settings'] = 'Custom'
+        
+    def check_wt_settings(self, meas):
+        """Checks the wt settings to see if they are still on the default
+                settings."""
+
+        s = self.meas.current_settings()
+        d = self.meas.qrev_default_settings()
+
+        beam_sol = s['WTbeamFilter']
+        wt_error = s['WTdFilter']
+        wt_vert = s['WTwFilter']
+        wt_snr = s['WTsnrFilter']
+
+        d_beam_sol = d['WTbeamFilter']
+        d_wt_error = d['WTdFilter']
+        d_wt_vert = d['WTwFilter']
+        d_wt_snr = d['WTsnrFilter']
+
+        settings = [beam_sol, wt_error, wt_vert, wt_snr]
+        default = [d_beam_sol, d_wt_error, d_wt_vert, d_wt_snr]
+
+        if settings == default:
+            self.settings_dict['wt_settings'] = 'Default'
+        else:
+            self.settings_dict['wt_settings'] = 'Custom'
+
+    def check_extrap_settings(self, meas):
+        """Checks the extrap to see if they are still on the default
+        settings."""
+
+        # Check fit parameters
+        if meas.extrap_fit.sel_fit[0].fit_method == 'Automatic':
+            fit = 'Automatic'
+        else:
+            fit = 'Manual'
+
+        # Check subsection parameters
+        if meas.extrap_fit.sel_fit[-1].data_type.lower() != 'q':
+            d_used = 'Manual'
+        elif meas.extrap_fit.threshold != 20:
+            d_used = 'Manual'
+        elif meas.extrap_fit.subsection[0] != 0 or \
+                meas.extrap_fit.subsection[1] != 100:
+            d_used = 'Manual'
+        else:
+            d_used = 'Automatic'
+
+        settings = [fit, d_used]
+        default = ['Automatic', 'Automatic']
+
+        if settings == default:
+            self.settings_dict['extrap_settings'] = 'Default'
+        else:
+            self.settings_dict['extrap_settings'] = 'Custom'
+
+    def check_tempsal_settings(self, meas):
+
+        """Checks the temp and salinity settings to see if they are still on
+        the default settings."""
+
+        t_source = []
+        s_sound = []
+        
+        for transect in meas.transects:
+            if transect.checked:
+
+                # Temperature source
+                if transect.sensors.temperature_deg_c.selected == 'user':
+                    source = 'Custom'
+
+                else:
+                    source = 'Default'
+
+                t_source.append(source)
+
+                # Speed of Sound
+                if transect.sensors.speed_of_sound_mps.selected == 'internal':
+
+                    source = 'Default'
+
+                else:
+                    source = 'Custom'
+
+                s_sound.append(source)
+
+        if 'Custom' in t_source:
+
+            self.settings_dict['tempsal_settings'] = 'Custom'
+
+        elif 'Custom' in s_sound:
+
+            self.settings_dict['tempsal_settings'] = 'Custom'
+
+        else:
+            self.settings_dict['tempsal_settings'] = 'Default'
+         
+        # check to see if the average salinity was modified on any transects
+        sal_initial_list = []
+        sal_current_list = []
+        
+        for transect in meas.transects:
+            
+            sal_list = meas.intial_settings
+            
+    def check_gps_settings(self, meas):
+        """Checks the gps settings to see if they are still on the default
+        settings."""
+
+        s = meas.current_settings()
+        d = meas.qrev_default_settings()
+
+        quality = s['ggaDiffQualFilter']
+        alt_change = s['ggaAltitudeFilter']
+        hdop = s['GPSHDOPFilter']
+        other = s['GPSSmoothFilter']
+
+        d_quality = d['ggaDiffQualFilter']
+        d_alt_change = d['ggaAltitudeFilter']
+        d_hdop = d['GPSHDOPFilter']
+        d_other = d['GPSSmoothFilter']
+
+        settings = [quality, alt_change, hdop, other]
+        default = [d_quality, d_alt_change, d_hdop, d_other]
+
+        if settings == default:
+            self.settings_dict['gps_settings'] = 'Default'
+        else:
+            self.settings_dict['tab_gps_settings'] = 'Custom'
+            
+    def check_depth_settings(self, meas):
+        """Checks the depth settings to see if they are still on the default
+                settings."""
+
+        s = meas.current_settings()
+        d = meas.qrev_default_settings()
+
+        depth_ref = s['depthReference']
+        bt_average = s['depthAvgMethod']
+        s_filter = s['depthFilterType']
+
+        d_depth_ref = d['depthReference']
+        d_bt_average = d['depthAvgMethod']
+        d_filter = d['depthFilterType']
+
+        settings = [depth_ref, bt_average, s_filter]
+        default = [d_depth_ref, d_bt_average, d_filter]
+
+        orig_draft = []
+        cur_draft = []
+
+        for transect in meas.transects:
+            orig_draft.append(transect.depths.draft_orig_m)
+            cur_draft.append(transect.depths.draft_use_m)
+
+        if settings == default:
+            self.settings_dict['depth_setings'] = 'Default'
+        elif orig_draft == cur_draft:
+            self.settings_dict['depth_setings'] = 'Default'
+        else:
+            self.settings_dict['depth_settings'] = 'Custom'
+
+    def check_edge_settings(self, meas):
+        """Checks the edge settings to see if they are still on the original
+                settings."""
+
+        orig_start = []
+        orig_left_type = []
+        orig_left_coef = []
+        orig_left_dist = []
+        orig_left_ens = []
+        orig_left_q = []
+        orig_right_type = []
+        orig_right_coef = []
+        orig_right_dist = []
+        orig_right_ens = []
+        orig_right_q = []
+
+        curr_start = []
+        curr_left_type = []
+        curr_left_coef = []
+        curr_left_dist = []
+        curr_left_ens = []
+        curr_left_q = []
+        curr_right_type = []
+        curr_right_coef = []
+        curr_right_dist = []
+        curr_right_ens = []
+        curr_right_q = []
+
+        for transect in meas.transects:
+
+            #check start edge
+            orig_start.append(transect.start_edge)
+            
+            #check left type
+            orig_left_type.append(transect.edges.left.type)
+            
+            #check left dist
+            orig_left_dist.append(transect.edges.left.distance_m)
+            
+            #check left ens
+            orig_left_ens.append(transect.edges.left.number_ensembles)
+            
+            # check right type
+            orig_right_type.append(transect.edges.right.type)
+
+            # check right dist
+            orig_right_dist.append(transect.edges.right.distance_m)
+            
+            # check right ens
+            orig_right_ens.append(transect.edges.right.number_ensembles)
+
+        original = [orig_star, orig_left_type, orig_left_coef, orig_left_dist,
+                    orig_left_ens, orig_left_q, orig_right_type,
+                    orig_right_coef, orig_right_dist, orig_right_ens,
+                    orig_right_q]
+
+        current = [curr_star, curr_left_type, curr_left_coef, curr_left_dist,
+                   curr_left_ens, curr_left_q, curr_right_type,
+                   curr_right_coef, curr_right_dist, curr_right_ens,
+                   curr_right_q]
+
+        if original == current:
+            self.settings_dict['edge_setings'] = 'Default'
+        else:
+            self.settings_dict['edge_setings'] = 'Custom'
+
+
+
