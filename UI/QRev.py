@@ -4414,11 +4414,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         index = self.combo_bt_error_velocity.findText(
             self.transect.boat_vel.bt_vel.d_filter, QtCore.Qt.MatchFixedString)
         self.combo_bt_error_velocity.setCurrentIndex(index)
+        s = self.meas.current_settings()
+        threshold = '{:3.2f}'.format(s['BTdFilterThreshold'] * self.units['V'])
+        self.ed_bt_error_vel_threshold.setText(threshold)
 
         # Set vertical velocity filter from transect data
         index = self.combo_bt_vert_velocity.findText(
             self.transect.boat_vel.bt_vel.w_filter, QtCore.Qt.MatchFixedString)
         self.combo_bt_vert_velocity.setCurrentIndex(index)
+        threshold = '{:3.2f}'.format(s['BTwFilterThreshold'] * self.units['V'])
+        self.ed_bt_vert_vel_threshold.setText(threshold)
 
         # Set smooth filter from transect data
         if self.transect.boat_vel.bt_vel.smooth_filter == 'Off':
@@ -6694,10 +6699,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Set error velocity filter from transect data
         index = self.combo_wt_error_velocity.findText(self.transect.w_vel.d_filter, QtCore.Qt.MatchFixedString)
         self.combo_wt_error_velocity.setCurrentIndex(index)
+        s = self.meas.current_settings()
+        threshold = '{:3.2f}'.format(s['WTdFilterThreshold'] * self.units['V'])
+        self.ed_wt_error_vel_threshold.setText(threshold)
 
         # Set vertical velocity filter from transect data
         index = self.combo_wt_vert_velocity.findText(self.transect.w_vel.w_filter, QtCore.Qt.MatchFixedString)
         self.combo_wt_vert_velocity.setCurrentIndex(index)
+        threshold = '{:3.2f}'.format(s['WTwFilterThreshold'] * self.units['V'])
+        self.ed_wt_vert_vel_threshold.setText(threshold)
 
         # Set smooth filter from transect data
         self.combo_wt_snr.blockSignals(True)
