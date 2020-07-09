@@ -173,37 +173,37 @@ class Oursin(object):
         Number of transects used
 
     # --- Store results of all simulations in DataFrame
-    simu1: DataFrame
+    sim_original: DataFrame
         Discharges (total, and subareas) computed for simulation 1
-    simu2: DataFrame
+    sim_extrap_pp_16: DataFrame
         Discharges (total, and subareas) computed for simulation 2
-    simu3: DataFrame
+    sim_extrap_pp_min: DataFrame
         Discharges (total, and subareas) computed for simulation 3
     simu3min: DataFrame
         Discharges (total, and subareas) computed for simulation 3min
     simu3max: DataFrame
         Discharges (total, and subareas) computed for simulation 3max
-    simu4: DataFrame
+    sim_extrap_cns_16: DataFrame
         Discharges (total, and subareas) computed for simulation 4
-    simu5: DataFrame
+    sim_extrap_cns_min: DataFrame
         Discharges (total, and subareas) computed for simulation 5
     simu5min: DataFrame
         Discharges (total, and subareas) computed for simulation 5min
     simu5max: DataFrame
         Discharges (total, and subareas) computed for simulation 5max
-    simu6: DataFrame
+    sim_extrap_3pns_16: DataFrame
         Discharges (total, and subareas) computed for simulation 6
-    simu7: DataFrame
+    sim_extrap_3pns_opt: DataFrame
         Discharges (total, and subareas) computed for simulation 7
     simu8: DataFrame # not used
         Discharges (total, and subareas) computed for simulation 8
-    simu9: DataFrame # edge
+    sim_edge_min: DataFrame # edge
         Discharges (total, and subareas) computed for simulation 9
-    simu10: DataFrame # edge
+    sim_edge_max: DataFrame # edge
         Discharges (total, and subareas) computed for simulation 10
-    simu11: DataFrame # draft
+    sim_draft_min: DataFrame # draft
         Discharges (total, and subareas) computed for simulation 11
-    simu12: DataFrame # draft
+    sim_draft_max: DataFrame # draft
         Discharges (total, and subareas) computed for simulation 12
     simu13: DataFrame # missing ens
         Discharges (total, and subareas) computed for simulation 13
@@ -215,17 +215,17 @@ class Oursin(object):
         Discharges (total, and subareas) computed for simulation 16
     simu17: DataFrame
         Discharges (total, and subareas) computed for simulation 17
-    simu18: DataFrame # missing cells
+    sim_cells_trdi: DataFrame # missing cells
         Discharges (total, and subareas) computed for simulation 18
-    simu19: DataFrame # missing cells
+    sim_cells_above: DataFrame # missing cells
         Discharges (total, and subareas) computed for simulation 19
-    simu20: DataFrame # missing cells
+    sim_cells_below: DataFrame # missing cells
         Discharges (total, and subareas) computed for simulation 20
     simu21: DataFrame # missing cells
         Discharges (total, and subareas) computed for simulation 21
-    simu22: DataFrame # missing cells
+    sim_cells_before: DataFrame # missing cells
         Discharges (total, and subareas) computed for simulation 22
-    simu23: DataFrame # missing cells
+    sim_cells_after: DataFrame # missing cells
         Discharges (total, and subareas) computed for simulation 23
     simu24: DataFrame # missing cells
         Discharges (total, and subareas) computed for simulation 24
@@ -338,33 +338,26 @@ class Oursin(object):
         self.variance_terms_by_transect_abs = pd.DataFrame()
 
         # --- Store results of all simulations in DataFrame
-        self.simu1 = pd.DataFrame()
-        self.simu2 = pd.DataFrame()
-        self.simu3 = pd.DataFrame()
-        self.simu3min = pd.DataFrame()
-        self.simu3max = pd.DataFrame()
-        self.simu4 = pd.DataFrame()
-        self.simu5 = pd.DataFrame()
-        self.simu5min = pd.DataFrame()
-        self.simu5max = pd.DataFrame()
-        self.simu6 = pd.DataFrame()
-        self.simu7 = pd.DataFrame()
-        self.simu8 = pd.DataFrame()  # not used
-        self.simu9 = pd.DataFrame()  # edge
-        self.simu10 = pd.DataFrame()  # edge
-        self.simu11 = pd.DataFrame()  # draft
-        self.simu12 = pd.DataFrame()  # draft
-        self.simu13 = pd.DataFrame()  # missing ens
-        self.simu14 = pd.DataFrame()  # missing ens
-        self.simu15 = pd.DataFrame()  # missing ens
-        self.simu16 = pd.DataFrame()
-        self.simu17 = pd.DataFrame()
-        self.simu18 = pd.DataFrame()  # missing cells
-        self.simu19 = pd.DataFrame()  # missing cells
-        self.simu20 = pd.DataFrame()  # missing cells
-        self.simu21 = pd.DataFrame()  # missing cells
-        self.simu22 = pd.DataFrame()  # missing cells
-        self.simu23 = pd.DataFrame()  # missing cells
+        self.sim_original = pd.DataFrame(columns=['q_total', 'q_top', 'q_bot', 'q_left', 'q_right', 'q_middle'])
+        self.sim_extrap_pp_16 = pd.DataFrame(columns=['q_total', 'q_top', 'q_bot'])
+        self.sim_extrap_pp_opt = pd.DataFrame(columns=['q_total', 'q_top', 'q_bot'])
+        self.sim_extrap_pp_min = pd.DataFrame(columns=['q_total', 'q_top', 'q_bot'])
+        self.sim_extrap_pp_max = pd.DataFrame(columns=['q_total', 'q_top', 'q_bot'])
+        self.sim_extrap_cns_16 = pd.DataFrame(columns=['q_total', 'q_top', 'q_bot'])
+        self.sim_extrap_cns_opt = pd.DataFrame(columns=['q_total', 'q_top', 'q_bot'])
+        self.sim_extrap_cns_min = pd.DataFrame(columns=['q_total', 'q_top', 'q_bot'])
+        self.sim_extrap_cns_max = pd.DataFrame(columns=['q_total', 'q_top', 'q_bot'])
+        self.sim_extrap_3pns_16 = pd.DataFrame(columns=['q_total', 'q_top', 'q_bot'])
+        self.sim_extrap_3pns_opt = pd.DataFrame(columns=['q_total', 'q_top', 'q_bot'])
+        self.sim_edge_min = pd.DataFrame(columns=['q_total', 'q_left', 'q_right'])
+        self.sim_edge_max = pd.DataFrame(columns=['q_total', 'q_left', 'q_right'])
+        self.sim_draft_min = pd.DataFrame(columns=['q_total', 'q_top', 'q_left', 'q_right'])
+        self.sim_draft_max = pd.DataFrame(columns=['q_total', 'q_top', 'q_left', 'q_right'])
+        self.sim_cells_trdi = pd.DataFrame(columns=['q_total', 'q_middle'])
+        self.sim_cells_above = pd.DataFrame(columns=['q_total', 'q_middle'])
+        self.sim_cells_below = pd.DataFrame(columns=['q_total', 'q_middle'])
+        self.sim_cells_before = pd.DataFrame(columns=['q_total', 'q_middle'])
+        self.sim_cells_after = pd.DataFrame(columns=['q_total', 'q_middle'])
         self.simu24 = pd.DataFrame()  # missing cells
         self.simu25 = pd.DataFrame()  # missing cells
 
@@ -495,22 +488,10 @@ class Oursin(object):
 
         # 1. Systematic terms + correction terms (moving bed)
         #   1.a. Moving-bed / Same than QRev or user override
-        if u_movbed_user is None:
-            u_movbed_68 = self.compute_moving_bed_uncertainty(meas)
-        else:
-            self.u_movbed_user = u_movbed_user
-            u_movbed_68 = 0.01 * u_movbed_user
-
-        self.u_movbed_list = [u_movbed_68] * self.nb_transects
+        self.compute_moving_bed_uncertainty(meas=meas, u_movbed_user=u_movbed_user)
 
         #   1.b.  Systematic. Use 1.31% or user override
-        if u_syst_mean_user is None:
-            self.u_syst_mean = self.compute_systematic_uncertainty()
-        else:
-            self.u_syst_mean_user = u_syst_mean_user  # Store the value if not None
-            self.u_syst_mean = u_syst_mean_user * 0.01
-
-        self.u_syst_list = [self.u_syst_mean] * self.nb_transects  # Repeated to be applied to each transect
+        self.compute_systematic_uncertainty(u_syst_mean_user=u_syst_mean_user)
 
         # 2. Measured uncertainty
         #   2.a. Measured area BY EQUATION
@@ -518,45 +499,40 @@ class Oursin(object):
         self.measured_area_uncertainty(meas=meas, u_prct_dzi_user=u_prct_dzi_user)
 
         #   2.b. Coefficient of variation (same as QRev but 68% level of confidence) or user override
-        # TODO COV stored as % not % * 0.01
-        if u_cov_68_user is None:
-            self.cov_68 = self.compute_meas_cov(meas)
-        else:
-            self.u_cov_68_user = u_cov_68_user  # Store the value if not None
-            self.cov_68 = u_cov_68_user
+        self.compute_meas_cov(meas=meas, u_cov_68_user=u_cov_68_user)
 
         # 3. Run all the simulations to compute possible discharges
         self.run_oursin_simulations(meas, exp_pp_min_user, exp_pp_max_user, exp_ns_min_user, exp_ns_max_user,
                                     draft_error_user, d_right_error_prct_user, d_left_error_prct_user)
 
         self.simu_discharge = dict({
-            'simu1': self.simu1,
-            'simu2': self.simu2,
-            'simu3': self.simu3,
+            'simu1': self.sim_original,
+            'simu2': self.sim_extrap_pp_16,
+            'simu3': self.sim_extrap_pp_min,
             'simu3min': self.simu3min,
             'simu3max': self.simu3max,
-            'simu4': self.simu4,
-            'simu5': self.simu5,
+            'simu4': self.sim_extrap_cns_16,
+            'simu5': self.sim_extrap_cns_min,
             'simu5min': self.simu5min,
             'simu5max': self.simu5max,
-            'simu6': self.simu6,
-            'simu7': self.simu7,
+            'simu6': self.sim_extrap_3pns_16,
+            'simu7': self.sim_extrap_3pns_opt,
             'simu8': self.simu8,
-            'simu9': self.simu9,
-            'simu10': self.simu10,
-            'simu11': self.simu11,
-            'simu12': self.simu12,
+            'simu9': self.sim_edge_min,
+            'simu10': self.sim_edge_max,
+            'simu11': self.sim_draft_min,
+            'simu12': self.sim_draft_max,
             'simu13': self.simu13,
             'simu14': self.simu14,
             'simu15': self.simu15,
             'simu16': self.simu16,
             'simu17': self.simu17,
-            'simu18': self.simu18,
-            'simu19': self.simu19,
-            'simu20': self.simu20,
+            'simu18': self.sim_cells_trdi,
+            'simu19': self.sim_cells_above,
+            'simu20': self.sim_cells_below,
             'simu21': self.simu21,
-            'simu22': self.simu22,
-            'simu23': self.simu23,
+            'simu22': self.sim_cells_before,
+            'simu23': self.sim_cells_after,
             'simu24': self.simu24,
             'simu25': self.simu25,
         })
@@ -603,23 +579,20 @@ class Oursin(object):
         for (key, value) in self.simu_checked.items():
             # Check if any simulation is unchecked then replace it by simu1
             if not value:
-                self.simu_discharge[key] = self.simu1
+                self.simu_discharge[key] = self.sim_original
 
         # 5. Compute terms based on possible simulations and assuming a rectangular law
-        self.u_badens_list = Oursin.apply_u_rect([self.simu_discharge['simu1']['q_total'],
-                                                  self.simu_discharge['simu13']['q_total'],
-                                                  self.simu_discharge['simu14']['q_total']]) \
-            / self.simu1['q_total']
-        self.u_badcell_list = Oursin.apply_u_rect([self.simu_discharge['simu1']['q_total'],
-                                                   self.simu_discharge['simu18']['q_total'],
-                                                   self.simu_discharge['simu19']['q_total'],
-                                                   self.simu_discharge['simu20']['q_total'],
-                                                   self.simu_discharge['simu22']['q_total'],
-                                                   self.simu_discharge['simu23']['q_total']]) \
-            / self.simu1['q_total']
 
-        self.u_top_list = Oursin.apply_u_rect([self.simu_discharge['simu1']['q_top'],
-                                               self.simu_discharge['simu3']['q_top'],
+        self.u_badcell_list = Oursin.apply_u_rect([self.sim_original,
+                                                   self.sim_cells_trdi,
+                                                   self.sim_cells_above,
+                                                   self.sim_cells_below,
+                                                   self.sim_cells_before,
+                                                   self.sim_cells_after]) \
+            / self.sim_original['q_total']
+
+        self.u_top_list = Oursin.apply_u_rect([self.sim_original,,
+                                               self.sim_extrap_p,
                                                self.simu_discharge['simu3min']['q_top'],
                                                self.simu_discharge['simu3max']['q_top'],
                                                self.simu_discharge['simu5']['q_top'],
@@ -628,9 +601,9 @@ class Oursin(object):
                                                self.simu_discharge['simu7']['q_top'],
                                                self.simu_discharge['simu11']['q_top'],
                                                self.simu_discharge['simu12']['q_top']]) \
-            / self.simu1['q_total']
+            / self.sim_original['q_total']
 
-        self.u_bot_list = Oursin.apply_u_rect([self.simu1['q_bot'],
+        self.u_bot_list = Oursin.apply_u_rect([self.sim_original['q_bot'],
                                                self.simu_discharge['simu3']['q_bot'],
                                                self.simu_discharge['simu3min']['q_bot'],
                                                self.simu_discharge['simu3max']['q_bot'],
@@ -638,21 +611,21 @@ class Oursin(object):
                                                self.simu_discharge['simu5min']['q_bot'],
                                                self.simu_discharge['simu5max']['q_bot'],
                                                self.simu_discharge['simu7']['q_bot']]) \
-            / self.simu1['q_total']
+            / self.sim_original['q_total']
 
-        self.u_left_list = Oursin.apply_u_rect([self.simu1['q_left'],
+        self.u_left_list = Oursin.apply_u_rect([self.sim_original['q_left'],
                                                 self.simu_discharge['simu9']['q_left'],
                                                 self.simu_discharge['simu10']['q_left'],
                                                 self.simu_discharge['simu11']['q_left'],
                                                 self.simu_discharge['simu12']['q_left']]) \
-            / self.simu1['q_total']
+            / self.sim_original['q_total']
 
-        self.u_right_list = Oursin.apply_u_rect([self.simu1['q_right'],
+        self.u_right_list = Oursin.apply_u_rect([self.sim_original['q_right'],
                                                  self.simu_discharge['simu9']['q_right'],
                                                  self.simu_discharge['simu10']['q_right'],
                                                  self.simu_discharge['simu11']['q_right'],
                                                  self.simu_discharge['simu12']['q_right']]) \
-            / self.simu1['q_total']
+            / self.sim_original['q_total']
 
         # Use user-provided values
         if u_badens_user is not None:
@@ -688,444 +661,6 @@ class Oursin(object):
         if u_total_95_user is not None:
             self.u_total_95 = u_total_95_user
             self.u_total_95_user = u_total_95_user
-
-    def u_meas_compute(self, meas, u_prct_dzi=0.005):
-        """
-        Compute the uncertainty related to the measured area
-        (boat and water velocity, depth cell uncertainty)
-
-        Parameters
-        ----------
-        meas: Measurement
-            Object of class Measurement
-        u_prct_dzi: float
-            Uncertainty (68%) related to the depth cell size - Default is 0.005 * 0.01 # k=1 0.5%
-
-        Returns
-        -------
-        u_meas_list: list
-            List of measured uncertainty (68%) for each transect and contribution of each terms to the measured
-            uncertainty (u_contrib_meas_v_boat, u_contrib_errv_v_boat, u_contrib_verv_h_depth,
-            u_contrib_errv_v_wate, u_contrib_meas_v_wate, u_contrib_meas_u_dzi).
-        """
-
-        for ind_transect in self.checked_idx:
-
-            # Relative depth error due to vertical velocity of boat
-            relative_error_depth = self.depth_error_boat_motion(meas.transects[ind_transect])
-
-            # Relative standard deviation of error velocity (Water Track)
-            std_ev_wt_ens = self.water_std_by_error_velocity(meas.transects[ind_transect])
-
-            # Relative standard deviation of error velocity (Bottom Track)
-            std_ev_bt = self.boat_std_by_error_velocity(meas.transects[ind_transect])
-
-            # Computation of u_meas
-            q_2_tran = meas.discharge[ind_transect].total ** 2
-            q_2_ens = meas.discharge[ind_transect].middle_ens ** 2
-            n_cell_ens = meas.transects[ind_transect].w_vel.cells_above_sl.sum(axis=0)  # number of cells by ens
-            n_cell_ens = np.where(n_cell_ens == 0, np.nan, n_cell_ens)
-
-            # Variance for each ensembles
-            u_2_meas = q_2_ens * (relative_error_depth ** 2 + std_ev_bt ** 2 +
-                                  (1 / n_cell_ens) * (std_ev_wt_ens ** 2 + u_prct_dzi ** 2))
-            # TODO DSM I would have computed as follows
-            # u_2_meas = q_2_ens * (std_ev_bt ** 2 + (1 / n_cell_ens) * (std_ev_wt_ens ** 2 + u_prct_dzi ** 2))
-
-            u_2_prct_meas = np.nansum(u_2_meas) / q_2_tran
-
-            # Standard deviation
-            u_prct_meas = u_2_prct_meas ** 0.5
-            self.u_meas_list.append(u_prct_meas)
-
-            # Compute the contribution of all terms to u_meas (sum of a0 to g0 =1)
-            u_contrib_errv_v_boat = (np.nan_to_num(q_2_ens * (std_ev_bt ** 2)).sum() / q_2_tran) / u_2_prct_meas
-            u_contrib_verv_h_depth = (np.nan_to_num(q_2_ens * (relative_error_depth ** 2)).sum()
-                                      / q_2_tran) / u_2_prct_meas
-            u_contrib_errv_v_wate = (np.nan_to_num(q_2_ens * ((1 / n_cell_ens) * (std_ev_wt_ens ** 2))).sum()
-                                     / q_2_tran) / u_2_prct_meas
-            u_contrib_meas_u_dzi = (np.nan_to_num(q_2_ens * ((1 / n_cell_ens) * (u_prct_dzi ** 2))).sum()
-                                    / q_2_tran) / u_2_prct_meas
-
-            self.u_contrib_errv_v_boat.append(u_contrib_errv_v_boat)
-            self.u_contrib_verv_h_depth.append(u_contrib_verv_h_depth)
-            self.u_contrib_errv_v_wate.append(u_contrib_errv_v_wate)
-            self.u_contrib_meas_u_dzi.append(u_contrib_meas_u_dzi)
-
-    def run_oursin_simulations(self, meas, exp_pp_min_user, exp_pp_max_user, exp_ns_min_user, exp_ns_max_user,
-                               draft_error_user, d_right_error_prct_user, d_left_error_prct_user):
-        """Compute discharges (top, bot, right, left, total, middle)
-        based on possible scenarios
-
-        Parameters
-        ----------
-        meas: Measurement
-            Object of class Measurement
-        exp_pp_min_user: float
-            User provided minimum power-power exponent for simulating possible discharge
-        exp_pp_max_user: float
-            User provided maximum power-power exponent for simulating possible discharge
-        exp_ns_min_user: float
-            User provided minimum no-slip exponent for simulating possible discharge
-        exp_ns_max_user: float
-            User provided maximum no-slip exponent for simulating possible discharge
-        draft_error_user: float
-            User provided draft error (in cm) for simulating possible discharge
-        d_right_error_prct_user: float
-            User provided distance error (in %) for the right edge
-        d_left_error_prct_user: float
-            User provided distance error (in %) for the left edge
-        """
-
-        # simulation 1 is the actual reference (selected measurements) / see 2nd loop below
-        q_total_1 = []
-        q_top_1 = []
-        q_bot_1 = []
-        q_right_1 = []
-        q_left_1 = []
-        q_middle_1 = []
-
-        # If list have not be saved recompute q_sensitivity
-        if not hasattr(meas.extrap_fit.q_sensitivity, 'q_pp_list'):
-            meas.extrap_fit.q_sensitivity.populate_data(meas.transects, meas.extrap_fit.sel_fit)
-
-        # simulation 2 default 1/6 power power law (already computed in ExtrapQSensitivity class)
-        self.simu2['q_total'] = meas.extrap_fit.q_sensitivity.q_pp_list
-        self.simu2['q_top'] = meas.extrap_fit.q_sensitivity.q_top_pp_list
-        self.simu2['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_pp_list
-
-        # simulation 3 optimized power power law (in ExtrapQSensitivity class)
-        self.simu3['q_total'] = meas.extrap_fit.q_sensitivity.q_pp_opt_list
-        self.simu3['q_top'] = meas.extrap_fit.q_sensitivity.q_top_pp_opt_list
-        self.simu3['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_pp_opt_list
-
-        # simulation 4 default 1/6 cns law (in ExtrapQSensitivity class)
-        self.simu4['q_total'] = meas.extrap_fit.q_sensitivity.q_cns_list
-        self.simu4['q_top'] = meas.extrap_fit.q_sensitivity.q_top_cns_list
-        self.simu4['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_cns_list
-
-        # simulation 5 optimized cns law (ExtrapQSensitivity class)
-        self.simu5['q_total'] = meas.extrap_fit.q_sensitivity.q_cns_opt_list
-        self.simu5['q_top'] = meas.extrap_fit.q_sensitivity.q_top_cns_opt_list
-        self.simu5['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_cns_opt_list
-
-        # simulation 6 default 1/6 3pt no slip law (already computed in ExtrapQSensitivity class
-        self.simu6['q_total'] = meas.extrap_fit.q_sensitivity.q_3p_ns_list
-        self.simu6['q_top'] = meas.extrap_fit.q_sensitivity.q_top_3p_ns_list
-        self.simu6['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_3p_ns_list
-
-        # simulation 7 default optimized 3pt no slip law (already computed in ExtrapQSensitivity class
-        self.simu7['q_total'] = meas.extrap_fit.q_sensitivity.q_3p_ns_opt_list
-        self.simu7['q_top'] = meas.extrap_fit.q_sensitivity.q_top_3p_ns_opt_list
-        self.simu7['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_3p_ns_opt_list
-
-        # Compute min-max no slip exponent
-        skip_ns_min_max, self.exp_ns_max, self.exp_ns_min = self.compute_ns_max_min(meas=meas,
-                                                                                    ns_exp=self.ns_exp,
-                                                                                    exp_ns_min_user=exp_ns_min_user,
-                                                                                    exp_ns_max_user=exp_ns_max_user)
-
-        # Compute min-max power exponent
-        skip_pp_min_max, self.exp_pp_max, self.exp_pp_min = self.compute_pp_max_min(meas=meas,
-                                                                                    exp_95ic_min=self.exp_95ic_min,
-                                                                                    exp_95ic_max=self.exp_95ic_max,
-                                                                                    pp_exp=self.pp_exp,
-                                                                                    exp_pp_min_user=exp_pp_min_user,
-                                                                                    exp_pp_max_user=exp_pp_max_user)
-
-        # Other simulations based on automatically parameters or user parameters
-        # Extrapolations simu 3min-max and 5min-max
-        # Intitialization
-        q_total_3min = []
-        q_top_3min = []
-        q_bot_3min = []
-        q_total_3max = []
-        q_top_3max = []
-        q_bot_3max = []
-        q_total_5min = []
-        q_top_5min = []
-        q_bot_5min = []
-        q_total_5max = []
-        q_top_5max = []
-        q_bot_5max = []
-
-        # Deep copy of actual measurement 'meas'
-        simedgemin_9 = copy.deepcopy(meas)  # draft - error
-        simedgemax_10 = copy.deepcopy(meas)  # draft + error
-        simdraftmin_11 = copy.deepcopy(meas)  # triangular shape - error
-        simdraftmax_12 = copy.deepcopy(meas)  # rectangular shape + error
-        simbadens_last_13 = copy.deepcopy(meas)  # last ens use
-        simbadens_next_14 = copy.deepcopy(meas)  # next ens use
-        simbadcells_18 = copy.deepcopy(meas)  # TRDI (pw6)
-        simbadcells_19 = copy.deepcopy(meas)  # above
-        simbadcells_20 = copy.deepcopy(meas)  # below
-        simbadcells_22 = copy.deepcopy(meas)  # before (hold)
-        simbadcells_23 = copy.deepcopy(meas)  # after (next)
-
-        for transect, edgemin_9, edgemax_10, draftmin_11, draftmax_12, \
-            ens_last_13, ens_next_14, cells_18, cells_19, cells_20, cells_22, cells_23 \
-                in zip(meas.transects,
-                       simedgemin_9.transects,
-                       simedgemax_10.transects,
-                       simdraftmin_11.transects,
-                       simdraftmax_12.transects,
-                       simbadens_last_13.transects,
-                       simbadens_next_14.transects,
-                       simbadcells_18.transects,
-                       simbadcells_19.transects,
-                       simbadcells_20.transects,
-                       simbadcells_22.transects,
-                       simbadcells_23.transects):
-            if transect.checked:
-                q = QComp()
-
-                # Compute discharge for power fit max and min exponents
-                if not skip_pp_min_max:
-                    q.populate_data(data_in=transect, top_method='Power', bot_method='Power', exponent=self.exp_pp_min)
-                    q_total_3min.append(q.total)
-                    q_top_3min.append(q.top)
-                    q_bot_3min.append(q.bottom)
-
-                    q.populate_data(data_in=transect, top_method='Power', bot_method='Power', exponent=self.exp_pp_max)
-                    q_total_3max.append(q.total)
-                    q_top_3max.append(q.top)
-                    q_bot_3max.append(q.bottom)
-
-                # Compute discharge for no slip fit max and min exponents
-                if not skip_ns_min_max:
-                    q.populate_data(data_in=transect,
-                                    top_method='Constant',
-                                    bot_method='No Slip',
-                                    exponent=self.exp_ns_min)
-                    q_total_5min.append(q.total)
-                    q_top_5min.append(q.top)
-                    q_bot_5min.append(q.bottom)
-
-                    q.populate_data(data_in=transect,
-                                    top_method='Constant',
-                                    bot_method='No Slip',
-                                    exponent=self.exp_ns_max)
-                    q_total_5max.append(q.total)
-                    q_top_5max.append(q.top)
-                    q_bot_5max.append(q.bottom)
-
-                # Edge estimation
-                max_left_dist, max_right_dist, min_left_dist, min_right_dist = \
-                    self.compute_edge_dist_max_min(transect=transect,
-                                                   d_left_error_prct_user=d_left_error_prct_user,
-                                                   d_right_error_prct_user=d_right_error_prct_user)
-
-                # Prep data for simulation 9 (underestimation case)
-                self.d_right_error_min.append(min_right_dist)
-                self.d_left_error_min.append(min_left_dist)
-                edgemin_9.edges.left.distance_m = min_left_dist
-                edgemin_9.edges.right.distance_m = min_right_dist
-                edgemin_9.edges.left.type = 'Triangular'
-                edgemin_9.edges.right.type = 'Triangular'
-
-                # Prep data simulation 10 (overestimation case)
-                self.d_right_error_max.append(max_right_dist)
-                self.d_left_error_max.append(max_left_dist)
-                edgemax_10.edges.left.distance_m = max_left_dist
-                edgemax_10.edges.right.distance_m = max_right_dist
-                edgemax_10.edges.left.type = 'Rectangular'
-                edgemax_10.edges.right.type = 'Rectangular'
-
-                # Prep data for simulation 11 -0.02m - simulation 12 +0.02m
-                draft_max, draft_min, draft_error = self.compute_draft_max_min(transect=transect,
-                                                                               draft_error_user=draft_error_user)
-                self.list_draft_error.append(draft_error)
-                draftmin_11.change_draft(draft_min)
-                draftmax_12.change_draft(draft_max)
-
-                # simulations 13 14 15 : ensemble interpolation
-                # TODO the use of abba includes estimating invalid ensembles if data is not lost or missing, so these
-                # are now duplicates of 22 and 23 if the entire ensemble is invalid.
-                # ens_last_13.w_vel.interpolate_ens_next()
-                # ens_next_14.w_vel.interpolate_ens_hold_last()
-
-                # simulations 18 to 25:  cells interpolation
-                cells_18.w_vel.interpolate_cells_trdi(cells_18)
-                # TODO Above, below, before, and after methods were not correct
-                # cells_19.w_vel.interpolate_cells_above(cells_19)
-                # cells_20.w_vel.interpolate_cells_below(cells_20)
-                # cells_22.w_vel.interpolate_cells_before(cells_22)
-                # cells_23.w_vel.interpolate_cells_after(cells_23)
-                cells_19.w_vel.interpolate_abba(transect, search_loc=['above'])
-                cells_20.w_vel.interpolate_abba(transect, search_loc=['below'])
-                cells_22.w_vel.interpolate_abba(transect, search_loc=['before'])
-                cells_23.w_vel.interpolate_abba(transect, search_loc=['after'])
-
-        # Assign max min simulations for power fit if power fit was used
-        if skip_pp_min_max:
-            self.simu3min = self.simu3
-            self.simu3max = self.simu3
-        else:
-            # simulation 3min
-            self.simu3min['q_total'] = q_total_3min
-            self.simu3min['q_top'] = q_top_3min
-            self.simu3min['q_bot'] = q_bot_3min
-            # simulation 3max
-            self.simu3max['q_total'] = q_total_3max
-            self.simu3max['q_top'] = q_top_3max
-            self.simu3max['q_bot'] = q_bot_3max
-
-        # Assign max min simulation for no slip fit if no slip fit was used
-        if skip_ns_min_max:
-            self.simu5min = self.simu5
-            self.simu5max = self.simu3
-        else:
-            # simulation 5min
-            self.simu5min['q_total'] = q_total_5min
-            self.simu5min['q_top'] = q_top_5min
-            self.simu5min['q_bot'] = q_bot_5min
-            # simulation 5max
-            self.simu5max['q_total'] = q_total_5max
-            self.simu5max['q_top'] = q_top_5max
-            self.simu5max['q_bot'] = q_bot_5max
-
-        # Compute discharge for simulations related to edge estimation (R and L)
-        simedgemin_9.compute_discharge()
-        simedgemax_10.compute_discharge()
-
-        # Compute discharge for simulations related to draft transducer
-        simdraftmin_11.compute_discharge()
-        simdraftmax_12.compute_discharge()
-
-        # Compute discharge for simulations of missing ensembles and cells
-        simbadens_last_13.compute_discharge()
-        simbadens_next_14.compute_discharge()
-        simbadcells_18.compute_discharge()
-        simbadcells_19.compute_discharge()
-        simbadcells_20.compute_discharge()
-        simbadcells_22.compute_discharge()
-        simbadcells_23.compute_discharge()
-
-        # Initialization
-        q_total_9 = []
-        q_right_9 = []
-        q_left_9 = []
-        q_total_10 = []
-        q_right_10 = []
-        q_left_10 = []
-        q_total_11 = []
-        q_top_11 = []
-        q_right_11 = []
-        q_left_11 = []
-        q_total_12 = []
-        q_top_12 = []
-        q_right_12 = []
-        q_left_12 = []
-        q_total_13 = []
-        q_middle_13 = []
-        q_total_14 = []
-        q_middle_14 = []
-        q_total_18 = []
-        q_middle_18 = []
-        q_total_19 = []
-        q_middle_19 = []
-        q_total_20 = []
-        q_middle_20 = []
-        q_total_22 = []
-        q_middle_22 = []
-        q_total_23 = []
-        q_middle_23 = []
-
-        # Append discharges list in a loop
-        for x in range(len(meas.transects)):
-            if meas.transects[x].checked == 1:
-                q_total_1.append(meas.discharge[x].total)
-                q_top_1.append(meas.discharge[x].top)
-                q_bot_1.append(meas.discharge[x].bottom)
-                q_right_1.append(meas.discharge[x].right)
-                q_left_1.append(meas.discharge[x].left)
-                q_middle_1.append(meas.discharge[x].middle)
-
-                q_total_9.append(simedgemin_9.discharge[x].total)
-                q_right_9.append(simedgemin_9.discharge[x].right)
-                q_left_9.append(simedgemin_9.discharge[x].left)
-
-                q_total_10.append(simedgemax_10.discharge[x].total)
-                q_right_10.append(simedgemax_10.discharge[x].right)
-                q_left_10.append(simedgemax_10.discharge[x].left)
-
-                q_total_11.append(simdraftmin_11.discharge[x].total)
-                q_top_11.append(simdraftmin_11.discharge[x].top)
-                q_right_11.append(simdraftmin_11.discharge[x].right)
-                q_left_11.append(simdraftmin_11.discharge[x].left)
-
-                q_total_12.append(simdraftmax_12.discharge[x].total)
-                q_top_12.append(simdraftmax_12.discharge[x].top)
-                q_right_12.append(simdraftmax_12.discharge[x].right)
-                q_left_12.append(simdraftmax_12.discharge[x].left)
-
-                q_total_13.append(simbadens_last_13.discharge[x].total)
-                q_middle_13.append(simbadens_last_13.discharge[x].middle)
-
-                q_total_14.append(simbadens_next_14.discharge[x].total)
-                q_middle_14.append(simbadens_next_14.discharge[x].middle)
-
-                q_total_18.append(simbadcells_18.discharge[x].total)
-                q_middle_18.append(simbadcells_18.discharge[x].middle)
-
-                q_total_19.append(simbadcells_19.discharge[x].total)
-                q_middle_19.append(simbadcells_19.discharge[x].middle)
-
-                q_total_20.append(simbadcells_20.discharge[x].total)
-                q_middle_20.append(simbadcells_20.discharge[x].middle)
-
-                q_total_22.append(simbadcells_22.discharge[x].total)
-                q_middle_22.append(simbadcells_22.discharge[x].middle)
-
-                q_total_23.append(simbadcells_23.discharge[x].total)
-                q_middle_23.append(simbadcells_23.discharge[x].middle)
-
-        # Store in self
-        self.simu1['q_total'] = q_total_1
-        self.simu1['q_top'] = q_top_1
-        self.simu1['q_bot'] = q_bot_1
-        self.simu1['q_right'] = q_right_1
-        self.simu1['q_left'] = q_left_1
-        self.simu1['q_middle'] = q_middle_1
-
-        self.simu9['q_total'] = q_total_9
-        self.simu9['q_right'] = q_right_9
-        self.simu9['q_left'] = q_left_9
-
-        self.simu10['q_total'] = q_total_10
-        self.simu10['q_right'] = q_right_10
-        self.simu10['q_left'] = q_left_10
-
-        self.simu11['q_total'] = q_total_11
-        self.simu11['q_top'] = q_top_11
-        self.simu11['q_right'] = q_right_11
-        self.simu11['q_left'] = q_left_11
-
-        self.simu12['q_total'] = q_total_12
-        self.simu12['q_top'] = q_top_12
-        self.simu12['q_right'] = q_right_12
-        self.simu12['q_left'] = q_left_12
-
-        self.simu13['q_total'] = q_total_13
-        self.simu13['q_middle'] = q_middle_13
-
-        self.simu14['q_total'] = q_total_14
-        self.simu14['q_middle'] = q_middle_14
-
-        self.simu18['q_total'] = q_total_18
-        self.simu18['q_middle'] = q_middle_18
-
-        self.simu19['q_total'] = q_total_19
-        self.simu19['q_middle'] = q_middle_19
-
-        self.simu20['q_total'] = q_total_20
-        self.simu20['q_middle'] = q_middle_20
-
-        self.simu22['q_total'] = q_total_22
-        self.simu22['q_middle'] = q_middle_22
-
-        self.simu23['q_total'] = q_total_23
-        self.simu23['q_middle'] = q_middle_23
 
     def compute_combined_uncertainty(self):
         """
@@ -1223,13 +758,149 @@ class Oursin(object):
         self.contrib_legend = list(TABLE_u.columns)
 
         # Convert relative uncertainties in m3/s and relative variance in m6/s2
-        self.u_syst_mean_abs = self.u_syst_mean*np.mean(self.simu1['q_total'])
-        self.u_combined_by_transect_abs = np.asarray(self.u_combined_by_transect)*np.asarray(self.simu1['q_total'])*0.01
-        self.u_terms_abs = np.asarray(self.u_terms)*0.01*np.mean(self.simu1['q_total'])
-        self.u_combined_total_abs = 0.01*self.u_combined_total*np.mean(self.simu1['q_total'])
-        self.u_total_by_transect_abs = np.asarray(self.u_total_by_transect)*np.asarray(self.simu1['q_total'])*0.01
-        self.u_total_95_abs = 0.01*self.u_total_95*np.mean(self.simu1['q_total'])
-        self.variance_terms_by_transect_abs=np.transpose(np.transpose(self.variance_terms_by_transect)*np.asarray(self.simu1['q_total'])**2)
+        self.u_syst_mean_abs = self.u_syst_mean*np.mean(self.sim_original['q_total'])
+        self.u_combined_by_transect_abs = np.asarray(self.u_combined_by_transect) * np.asarray(self.sim_original['q_total']) * 0.01
+        self.u_terms_abs = np.asarray(self.u_terms)*0.01*np.mean(self.sim_original['q_total'])
+        self.u_combined_total_abs = 0.01*self.u_combined_total*np.mean(self.sim_original['q_total'])
+        self.u_total_by_transect_abs = np.asarray(self.u_total_by_transect) * np.asarray(self.sim_original['q_total']) * 0.01
+        self.u_total_95_abs = 0.01*self.u_total_95*np.mean(self.sim_original['q_total'])
+        self.variance_terms_by_transect_abs=np.transpose(np.transpose(self.variance_terms_by_transect) * np.asarray(self.sim_original['q_total']) ** 2)
+
+    def u_meas_compute(self, meas, u_prct_dzi=0.005):
+        """
+        Compute the uncertainty related to the measured area
+        (boat and water velocity, depth cell uncertainty)
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        u_prct_dzi: float
+            Uncertainty (68%) related to the depth cell size - Default is 0.005 * 0.01 # k=1 0.5%
+
+        Returns
+        -------
+        u_meas_list: list
+            List of measured uncertainty (68%) for each transect and contribution of each terms to the measured
+            uncertainty (u_contrib_meas_v_boat, u_contrib_errv_v_boat, u_contrib_verv_h_depth,
+            u_contrib_errv_v_wate, u_contrib_meas_v_wate, u_contrib_meas_u_dzi).
+        """
+
+        for ind_transect in self.checked_idx:
+
+            # Relative depth error due to vertical velocity of boat
+            relative_error_depth = self.depth_error_boat_motion(meas.transects[ind_transect])
+
+            # Relative standard deviation of error velocity (Water Track)
+            std_ev_wt_ens = self.water_std_by_error_velocity(meas.transects[ind_transect])
+
+            # Relative standard deviation of error velocity (Bottom Track)
+            std_ev_bt = self.boat_std_by_error_velocity(meas.transects[ind_transect])
+
+            # Computation of u_meas
+            q_2_tran = meas.discharge[ind_transect].total ** 2
+            q_2_ens = meas.discharge[ind_transect].middle_ens ** 2
+            n_cell_ens = meas.transects[ind_transect].w_vel.cells_above_sl.sum(axis=0)  # number of cells by ens
+            n_cell_ens = np.where(n_cell_ens == 0, np.nan, n_cell_ens)
+
+            # Variance for each ensembles
+            u_2_meas = q_2_ens * (relative_error_depth ** 2 + std_ev_bt ** 2 +
+                                  (1 / n_cell_ens) * (std_ev_wt_ens ** 2 + u_prct_dzi ** 2))
+            # TODO DSM I would have computed as follows
+            # u_2_meas = q_2_ens * (std_ev_bt ** 2 + (1 / n_cell_ens) * (std_ev_wt_ens ** 2 + u_prct_dzi ** 2))
+
+            u_2_prct_meas = np.nansum(u_2_meas) / q_2_tran
+
+            # Standard deviation
+            u_prct_meas = u_2_prct_meas ** 0.5
+            self.u_meas_list.append(u_prct_meas)
+
+            # Compute the contribution of all terms to u_meas (sum of a0 to g0 =1)
+            u_contrib_errv_v_boat = (np.nan_to_num(q_2_ens * (std_ev_bt ** 2)).sum() / q_2_tran) / u_2_prct_meas
+            u_contrib_verv_h_depth = (np.nan_to_num(q_2_ens * (relative_error_depth ** 2)).sum()
+                                      / q_2_tran) / u_2_prct_meas
+            u_contrib_errv_v_wate = (np.nan_to_num(q_2_ens * ((1 / n_cell_ens) * (std_ev_wt_ens ** 2))).sum()
+                                     / q_2_tran) / u_2_prct_meas
+            u_contrib_meas_u_dzi = (np.nan_to_num(q_2_ens * ((1 / n_cell_ens) * (u_prct_dzi ** 2))).sum()
+                                    / q_2_tran) / u_2_prct_meas
+
+            self.u_contrib_errv_v_boat.append(u_contrib_errv_v_boat)
+            self.u_contrib_verv_h_depth.append(u_contrib_verv_h_depth)
+            self.u_contrib_errv_v_wate.append(u_contrib_errv_v_wate)
+            self.u_contrib_meas_u_dzi.append(u_contrib_meas_u_dzi)
+
+    def run_oursin_simulations(self, meas, exp_pp_min_user, exp_pp_max_user, exp_ns_min_user, exp_ns_max_user,
+                               draft_error_user, d_right_error_prct_user, d_left_error_prct_user):
+        """Compute discharges (top, bot, right, left, total, middle)  based on possible scenarios
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        exp_pp_min_user: float
+            User provided minimum power-power exponent for simulating possible discharge
+        exp_pp_max_user: float
+            User provided maximum power-power exponent for simulating possible discharge
+        exp_ns_min_user: float
+            User provided minimum no-slip exponent for simulating possible discharge
+        exp_ns_max_user: float
+            User provided maximum no-slip exponent for simulating possible discharge
+        draft_error_user: float
+            User provided draft error (in cm) for simulating possible discharge
+        d_right_error_prct_user: float
+            User provided distance error (in %) for the right edge
+        d_left_error_prct_user: float
+            User provided distance error (in %) for the left edge
+        """
+
+        # If list have not be saved recompute q_sensitivity
+        if not hasattr(meas.extrap_fit.q_sensitivity, 'q_pp_list'):
+            meas.extrap_fit.q_sensitivity.populate_data(meas.transects, meas.extrap_fit.sel_fit)
+
+        # Simulation original
+        self.sim_orig(meas)
+
+        # Simulation power / power default 1/6
+        self.sim_extrap_pp_16['q_total'] = meas.extrap_fit.q_sensitivity.q_pp_list
+        self.sim_extrap_pp_16['q_top'] = meas.extrap_fit.q_sensitivity.q_top_pp_list
+        self.sim_extrap_pp_16['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_pp_list
+
+        # Simulations power / power optimized
+        self.sim_pp_min_max(meas=meas,
+                        exp_pp_min_user=exp_pp_min_user,
+                        exp_pp_max_user=exp_pp_max_user)
+
+        # Simulation cns default 1/6
+        self.sim_extrap_cns_16['q_total'] = meas.extrap_fit.q_sensitivity.q_cns_list
+        self.sim_extrap_cns_16['q_top'] = meas.extrap_fit.q_sensitivity.q_top_cns_list
+        self.sim_extrap_cns_16['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_cns_list
+
+        # Simulation cns optimized
+        self.sim_cns_min_max(meas=meas,
+                         exp_ns_min_user=exp_ns_min_user,
+                         exp_ns_max_user=exp_ns_max_user)
+
+        # Simulation 3pt no slip default 1/6
+        self.sim_extrap_3pns_16['q_total'] = meas.extrap_fit.q_sensitivity.q_3p_ns_list
+        self.sim_extrap_3pns_16['q_top'] = meas.extrap_fit.q_sensitivity.q_top_3p_ns_list
+        self.sim_extrap_3pns_16['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_3p_ns_list
+
+        # Simulation 3pt no slip optimized
+        self.sim_extrap_3pns_opt['q_total'] = meas.extrap_fit.q_sensitivity.q_3p_ns_opt_list
+        self.sim_extrap_3pns_opt['q_top'] = meas.extrap_fit.q_sensitivity.q_top_3p_ns_opt_list
+        self.sim_extrap_3pns_opt['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_3p_ns_opt_list
+
+        # Simulations edge min and max
+        self.sim_edge_min_max(meas=meas,
+                              d_left_error_prct_user=d_left_error_prct_user,
+                              d_right_error_prct_user=d_right_error_prct_user)
+
+        # Simulation draft min and max
+        self.sim_draft_max_min(meas=meas,
+                               draft_error_user=draft_error_user)
+
+        # Simulation of invalid cells and ensembles
+        self.sim_invalid_cells(meas=meas)
 
     def measured_area_uncertainty(self, meas, u_prct_dzi_user=None):
 
@@ -1242,12 +913,335 @@ class Oursin(object):
         # Compute the uncertainty due to the measured area
         self.u_meas_compute(meas=meas, u_prct_dzi=self.u_prct_dzi)
 
+    def compute_moving_bed_uncertainty(self, meas, u_movbed_user):
+        """Computes the moving-bed uncertainty
+
+        Parameters
+        ----------
+        meas: MeasurementData
+            Object of MeasurementData
+        u_movbed_user: float
+            User provided moving-bed uncertainty in percent
+        """
+
+        if u_movbed_user is None:
+            u_movbed_68 = 0.01 * meas.uncertainty.moving_bed_95 / 2
+        else:
+            self.u_movbed_user = u_movbed_user
+            u_movbed_68 = 0.01 * u_movbed_user
+
+        self.u_movbed_list = [u_movbed_68] * self.nb_transects
+
+    def compute_systematic_uncertainty(self, u_syst_mean_user):
+        """Compute systematic uncertaint
+
+        Parameters
+        ----------
+        u_syst_mean_user: float
+            User provided systematic uncertainty in percent
+        """
+
+        if u_syst_mean_user is None:
+            self.u_syst_mean = 0.01 * 1.31
+        else:
+            self.u_syst_mean_user = u_syst_mean_user
+            self.u_syst_mean = u_syst_mean_user * 0.01
+
+        self.u_syst_list = [self.u_syst_mean] * self.nb_transects
+
+    def compute_meas_cov(self, meas, u_cov_68_user):
+        """Compute the coefficient of variation of the total transect discharges used in the measurement.
+
+        Parameters
+        ----------
+        meas: MeasurementData
+            Object of MeasurementData
+        u_cov_68_user: float
+            User provided coefficient of variation
+        """
+
+        if u_cov_68_user is None:
+            self.cov_68 = np.nan
+            nb_transects = len(meas.transects)
+
+            # Only compute for multiple transects
+            if nb_transects > 1:
+                total_q = []
+                for n in range(nb_transects):
+                    if meas.transects[n].checked:
+                        total_q.append(meas.discharge[n].total)
+
+                # Compute coefficient of variation
+                cov = np.abs(np.nanstd(total_q, ddof=1) / np.nanmean(total_q)) * 100
+
+                # Inflate the cov to the 95% value
+                if len(total_q) == 2:
+                    # Use the approximate method as taught in class to reduce the high coverage factor for 2 transects
+                    # and account for prior knowledge related to 720 second duration analysis
+                    cov_95 = cov * 3.3
+                    self.cov_68 = cov_95 / 2
+                else:
+                    # Use Student's t to inflate COV for n > 2
+                    cov_95 = t.interval(0.95, len(total_q) - 1)[1] * cov / len(total_q) ** 0.5
+                    self.cov_68 = cov_95 / 2
+        else:
+            # TODO COV stored as % not % * 0.01
+            self.u_cov_68_user = u_cov_68_user
+            self.cov_68 = u_cov_68_user
+
+    def sim_orig(self, meas):
+        """Stores original measurement results in a data frame
+
+        Parameters
+        ----------
+        meas: MeasurementData
+            Object of MeasurementData
+        """
+
+        for trans_id in self.checked_idx:
+            self.sim_original['q_total'] = meas.discharge[trans_id].total
+            self.sim_original['q_top'] = meas.discharge[trans_id].top
+            self.sim_original['q_bot'] = meas.discharge[trans_id].bottom
+            self.sim_original['q_right'] = meas.discharge[trans_id].right
+            self.sim_original['q_left'] = meas.discharge[trans_id].left
+            self.sim_original['q_middle'] = meas.discharge[trans_id].middle
+
+    def sim_cns_min_max(self, meas, exp_ns_min_user, exp_ns_max_user):
+        """Computes simulations resulting in the the min and max discharges for a constant no slip extrapolation
+        fit.
+
+        Parameters
+        ----------
+        meas: MeasurementData
+            Object of MeasurementData
+        exp_ns_min_user: float
+            User supplied minimum exponent for the no slip fit
+        exp_ns_max_user: float
+            User supplied minimum exponet for the no slip fit
+        """
+
+        # Compute min-max no slip exponent
+        skip_ns_min_max, self.exp_ns_max, self.exp_ns_min = self.compute_ns_max_min(meas=meas,
+                                                                                    ns_exp=self.ns_exp,
+                                                                                    exp_ns_min_user=exp_ns_min_user,
+                                                                                    exp_ns_max_user=exp_ns_max_user)
+
+        # Optimized
+        self.sim_extrap_cns_opt['q_total'] = meas.extrap_fit.q_sensitivity.q_cns_opt_list
+        self.sim_extrap_cns_opt['q_top'] = meas.extrap_fit.q_sensitivity.q_top_cns_opt_list
+        self.sim_extrap_cns_opt['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_cns_opt_list
+
+        # Max min
+        if skip_ns_min_max:
+            # If cns not used both max and min are equal to the optimized value
+            self.sim_extrap_cns_min['q_total'] = meas.extrap_fit.q_sensitivity.q_cns_opt_list
+            self.sim_extrap_cns_min['q_top'] = meas.extrap_fit.q_sensitivity.q_top_cns_opt_list
+            self.sim_extrap_cns_min['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_cns_opt_list
+            self.sim_extrap_cns_max['q_total'] = meas.extrap_fit.q_sensitivity.q_cns_opt_list
+            self.sim_extrap_cns_max['q_top'] = meas.extrap_fit.q_sensitivity.q_top_cns_opt_list
+            self.sim_extrap_cns_max['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_cns_opt_list
+        else:
+            # Compute q for min and max values
+            q = QComp()
+            for trans_id in self.checked_idx:
+                # Compute min values
+                q.populate_data(data_in=meas.transects[trans_id],
+                                top_method='Constant',
+                                bot_method='No Slip',
+                                exponent=self.exp_ns_min)
+                self.sim_extrap_cns_min.loc[len(self.sim_extrap_pp_min)] = [q.total, q.top, q.bottom]
+                # Compute max values
+                q.populate_data(data_in=meas.transects[trans_id],
+                                top_method='Constant',
+                                bot_method='No Slip',
+                                exponent=self.exp_ns_max)
+                self.sim_extrap_cns_max.loc[len(self.sim_extrap_pp_min)] = [q.total, q.top, q.bottom]
+
+    def sim_pp_min_max(self, meas, exp_pp_min_user, exp_pp_max_user):
+        """Computes simulations resulting in the the min and max discharges for a power power extrapolation
+        fit.
+
+        Parameters
+        ----------
+        meas: MeasurementData
+            Object of MeasurementData
+        exp_pp_min_user: float
+            User supplied minimum exponent for the power fit
+        exp_pp_max_user: float
+            User supplied minimum exponet for the power fit
+                """
+        # Compute min-max power exponent
+        skip_pp_min_max, self.exp_pp_max, self.exp_pp_min = self.compute_pp_max_min(meas=meas,
+                                                                                    exp_95ic_min=self.exp_95ic_min,
+                                                                                    exp_95ic_max=self.exp_95ic_max,
+                                                                                    pp_exp=self.pp_exp,
+                                                                                    exp_pp_min_user=exp_pp_min_user,
+                                                                                    exp_pp_max_user=exp_pp_max_user)
+
+        # Optimized
+        self.sim_extrap_pp_opt['q_total'] = meas.extrap_fit.q_sensitivity.q_pp_opt_list
+        self.sim_extrap_pp_opt['q_top'] = meas.extrap_fit.q_sensitivity.q_top_pp_opt_list
+        self.sim_extrap_pp_opt['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_pp_opt_list
+
+        # Max min
+        if skip_pp_min_max:
+            self.sim_extrap_pp_min['q_total'] = meas.extrap_fit.q_sensitivity.q_pp_opt_list
+            self.sim_extrap_pp_min['q_top'] = meas.extrap_fit.q_sensitivity.q_top_pp_opt_list
+            self.sim_extrap_pp_min['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_pp_opt_list
+            self.sim_extrap_pp_max['q_total'] = meas.extrap_fit.q_sensitivity.q_pp_opt_list
+            self.sim_extrap_pp_max['q_top'] = meas.extrap_fit.q_sensitivity.q_top_pp_opt_list
+            self.sim_extrap_pp_max['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_pp_opt_list
+        else:
+            q = QComp()
+            for trans_id in self.checked_idx:
+                q.populate_data(data_in=meas.transects[trans_id],
+                                top_method='Power',
+                                bot_method='Power',
+                                exponent=self.exp_pp_min)
+                self.sim_extrap_pp_min.loc[len(self.sim_extrap_pp_min)] = [q.total, q.top, q.bottom]
+
+                q.populate_data(data_in=meas.transects[trans_id],
+                                top_method='Power',
+                                bot_method='Power',
+                                exponent=self.exp_pp_max)
+                self.sim_extrap_pp_max.loc[len(self.sim_extrap_pp_min)] = [q.total, q.top, q.bottom]
+
+    def sim_edge_min_max(self, meas, d_left_error_prct_user, d_right_error_prct_user):
+        """Computes simulations for the maximum and minimum edge discharges.
+
+        Parameters
+        ----------
+        meas: MeasurementData
+            Object of measurement data
+        d_left_error_prct_user: float
+            Percent error for the left edge distance provided by the user
+        d_right_error_prct_user: float
+            Percent error for the right edge distance provided by the user
+        """
+
+        # Create measurement copy to allow changes without affecting original
+        meas_temp = copy.deepcopy(meas)
+
+        # Process each checked transect
+        for trans_id in self.checked_idx:
+            # Compute max and min edge distances
+            max_left_dist, max_right_dist, min_left_dist, min_right_dist = \
+                self.compute_edge_dist_max_min(transect=meas.transects[trans_id],
+                                               d_left_error_prct_user=d_left_error_prct_user,
+                                               d_right_error_prct_user=d_right_error_prct_user)
+
+            # Compute edge minimum
+            self.d_right_error_min.append(min_right_dist)
+            self.d_left_error_min.append(min_left_dist)
+            meas_temp.transects[trans_id].edges.left.distance_m = min_left_dist
+            meas_temp.transects[trans_id].edges.right.distance_m = min_right_dist
+            meas_temp.transects[trans_id].edges.left.type = 'Triangular'
+            meas_temp.transects[trans_id].edges.right.type = 'Triangular'
+            meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
+                                                         moving_bed_data=meas_temp.mb_tests)
+            self.sim_edge_min.loc[len(self.sim_edge_min)] = [meas_temp.discharge[trans_id].total,
+                                                             meas_temp.discharge[trans_id].left,
+                                                             meas_temp.discharge[trans_id].right]
+
+            # Compute edge maximum
+            self.d_right_error_max.append(max_right_dist)
+            self.d_left_error_max.append(max_left_dist)
+            meas_temp.transects[trans_id].edges.left.distance_m = max_left_dist
+            meas_temp.transects[trans_id].edges.right.distance_m = max_right_dist
+            meas_temp.transects[trans_id].edges.left.type = 'Rectangular'
+            meas_temp.transects[trans_id].edges.right.type = 'Rectangular'
+            meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
+                                                         moving_bed_data=meas_temp.mb_tests)
+            self.sim_edge_max.loc[len(self.sim_edge_max)] = [meas_temp.discharge[trans_id].total,
+                                                             meas_temp.discharge[trans_id].left,
+                                                             meas_temp.discharge[trans_id].right]
+
+    def sim_draft_max_min(self, meas, draft_error_user):
+        """Compute the simulations for the max and min draft errror.
+
+        Parameters
+        ----------
+        meas: MeasurementData
+            Object of MeasurementData
+        draft_error_user: float
+            User supplied draft error in m
+        """
+        # Create copy of meas to avoid changing original
+        meas_temp = copy.deepcopy(meas)
+
+        for trans_id in self.checked_idx:
+            # Compute max and min draft
+            draft_max, draft_min, draft_error = self.compute_draft_max_min(transect=meas.transects[trans_id],
+                                                                           draft_error_user=draft_error_user)
+            self.list_draft_error.append(draft_error)
+
+            # Compute discharge for draft min
+            meas_temp.change_draft(draft_min)
+            meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
+                                                         moving_bed_data=meas_temp.mb_tests)
+            self.sim_draft_min.loc[len(self.sim_draft_min)] = [meas_temp.discharge[trans_id].total,
+                                                               meas_temp.discharge[trans_id].top,
+                                                               meas_temp.discharge[trans_id].left,
+                                                               meas_temp.discharge[trans_id].right]
+            # Compute discharge for draft max
+            meas_temp.change_draft(draft_max)
+            meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
+                                                         moving_bed_data=meas_temp.mb_tests)
+            self.sim_draft_max.loc[len(self.sim_draft_max)] = [meas_temp.discharge[trans_id].total,
+                                                               meas_temp.discharge[trans_id].top,
+                                                               meas_temp.discharge[trans_id].left,
+                                                               meas_temp.discharge[trans_id].right]
+
+    def sim_invalid_cells(self, meas):
+        """Computes simulations using different methods to interpolate for invalid cells and ensembles.
+
+        Parameters
+        ----------
+        meas: MeasurementData
+            Object of MeasurementData
+        """
+
+        # Simulations for invalid cells and ensembles
+        meas_temp = copy.deepcopy(meas)
+        for trans_id in self.checked_idx:
+            # TRDI method
+            meas_temp.transects[trans_id].w_vel.interpolate_cells_trdi(meas_temp.transects[trans_id])
+            meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
+                                                         moving_bed_data=meas_temp.mb_tests)
+            self.sim_cells_trdi.loc[len(self.sim_cells_trdi)] = [meas_temp.discharge[trans_id].total,
+                                                                     meas_temp.discharge[trans_id].middle]
+
+            # Above only
+            meas_temp.transects[trans_id].w_vel.interpolate_abba(meas_temp.transects[trans_id], search_loc=['above'])
+            meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
+                                                         moving_bed_data=meas_temp.mb_tests)
+            self.sim_cells_above.loc[len(self.sim_cells_above)] = [meas_temp.discharge[trans_id].total,
+                                                                 meas_temp.discharge[trans_id].middle]
+            # Below only
+            meas_temp.transects[trans_id].w_vel.interpolate_abba(meas_temp.transects[trans_id], search_loc=['below'])
+            meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
+                                                         moving_bed_data=meas_temp.mb_tests)
+            self.sim_cells_below.loc[len(self.sim_cells_below)] = [meas_temp.discharge[trans_id].total,
+                                                                   meas_temp.discharge[trans_id].middle]
+            # Before only
+            meas_temp.transects[trans_id].w_vel.interpolate_abba(meas_temp.transects[trans_id], search_loc=['before'])
+            meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
+                                                         moving_bed_data=meas_temp.mb_tests)
+            self.sim_cells_before.loc[len(self.sim_cells_before)] = [meas_temp.discharge[trans_id].total,
+                                                                     meas_temp.discharge[trans_id].middle]
+            # After only
+            meas_temp.transects[trans_id].w_vel.interpolate_abba(meas_temp.transects[trans_id], search_loc=['after'])
+            meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
+                                                         moving_bed_data=meas_temp.mb_tests)
+            self.sim_cells_after.loc[len(self.sim_cells_after)] = [meas_temp.discharge[trans_id].total,
+                                                                   meas_temp.discharge[trans_id].middle]
+
     @staticmethod
     def compute_draft_max_min(transect, draft_error_user=None):
         """Determine the max and min values of the ADCP draft.
         """
         depths = transect.depths.bt_depths.depth_processed_m  # depth by ens
-        depth_90 = np.quantile(depths, q=0.9) # quantile 90% to avoid spikes
+        depth_90 = np.quantile(depths, q=0.9)  # quantile 90% to avoid spikes
 
         # Determine draft error value
         if draft_error_user is None:
@@ -1397,14 +1391,6 @@ class Oursin(object):
         return skip_NS_min_max, exp_ns_max, exp_ns_min
 
     @staticmethod
-    def compute_moving_bed_uncertainty(meas):
-        return 0.01 * meas.uncertainty.moving_bed_95 / 2
-
-    @staticmethod
-    def compute_systematic_uncertainty():
-        return 0.01 * 1.31
-
-    @staticmethod
     def depth_error_boat_motion(transect):
         """Relative depth error due to vertical velocity of boat
            the height [m] is vertical velocity times ensemble duration
@@ -1527,45 +1513,16 @@ class Oursin(object):
         return std_ev_BT
 
     @staticmethod
-    def compute_meas_cov(meas):
-        """Compute the coefficient of variation of the total transect discharges used in the measurement.
+    def apply_u_rect(list_sims):
+        # Compute the uncertainty using list of simulated discharges following a ranctangular law
+        # simu = pd.DataFrame()
+        # for i in range(len(list_simu)):
+        #     name_col = 'simu' + str(i)
+        #     simu[name_col] = list_simu[i]
+        vertical_stack = pd.concat(list_sims, axis=0, sort=True)
+        u_rect = (vertical_stack['q_total'].max() - vertical_stack['q_total'].min()) / (2 * (3 ** 0.5))
 
-        Parameters
-        ----------
-        meas: MeasurementData
-            Object of MeasurementData
-
-        Returns
-        -------
-        cov_68: float
-            Coefficient of variation in percent
-        """
-
-        cov_68 = np.nan
-        nb_transects = len(meas.transects)
-
-        # Only compute for multiple transects
-        if nb_transects > 1:
-            total_q = []
-            for n in range(nb_transects):
-                if meas.transects[n].checked:
-                    total_q.append(meas.discharge[n].total)
-
-            # Compute coefficient of variation
-            cov = np.abs(np.nanstd(total_q, ddof=1) / np.nanmean(total_q)) * 100
-
-            # Inflate the cov to the 95% value
-            if len(total_q) == 2:
-                # Use the approximate method as taught in class to reduce the high coverage factor for 2 transects
-                # and account for prior knowledge related to 720 second duration analysis
-                cov_95 = cov * 3.3
-                cov_68 = cov_95 / 2
-            else:
-                # Use Student's t to inflate COV for n > 2
-                cov_95 = t.interval(0.95, len(total_q) - 1)[1] * cov / len(total_q) ** 0.5
-                cov_68 = cov_95 / 2
-
-        return cov_68
+        return (u_rect)
 
     # def plot_u_meas_contrib(self, plot=False, name_plot_u_meas='Contrib_u_meas.png'):
     #     """
@@ -1730,13 +1687,4 @@ class Oursin(object):
     #         plt.savefig(name_plot_u_pie, bbox_inches='tight')
     #     plt.show()
 
-    @staticmethod
-    def apply_u_rect(list_simu):
-        # Compute the uncertainty using list of simulated discharges following a ranctangular law
-        simu = pd.DataFrame()
-        for i in range(len(list_simu)):
-            name_col = 'simu' + str(i)
-            simu[name_col] = list_simu[i]
-        u_rect = (simu.max(axis=1) - simu.min(axis=1)) / (2 * (3 ** 0.5))
 
-        return (u_rect)
