@@ -1866,6 +1866,7 @@ class QAData(object):
             self.settings_dict['tab_bt'] = 'Default'
         else:
             self.settings_dict['tab_bt'] = 'Custom'
+            self.bt_vel['messages'].append(['BT: User modified default settings.',0,0])
         
     def check_wt_settings(self, meas):
         """Checks the wt settings to see if they are still on the default
@@ -1891,6 +1892,9 @@ class QAData(object):
             self.settings_dict['tab_wt'] = 'Default'
         else:
             self.settings_dict['tab_wt'] = 'Custom'
+            self.w_vel['messages'].append(['WT: User modified default '
+                                           'settings.',0,0])
+
 
     def check_extrap_settings(self, meas):
         """Checks the extrap to see if they are still on the default
@@ -1920,6 +1924,10 @@ class QAData(object):
             self.settings_dict['tab_extrap'] = 'Default'
         else:
             self.settings_dict['tab_extrap'] = 'Custom'
+            self.extrapolation['messages'].append(['Extrapolation: User '
+                                                   'modified default settings.'
+                                                      ,0,0])
+
 
     def check_tempsal_settings(self, meas):
 
@@ -1954,10 +1962,15 @@ class QAData(object):
         if 'Custom' in t_source:
 
             self.settings_dict['tab_tempsal'] = 'Custom'
+            self.Temperature['messages'].append(['Temperature: User modified '
+                                                 'temperature source.',0,0])
+
 
         elif 'Custom' in s_sound:
 
             self.settings_dict['tab_tempsal'] = 'Custom'
+            self.Temperature['messages'].append(['Temperature: User modified '
+                                                 'speed of sound source.',0,0])
 
         else:
             self.settings_dict['tab_tempsal'] = 'Default'
@@ -2025,8 +2038,13 @@ class QAData(object):
 
         if settings != default:
             self.settings_dict['tab_depth'] = 'Custom'
+            self.depths['messages'].append(['Depths: User modified default '
+                                            'settings.',0,0])
+
         elif orig_draft != cur_draft:
             self.settings_dict['tab_depth'] = 'Custom'
+            self.depths['messages'].append(['Depths: User modified '
+                                            'draft.',0,0])
         else:
             self.settings_dict['tab_depth'] = 'Default'
 
