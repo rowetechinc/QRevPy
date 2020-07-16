@@ -4,6 +4,7 @@ from Classes.BoatStructure import *
 from Classes.QComp import QComp
 import math
 from scipy.stats import t
+from profilehooks import profile
 # import matplotlib.pyplot as plt
 
 
@@ -221,16 +222,10 @@ class Oursin(object):
         Discharges (total, and subareas) computed for simulation 19
     sim_cells_below: DataFrame # missing cells
         Discharges (total, and subareas) computed for simulation 20
-    simu21: DataFrame # missing cells
-        Discharges (total, and subareas) computed for simulation 21
     sim_cells_before: DataFrame # missing cells
         Discharges (total, and subareas) computed for simulation 22
     sim_cells_after: DataFrame # missing cells
         Discharges (total, and subareas) computed for simulation 23
-    simu24: DataFrame # missing cells
-        Discharges (total, and subareas) computed for simulation 24
-    simu25: DataFrame # missing cells
-        Discharges (total, and subareas) computed for simulation 25
 
     simu_checked: Dict
         Dict that shows which simulation are used to compute the uncertainty
@@ -368,6 +363,7 @@ class Oursin(object):
 
         self.checked_idx = []
 
+    @profile
     def compute_oursin(self, meas,
                        exp_pp_min_user=None,
                        exp_pp_max_user=None,
@@ -386,7 +382,6 @@ class Oursin(object):
                        u_right_mean_user=None,
                        u_left_mean_user=None,
                        u_badcell_user=None,
-                       u_badens_user=None,
                        u_total_95_user=None,
                        simu_checked_user=None,
                        u_prct_dzi_user=None
@@ -442,25 +437,305 @@ class Oursin(object):
             User provided uncertainty related to depth cell size
         """
 
-        # Use only checked discharges
-        # Extract discharges and other data that are used later on (PP and NS exponents)
-        # Compute the uncertainty related to the limited number of ensembles (ISO 748)
-        discharges = []
-        total_q = []
+        self.transect_extrap_data_prep(meas)
 
-        if simu_checked_user is None:
-            simu_checked_user = dict()
+        # 1. Systematic terms + correction terms (moving bed)
+        #   1.a. Moving-bed / Same than QRev or user override
+        self.compute_moving_bed_uncertainty(meas=meas, u_movbed_user=u_movbed_user)
 
-        # Get discharges and extrapolation data for each transect
+        #   1.b.  Systematic. Use 1.31% or user override
+        self.compute_systematic_uncertainty(u_syst_mean_user=u_syst_mean_user)
+
+        # 2. Measured uncertainty
+        #   2.a. Measured area BY EQUATION
+        # Standard relative uncertainty of depth cell size 0.5% or user override
+        self.measured_area_uncertainty(meas=meas, u_meas_mean_user=u_meas_mean_user)
+
+        #   2.b. Coefficient of variation (same as QRev but 68% level of confidence) or user override
+        self.compute_meas_cov(meas=meas, u_cov_68_user=u_cov_68_user)
+
+        #   2.c. Uncertianty based on number of ensembles
+        self.compute_number_ensembles_uncertainty(meas, u_ens_user)
+
+        # 3. Run all the simulations to compute possible discharges
+        self.run_oursin_simulations(meas, exp_pp_min_user, exp_pp_max_user, exp_ns_min_user, exp_ns_max_user,
+                                    draft_error_user, d_right_error_prct_user, d_left_error_prct_user)
+
+        # 4. Compute terms based on possible simulations and assuming a rectangular law
+
+        # Uncertainty due to invalid cells and ensembles
+        self.u_badcell_list = Oursin.apply_u_rect(list_sims=[self.sim_original,
+                                                             self.sim_cells_trdi,
+                                                             self.sim_cells_above,
+                                                             self.sim_cells_below,
+                                                             self.sim_cells_before,
+                                                             self.sim_cells_after],
+                                                  col_name='q_total') \
+            / self.sim_original['q_total']
+
+        if u_badcell_user is not None:
+            self.u_badcell_user_list = [0.01 * u_badcell_user] * self.nb_transects
+            self.u_badcell_user = u_badcell_user
+        else:
+            self.u_badcell_user_list = self.u_badcell_list
+
+        # Uncertainty of top discharge extrapolation
+        self.u_top_list = Oursin.apply_u_rect(list_sims=[self.sim_original,
+                                                         self.sim_extrap_pp_opt,
+                                                         self.sim_extrap_pp_min,
+                                                         self.sim_extrap_pp_max,
+                                                         self.sim_extrap_cns_opt,
+                                                         self.sim_extrap_cns_min,
+                                                         self.sim_extrap_cns_max,
+                                                         self.sim_extrap_3pns_opt,
+                                                         self.sim_draft_max,
+                                                         self.sim_draft_min],
+                                              col_name='q_top') \
+            / self.sim_original['q_total']
+
+        if u_top_mean_user is not None:
+            self.u_top_mean_user_list = [0.01 * u_top_mean_user] * self.nb_transects
+            self.u_top_mean_user = u_top_mean_user
+        else:
+            self.u_top_mean_user_list = self.u_top_list
+
+        # Uncertainty of bottom discharge extrapolation
+        self.u_bot_list = Oursin.apply_u_rect(list_sims=[self.sim_original,
+                                                         self.sim_extrap_pp_opt,
+                                                         self.sim_extrap_pp_min,
+                                                         self.sim_extrap_pp_max,
+                                                         self.sim_extrap_cns_opt,
+                                                         self.sim_extrap_cns_min,
+                                                         self.sim_extrap_cns_max,
+                                                         self.sim_extrap_3pns_opt],
+                                              col_name='q_bot') \
+            / self.sim_original['q_total']
+
+        if u_bot_mean_user is not None:
+            self.u_bot_mean_user_list = [0.01 * u_bot_mean_user] * self.nb_transects
+            self.u_bot_mean_user = u_bot_mean_user
+        else:
+            self.u_bot_mean_user_list = self.u_bot_list
+
+        # Uncertainty of left edge discharge estimation
+        self.u_left_list = Oursin.apply_u_rect(list_sims=[self.sim_original['q_left'],
+                                                          self.sim_edge_min,
+                                                          self.sim_edge_max,
+                                                          self.sim_draft_min,
+                                                          self.sim_draft_max],
+                                               col_name='q_left') \
+            / self.sim_original['q_total']
+
+        if u_left_mean_user is not None:
+            self.u_left_mean_user_list = [0.01 * u_left_mean_user] * self.nb_transects
+            self.u_left_mean_user = u_left_mean_user
+        else:
+            self.u_left_mean_user_list = self.u_left_list
+
+        # Uncertainty of right edge discharge estimation
+        self.u_right_list = Oursin.apply_u_rect(list_sims=[self.sim_original['q_left'],
+                                                          self.sim_edge_min,
+                                                          self.sim_edge_max,
+                                                          self.sim_draft_min,
+                                                          self.sim_draft_max],
+                                               col_name='q_right') \
+            / self.sim_original['q_total']
+
+        if u_right_mean_user is not None:
+            self.u_right_mean_user_list = [0.01 * u_right_mean_user] * self.nb_transects
+            self.u_right_mean_user = u_right_mean_user
+        else:
+            self.u_right_mean_user_list = self.u_right_list
+
+        # 6. Combined by transects and contribution
+        #    Evaluate the coefficient of variation and add it if cov²>oursin²
+        self.u, self.u_meas, self.u_dsm, self.u_meas_dsm = \
+            self.compute_combined_uncertainty(u_syst=self.u_syst_list,
+                                              u_movbed=self.u_movbed_list,
+                                              u_meas=self.u_meas_list,
+                                              u_ens=self.u_ens_list,
+                                              u_badcell=self.u_badcell_list,
+                                              u_top=self.u_top_list,
+                                              u_bot=self.u_bot_list,
+                                              u_left=self.u_left_list,
+                                              u_right=self.u_right_list,
+                                              cov_68=self.cov_68)
+
+        # self.u_user, self.u_meas_user, self.u_dsm_user, self.u_meas_dsm_user = \
+        #     self.compute_combined_uncertainty(u_syst=self.u_syst_mean_user_list,
+        #                                       u_movbed=self.u_movbed_user_list,
+        #                                       u_meas=self.u_meas_mean_user_list,
+        #                                       u_ens=self.u_ens_user_list,
+        #                                       u_badcell=self.u_badcell_user_list,
+        #                                       u_top=self.u_top_mean_user_list,
+        #                                       u_bot=self.u_bot_mean_user_list,
+        #                                       u_left=self.u_left_mean_user_list,
+        #                                       u_right=self.u_right_mean_user_list,
+        #                                       cov_68=self.cov_68)
+        # # Use user provided uncertainty
+        # if u_total_95_user is not None:
+        #     self.u_total_95 = u_total_95_user
+        #     self.u_total_95_user = u_total_95_user
+
+    @staticmethod
+    def compute_combined_uncertainty(u_syst, u_movbed, u_meas, u_ens, u_badcell, u_top, u_bot, u_left, u_right, cov_68):
+        """Combined the uncertainty for each transect and for the measurement
+
+        Parameters
+        ----------
+        u_syst: list
+            List of system uncertainties for each transect
+        u_movbed: list
+            List of moving-bed uncertainties for each transect
+        u_meas: list
+            List of uncertainties for the measured portion for each transect
+        u_ens: list
+            List of uncertainties due to number of ensembles in each transect
+        u_badcell: list
+            List of uncertainties due to invalid cells and ensembles in each transect
+        u_top: list
+            List of uncertainties due to top extrapolation in each transect
+        u_bot: list
+            List of uncertainties due to the bottom extrapolation in each transect
+        u_left: list
+            List of uncertainties due to the left edge discharge in each transect
+        u_right: list
+            List of uncertainties due to the right edge discharge in each transect
+        cov_68: float
+            Coefficient of variation for all transects
+
+        Returns
+        -------
+        u_combined_by_transect
+        u_total_by_transect
+        u_total_95
+        :
+        """
+
+        # Create a Dataframe with all computed uncertainty for each checked transect
+        u = pd.DataFrame(columns=['u_meas', 'u_movbed', 'u_syst', 'u_ens', 'u_badcell', 'u_top', 'u_bot', 'u_left',
+                                  'u_right', 'u_cov'])
+        u['u_syst'] = u_syst
+        u['u_movbed'] = u_movbed
+        u['u_meas'] = u_meas  # the only purely random uncertainty component source
+        u['u_ens'] = u_ens
+        u['u_badcell'] = u_badcell
+        u['u_top'] = u_top
+        u['u_bot'] = u_bot
+        u['u_left'] = u_left
+        u['u_right'] = u_right
+        u['u_cov'] = cov_68
+
+        # dsm computations without use of cov
+        u_dsm = u.drop(['u_cov'], axis=1)
+        u2_dsm = u_dsm ** 2
+        u2_meas_dsm = u2_dsm.mean(axis=0).to_frame().T
+        u_dsm['total'] = (u2_dsm.sum(axis=1) ** 0.5)
+        u_dsm['total_95'] = u_dsm['total'] * 2
+        u_dsm = u_dsm * 100
+        u2_random_dsm = u2_meas_dsm['u_meas']
+        u2_bias_dsm = u2_meas_dsm.drop(['u_meas'], axis=1).sum(axis=1)
+        u2_meas_dsm['total'] = (1 / len(u_ens)) * u2_random_dsm + u2_bias_dsm[0]
+        u_meas_dsm = u2_meas_dsm ** 0.5
+        u_meas_dsm['total_95'] = u_meas_dsm['total'] * 2
+        u_meas_dsm = u_meas_dsm * 100
+
+        # Convert uncertainty (68% level of confidence) into variance
+        # Note that only variance is additive
+        u2 = u ** 2
+        u2_meas = u2.mean().to_frame().T
+        # Combined uncertainty by transect
+        # Sum of variance of each component, then sqrt, then multiply by 100 for percentage
+        u['total'] = (u2.sum(axis=1) ** 0.5)
+        u['total_95'] = u['total'] * 2
+        u = u * 100
+
+        # Uncertainty for the measurement
+        # The only random source is from the measured area
+        u2_random = u2['u_meas'].mean()
+
+        # All other sources are systematic (mostly due to computation method and values from user)
+        # TODO What about u_cov
+        u2_bias = u2_meas.drop(['u_meas'], axis=1).sum(axis=1)
+
+        # Combined all uncertainty sources
+        u2_meas['total'] = (1 / len(u_ens)) * u2_random + u2_bias[0]
+        u_meas = u2_meas ** 0.5
+        u_meas['total_95'] = u_meas['total'] * 2
+        u_meas = u_meas * 100
+
+        return u, u_meas, u_dsm, u_meas_dsm
+
+        # # Add coeff of variation only if larger than the combined uncertainty
+        # if (self.cov_68 - u_combined_total) > 0:
+        #     print("Adding coefficient of variation")
+        #     u['u_cov'] = 0.01 * self.cov_68
+        #     u2 = u.applymap(lambda x: x ** 2)
+        #     self.u_combined_by_transect = [100 * (x ** 0.5) for x in list(u2.sum(axis=1))]
+        #     self.u_total_by_transect = [2 * x for x in self.u_combined_by_transect]
+        #     u2_alea = u2['u_meas'].mean()
+        #     u2_syst = list(u2.drop(['u_meas'], axis=1).mean())
+        #     u2_c_gauging = (1 / self.nb_transects) * u2_alea + sum(u2_syst)
+        #     u_combined_total = 100 * (u2_c_gauging ** 0.5)
+        #     u_total_95 = 2 * u_combined_total
+        #
+        # if self.u_cov_68_user is not None:
+        #     u['u_cov'] = 0.01 * self.u_cov_68_user
+        #     u2 = u.applymap(lambda x: x ** 2)
+        #     self.u_combined_by_transect = [100 * (x ** 0.5) for x in list(u2.sum(axis=1))]
+        #     self.u_total_by_transect = [2 * x for x in self.u_combined_by_transect]
+        #     u2_alea = u2['u_meas'].mean()
+        #     u2_syst = list(u2.drop(['u_meas'], axis=1).mean())
+        #     u2_c_gauging = (1 / self.nb_transects) * u2_alea + sum(u2_syst)
+        #     u_combined_total = 100 * (u2_c_gauging ** 0.5)
+        #     u_total_95 = 2 * u_combined_total
+
+        # Average of each terms
+        # Average contribution to the combined uncertainty
+        # Measured uncertainty then other uncertainty sources
+        # u_terms = []
+        # contrib_terms_total = []
+        # TODO why should the user value not be divided by number of transects
+        # if self.u_meas_mean_user is not None:
+        #     u_terms.append(self.u_meas_mean_user)
+        #     contrib_terms_total.append(100 * ( ((0.01 * self.u_meas_mean_user) ** 2) ) / u2_c_gauging)
+        # else:
+        #     u_terms.append(100 * ((1 / self.nb_transects) * u2['u_meas'].mean()) ** 0.5)
+        #     contrib_terms_total.append(100 * ((1 / self.nb_transects) * u2['u_meas'].mean()) / u2_c_gauging)
+        # u_terms = u_terms + [100 * x ** 0.5 for x in u2_syst]
+        # contrib_terms_total = contrib_terms_total + [100 * x / u2_c_gauging for x in u2_syst]
+        #
+        # # Store results : reordering so that syst, moving bed and measured are the three first sources
+        # self.u_terms = [u_terms[i] for i in [2, 1, 0, 3, 4, 5, 6, 7, 8, 9, 10]]
+        # self.u_combined_total = u_combined_total
+        # self.u_total_95 = u_total_95
+        # self.variance_terms_by_transect = u2
+        # self.contrib_terms_total = [contrib_terms_total[i] for i in [2, 1, 0, 3, 4, 5, 6, 7, 8, 9, 10]]
+        # self.contrib_legend = list(u.columns)
+
+        # Convert relative uncertainties in m3/s and relative variance in m6/s2
+        # self.u_syst_mean_abs = self.u_syst_mean*np.mean(self.sim_original['q_total'])
+        # self.u_combined_by_transect_abs = np.asarray(self.u_combined_by_transect) * np.asarray(self.sim_original['q_total']) * 0.01
+        # self.u_terms_abs = np.asarray(self.u_terms)*0.01*np.mean(self.sim_original['q_total'])
+        # self.u_combined_total_abs = 0.01*self.u_combined_total*np.mean(self.sim_original['q_total'])
+        # self.u_total_by_transect_abs = np.asarray(self.u_total_by_transect) * np.asarray(self.sim_original['q_total']) * 0.01
+        # self.u_total_95_abs = 0.01*self.u_total_95*np.mean(self.sim_original['q_total'])
+        # self.variance_terms_by_transect_abs=np.transpose(np.transpose(self.variance_terms_by_transect) * np.asarray(self.sim_original['q_total']) ** 2)
+
+    def transect_extrap_data_prep(self, meas):
+        """Determine checked transects and max and min exponents for power and no slip extrapolation.
+
+        Parameters
+        ----------
+        meas: MeasurementData
+            Object of MeasurementData
+        """
+
+        # Use only checked transects
+        # Extract data that are used later on (PP and NS exponents)
         for n in range(len(meas.transects)):
             if meas.transects[n].checked:
                 self.checked_idx.append(n)
-                discharges.append(meas.discharge[n])
-                total_q.append(meas.discharge[n].total)
-
-                # TODO Seems this would be better placed somewhere else
-                # Compute uncertainty due to limited number of ensembles (ISO 748; Le Coz et al., 2012)
-                self.u_ens_list.append(0.01 * 32 * len(meas.discharge[n].middle_ens) ** (-0.88))
 
                 # Bottom method selected using data from each transect only
                 self.bot_meth.append(meas.extrap_fit.sel_fit[n].bot_method_auto)
@@ -483,351 +758,7 @@ class Oursin(object):
                 elif meas.extrap_fit.sel_fit[n].bot_method_auto == "No Slip":
                     self.ns_exp.append(meas.extrap_fit.sel_fit[n].ns_exponent)
 
-        self.nb_transects = len(discharges)
-        # print(self.exp_95ic_min)
-
-        # 1. Systematic terms + correction terms (moving bed)
-        #   1.a. Moving-bed / Same than QRev or user override
-        self.compute_moving_bed_uncertainty(meas=meas, u_movbed_user=u_movbed_user)
-
-        #   1.b.  Systematic. Use 1.31% or user override
-        self.compute_systematic_uncertainty(u_syst_mean_user=u_syst_mean_user)
-
-        # 2. Measured uncertainty
-        #   2.a. Measured area BY EQUATION
-        # Standard relative uncertainty of depth cell size 0.5% or user override
-        self.measured_area_uncertainty(meas=meas, u_prct_dzi_user=u_prct_dzi_user)
-
-        #   2.b. Coefficient of variation (same as QRev but 68% level of confidence) or user override
-        self.compute_meas_cov(meas=meas, u_cov_68_user=u_cov_68_user)
-
-        # 3. Run all the simulations to compute possible discharges
-        self.run_oursin_simulations(meas, exp_pp_min_user, exp_pp_max_user, exp_ns_min_user, exp_ns_max_user,
-                                    draft_error_user, d_right_error_prct_user, d_left_error_prct_user)
-
-        self.simu_discharge = dict({
-            'simu1': self.sim_original,
-            'simu2': self.sim_extrap_pp_16,
-            'simu3': self.sim_extrap_pp_min,
-            'simu3min': self.simu3min,
-            'simu3max': self.simu3max,
-            'simu4': self.sim_extrap_cns_16,
-            'simu5': self.sim_extrap_cns_min,
-            'simu5min': self.simu5min,
-            'simu5max': self.simu5max,
-            'simu6': self.sim_extrap_3pns_16,
-            'simu7': self.sim_extrap_3pns_opt,
-            'simu8': self.simu8,
-            'simu9': self.sim_edge_min,
-            'simu10': self.sim_edge_max,
-            'simu11': self.sim_draft_min,
-            'simu12': self.sim_draft_max,
-            'simu13': self.simu13,
-            'simu14': self.simu14,
-            'simu15': self.simu15,
-            'simu16': self.simu16,
-            'simu17': self.simu17,
-            'simu18': self.sim_cells_trdi,
-            'simu19': self.sim_cells_above,
-            'simu20': self.sim_cells_below,
-            'simu21': self.simu21,
-            'simu22': self.sim_cells_before,
-            'simu23': self.sim_cells_after,
-            'simu24': self.simu24,
-            'simu25': self.simu25,
-        })
-
-        # 4. Active or inactive simulations
-        if not bool(simu_checked_user):  # if the dict is empty, then use default
-            self.simu_checked = dict({
-                'simu1': True,
-                'simu2': True,
-                'simu3': True,
-                'simu3min': True,
-                'simu3max': True,
-                'simu4': True,
-                'simu5': True,
-                'simu5min': True,
-                'simu5max': True,
-                'simu6': True,
-                'simu7': True,
-                'simu8': False,  # Not computed
-                'simu9': True,
-                'simu10': True,
-                'simu11': True,
-                'simu12': True,
-                'simu13': True,
-                'simu14': True,
-                'simu15': False,  # Not computed
-                'simu16': False,  # Not computed
-                'simu17': False,  # Not computed
-                'simu18': True,
-                'simu19': True,
-                'simu20': True,
-                'simu21': False,  # Not computed
-                'simu22': True,
-                'simu23': True,
-                'simu24': False,  # Not computed
-                'simu25': False,  # Not computed
-            })
-
-        else:
-            self.simu_checked_user = simu_checked_user
-            self.simu_checked = simu_checked_user
-
-        # Replace inactivated simulations by simu1
-        for (key, value) in self.simu_checked.items():
-            # Check if any simulation is unchecked then replace it by simu1
-            if not value:
-                self.simu_discharge[key] = self.sim_original
-
-        # 5. Compute terms based on possible simulations and assuming a rectangular law
-
-        self.u_badcell_list = Oursin.apply_u_rect([self.sim_original,
-                                                   self.sim_cells_trdi,
-                                                   self.sim_cells_above,
-                                                   self.sim_cells_below,
-                                                   self.sim_cells_before,
-                                                   self.sim_cells_after]) \
-            / self.sim_original['q_total']
-
-        self.u_top_list = Oursin.apply_u_rect([self.sim_original,,
-                                               self.sim_extrap_p,
-                                               self.simu_discharge['simu3min']['q_top'],
-                                               self.simu_discharge['simu3max']['q_top'],
-                                               self.simu_discharge['simu5']['q_top'],
-                                               self.simu_discharge['simu5min']['q_top'],
-                                               self.simu_discharge['simu5max']['q_top'],
-                                               self.simu_discharge['simu7']['q_top'],
-                                               self.simu_discharge['simu11']['q_top'],
-                                               self.simu_discharge['simu12']['q_top']]) \
-            / self.sim_original['q_total']
-
-        self.u_bot_list = Oursin.apply_u_rect([self.sim_original['q_bot'],
-                                               self.simu_discharge['simu3']['q_bot'],
-                                               self.simu_discharge['simu3min']['q_bot'],
-                                               self.simu_discharge['simu3max']['q_bot'],
-                                               self.simu_discharge['simu5']['q_bot'],
-                                               self.simu_discharge['simu5min']['q_bot'],
-                                               self.simu_discharge['simu5max']['q_bot'],
-                                               self.simu_discharge['simu7']['q_bot']]) \
-            / self.sim_original['q_total']
-
-        self.u_left_list = Oursin.apply_u_rect([self.sim_original['q_left'],
-                                                self.simu_discharge['simu9']['q_left'],
-                                                self.simu_discharge['simu10']['q_left'],
-                                                self.simu_discharge['simu11']['q_left'],
-                                                self.simu_discharge['simu12']['q_left']]) \
-            / self.sim_original['q_total']
-
-        self.u_right_list = Oursin.apply_u_rect([self.sim_original['q_right'],
-                                                 self.simu_discharge['simu9']['q_right'],
-                                                 self.simu_discharge['simu10']['q_right'],
-                                                 self.simu_discharge['simu11']['q_right'],
-                                                 self.simu_discharge['simu12']['q_right']]) \
-            / self.sim_original['q_total']
-
-        # Use user-provided values
-        if u_badens_user is not None:
-            self.u_badens_list = [0.01 * u_badens_user] * len(discharges)
-            self.u_badens_user = u_badens_user
-        if u_badcell_user is not None:
-            self.u_badcell_list = [0.01 * u_badcell_user] * len(discharges)
-            self.u_badcell_user = u_badcell_user
-        if u_top_mean_user is not None:
-            self.u_top_list = [0.01 * u_top_mean_user] * len(discharges)
-            self.u_top_mean_user = u_top_mean_user
-        if u_bot_mean_user is not None:
-            self.u_bot_list = [0.01 * u_bot_mean_user] * len(discharges)
-            self.u_bot_mean_user = u_bot_mean_user
-        if u_left_mean_user is not None:
-            self.u_left_list = [0.01 * u_left_mean_user] * len(discharges)
-            self.u_left_mean_user = u_left_mean_user
-        if u_right_mean_user is not None:
-            self.u_right_list = [0.01 * u_right_mean_user] * len(discharges)
-            self.u_right_mean_user = u_right_mean_user
-        if u_meas_mean_user is not None:
-            self.u_meas_list = [0.01 * u_meas_mean_user] * len(discharges)
-            self.u_meas_mean_user = u_meas_mean_user
-        if u_ens_user is not None:
-            self.u_ens_user = u_ens_user
-            self.u_ens_list = [0.01 * u_ens_user] * len(discharges)
-
-        # 6. Combined by transects and contribution
-        #    Evaluate the coefficient of variation and add it if cov²>oursin²
-        self.compute_combined_uncertainty()
-
-        # Use user provided uncertainty
-        if u_total_95_user is not None:
-            self.u_total_95 = u_total_95_user
-            self.u_total_95_user = u_total_95_user
-
-    def compute_combined_uncertainty(self):
-        """
-        Combined the uncertainty for each transect and for the measurement
-
-        :return: computed values combined, total and contributions
-        """
-
-        # Create a Dataframe with all computed uncertainty for each checked transect
-        TABLE_u = pd.DataFrame()
-        TABLE_u['u_syst'] = self.u_syst_list
-        TABLE_u['u_movbed'] = self.u_movbed_list
-        TABLE_u['u_meas'] = self.u_meas_list  # the only purely random uncertainty component source
-        TABLE_u['u_ens'] = self.u_ens_list
-        TABLE_u['u_badcell'] = self.u_badcell_list
-        TABLE_u['u_badens'] = self.u_badens_list
-        TABLE_u['u_top'] = self.u_top_list
-        TABLE_u['u_bot'] = self.u_bot_list
-        TABLE_u['u_left'] = self.u_left_list
-        TABLE_u['u_right'] = self.u_right_list
-        if self.u_cov_68_user is not None:
-            TABLE_u['u_cov'] = 0.01 * self.u_cov_68_user
-        else:
-            TABLE_u['u_cov'] = 0.01*self.cov_68
-
-        # Convert uncertainty (68% level of confidence) into variance
-        # Note that only variance is additive
-        TABLE_u2 = TABLE_u.applymap(lambda x: x ** 2)
-
-        # Combined uncertainty by transect
-        # sum of variance of each component, then sqrt, then multiply by 100 for percentage
-        self.u_combined_by_transect = [100 * (x ** 0.5) for x in list(TABLE_u2.sum(axis=1))]
-        self.u_total_by_transect = [2 * x for x in self.u_combined_by_transect]
-
-        # Uncertainty for the measurement
-        # The only random source is from the measured area
-        u2_alea = TABLE_u2['u_meas'].mean()
-
-        # All other sources are systematic (mostly due to computation method and values from user)
-        u2_syst = list(TABLE_u2.drop(['u_meas'], axis=1).mean())
-
-        # Combined all uncertainty sources
-        # If the user change the u_meas term, then it is not averaged out
-        if self.u_meas_mean_user is not None:
-            u2_c_gauging = ((0.01 * self.u_meas_mean_user)**2) + sum(u2_syst)
-        else:
-            u2_c_gauging = (1 / self.nb_transects) * u2_alea + sum(u2_syst)
-        u_combined_total = 100 * (u2_c_gauging ** 0.5)
-        u_total_95 = 2 * u_combined_total
-
-        # # Add coeff of variation only if larger than the combined uncertainty
-        # if (self.cov_68 - u_combined_total) > 0:
-        #     print("Adding coefficient of variation")
-        #     TABLE_u['u_cov'] = 0.01 * self.cov_68
-        #     TABLE_u2 = TABLE_u.applymap(lambda x: x ** 2)
-        #     self.u_combined_by_transect = [100 * (x ** 0.5) for x in list(TABLE_u2.sum(axis=1))]
-        #     self.u_total_by_transect = [2 * x for x in self.u_combined_by_transect]
-        #     u2_alea = TABLE_u2['u_meas'].mean()
-        #     u2_syst = list(TABLE_u2.drop(['u_meas'], axis=1).mean())
-        #     u2_c_gauging = (1 / self.nb_transects) * u2_alea + sum(u2_syst)
-        #     u_combined_total = 100 * (u2_c_gauging ** 0.5)
-        #     u_total_95 = 2 * u_combined_total
-        #
-        # if self.u_cov_68_user is not None:
-        #     TABLE_u['u_cov'] = 0.01 * self.u_cov_68_user
-        #     TABLE_u2 = TABLE_u.applymap(lambda x: x ** 2)
-        #     self.u_combined_by_transect = [100 * (x ** 0.5) for x in list(TABLE_u2.sum(axis=1))]
-        #     self.u_total_by_transect = [2 * x for x in self.u_combined_by_transect]
-        #     u2_alea = TABLE_u2['u_meas'].mean()
-        #     u2_syst = list(TABLE_u2.drop(['u_meas'], axis=1).mean())
-        #     u2_c_gauging = (1 / self.nb_transects) * u2_alea + sum(u2_syst)
-        #     u_combined_total = 100 * (u2_c_gauging ** 0.5)
-        #     u_total_95 = 2 * u_combined_total
-
-        # Average of each terms
-        # Average contribution to the combined uncertainty
-        # Measured uncertainty then other uncertainty sources
-        u_terms = []
-        contrib_terms_total = []
-        if self.u_meas_mean_user is not None:
-            u_terms.append(self.u_meas_mean_user)
-            contrib_terms_total.append(100 * ( ((0.01 * self.u_meas_mean_user) ** 2) ) / u2_c_gauging)
-        else:
-            u_terms.append(100 * ((1 / self.nb_transects) * TABLE_u2['u_meas'].mean()) ** 0.5)
-            contrib_terms_total.append(100 * ((1 / self.nb_transects) * TABLE_u2['u_meas'].mean()) / u2_c_gauging)
-        u_terms = u_terms + [100 * x ** 0.5 for x in u2_syst]
-        contrib_terms_total = contrib_terms_total + [100 * x / u2_c_gauging for x in u2_syst]
-
-        # Store results : reordering so that syst, moving bed and measured are the three first sources
-        self.u_terms = [u_terms[i] for i in [2, 1, 0, 3, 4, 5, 6, 7, 8, 9, 10]]
-        self.u_combined_total = u_combined_total
-        self.u_total_95 = u_total_95
-        self.variance_terms_by_transect = TABLE_u2
-        self.contrib_terms_total = [contrib_terms_total[i] for i in [2, 1, 0, 3, 4, 5, 6, 7, 8, 9, 10]]
-        self.contrib_legend = list(TABLE_u.columns)
-
-        # Convert relative uncertainties in m3/s and relative variance in m6/s2
-        self.u_syst_mean_abs = self.u_syst_mean*np.mean(self.sim_original['q_total'])
-        self.u_combined_by_transect_abs = np.asarray(self.u_combined_by_transect) * np.asarray(self.sim_original['q_total']) * 0.01
-        self.u_terms_abs = np.asarray(self.u_terms)*0.01*np.mean(self.sim_original['q_total'])
-        self.u_combined_total_abs = 0.01*self.u_combined_total*np.mean(self.sim_original['q_total'])
-        self.u_total_by_transect_abs = np.asarray(self.u_total_by_transect) * np.asarray(self.sim_original['q_total']) * 0.01
-        self.u_total_95_abs = 0.01*self.u_total_95*np.mean(self.sim_original['q_total'])
-        self.variance_terms_by_transect_abs=np.transpose(np.transpose(self.variance_terms_by_transect) * np.asarray(self.sim_original['q_total']) ** 2)
-
-    def u_meas_compute(self, meas, u_prct_dzi=0.005):
-        """
-        Compute the uncertainty related to the measured area
-        (boat and water velocity, depth cell uncertainty)
-
-        Parameters
-        ----------
-        meas: Measurement
-            Object of class Measurement
-        u_prct_dzi: float
-            Uncertainty (68%) related to the depth cell size - Default is 0.005 * 0.01 # k=1 0.5%
-
-        Returns
-        -------
-        u_meas_list: list
-            List of measured uncertainty (68%) for each transect and contribution of each terms to the measured
-            uncertainty (u_contrib_meas_v_boat, u_contrib_errv_v_boat, u_contrib_verv_h_depth,
-            u_contrib_errv_v_wate, u_contrib_meas_v_wate, u_contrib_meas_u_dzi).
-        """
-
-        for ind_transect in self.checked_idx:
-
-            # Relative depth error due to vertical velocity of boat
-            relative_error_depth = self.depth_error_boat_motion(meas.transects[ind_transect])
-
-            # Relative standard deviation of error velocity (Water Track)
-            std_ev_wt_ens = self.water_std_by_error_velocity(meas.transects[ind_transect])
-
-            # Relative standard deviation of error velocity (Bottom Track)
-            std_ev_bt = self.boat_std_by_error_velocity(meas.transects[ind_transect])
-
-            # Computation of u_meas
-            q_2_tran = meas.discharge[ind_transect].total ** 2
-            q_2_ens = meas.discharge[ind_transect].middle_ens ** 2
-            n_cell_ens = meas.transects[ind_transect].w_vel.cells_above_sl.sum(axis=0)  # number of cells by ens
-            n_cell_ens = np.where(n_cell_ens == 0, np.nan, n_cell_ens)
-
-            # Variance for each ensembles
-            u_2_meas = q_2_ens * (relative_error_depth ** 2 + std_ev_bt ** 2 +
-                                  (1 / n_cell_ens) * (std_ev_wt_ens ** 2 + u_prct_dzi ** 2))
-            # TODO DSM I would have computed as follows
-            # u_2_meas = q_2_ens * (std_ev_bt ** 2 + (1 / n_cell_ens) * (std_ev_wt_ens ** 2 + u_prct_dzi ** 2))
-
-            u_2_prct_meas = np.nansum(u_2_meas) / q_2_tran
-
-            # Standard deviation
-            u_prct_meas = u_2_prct_meas ** 0.5
-            self.u_meas_list.append(u_prct_meas)
-
-            # Compute the contribution of all terms to u_meas (sum of a0 to g0 =1)
-            u_contrib_errv_v_boat = (np.nan_to_num(q_2_ens * (std_ev_bt ** 2)).sum() / q_2_tran) / u_2_prct_meas
-            u_contrib_verv_h_depth = (np.nan_to_num(q_2_ens * (relative_error_depth ** 2)).sum()
-                                      / q_2_tran) / u_2_prct_meas
-            u_contrib_errv_v_wate = (np.nan_to_num(q_2_ens * ((1 / n_cell_ens) * (std_ev_wt_ens ** 2))).sum()
-                                     / q_2_tran) / u_2_prct_meas
-            u_contrib_meas_u_dzi = (np.nan_to_num(q_2_ens * ((1 / n_cell_ens) * (u_prct_dzi ** 2))).sum()
-                                    / q_2_tran) / u_2_prct_meas
-
-            self.u_contrib_errv_v_boat.append(u_contrib_errv_v_boat)
-            self.u_contrib_verv_h_depth.append(u_contrib_verv_h_depth)
-            self.u_contrib_errv_v_wate.append(u_contrib_errv_v_wate)
-            self.u_contrib_meas_u_dzi.append(u_contrib_meas_u_dzi)
+        self.nb_transects = len(self.checked_idx)
 
     def run_oursin_simulations(self, meas, exp_pp_min_user, exp_pp_max_user, exp_ns_min_user, exp_ns_max_user,
                                draft_error_user, d_right_error_prct_user, d_left_error_prct_user):
@@ -902,16 +833,70 @@ class Oursin(object):
         # Simulation of invalid cells and ensembles
         self.sim_invalid_cells(meas=meas)
 
-    def measured_area_uncertainty(self, meas, u_prct_dzi_user=None):
+    def measured_area_uncertainty(self, meas, u_meas_mean_user=None):
+        """Compute the uncertainty related to the measured area.
 
-        # Assume 0.5% uncertainty on cell size
-        if u_prct_dzi_user is not None:
-            self.u_prct_dzi = 0.01 * u_prct_dzi_user
-        else:
-            self.u_prct_dzi = 0.5 * 0.01  # k=1 0.5%
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        u_meas_mean_user: float
+            User provided uncertainty of the measured area in percent
+        """
+
+        # Set uncertainty of cell size
+        self.u_prct_dzi = 0.5 * 0.01  # k=1 0.5%
 
         # Compute the uncertainty due to the measured area
-        self.u_meas_compute(meas=meas, u_prct_dzi=self.u_prct_dzi)
+        for ind_transect in self.checked_idx:
+            # Relative depth error due to vertical velocity of boat
+            # TODO this does not below in the measured area, only affects bottom and edges
+            relative_error_depth = self.depth_error_boat_motion(meas.transects[ind_transect])
+
+            # Relative standard deviation of error velocity (Water Track)
+            std_ev_wt_ens = self.water_std_by_error_velocity(meas.transects[ind_transect])
+
+            # Relative standard deviation of error velocity (Bottom Track)
+            std_ev_bt = self.boat_std_by_error_velocity(meas.transects[ind_transect])
+
+            # Computation of u_meas
+            q_2_tran = meas.discharge[ind_transect].total ** 2
+            q_2_ens = meas.discharge[ind_transect].middle_ens ** 2
+            n_cell_ens = meas.transects[ind_transect].w_vel.cells_above_sl.sum(axis=0)  # number of cells by ens
+            n_cell_ens = np.where(n_cell_ens == 0, np.nan, n_cell_ens)
+
+            # Variance for each ensembles
+            u_2_meas = q_2_ens * (relative_error_depth ** 2 + std_ev_bt ** 2 +
+                                  (1 / n_cell_ens) * (std_ev_wt_ens ** 2 + self.u_prct_dzi ** 2))
+            # TODO DSM I would have computed as follows
+            # u_2_meas = q_2_ens * (std_ev_bt ** 2 + (1 / n_cell_ens) * (std_ev_wt_ens ** 2 + u_prct_dzi ** 2))
+
+            u_2_prct_meas = np.nansum(u_2_meas) / q_2_tran
+
+            # Standard deviation
+            u_prct_meas = u_2_prct_meas ** 0.5
+            self.u_meas_list.append(u_prct_meas)
+
+            # Compute the contribution of all terms to u_meas (sum of a0 to g0 =1)
+            u_contrib_errv_v_boat = (np.nan_to_num(q_2_ens * (std_ev_bt ** 2)).sum() / q_2_tran) / u_2_prct_meas
+            u_contrib_verv_h_depth = (np.nan_to_num(q_2_ens * (relative_error_depth ** 2)).sum()
+                                      / q_2_tran) / u_2_prct_meas
+            u_contrib_errv_v_wate = (np.nan_to_num(q_2_ens * ((1 / n_cell_ens) * (std_ev_wt_ens ** 2))).sum()
+                                     / q_2_tran) / u_2_prct_meas
+            u_contrib_meas_u_dzi = (np.nan_to_num(q_2_ens * ((1 / n_cell_ens) * (self.u_prct_dzi ** 2))).sum()
+                                    / q_2_tran) / u_2_prct_meas
+
+            self.u_contrib_errv_v_boat.append(u_contrib_errv_v_boat)
+            self.u_contrib_verv_h_depth.append(u_contrib_verv_h_depth)
+            self.u_contrib_errv_v_wate.append(u_contrib_errv_v_wate)
+            self.u_contrib_meas_u_dzi.append(u_contrib_meas_u_dzi)
+
+        # Assume 0.5% uncertainty on cell size
+        if u_meas_mean_user is not None:
+            self.u_meas_mean_user_list = [0.01 * u_meas_mean_user] * self.nb_transects
+            self.u_meas_mean_user = u_meas_mean_user
+        else:
+            self.u_meas_mean_user_list = self.u_meas_list
 
     def compute_moving_bed_uncertainty(self, meas, u_movbed_user):
         """Computes the moving-bed uncertainty
@@ -924,13 +909,13 @@ class Oursin(object):
             User provided moving-bed uncertainty in percent
         """
 
-        if u_movbed_user is None:
-            u_movbed_68 = 0.01 * meas.uncertainty.moving_bed_95 / 2
-        else:
-            self.u_movbed_user = u_movbed_user
-            u_movbed_68 = 0.01 * u_movbed_user
+        self.u_movbed_list = [0.01 * meas.uncertainty.moving_bed_95 / 2] * self.nb_transects
 
-        self.u_movbed_list = [u_movbed_68] * self.nb_transects
+        if u_movbed_user is not None:
+            self.u_movbed_user_list = [u_movbed_user * 0.01] * self.nb_transects
+            self.u_movbed_user = u_movbed_user
+        else:
+            self.u_movbed_user_list = self.u_movbed_list
 
     def compute_systematic_uncertainty(self, u_syst_mean_user):
         """Compute systematic uncertaint
@@ -941,13 +926,34 @@ class Oursin(object):
             User provided systematic uncertainty in percent
         """
 
-        if u_syst_mean_user is None:
-            self.u_syst_mean = 0.01 * 1.31
-        else:
-            self.u_syst_mean_user = u_syst_mean_user
-            self.u_syst_mean = u_syst_mean_user * 0.01
+        self.u_syst_list = [0.01 * 1.31] * self.nb_transects
 
-        self.u_syst_list = [self.u_syst_mean] * self.nb_transects
+        if u_syst_mean_user is not None:
+            self.u_syst_mean_user_list = [u_syst_mean_user * 0.01] * self.nb_transects
+            self.u_syst_mean_user = u_syst_mean_user
+        else:
+            self.u_syst_mean_user_list = self.u_syst_list
+
+    def compute_number_ensembles_uncertainty(self, meas, u_ens_user):
+        """Computes the uncertainty due to the number of ensembles in a transect.
+
+        Parameters
+        ----------
+        meas: MeasurementData
+            Object of MeasurementData
+        u_ens_user: float
+            User provided uncertianty in percent
+        """
+
+        for trans_id in self.checked_idx:
+            # Compute uncertainty due to limited number of ensembles (ISO 748; Le Coz et al., 2012)
+            self.u_ens_list.append(0.01 * 32 * len(meas.discharge[trans_id].middle_ens) ** (-0.88))
+
+        if u_ens_user is not None:
+            self.u_ens_user_list = [0.01 * u_ens_user] * self.nb_transects
+            self.u_ens_user = u_ens_user
+        else:
+            self.u_ens_user_list = self.u_ens_list
 
     def compute_meas_cov(self, meas, u_cov_68_user):
         """Compute the coefficient of variation of the total transect discharges used in the measurement.
@@ -960,34 +966,35 @@ class Oursin(object):
             User provided coefficient of variation
         """
 
-        if u_cov_68_user is None:
-            self.cov_68 = np.nan
-            nb_transects = len(meas.transects)
+        self.cov_68 = np.nan
+        nb_transects = len(meas.transects)
 
-            # Only compute for multiple transects
-            if nb_transects > 1:
-                total_q = []
-                for n in range(nb_transects):
-                    if meas.transects[n].checked:
-                        total_q.append(meas.discharge[n].total)
+        # Only compute for multiple transects
+        if nb_transects > 1:
+            total_q = []
+            for n in range(nb_transects):
+                if meas.transects[n].checked:
+                    total_q.append(meas.discharge[n].total)
 
-                # Compute coefficient of variation
-                cov = np.abs(np.nanstd(total_q, ddof=1) / np.nanmean(total_q)) * 100
+            # Compute coefficient of variation
+            cov = np.abs(np.nanstd(total_q, ddof=1) / np.nanmean(total_q))
 
-                # Inflate the cov to the 95% value
-                if len(total_q) == 2:
-                    # Use the approximate method as taught in class to reduce the high coverage factor for 2 transects
-                    # and account for prior knowledge related to 720 second duration analysis
-                    cov_95 = cov * 3.3
-                    self.cov_68 = cov_95 / 2
-                else:
-                    # Use Student's t to inflate COV for n > 2
-                    cov_95 = t.interval(0.95, len(total_q) - 1)[1] * cov / len(total_q) ** 0.5
-                    self.cov_68 = cov_95 / 2
+            # Inflate the cov to the 95% value
+            if len(total_q) == 2:
+                # Use the approximate method as taught in class to reduce the high coverage factor for 2 transects
+                # and account for prior knowledge related to 720 second duration analysis
+                cov_95 = cov * 0.033
+                self.cov_68 = cov_95 / 2
+            else:
+                # Use Student's t to inflate COV for n > 2
+                cov_95 = t.interval(0.95, len(total_q) - 1)[1] * cov / len(total_q) ** 0.5
+                self.cov_68 = cov_95 / 2
+
+        if u_cov_68_user is not None:
+            self.u_cov_68_user = u_cov_68_user * 0.01
+            self.u_cov_68_user_value = self.u_cov_68_user
         else:
-            # TODO COV stored as % not % * 0.01
-            self.u_cov_68_user = u_cov_68_user
-            self.cov_68 = u_cov_68_user
+            self.u_cov_68_user_value = self.cov_68
 
     def sim_orig(self, meas):
         """Stores original measurement results in a data frame
@@ -997,14 +1004,15 @@ class Oursin(object):
         meas: MeasurementData
             Object of MeasurementData
         """
-
+        transect_q=dict()
         for trans_id in self.checked_idx:
-            self.sim_original['q_total'] = meas.discharge[trans_id].total
-            self.sim_original['q_top'] = meas.discharge[trans_id].top
-            self.sim_original['q_bot'] = meas.discharge[trans_id].bottom
-            self.sim_original['q_right'] = meas.discharge[trans_id].right
-            self.sim_original['q_left'] = meas.discharge[trans_id].left
-            self.sim_original['q_middle'] = meas.discharge[trans_id].middle
+            transect_q['q_total'] = meas.discharge[trans_id].total
+            transect_q['q_top'] = meas.discharge[trans_id].top
+            transect_q['q_bot'] = meas.discharge[trans_id].bottom
+            transect_q['q_right'] = meas.discharge[trans_id].right
+            transect_q['q_left'] = meas.discharge[trans_id].left
+            transect_q['q_middle'] = meas.discharge[trans_id].middle
+            self.sim_original = self.sim_original.append(transect_q, ignore_index=True, sort=False)
 
     def sim_cns_min_max(self, meas, exp_ns_min_user, exp_ns_max_user):
         """Computes simulations resulting in the the min and max discharges for a constant no slip extrapolation
@@ -1176,7 +1184,7 @@ class Oursin(object):
             self.list_draft_error.append(draft_error)
 
             # Compute discharge for draft min
-            meas_temp.change_draft(draft_min)
+            meas_temp.transects[trans_id].change_draft(draft_min)
             meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
                                                          moving_bed_data=meas_temp.mb_tests)
             self.sim_draft_min.loc[len(self.sim_draft_min)] = [meas_temp.discharge[trans_id].total,
@@ -1184,7 +1192,7 @@ class Oursin(object):
                                                                meas_temp.discharge[trans_id].left,
                                                                meas_temp.discharge[trans_id].right]
             # Compute discharge for draft max
-            meas_temp.change_draft(draft_max)
+            meas_temp.transects[trans_id].change_draft(draft_max)
             meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
                                                          moving_bed_data=meas_temp.mb_tests)
             self.sim_draft_max.loc[len(self.sim_draft_max)] = [meas_temp.discharge[trans_id].total,
@@ -1513,14 +1521,14 @@ class Oursin(object):
         return std_ev_BT
 
     @staticmethod
-    def apply_u_rect(list_sims):
+    def apply_u_rect(list_sims, col_name):
         # Compute the uncertainty using list of simulated discharges following a ranctangular law
         # simu = pd.DataFrame()
         # for i in range(len(list_simu)):
         #     name_col = 'simu' + str(i)
         #     simu[name_col] = list_simu[i]
         vertical_stack = pd.concat(list_sims, axis=0, sort=True)
-        u_rect = (vertical_stack['q_total'].max() - vertical_stack['q_total'].min()) / (2 * (3 ** 0.5))
+        u_rect = (vertical_stack[col_name].max() - vertical_stack[col_name].min()) / (2 * (3 ** 0.5))
 
         return (u_rect)
 

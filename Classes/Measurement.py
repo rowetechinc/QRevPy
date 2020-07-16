@@ -158,11 +158,13 @@ class Measurement(object):
                         self.discharge.append(q)
                 self.uncertainty = Uncertainty()
                 self.uncertainty.compute_uncertainty(self)
+
                 self.qa = QAData(self)
                 self.oursin = Oursin()
                 self.oursin.compute_oursin(self)
-                # self.oursin_orig = Oursin_orig()
-                # self.oursin_orig.compute_oursin(self)
+
+                self.oursin_orig = Oursin_orig()
+                self.oursin_orig.compute_oursin(self)
 
     def load_trdi(self, mmt_file, transect_type='Q', checked=False):
         """Method to load TRDI data.
