@@ -1046,6 +1046,7 @@ class QAData(object):
                                                        + 'The user has manually forced the use of some tests;', 1, 6])
                     self.movingbed['status'] = 'warning'
                     self.movingbed['code'] = 3
+                    self.settings_dict['tab_mbt'] = 'Custom'
 
                 else:
                     # Test has critical errors
