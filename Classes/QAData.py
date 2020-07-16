@@ -1844,7 +1844,13 @@ class QAData(object):
     # check for user changes
     def check_bt_setting(self, meas):
         """Checks the bt settings to see if they are still on the default
-                        settings."""
+                        settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
 
         s = meas.current_settings()
         d = meas.qrev_default_settings()
@@ -1866,11 +1872,18 @@ class QAData(object):
             self.settings_dict['tab_bt'] = 'Default'
         else:
             self.settings_dict['tab_bt'] = 'Custom'
-            self.bt_vel['messages'].append(['BT: User modified default settings.',0,0])
+            self.bt_vel['messages'].append(['BT: User modified default '
+                                            'filters.',3,8])
         
     def check_wt_settings(self, meas):
         """Checks the wt settings to see if they are still on the default
-                settings."""
+                settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
 
         s = meas.current_settings()
         d = meas.qrev_default_settings()
@@ -1893,12 +1906,18 @@ class QAData(object):
         else:
             self.settings_dict['tab_wt'] = 'Custom'
             self.w_vel['messages'].append(['WT: User modified default '
-                                           'settings.',0,0])
+                                           'filters.',3,11])
 
 
     def check_extrap_settings(self, meas):
         """Checks the extrap to see if they are still on the default
-        settings."""
+        settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
 
         # Check fit parameters
         if meas.extrap_fit.sel_fit[0].fit_method == 'Automatic':
@@ -1926,13 +1945,19 @@ class QAData(object):
             self.settings_dict['tab_extrap'] = 'Custom'
             self.extrapolation['messages'].append(['Extrapolation: User '
                                                    'modified default settings.'
-                                                      ,0,0])
+                                                      ,3,12])
 
 
     def check_tempsal_settings(self, meas):
 
         """Checks the temp and salinity settings to see if they are still on
-        the default settings."""
+        the default settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
 
         t_source = []
         s_sound = []
@@ -1959,21 +1984,20 @@ class QAData(object):
 
                 s_sound.append(source)
 
+        self.settings_dict['tab_tempsal'] = 'Default'
+
         if 'Custom' in t_source:
 
             self.settings_dict['tab_tempsal'] = 'Custom'
-            self.Temperature['messages'].append(['Temperature: User modified '
-                                                 'temperature source.',0,0])
+            self.temperature['messages'].append(['Temperature: User modified '
+                                                 'temperature source.',3,5])
 
 
-        elif 'Custom' in s_sound:
+        if 'Custom' in s_sound:
 
             self.settings_dict['tab_tempsal'] = 'Custom'
-            self.Temperature['messages'].append(['Temperature: User modified '
-                                                 'speed of sound source.',0,0])
-
-        else:
-            self.settings_dict['tab_tempsal'] = 'Default'
+            self.temperature['messages'].append(['Temperature: User modified '
+                                                 'speed of sound source.',3,5])
          
         # check to see if the average salinity was modified on any transects
         #sal_initial_list = []
@@ -1986,7 +2010,13 @@ class QAData(object):
 
     def check_gps_settings(self, meas):
         """Checks the gps settings to see if they are still on the default
-        settings."""
+        settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
 
         s = meas.current_settings()
         d = meas.qrev_default_settings()
@@ -2011,7 +2041,13 @@ class QAData(object):
             
     def check_depth_settings(self, meas):
         """Checks the depth settings to see if they are still on the default
-                settings."""
+                settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
 
         s = meas.current_settings()
         d = meas.qrev_default_settings()
@@ -2039,18 +2075,24 @@ class QAData(object):
         if settings != default:
             self.settings_dict['tab_depth'] = 'Custom'
             self.depths['messages'].append(['Depths: User modified default '
-                                            'settings.',0,0])
+                                            'settings.', 3, 10])
 
-        elif orig_draft != cur_draft:
+        if orig_draft != cur_draft:
             self.settings_dict['tab_depth'] = 'Custom'
             self.depths['messages'].append(['Depths: User modified '
-                                            'draft.',0,0])
-        else:
+                                            'draft.', 3, 10])
+        if settings == default and orig_draft == cur_draft:
             self.settings_dict['tab_depth'] = 'Default'
 
     def check_edge_settings(self, meas):
         """Checks the edge settings to see if they are still on the original
-                settings."""
+                settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
 
         orig_start = []
         orig_left_type = []
