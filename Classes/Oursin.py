@@ -1057,13 +1057,13 @@ class Oursin(object):
                                 top_method='Constant',
                                 bot_method='No Slip',
                                 exponent=self.exp_ns_min)
-                self.sim_extrap_cns_min.loc[len(self.sim_extrap_pp_min)] = [q.total, q.top, q.bottom]
+                self.sim_extrap_cns_min.loc[len(self.sim_extrap_cns_min)] = [q.total, q.top, q.bottom]
                 # Compute max values
                 q.populate_data(data_in=meas.transects[trans_id],
                                 top_method='Constant',
                                 bot_method='No Slip',
                                 exponent=self.exp_ns_max)
-                self.sim_extrap_cns_max.loc[len(self.sim_extrap_pp_min)] = [q.total, q.top, q.bottom]
+                self.sim_extrap_cns_max.loc[len(self.sim_extrap_cns_max)] = [q.total, q.top, q.bottom]
 
     def sim_pp_min_max(self, meas, exp_pp_min_user, exp_pp_max_user):
         """Computes simulations resulting in the the min and max discharges for a power power extrapolation
@@ -1112,7 +1112,7 @@ class Oursin(object):
                                 top_method='Power',
                                 bot_method='Power',
                                 exponent=self.exp_pp_max)
-                self.sim_extrap_pp_max.loc[len(self.sim_extrap_pp_min)] = [q.total, q.top, q.bottom]
+                self.sim_extrap_pp_max.loc[len(self.sim_extrap_pp_max)] = [q.total, q.top, q.bottom]
 
     def sim_edge_min_max(self, meas, d_left_error_prct_user, d_right_error_prct_user):
         """Computes simulations for the maximum and minimum edge discharges.
@@ -1528,7 +1528,8 @@ class Oursin(object):
         #     name_col = 'simu' + str(i)
         #     simu[name_col] = list_simu[i]
         vertical_stack = pd.concat(list_sims, axis=0, sort=True)
-        u_rect = (vertical_stack[col_name].max() - vertical_stack[col_name].min()) / (2 * (3 ** 0.5))
+        u_rect = (vertical_stack.groupby(vertical_stack.index)[col_name].max()
+                  - vertical_stack.groupby(vertical_stack.index)[col_name].min()) / (2 * (3 ** 0.5))
 
         return (u_rect)
 
