@@ -8975,6 +8975,231 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.update_tab_icons()
             # self.setTabIcon('tab_edges', self.meas.qa.edges['status'])
 
+    # Uncertainty tab
+    # ===============
+    def uncertainty_tab(self):
+        self.uncertainty_results_table()
+
+    def uncertainty_results_table(self):
+        """Create and populate uncertainty results table.
+        """
+
+        # Setup table
+        tbl = self.table_uncertainty_results
+        nrows = len(self.checked_transects_idx)
+        tbl.setRowCount(nrows + 4)
+        tbl.setColumnCount(15)
+        tbl.horizontalHeader().hide()
+        tbl.verticalHeader().hide()
+        tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+
+        if len(self.checked_transects_idx) > 0:
+            # Build column labels using custom_header to create appropriate spans
+            self.custom_header(tbl, 0, 0, 3, 1, self.tr('Transect'))
+            self.custom_header(tbl, 0, 1, 1, 11, self.tr('Automatic Uncertainty Standard Deviation in Percent'))
+            tbl.item(0, 1).setTextAlignment(QtCore.Qt.AlignCenter)
+            self.custom_header(tbl, 2, 1, 1, 2, self.tr('System'))
+            self.custom_header(tbl, 2, 2, 1, 2, self.tr('Moving-bed'))
+            self.custom_header(tbl, 2, 3, 1, 2, self.tr('# Ensembles'))
+            self.custom_header(tbl, 2, 4, 1, 2, self.tr('Meas. Q'))
+            self.custom_header(tbl, 2, 5, 1, 2, self.tr('Left Q'))
+            self.custom_header(tbl, 2, 6, 1, 2, self.tr('Right Q'))
+            self.custom_header(tbl, 2, 7, 1, 2, self.tr('Top Q'))
+            self.custom_header(tbl, 2, 8, 1, 2, self.tr('Bottom Q'))
+            self.custom_header(tbl, 1, 9, 1, 2, self.tr('Invalid Data'))
+            tbl.item(1, 9).setTextAlignment(QtCore.Qt.AlignCenter)
+            self.custom_header(tbl, 2, 9, 1, 1, self.tr('Boat'))
+            self.custom_header(tbl, 2, 10, 1, 1, self.tr('Depth'))
+            self.custom_header(tbl, 2, 11, 1, 1, self.tr('Water'))
+            self.custom_header(tbl, 0, 12, 3, 1, self.tr('Adjusted \n Coefficient \n of Variation \n (percent)'))
+            self.custom_header(tbl, 0, 13, 3, 1, self.tr('Automatic \n Total 95% \n Uncertainty'))
+            self.custom_header(tbl, 0, 14, 3, 1, self.tr('User \n Total 95% \n Uncertainty'))
+
+            # Add data
+            for trans_row in range(nrows):
+                row = trans_row + 4
+                col = 0
+                transect_id = self.checked_transects_idx[trans_row]
+
+                # File/transect name
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(self.meas.transects[transect_id].file_name[:-4]))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # System
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_syst'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Moving-bed
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_movbed'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Ensembles
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_ens'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Measured Q
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_meas'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Left Q
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_left'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Right Q
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_right'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Top Q
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_top'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Bottom Q
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_bot'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Boat
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Depth
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Water
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_badcell'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # COV
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Auto 95
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['total_95'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # User 95
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.u_user.iloc[trans_row]['total_95'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            row = 4
+            col = 0
+
+
+            # File/transect name
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Measurement'))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # System
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_syst'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Moving-bed
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_movbed'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Ensembles
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_ens'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Measured Q
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_meas'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Left Q
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_left'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Right Q
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_right'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Top Q
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_top'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Bottom Q
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_bot'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Boat
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Depth
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Water
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_badcell'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # COV
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.cov_68 * 100)))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Auto 95
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['total_95'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # User 95
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.u_measurement_user.iloc[0]['total_95'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # Bold Measurement row
+            for col in range(tbl.columnCount()):
+                tbl.item(4, col).setFont(self.font_bold)
+
     # EDI tab
     # =======
     def edi_tab(self):
@@ -9692,8 +9917,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         elif tab_idx == 10:
             self.edges_tab()
 
-        # EDI tab
+        # Uncertainty tab
         elif tab_idx == 11:
+            self.uncertainty_tab()
+
+        # EDI tab
+        elif tab_idx == 12:
             self.edi_tab()
 
         self.set_tab_color()
@@ -9777,7 +10006,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.actionON.setDisabled(True)
 
         # Set tab text and icons to default
-        for tab_idx in range(self.tab_all.count() - 1):
+        for tab_idx in range(self.tab_all.count() - 2):
             self.tab_all.setTabIcon(tab_idx, QtGui.QIcon())
             self.tab_all.tabBar().setTabTextColor(tab_idx, QtGui.QColor(191, 191, 191))
 

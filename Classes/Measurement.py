@@ -160,8 +160,8 @@ class Measurement(object):
                 self.uncertainty.compute_uncertainty(self)
 
                 self.qa = QAData(self)
-                # self.oursin = Oursin()
-                # self.oursin.compute_oursin(self)
+                self.oursin = Oursin()
+                self.oursin.compute_oursin(self)
                 #
                 # self.oursin_orig = Oursin_orig()
                 # self.oursin_orig.compute_oursin(self)

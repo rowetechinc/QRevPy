@@ -549,7 +549,7 @@ class Oursin(object):
 
         # 6. Combined by transects and contribution
         #    Evaluate the coefficient of variation and add it if cov²>oursin²
-        self.u, self.u_meas, self.u_dsm, self.u_meas_dsm = \
+        self.u, self.u_measurement, self.u_dsm, self.u_measurement_dsm = \
             self.compute_combined_uncertainty(u_syst=self.u_syst_list,
                                               u_movbed=self.u_movbed_list,
                                               u_meas=self.u_meas_list,
@@ -561,21 +561,21 @@ class Oursin(object):
                                               u_right=self.u_right_list,
                                               cov_68=self.cov_68)
 
-        # self.u_user, self.u_meas_user, self.u_dsm_user, self.u_meas_dsm_user = \
-        #     self.compute_combined_uncertainty(u_syst=self.u_syst_mean_user_list,
-        #                                       u_movbed=self.u_movbed_user_list,
-        #                                       u_meas=self.u_meas_mean_user_list,
-        #                                       u_ens=self.u_ens_user_list,
-        #                                       u_badcell=self.u_badcell_user_list,
-        #                                       u_top=self.u_top_mean_user_list,
-        #                                       u_bot=self.u_bot_mean_user_list,
-        #                                       u_left=self.u_left_mean_user_list,
-        #                                       u_right=self.u_right_mean_user_list,
-        #                                       cov_68=self.cov_68)
-        # # Use user provided uncertainty
-        # if u_total_95_user is not None:
-        #     self.u_total_95 = u_total_95_user
-        #     self.u_total_95_user = u_total_95_user
+        self.u_user, self.u_measurement_user, self.u_dsm_user, self.u_measurement_dsm_user = \
+            self.compute_combined_uncertainty(u_syst=self.u_syst_mean_user_list,
+                                              u_movbed=self.u_movbed_user_list,
+                                              u_meas=self.u_meas_mean_user_list,
+                                              u_ens=self.u_ens_user_list,
+                                              u_badcell=self.u_badcell_user_list,
+                                              u_top=self.u_top_mean_user_list,
+                                              u_bot=self.u_bot_mean_user_list,
+                                              u_left=self.u_left_mean_user_list,
+                                              u_right=self.u_right_mean_user_list,
+                                              cov_68=self.cov_68)
+        # Use user provided uncertainty
+        if u_total_95_user is not None:
+            self.u_total_95 = u_total_95_user
+            self.u_total_95_user = u_total_95_user
 
     @staticmethod
     def compute_combined_uncertainty(u_syst, u_movbed, u_meas, u_ens, u_badcell, u_top, u_bot, u_left, u_right, cov_68):
@@ -587,7 +587,7 @@ class Oursin(object):
             List of system uncertainties for each transect
         u_movbed: list
             List of moving-bed uncertainties for each transect
-        u_meas: list
+        u_measurement: list
             List of uncertainties for the measured portion for each transect
         u_ens: list
             List of uncertainties due to number of ensembles in each transect
@@ -629,21 +629,23 @@ class Oursin(object):
         # dsm computations without use of cov
         u_dsm = u.drop(['u_cov'], axis=1)
         u2_dsm = u_dsm ** 2
-        u2_meas_dsm = u2_dsm.mean(axis=0).to_frame().T
+        u2_measurement_dsm = u2_dsm.mean(axis=0).to_frame().T
         u_dsm['total'] = (u2_dsm.sum(axis=1) ** 0.5)
         u_dsm['total_95'] = u_dsm['total'] * 2
         u_dsm = u_dsm * 100
-        u2_random_dsm = u2_meas_dsm['u_meas']
-        u2_bias_dsm = u2_meas_dsm.drop(['u_meas'], axis=1).sum(axis=1)
-        u2_meas_dsm['total'] = (1 / len(u_ens)) * u2_random_dsm + u2_bias_dsm[0]
-        u_meas_dsm = u2_meas_dsm ** 0.5
-        u_meas_dsm['total_95'] = u_meas_dsm['total'] * 2
-        u_meas_dsm = u_meas_dsm * 100
+        u2_random_dsm = u2_measurement_dsm['u_meas']
+        u2_bias_dsm = u2_measurement_dsm.drop(['u_meas'], axis=1).sum(axis=1)
 
-        # Convert uncertainty (68% level of confidence) into variance
+        u2_measurement_dsm['total'] = (1 / len(u_ens)) * u2_random_dsm + u2_bias_dsm[0]
+        u_measurement_dsm = u2_measurement_dsm ** 0.5
+        u_measurement_dsm['total_95'] = u_measurement_dsm['total'] * 2
+        u_measurement_dsm = u_measurement_dsm * 100
+
+        # Convert uncertainty (68% level of confidence) into vari
+        # ance
         # Note that only variance is additive
         u2 = u ** 2
-        u2_meas = u2.mean().to_frame().T
+        u2_measurement = u2.mean().to_frame().T
         # Combined uncertainty by transect
         # Sum of variance of each component, then sqrt, then multiply by 100 for percentage
         u['total'] = (u2.sum(axis=1) ** 0.5)
@@ -656,15 +658,15 @@ class Oursin(object):
 
         # All other sources are systematic (mostly due to computation method and values from user)
         # TODO What about u_cov
-        u2_bias = u2_meas.drop(['u_meas'], axis=1).sum(axis=1)
+        u2_bias = u2_measurement.drop(['u_meas'], axis=1).sum(axis=1)
 
         # Combined all uncertainty sources
-        u2_meas['total'] = (1 / len(u_ens)) * u2_random + u2_bias[0]
-        u_meas = u2_meas ** 0.5
-        u_meas['total_95'] = u_meas['total'] * 2
-        u_meas = u_meas * 100
+        u2_measurement['total'] = (1 / len(u_ens)) * u2_random + u2_bias[0]
+        u_measurement = u2_measurement ** 0.5
+        u_measurement['total_95'] = u_measurement['total'] * 2
+        u_measurement = u_measurement * 100
 
-        return u, u_meas, u_dsm, u_meas_dsm
+        return u, u_measurement, u_dsm, u_measurement_dsm
 
         # # Add coeff of variation only if larger than the combined uncertainty
         # if (self.cov_68 - u_combined_total) > 0:
