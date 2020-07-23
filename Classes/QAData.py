@@ -90,13 +90,14 @@ class QAData(object):
         else:
             self.populate_from_qrev_mat(meas, mat_struct)
 
-        self.check_bt_setting(meas)
-        self.check_wt_settings(meas)
-        self.check_depth_settings(meas)
-        self.check_gps_settings(meas)
-        # self.check_edge_settings(meas)
-        self.check_extrap_settings(meas)
-        self.check_tempsal_settings(meas)
+        self.check_bt_setting(meas, compute)
+        self.check_wt_settings(meas, compute)
+        self.check_depth_settings(meas, compute)
+        self.check_gps_settings(meas, compute)
+        # self.check_edge_settings(meas, compute)
+        self.check_extrap_settings(meas, compute)
+        self.check_tempsal_settings(meas, compute)
+        self.check_gps_settings(meas, compute)
 
     def populate_from_qrev_mat(self, meas, meas_struct):
         """Populates the object using data from previously saved QRev Matlab file.
@@ -1843,7 +1844,7 @@ class QAData(object):
         return right_dist_moved, left_dist_moved, dmg
     
     # check for user changes
-    def check_bt_setting(self, meas):
+    def check_bt_setting(self, meas, compute):
         """Checks the bt settings to see if they are still on the default
                         settings.
 
@@ -1873,10 +1874,13 @@ class QAData(object):
             self.settings_dict['tab_bt'] = 'Default'
         else:
             self.settings_dict['tab_bt'] = 'Custom'
-            self.bt_vel['messages'].append(['BT: User modified default '
-                                            'filters.',3,8])
-        
-    def check_wt_settings(self, meas):
+
+            if compute:
+
+                self.bt_vel['messages'].append(['BT: User modified default '
+                                                'filters.',3,8])
+
+    def check_wt_settings(self, meas, compute):
         """Checks the wt settings to see if they are still on the default
                 settings.
 
@@ -1906,11 +1910,13 @@ class QAData(object):
             self.settings_dict['tab_wt'] = 'Default'
         else:
             self.settings_dict['tab_wt'] = 'Custom'
-            self.w_vel['messages'].append(['WT: User modified default '
-                                           'filters.',3,11])
+            
+            if compute:
+                self.w_vel['messages'].append(['WT: User modified default '
+                                               'filters.',3,11])
 
 
-    def check_extrap_settings(self, meas):
+    def check_extrap_settings(self, meas, compute):
         """Checks the extrap to see if they are still on the default
         settings.
 
@@ -1944,12 +1950,14 @@ class QAData(object):
             self.settings_dict['tab_extrap'] = 'Default'
         else:
             self.settings_dict['tab_extrap'] = 'Custom'
-            self.extrapolation['messages'].append(['Extrapolation: User '
-                                                   'modified default settings.'
-                                                      ,3,12])
+            
+            if compute:
+                self.extrapolation['messages'].append(['Extrapolation: User '
+                                                       'modified default '
+                                                       'settings.'
+                                                       ,3,12])
 
-
-    def check_tempsal_settings(self, meas):
+    def check_tempsal_settings(self, meas, compute):
 
         """Checks the temp and salinity settings to see if they are still on
         the default settings.
@@ -1990,26 +1998,24 @@ class QAData(object):
         if 'Custom' in t_source:
 
             self.settings_dict['tab_tempsal'] = 'Custom'
-            self.temperature['messages'].append(['Temperature: User modified '
-                                                 'temperature source.',3,5])
+            
+            if compute:
+                self.temperature['messages'].append(['Temperature: User '
+                                                     'modified '
+                                                     'temperature source.'
+                                                     ,3,5])
 
 
         if 'Custom' in s_sound:
 
             self.settings_dict['tab_tempsal'] = 'Custom'
-            self.temperature['messages'].append(['Temperature: User modified '
-                                                 'speed of sound source.',3,5])
-         
-        # check to see if the average salinity was modified on any transects
-        #sal_initial_list = []
-        #sal_current_list = []
-        
-        #for transect in meas.transects:
             
-            #sal_list = meas.intial_settings
-
-
-    def check_gps_settings(self, meas):
+            if compute:
+                self.temperature['messages'].append(['Temperature: User '
+                                                     'modified speed of sound '
+                                                     'source.',3,5])
+         
+    def check_gps_settings(self, meas, compute):
         """Checks the gps settings to see if they are still on the default
         settings.
 
@@ -2037,10 +2043,15 @@ class QAData(object):
 
         if settings == default:
             self.settings_dict['tab_gps'] = 'Default'
+
         else:
             self.settings_dict['tab_gps'] = 'Custom'
-            
-    def check_depth_settings(self, meas):
+
+            if compute:
+                self.gga_vel['messages'].append(['GPS: User modified default '
+                                                 'filters.', 3, 8])
+
+    def check_depth_settings(self, meas, compute):
         """Checks the depth settings to see if they are still on the default
                 settings.
 
@@ -2075,17 +2086,22 @@ class QAData(object):
 
         if settings != default:
             self.settings_dict['tab_depth'] = 'Custom'
-            self.depths['messages'].append(['Depths: User modified default '
-                                            'settings.', 3, 10])
+            
+            if compute:
+                self.depths['messages'].append(['Depths: User modified '
+                                                'default settings.', 3, 10])
 
         if orig_draft != cur_draft:
             self.settings_dict['tab_depth'] = 'Custom'
-            self.depths['messages'].append(['Depths: User modified '
-                                            'draft.', 3, 10])
+            
+            if compute:
+                self.depths['messages'].append(['Depths: User modified '
+                                                'draft.', 3, 10])
+                
         if settings == default and orig_draft == cur_draft:
             self.settings_dict['tab_depth'] = 'Default'
 
-    def check_edge_settings(self, meas):
+    def check_edge_settings(self, meas, compute):
         """Checks the edge settings to see if they are still on the original
                 settings.
 
@@ -2157,6 +2173,3 @@ class QAData(object):
             self.settings_dict['tab_edges'] = 'Default'
         else:
             self.settings_dict['tab_edges'] = 'Custom'
-
-        print("or edge = ", original)
-        print("cur edge = ", current)
