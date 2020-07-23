@@ -5110,9 +5110,22 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                                  QtCore.Qt.MatchFixedString)
         self.combo_gps_altitude.setCurrentIndex(index)
 
+        s = self.meas.current_settings()
+
+        if s['ggaAltitudeFilter'] == 'Manual':
+            self.ed_gps_altitude_threshold.setEnabled(True)
+            threshold = '{:3.2f}'.format(s['ggaAltitudeFilterChange'] *
+                                         self.units['L'])
+            self.ed_gps_altitude_threshold.setText(threshold)
+
         # Set hdop filter from transect data
         index = self.combo_gps_hdop.findText(self.transect.boat_vel.gga_vel.gps_HDOP_filter, QtCore.Qt.MatchFixedString)
         self.combo_gps_hdop.setCurrentIndex(index)
+
+        if s['GPSHDOPFilter'] == 'Manual':
+            self.ed_gps_hdop_threshold.setEnabled(True)
+            threshold = '{:3.2f}'.format(s['GPSHDOPFilterChange'])
+            self.ed_gps_hdop_threshold.setText(threshold)
 
         # Set smooth filter from transect data
         if self.transect.boat_vel.gga_vel.smooth_filter == 'Off':
@@ -5673,6 +5686,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # If Manual enable the line edit box for user input. Updates are not applied until the user has entered
                 # a value in the line edit box.
                 self.ed_gps_altitude_threshold.setEnabled(True)
+
             else:
                 # If manual is not selected the line edit box is cleared and disabled and the updates applied.
                 self.ed_gps_altitude_threshold.setEnabled(False)
@@ -5701,6 +5715,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # If Manual enable the line edit box for user input. Updates are not applied until the user has entered
                 # a value in the line edit box.
                 self.ed_gps_hdop_threshold.setEnabled(True)
+
             else:
                 # If manual is not selected the line edit box is cleared and disabled and the updates applied.
                 self.ed_gps_hdop_threshold.setEnabled(False)
