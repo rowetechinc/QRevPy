@@ -98,6 +98,7 @@ class QAData(object):
         self.check_extrap_settings(meas, compute)
         self.check_tempsal_settings(meas, compute)
         self.check_gps_settings(meas, compute)
+        self.check_mbt_settings(meas)
 
     def populate_from_qrev_mat(self, meas, meas_struct):
         """Populates the object using data from previously saved QRev Matlab file.
@@ -1047,7 +1048,6 @@ class QAData(object):
                                                        + 'The user has manually forced the use of some tests;', 1, 6])
                     self.movingbed['status'] = 'warning'
                     self.movingbed['code'] = 3
-                    self.settings_dict['tab_mbt'] = 'Custom'
 
                 else:
                     # Test has critical errors
@@ -1063,6 +1063,8 @@ class QAData(object):
                     if self.movingbed['code'] < 3:
                         self.movingbed['code'] = 2
                         self.movingbed['status'] = 'caution'
+
+        self.check_mbt_settings(meas)
 
     def user_qa(self, meas):
         """Apply quality checks to user input data.
@@ -2024,32 +2026,38 @@ class QAData(object):
         meas: Measurement
             Object of class Measurement
         """
+        gps = False
+        for transect in meas.transects:
+            if transect.boat_vel.gga_vel is not None:
+                gps = True
+                break
 
-        s = meas.current_settings()
-        d = meas.qrev_default_settings()
+        if gps is True:
+            s = meas.current_settings()
+            d = meas.qrev_default_settings()
 
-        quality = s['ggaDiffQualFilter']
-        alt_change = s['ggaAltitudeFilter']
-        hdop = s['GPSHDOPFilter']
-        other = s['GPSSmoothFilter']
+            quality = s['ggaDiffQualFilter']
+            alt_change = s['ggaAltitudeFilter']
+            hdop = s['GPSHDOPFilter']
+            other = s['GPSSmoothFilter']
 
-        d_quality = d['ggaDiffQualFilter']
-        d_alt_change = d['ggaAltitudeFilter']
-        d_hdop = d['GPSHDOPFilter']
-        d_other = d['GPSSmoothFilter']
+            d_quality = d['ggaDiffQualFilter']
+            d_alt_change = d['ggaAltitudeFilter']
+            d_hdop = d['GPSHDOPFilter']
+            d_other = d['GPSSmoothFilter']
 
-        settings = [quality, alt_change, hdop, other]
-        default = [d_quality, d_alt_change, d_hdop, d_other]
+            settings = [quality, alt_change, hdop, other]
+            default = [d_quality, d_alt_change, d_hdop, d_other]
 
-        if settings == default:
-            self.settings_dict['tab_gps'] = 'Default'
+            if settings == default:
+                self.settings_dict['tab_gps'] = 'Default'
 
-        else:
-            self.settings_dict['tab_gps'] = 'Custom'
+            else:
+                self.settings_dict['tab_gps'] = 'Custom'
 
-            if compute:
-                self.gga_vel['messages'].append(['GPS: User modified default '
-                                                 'filters.', 3, 8])
+                if compute:
+                    self.gga_vel['messages'].append(['GPS: User modified default '
+                                                     'filters.', 3, 8])
 
     def check_depth_settings(self, meas, compute):
         """Checks the depth settings to see if they are still on the default
@@ -2173,3 +2181,56 @@ class QAData(object):
             self.settings_dict['tab_edges'] = 'Default'
         else:
             self.settings_dict['tab_edges'] = 'Custom'
+
+    def check_mbt_settings(self, meas):
+        """Checks the mbt settings to see if they are still on the original
+                settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
+        # if there are mb tests check for user changes
+        if len(meas.mb_tests) >= 1:
+            mbt = meas.mb_tests
+
+            mb_present = []
+            mb_user_valid = []
+            mb_test_quality = []
+            mb_used = []
+
+            for test in mbt:
+
+                if test.user_valid:
+                    mb_user_valid.append(True)
+                else:
+                    mb_user_valid.append(False)
+
+                if 'Yes' in test.moving_bed:
+                    mb_present.append(True)
+                else:
+                    mb_present.append(False)
+
+                if 'Good' in test.test_quality:
+                    mb_test_quality.append(True)
+                else:
+                    mb_test_quality.append(False)
+
+                if test.use_2_correct is True:
+                    mb_used.append(True)
+                else:
+                    mb_used.append(False)
+
+            if mb_test_quality != mb_user_valid:
+                self.settings_dict['tab_mbt'] = 'Custom'
+                self.movingbed['messages'].append(['Moving-Bed Test: '
+                                                   'User modified default '
+                                                   'settings.', 3, 6])
+            elif mb_used != mb_present:
+                self.settings_dict['tab_mbt'] = 'Custom'
+                self.movingbed['messages'].append(['Moving-Bed Test: '
+                                                   'User modified default '
+                                                   'settings.', 3, 6])
+            else:
+                self.settings_dict['tab_mbt'] = 'Default'
