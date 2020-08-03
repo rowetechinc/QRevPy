@@ -1151,6 +1151,8 @@ class Measurement(object):
         self.uncertainty = Uncertainty()
         self.uncertainty.compute_uncertainty(self)
         self.qa = QAData(self)
+        self.oursin = Oursin()
+        self.oursin.compute_oursin(self)
 
     def current_settings(self):
         """Saves the current settings for a measurement. Since all settings

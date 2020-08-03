@@ -584,8 +584,22 @@ class DepthData(object):
         for n in range(1, n_ensembles):
             
             # If current ensemble's depth is invalid assign depth from previous example
-            if np.isnan(self.depth_processed_m[n]):
+            if not self.valid_data[n]:
                 self.depth_processed_m[n] = self.depth_processed_m[n-1]
+
+    def interpolate_next(self):
+        """This function back fills with the next valid value.
+        """
+
+        # Get number of ensembles
+        n_ens = len(self.depth_processed_m)
+
+        # Process data by ensemble
+        for n in np.arange(0, n_ens-1)[::-1]:
+
+            # If current ensemble's depth is invalid assign depth from previous example
+            if not self.valid_data[n]:
+                self.depth_processed_m[n] = self.depth_processed_m[n + 1]
 
     def interpolate_smooth(self):
         """Apply interpolation based on the robust loess smooth

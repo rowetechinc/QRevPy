@@ -8979,6 +8979,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     # ===============
     def uncertainty_tab(self):
         self.uncertainty_results_table()
+        self.advanced_settings_table()
 
     def uncertainty_results_table(self):
         """Create and populate uncertainty results table.
@@ -8986,38 +8987,45 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Setup table
         tbl = self.table_uncertainty_results
-        nrows = len(self.checked_transects_idx)
-        tbl.setRowCount(nrows + 4)
-        tbl.setColumnCount(15)
+        n_transects = len(self.checked_transects_idx)
+
+        tbl.setRowCount(n_transects + 5)
+        tbl.setColumnCount(18)
         tbl.horizontalHeader().hide()
         tbl.verticalHeader().hide()
-        tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        # tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        tbl.itemChanged.connect(self.user_uncertainty_change)
+        tbl.itemChanged.disconnect()
+
 
         if len(self.checked_transects_idx) > 0:
             # Build column labels using custom_header to create appropriate spans
             self.custom_header(tbl, 0, 0, 3, 1, self.tr('Transect'))
-            self.custom_header(tbl, 0, 1, 1, 11, self.tr('Automatic Uncertainty Standard Deviation in Percent'))
+            self.custom_header(tbl, 0, 1, 1, 12, self.tr('Uncertainty Standard Deviation in Percent'))
             tbl.item(0, 1).setTextAlignment(QtCore.Qt.AlignCenter)
-            self.custom_header(tbl, 2, 1, 1, 2, self.tr('System'))
-            self.custom_header(tbl, 2, 2, 1, 2, self.tr('Moving-bed'))
-            self.custom_header(tbl, 2, 3, 1, 2, self.tr('# Ensembles'))
-            self.custom_header(tbl, 2, 4, 1, 2, self.tr('Meas. Q'))
-            self.custom_header(tbl, 2, 5, 1, 2, self.tr('Left Q'))
-            self.custom_header(tbl, 2, 6, 1, 2, self.tr('Right Q'))
-            self.custom_header(tbl, 2, 7, 1, 2, self.tr('Top Q'))
-            self.custom_header(tbl, 2, 8, 1, 2, self.tr('Bottom Q'))
-            self.custom_header(tbl, 1, 9, 1, 2, self.tr('Invalid Data'))
-            tbl.item(1, 9).setTextAlignment(QtCore.Qt.AlignCenter)
-            self.custom_header(tbl, 2, 9, 1, 1, self.tr('Boat'))
-            self.custom_header(tbl, 2, 10, 1, 1, self.tr('Depth'))
-            self.custom_header(tbl, 2, 11, 1, 1, self.tr('Water'))
-            self.custom_header(tbl, 0, 12, 3, 1, self.tr('Adjusted \n Coefficient \n of Variation \n (percent)'))
-            self.custom_header(tbl, 0, 13, 3, 1, self.tr('Automatic \n Total 95% \n Uncertainty'))
-            self.custom_header(tbl, 0, 14, 3, 1, self.tr('User \n Total 95% \n Uncertainty'))
+            self.custom_header(tbl, 1, 1, 2, 1, self.tr('System'))
+            self.custom_header(tbl, 1, 2, 2, 1, self.tr('Compass'))
+            self.custom_header(tbl, 1, 3, 2, 1, self.tr('Moving-bed'))
+            self.custom_header(tbl, 1, 4, 2, 1, self.tr('# Ensembles'))
+            self.custom_header(tbl, 1, 5, 2, 1, self.tr('Meas. Q'))
+            self.custom_header(tbl, 1, 6, 2, 1, self.tr('Left Q'))
+            self.custom_header(tbl, 1, 7, 2, 1, self.tr('Right Q'))
+            self.custom_header(tbl, 1, 8, 2, 1, self.tr('Top Q'))
+            self.custom_header(tbl, 1, 9, 2, 1, self.tr('Bottom Q'))
+            self.custom_header(tbl, 1, 10, 1, 3, self.tr('Invalid Data'))
+            tbl.item(1, 10).setTextAlignment(QtCore.Qt.AlignCenter)
+            self.custom_header(tbl, 2, 10, 1, 1, self.tr('Boat'))
+            self.custom_header(tbl, 2, 11, 1, 1, self.tr('Depth'))
+            self.custom_header(tbl, 2, 12, 1, 1, self.tr('Water'))
+            self.custom_header(tbl, 0, 13, 3, 1, self.tr(' Adjusted \n Coefficient \n of Variation \n (percent)'))
+            self.custom_header(tbl, 0, 14, 3, 1, self.tr(' Automatic \n Total 95% \n Uncertainty'))
+            self.custom_header(tbl, 0, 15, 3, 1, self.tr(' User \n Total 95% \n Uncertainty'))
+            self.custom_header(tbl, 0, 16, 3, 1, self.tr(' No COV \n Total 95% \n Uncertainty'))
+            self.custom_header(tbl, 0, 17, 3, 1, self.tr(' Orig QRev \n Total 95% \n Uncertainty'))
 
             # Add data
-            for trans_row in range(nrows):
-                row = trans_row + 4
+            for trans_row in range(n_transects):
+                row = trans_row + 5
                 col = 0
                 transect_id = self.checked_transects_idx[trans_row]
 
@@ -9029,6 +9037,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 col += 1
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
                     '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_syst'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # Compass
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_compass'])))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Moving-bed
@@ -9075,18 +9089,20 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Boat
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_boat'])))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Depth
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_depth'])))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Water
                 col += 1
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
-                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_badcell'])))
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_water'])))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # COV
@@ -9106,9 +9122,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     '{:5.2f}'.format(self.meas.oursin.u_user.iloc[trans_row]['total_95'])))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-            row = 4
-            col = 0
+                # No COV 95
+                col += 1
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.u_nocov.iloc[trans_row]['total_95'])))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
+            row = 4
+            row_user = 3
+            col = 0
 
             # File/transect name
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Measurement'))
@@ -9119,64 +9141,108 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
                 '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_syst'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            if self.meas.oursin.user_specified_u['u_syst_mean_user'] is not None:
+                tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_syst_mean_user'])))
+
+            # Compass
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_compass'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            if self.meas.oursin.user_specified_u['u_compass_user'] is not None:
+                tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_compass_user'])))
 
             # Moving-bed
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
                 '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_movbed'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            if self.meas.oursin.user_specified_u['u_movbed_user'] is not None:
+                tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_movbed_user'])))
 
             # Ensembles
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
                 '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_ens'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            if self.meas.oursin.user_specified_u['u_ens_user'] is not None:
+                tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_ens_user'])))
 
             # Measured Q
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
                 '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_meas'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            if self.meas.oursin.user_specified_u['u_meas_mean_user'] is not None:
+                tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_meas_mean_user'])))
 
             # Left Q
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
                 '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_left'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            if self.meas.oursin.user_specified_u['u_left_mean_user'] is not None:
+                tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_left_mean_user'])))
 
             # Right Q
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
                 '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_right'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            if self.meas.oursin.user_specified_u['u_right_mean_user'] is not None:
+                tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_right_mean_user'])))
 
             # Top Q
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
                 '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_top'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            if self.meas.oursin.user_specified_u['u_top_mean_user'] is not None:
+                tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_top_mean_user'])))
 
             # Bottom Q
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
                 '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_bot'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            if self.meas.oursin.user_specified_u['u_bot_mean_user'] is not None:
+                tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_bot_mean_user'])))
 
             # Boat
             col += 1
-            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_boat'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            if self.meas.oursin.user_specified_u['u_invalid_boat_user'] is not None:
+                tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_invalid_boat_user'])))
 
             # Depth
             col += 1
-            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(''))
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_depth'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            if self.meas.oursin.user_specified_u['u_invalid_depth_user'] is not None:
+                tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_invalid_depth_user'])))
 
             # Water
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
-                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_badcell'])))
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_water'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            if self.meas.oursin.user_specified_u['u_invalid_water_user'] is not None:
+                tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_invalid_water_user'])))
 
             # COV
             col += 1
@@ -9196,9 +9262,266 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 '{:5.2f}'.format(self.meas.oursin.u_measurement_user.iloc[0]['total_95'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
+            # No COV 95
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.u_measurement_nocov.iloc[0]['total_95'])))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            # QRev
+            col += 1
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.uncertainty.total_95)))
+            tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
             # Bold Measurement row
             for col in range(tbl.columnCount()):
                 tbl.item(4, col).setFont(self.font_bold)
+
+            # User specified
+            col = 0
+            tbl.setItem(3, col, QtWidgets.QTableWidgetItem('User Specified'))
+            tbl.item(3, col).setFlags(QtCore.Qt.ItemIsEnabled)
+            tbl.item(3, col).setFont(self.font_bold)
+            tbl.setItem(3, 13, QtWidgets.QTableWidgetItem(''))
+            tbl.item(3, 13).setFlags(QtCore.Qt.ItemIsEnabled)
+            tbl.setItem(3, 14, QtWidgets.QTableWidgetItem(''))
+            tbl.item(3, 14).setFlags(QtCore.Qt.ItemIsEnabled)
+            tbl.setItem(3, 15, QtWidgets.QTableWidgetItem(''))
+            tbl.item(3, 15).setFlags(QtCore.Qt.ItemIsEnabled)
+            tbl.setItem(3, 16, QtWidgets.QTableWidgetItem(''))
+            tbl.item(3, 16).setFlags(QtCore.Qt.ItemIsEnabled)
+            tbl.setItem(3, 17, QtWidgets.QTableWidgetItem(''))
+            tbl.item(3, 17).setFlags(QtCore.Qt.ItemIsEnabled)
+
+            tbl.item(3, 13).setBackground(QtGui.QColor(150, 150, 150))
+            tbl.item(3, 14).setBackground(QtGui.QColor(150, 150, 150))
+            tbl.item(3, 15).setBackground(QtGui.QColor(150, 150, 150))
+            tbl.item(3, 16).setBackground(QtGui.QColor(150, 150, 150))
+            tbl.item(3, 17).setBackground(QtGui.QColor(150, 150, 150))
+
+            tbl.resizeColumnsToContents()
+
+            tbl.setRowHeight(0, 40)
+            tbl.setRowHeight(1, 40)
+            tbl.setRowHeight(2, 40)
+
+            for col in range(1, 15):
+                tbl.setColumnWidth(col, 76)
+
+        tbl.itemChanged.connect(self.user_uncertainty_change)
+
+    def advanced_settings_table(self):
+        """Create and populate uncertainty results table.
+        """
+
+        # Setup table
+        tbl = self.table_uncertainty_settings
+        tbl.setRowCount(11)
+        tbl.setColumnCount(1)
+        v_header = [self.tr('Draft (m)'),
+                    self.tr('Left edge distance (%)'),
+                    self.tr('Right edge distance (%)'),
+                    self.tr('Depth cell size (%)'),
+                    self.tr('Extrap: power exponent minimum'),
+                    self.tr('Extrap: power exponent maximum'),
+                    self.tr('Extrap: no slip exponent minimum'),
+                    self.tr('Extrap: no slip exponent maximum'),
+                    self.tr('GGA boat speed (m/s)'),
+                    self.tr('VTG boat speed (m/s'),
+                    self.tr('Compass error (deg')]
+        tbl.setHorizontalHeaderLabels([self.tr('Value')])
+        tbl.setVerticalHeaderLabels(v_header)
+        # tbl.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        tbl.itemChanged.connect(self.user_advanced_settings_change)
+        tbl.itemChanged.disconnect()
+
+        col = 0
+
+        # Draft
+        row = 0
+        if self.meas.oursin.user_advanced_settings['draft_error_user'] is not None:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.user_advanced_settings['draft_error_user'])))
+        else:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Computed'))
+
+        # Left edge
+        row += 1
+        if self.meas.oursin.user_advanced_settings['left_edge_dist_prct_user'] is not None:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.user_advanced_settings['left_edge_dist_prct_user'])))
+        else:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.default_advanced_settings['left_edge_dist_prct'])))
+
+        # Right edge
+        row += 1
+        if self.meas.oursin.user_advanced_settings['right_edge_dist_prct_user'] is not None:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.user_advanced_settings['right_edge_dist_prct_user'])))
+        else:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.default_advanced_settings['right_edge_dist_prct'])))
+
+        # Depth cell size
+        row += 1
+        if self.meas.oursin.user_advanced_settings['dzi_prct_user'] is not None:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.user_advanced_settings['dzi_prct_user'])))
+        else:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.default_advanced_settings['dzi_prct'])))
+
+        # Power minimum
+        row += 1
+        if self.meas.oursin.user_advanced_settings['exp_pp_min_user'] is not None:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.user_advanced_settings['exp_pp_min_user'])))
+        else:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Computed'))
+
+        # Power maximum
+        row += 1
+        if self.meas.oursin.user_advanced_settings['exp_pp_max_user'] is not None:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.user_advanced_settings['exp_pp_max_user'])))
+        else:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Computed'))
+
+        # No slip minimum
+        row += 1
+        if self.meas.oursin.user_advanced_settings['exp_ns_min_user'] is not None:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.user_advanced_settings['exp_ns_min_user'])))
+        else:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Computed'))
+
+        # No slip maximum
+        row += 1
+        if self.meas.oursin.user_advanced_settings['exp_ns_max_user'] is not None:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.user_advanced_settings['exp_ns_max_user'])))
+        else:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Computed'))
+
+        # GGA
+        row += 1
+        if self.meas.oursin.user_advanced_settings['gga_boat_user'] is not None:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.user_advanced_settings['gga_boat_user'])))
+        else:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem('Computed'))
+
+        # VTG
+        row += 1
+        if self.meas.oursin.user_advanced_settings['vtg_boat_user'] is not None:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.user_advanced_settings['vtg_boat_user'])))
+        else:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.default_advanced_settings['vtg_boat_mps'])))
+
+        # Compass
+        row += 1
+        if self.meas.oursin.user_advanced_settings['compass_error_user'] is not None:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.user_advanced_settings['compass_error_user'])))
+        else:
+            tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
+                '{:5.2f}'.format(self.meas.oursin.default_advanced_settings['compass_error_deg'])))
+
+        tbl.itemChanged.connect(self.user_advanced_settings_change)
+
+    def user_uncertainty_change(self):
+        """Recomputes the uncertainty based on user input.
+                """
+
+        # Get edited value from table
+        with self.wait_cursor():
+            new_value = self.table_uncertainty_results.selectedItems()[0].text()
+            if new_value == '':
+                new_value = None
+            else:
+                new_value = float(new_value)
+
+            # Identify uncertainty variable that was edited.
+            col_index = self.table_uncertainty_results.selectedItems()[0].column()
+            if col_index == 1:
+                self.meas.oursin.user_specified_u['u_syst_mean_user'] = new_value
+            elif col_index == 2:
+                self.meas.oursin.user_specified_u['u_compass_user'] = new_value
+            elif col_index == 3:
+                self.meas.oursin.user_specified_u['u_movbed_user'] = new_value
+            elif col_index == 4:
+                self.meas.oursin.user_specified_u['u_ens_user'] = new_value
+            elif col_index == 5:
+                self.meas.oursin.user_specified_u['u_meas_mean_user'] = new_value
+            elif col_index == 6:
+                self.meas.oursin.user_specified_u['u_left_mean_user'] = new_value
+            elif col_index == 7:
+                self.meas.oursin.user_specified_u['u_right_mean_user'] = new_value
+            elif col_index == 8:
+                self.meas.oursin.user_specified_u['u_top_mean_user'] = new_value
+            elif col_index == 9:
+                self.meas.oursin.user_specified_u['u_bot_mean_user'] = new_value
+            elif col_index == 10:
+                self.meas.oursin.user_specified_u['u_invalid_boat_user'] = new_value
+            elif col_index == 11:
+                self.meas.oursin.user_specified_u['u_invalid_depth_user'] = new_value
+            elif col_index == 12:
+                self.meas.oursin.user_specified_u['u_invalid_water_user'] = new_value
+
+            # Compute new uncertainty values
+            self.meas.oursin.compute_oursin(meas=self.meas)
+
+            # Update table
+            self.uncertainty_results_table()
+            # if new_value is not None:
+            #     self.table_uncertainty_results.item(col_index, 3).setText('{:5.2f}'.format(new_value))
+            # self.table_uncertainty.item(6, 2).setText('{:8.1f}'.format(self.meas.uncertainty.total_95_user))
+
+    def user_advanced_settings_change(self):
+        pass
+        # Get edited value from table
+        with self.wait_cursor():
+            new_value = self.table_uncertainty_settings.selectedItems()[0].text()
+            if new_value == '':
+                new_value = None
+            else:
+                new_value = float(new_value)
+
+            # Identify uncertainty variable that was edited.
+            row_index = self.table_uncertainty_settings.selectedItems()[0].row()
+            if row_index == 0:
+                self.meas.oursin.user_advanced_settings['draft_error_user'] = new_value
+            elif row_index == 1:
+                self.meas.oursin.user_advanced_settings['left_edge_dist_prct_user'] = new_value
+            elif row_index == 2:
+                self.meas.oursin.user_advanced_settings['right_edge_dist_prct_user'] = new_value
+            elif row_index == 3:
+                self.meas.oursin.user_advanced_settings['dzi_prct_user'] = new_value
+            elif row_index == 4:
+                self.meas.oursin.user_advanced_settings['exp_pp_min_user'] = new_value
+            elif row_index == 5:
+                self.meas.oursin.user_advanced_settings['exp_pp_max_user'] = new_value
+            elif row_index == 6:
+                self.meas.oursin.user_advanced_settings['exp_ns_min_user'] = new_value
+            elif row_index == 7:
+                self.meas.oursin.user_advanced_settings['exp_ns_max_user'] = new_value
+            elif row_index == 8:
+                self.meas.oursin.user_advanced_settings['gga_boat_user'] = new_value
+            elif row_index == 9:
+                self.meas.oursin.user_advanced_settings['vtg_boat_user'] = new_value
+            elif row_index == 10:
+                self.meas.oursin.user_advanced_settings['compass_error_user'] = new_value
+
+            # Compute new uncertainty values
+            self.meas.oursin.compute_oursin(meas=self.meas)
+
+            # Update table
+            self.uncertainty_results_table()
+            self.advanced_settings_table()
 
     # EDI tab
     # =======
