@@ -695,7 +695,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                                checked=self.checked_transects_idx)
 
             # Save xml file
-            self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml')
+            self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml', self.checked_transects_idx)
 
             # Save stylesheet in measurement folder
             if self.save_stylesheet:
@@ -914,7 +914,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         fullname = os.path.join(self.sticky_settings.get('Folder'),
                                 datetime.today().strftime('%Y%m%d_%H%M%S_QRev.kml'))
         kml.save(fullname)
-        os.startfile(fullname)
+        try:
+            os.startfile(fullname)
+        except os.error:
+            self.popup_message(text='Google Earth is not installed or is not associated with kml files.')
+
 
     def help(self):
         """Opens pdf help file user's default pdf viewer.
@@ -6958,6 +6962,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """
 
         with self.wait_cursor():
+            self.cb_wt_bt.blockSignals(True)
+            self.cb_wt_gga.blockSignals(True)
+            self.cb_wt_vtg.blockSignals(True)
+            self.cb_wt_vectors.blockSignals(True)
             # Set all filenames to normal font
             nrows = len(self.checked_transects_idx)
             for nrow in range(nrows):
@@ -6983,6 +6991,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Reset data cursor to work with new figure
             if self.actionData_Cursor.isChecked():
                 self.data_cursor()
+
+            self.cb_wt_bt.blockSignals(False)
+            self.cb_wt_gga.blockSignals(False)
+            self.cb_wt_vtg.blockSignals(False)
+            self.cb_wt_vectors.blockSignals(False)
 
     def wt_shiptrack(self):
         """Creates shiptrack plot for data in transect.
@@ -7075,16 +7088,19 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Initialize the water filters figure and assign to the canvas
             self.wt_top_fig = WTContour(canvas=self.wt_top_canvas)
             # Determine invalid data based on depth, nav, and wt
-            depth_valid = getattr(self.transect.depths, self.transect.depths.selected).valid_data
-            boat_valid = getattr(self.transect.boat_vel, self.transect.boat_vel.selected).valid_data[0, :]
-            invalid_ens = np.logical_not(np.logical_and(depth_valid, boat_valid))
-            valid_data = np.copy(self.transect.w_vel.valid_data[0, :, :])
-            valid_data[:, invalid_ens[0]] = False
-            # Create the figure with the specified data
-            self.wt_top_fig.create(transect=self.transect,
-                                   units=self.units,
-                                   invalid_data=np.logical_not(self.transect.w_vel.valid_data[0, :, :]),
-                                   max_limit=self.wt_max_limit)
+            try:
+                depth_valid = getattr(self.transect.depths, self.transect.depths.selected).valid_data
+                boat_valid = getattr(self.transect.boat_vel, self.transect.boat_vel.selected).valid_data[0, :]
+                invalid_ens = np.logical_not(np.logical_and(depth_valid, boat_valid))
+                valid_data = np.copy(self.transect.w_vel.valid_data[0, :, :])
+                valid_data[:, invalid_ens[0]] = False
+                # Create the figure with the specified data
+                self.wt_top_fig.create(transect=self.transect,
+                                       units=self.units,
+                                       invalid_data=np.logical_not(self.transect.w_vel.valid_data[0, :, :]),
+                                       max_limit=self.wt_max_limit)
+            except AttributeError:
+                pass
         else:
             # Initialize the wt filters plot
             self.wt_top_fig = WTFilters(canvas=self.wt_top_canvas)
@@ -9482,7 +9498,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # self.table_uncertainty.item(6, 2).setText('{:8.1f}'.format(self.meas.uncertainty.total_95_user))
 
     def user_advanced_settings_change(self):
-        pass
+        """User advanced settings have changed, update settings and recompute uncertainty.
+        """
+
         # Get edited value from table
         with self.wait_cursor():
             new_value = self.table_uncertainty_settings.selectedItems()[0].text()
@@ -9818,13 +9836,16 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     def clear_zphd(self):
         """Clears the graphics user controls.
         """
-        self.actionData_Cursor.setChecked(False)
-        for fig in self.figs:
-            fig.set_hover_connection(False)
-        if self.actionPan.isChecked():
-            self.actionPan.trigger()
-        if self.actionZoom.isChecked():
-            self.actionZoom.trigger()
+        try:
+            self.actionData_Cursor.setChecked(False)
+            for fig in self.figs:
+                fig.set_hover_connection(False)
+            if self.actionPan.isChecked():
+                self.actionPan.trigger()
+            if self.actionZoom.isChecked():
+                self.actionZoom.trigger()
+        except (AttributeError, SystemError):
+            pass
 
     def data_cursor(self):
         """Apply the data cursor.
@@ -9976,7 +9997,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                                    checked=self.groupings[self.group_idx])
 
                 # Save xml file
-                self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml')
+                self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml', self.checked_transects_idx)
 
                 # Notify user when save complete
                 QtWidgets.QMessageBox.about(self, "Save", "Group " +

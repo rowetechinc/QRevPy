@@ -368,6 +368,8 @@ class Oursin(object):
         self.sim_boat_hold = pd.DataFrame(columns=['q_total', 'q_middle'])
         self.sim_boat_next = pd.DataFrame(columns=['q_total', 'q_middle'])
 
+        self.u_contribution_meas = pd.DataFrame(columns=['boat', 'water', 'depth', 'dzi'])
+
     @profile
     def compute_oursin(self, meas):
         """Computes the uncertainty for the components of the discharge measurement
@@ -416,7 +418,8 @@ class Oursin(object):
         self.uncertainty_invalid_water_data()
 
         # 6. Compute combined uncertainty
-        self.u, self.u_measurement, self.u_nocov, self.u_measurement_nocov = \
+        self.u, self.u_measurement, self.u_contribution, self.u_contribution_measurement, \
+            self.u_nocov, self.u_measurement_nocov = \
             self.compute_combined_uncertainty(u_syst=self.u_syst_list,
                                               u_compass=self.u_compass_list,
                                               u_movbed=self.u_movbed_list,
@@ -431,7 +434,8 @@ class Oursin(object):
                                               u_water=self.u_invalid_water_list,
                                               cov_68=self.cov_68)
 
-        self.u_user, self.u_measurement_user, self.u_nocov_user, self.u_measurement_nocov_user = \
+        self.u_user, self.u_measurement_user, self.u_contribution_user, self.u_contribution_measurement_user,\
+            self.u_nocov_user, self.u_measurement_nocov_user = \
             self.compute_combined_uncertainty(u_syst=self.u_syst_mean_user_list,
                                               u_compass=self.u_compass_user_list,
                                               u_movbed=self.u_movbed_user_list,
@@ -504,6 +508,8 @@ class Oursin(object):
         u['u_boat'] = u_boat
         u['u_depth'] = u_depth
 
+        n_transects = len(u_ens)
+
         # Computations without use of cov
         u_nocov = u.drop(['u_cov'], axis=1)
         u2_nocov = u_nocov.pow(2)
@@ -514,7 +520,7 @@ class Oursin(object):
         u2_random_nocov = u2_measurement_nocov['u_meas']
         u2_bias_nocov = u2_measurement_nocov.drop(['u_meas'], axis=1).sum(axis=1, skipna=False)
 
-        u2_measurement_nocov['total'] = (1 / len(u_ens)) * u2_random_nocov + u2_bias_nocov[0]
+        u2_measurement_nocov['total'] = (1 / n_transects) * u2_random_nocov + u2_bias_nocov[0]
         u_measurement_nocov = u2_measurement_nocov ** 0.5
         u_measurement_nocov['total_95'] = u_measurement_nocov['total'] * 2
         u_measurement_nocov = u_measurement_nocov * 100
@@ -522,7 +528,7 @@ class Oursin(object):
         # Convert uncertainty (68% level of confidence) into variance
         # Note that only variance is additive
         u2 = u.pow(2)
-        u2_measurement = u2.mean(skipna=False).to_frame().T
+        u2_measurement = u2.mean(axis=0, skipna=False).to_frame().T
         # Combined uncertainty by transect
         # Sum of variance of each component, then sqrt, then multiply by 100 for percentage
         u['total'] = (u2.sum(axis=1, skipna=False) ** 0.5)
@@ -537,50 +543,45 @@ class Oursin(object):
         u2_bias = u2_measurement.drop(['u_meas'], axis=1).sum(axis=1, skipna=False)
 
         # Combined all uncertainty sources
-        u2_measurement['total'] = (1 / len(u_ens)) * u2_random + u2_bias[0]
+        u2_measurement['total'] = (1 / n_transects) * u2_random + u2_bias[0]
         u_measurement = u2_measurement ** 0.5
         u_measurement['total_95'] = u_measurement['total'] * 2
         u_measurement = u_measurement * 100
 
-        return u, u_measurement, u_nocov, u_measurement_nocov
 
-        # # Add coeff of variation only if larger than the combined uncertainty
-        # if (self.cov_68 - u_combined_total) > 0:
-        #     print("Adding coefficient of variation")
-        #     u['u_cov'] = 0.01 * self.cov_68
-        #     u2 = u.applymap(lambda x: x ** 2)
-        #     self.u_combined_by_transect = [100 * (x ** 0.5) for x in list(u2.sum(axis=1))]
-        #     self.u_total_by_transect = [2 * x for x in self.u_combined_by_transect]
-        #     u2_alea = u2['u_meas'].mean()
-        #     u2_syst = list(u2.drop(['u_meas'], axis=1).mean())
-        #     u2_c_gauging = (1 / self.nb_transects) * u2_alea + sum(u2_syst)
-        #     u_combined_total = 100 * (u2_c_gauging ** 0.5)
-        #     u_total_95 = 2 * u_combined_total
-        #
-        # if self.u_cov_68_user is not None:
-        #     u['u_cov'] = 0.01 * self.u_cov_68_user
-        #     u2 = u.applymap(lambda x: x ** 2)
-        #     self.u_combined_by_transect = [100 * (x ** 0.5) for x in list(u2.sum(axis=1))]
-        #     self.u_total_by_transect = [2 * x for x in self.u_combined_by_transect]
-        #     u2_alea = u2['u_meas'].mean()
-        #     u2_syst = list(u2.drop(['u_meas'], axis=1).mean())
-        #     u2_c_gauging = (1 / self.nb_transects) * u2_alea + sum(u2_syst)
-        #     u_combined_total = 100 * (u2_c_gauging ** 0.5)
-        #     u_total_95 = 2 * u_combined_total
+        u_contribution_measurement = u2_measurement.copy()
+        u_contribution_measurement['u_meas'] = u2_measurement['u_meas'] / (n_transects**2)
+        u_contribution_measurement = u_contribution_measurement.div(u_contribution_measurement['total'], axis=0)
+        u_contribution_measurement = u_contribution_measurement.mul(u_measurement['total_95'], axis=0)
 
-        # Average of each terms
-        # Average contribution to the combined uncertainty
-        # Measured uncertainty then other uncertainty sources
+        u_contribution = u2.copy()
+        u_contribution['u_meas'] = u2['u_meas'].div(n_transects**2, axis=0)
+        u_contribution['total'] = u_contribution.sum(axis=1)
+        u_contribution = u_contribution.div(u_contribution['total'], axis=0)
+        u_contribution = u_contribution.mul(u['total_95'], axis=0)
+
+        return u, u_measurement, u_contribution, u_contribution_measurement, u_nocov, u_measurement_nocov
+
+        # # Average of each terms
+        # # Average contribution to the combined uncertainty
+        # # Measured uncertainty then other uncertainty sources
+        # u_contribution_transects = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas',
+        #                                                  'u_left', 'u_right', 'u_top', 'u_bot',
+        #                                                  'u_boat', 'u_depth', 'u_water', 'u_cov'])
+        # u_contribution_measurement = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas',
+        #                                                    'u_left', 'u_right', 'u_top', 'u_bot',
+        #                                                    'u_boat', 'u_depth', 'u_water', 'u_cov'])
         # u_terms = []
         # contrib_terms_total = []
-        # TODO why should the user value not be divided by number of transects
-        # if self.u_meas_mean_user is not None:
-        #     u_terms.append(self.u_meas_mean_user)
-        #     contrib_terms_total.append(100 * ( ((0.01 * self.u_meas_mean_user) ** 2) ) / u2_c_gauging)
-        # else:
-        #     u_terms.append(100 * ((1 / self.nb_transects) * u2['u_meas'].mean()) ** 0.5)
-        #     contrib_terms_total.append(100 * ((1 / self.nb_transects) * u2['u_meas'].mean()) / u2_c_gauging)
+        # # # TODO why should the user value not be divided by number of transects
+        # # if self.u_meas_mean_user is not None:
+        # #     u_terms.append(self.u_meas_mean_user)
+        # #     contrib_terms_total.append(100 * ( ((0.01 * self.u_meas_mean_user) ** 2) ) / u2_c_gauging)
+        # # else:
+        # u_terms.append(100 * ((1 / self.nb_transects) * u2['u_meas'].mean()) ** 0.5)
         # u_terms = u_terms + [100 * x ** 0.5 for x in u2_syst]
+        #
+        # contrib_terms_total.append(100 * ((1 / self.nb_transects) * u2_random) / u2_measurement['total'])
         # contrib_terms_total = contrib_terms_total + [100 * x / u2_c_gauging for x in u2_syst]
         #
         # # Store results : reordering so that syst, moving bed and measured are the three first sources
@@ -590,7 +591,7 @@ class Oursin(object):
         # self.variance_terms_by_transect = u2
         # self.contrib_terms_total = [contrib_terms_total[i] for i in [2, 1, 0, 3, 4, 5, 6, 7, 8, 9, 10]]
         # self.contrib_legend = list(u.columns)
-
+        #
         # Convert relative uncertainties in m3/s and relative variance in m6/s2
         # self.u_syst_mean_abs = self.u_syst_mean*np.mean(self.sim_original['q_total'])
         # self.u_combined_by_transect_abs = np.asarray(self.u_combined_by_transect) * np.asarray(self.sim_original['q_total']) * 0.01
@@ -728,13 +729,15 @@ class Oursin(object):
                 u_boat = self.boat_std_by_error_velocity(meas.transects[transect_id])
             elif meas.transects[transect_id].boat_vel.selected == 'gga_vel':
                 if self.user_advanced_settings['gga_boat_user'] is None:
-                    u_boat = (np.nanstd(meas.transects[transect_id].gps.altitude_ens_m, ddof=1) / 3) / \
-                               np.nanmean(np.diff(meas.transects[transect_id].gps.gga_serial_time_ens))
+                    if meas.transects[transect_id].gps is not None:
+                        u_boat = (np.nanstd(meas.transects[transect_id].gps.altitude_ens_m, ddof=1) / 3) / \
+                                   np.nanmean(np.diff(meas.transects[transect_id].gps.gga_serial_time_ens))
                 else:
                     u_boat = self.user_advanced_settings['gga_boat_mps']
             elif meas.transects[transect_id].boat_vel.selected == 'vtg_vel':
                 if self.user_advanced_settings['vtg_boat_user'] is None:
-                    u_boat = self.default_advanced_settings['vtg_boat_mps']
+                    if meas.transects[transect_id].gps is not None:
+                        u_boat = self.default_advanced_settings['vtg_boat_mps']
                 else:
                     u_boat = self.user_advanced_settings['vtg_boat_user']
 
@@ -757,18 +760,18 @@ class Oursin(object):
             self.u_meas_list.append(u_prct_meas)
 
             # Compute the contribution of all terms to u_meas (sum of a0 to g0 =1)
-            u_contrib_errv_v_boat = (np.nan_to_num(q_2_ens * (u_boat ** 2)).sum() / q_2_tran) / u_2_prct_meas
-            u_contrib_verv_h_depth = (np.nan_to_num(q_2_ens * (relative_error_depth ** 2)).sum()
+            u_contrib_boat = (np.nan_to_num(q_2_ens * (u_boat ** 2)).sum() / q_2_tran) / u_2_prct_meas
+            u_contrib_depth = (np.nan_to_num(q_2_ens * (relative_error_depth ** 2)).sum()
                                       / q_2_tran) / u_2_prct_meas
-            u_contrib_errv_v_wate = (np.nan_to_num(q_2_ens * ((1 / n_cell_ens) * (std_ev_wt_ens ** 2))).sum()
+            u_contrib_water = (np.nan_to_num(q_2_ens * ((1 / n_cell_ens) * (std_ev_wt_ens ** 2))).sum()
                                      / q_2_tran) / u_2_prct_meas
-            u_contrib_meas_u_dzi = (np.nan_to_num(q_2_ens * ((1 / n_cell_ens) * (u_dzi ** 2))).sum()
+            u_contrib_dzi = (np.nan_to_num(q_2_ens * ((1 / n_cell_ens) * (u_dzi ** 2))).sum()
                                     / q_2_tran) / u_2_prct_meas
 
-            self.u_contrib_errv_v_boat.append(u_contrib_errv_v_boat)
-            self.u_contrib_verv_h_depth.append(u_contrib_verv_h_depth)
-            self.u_contrib_errv_v_wate.append(u_contrib_errv_v_wate)
-            self.u_contrib_meas_u_dzi.append(u_contrib_meas_u_dzi)
+            self.u_contribution_meas.loc[len(self.u_contribution_meas)] = [u_contrib_boat,
+                                                                           u_contrib_water,
+                                                                           u_contrib_depth,
+                                                                           u_contrib_dzi]
 
         # Apply user specified uncertainty
         if self.user_specified_u['u_meas_mean_user'] is not None:
@@ -1370,17 +1373,23 @@ class Oursin(object):
         for trans_id in self.checked_idx:
             # Hold last
             boat_data = getattr(meas_temp.transects[trans_id].boat_vel, meas_temp.transects[trans_id].boat_vel.selected)
-            boat_data.interpolate_hold_last()
-            meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
-                                                        moving_bed_data=meas_temp.mb_tests)
-            self.sim_boat_hold.loc[len(self.sim_boat_hold)] = [meas_temp.discharge[trans_id].total,
-                                                                meas_temp.discharge[trans_id].middle]
-            # Fill with next
-            boat_data.interpolate_next()
-            meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
-                                                        moving_bed_data=meas_temp.mb_tests)
-            self.sim_boat_next.loc[len(self.sim_boat_next)] = [meas_temp.discharge[trans_id].total,
-                                                                meas_temp.discharge[trans_id].middle]
+            if boat_data is not None:
+                boat_data.interpolate_hold_last()
+                meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
+                                                            moving_bed_data=meas_temp.mb_tests)
+                self.sim_boat_hold.loc[len(self.sim_boat_hold)] = [meas_temp.discharge[trans_id].total,
+                                                                    meas_temp.discharge[trans_id].middle]
+                # Fill with next
+                boat_data.interpolate_next()
+                meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
+                                                            moving_bed_data=meas_temp.mb_tests)
+                self.sim_boat_next.loc[len(self.sim_boat_next)] = [meas_temp.discharge[trans_id].total,
+                                                                   meas_temp.discharge[trans_id].middle]
+            else:
+                self.sim_boat_next.loc[len(self.sim_boat_next)] = [meas.discharge[trans_id].total,
+                                                                   meas_temp.discharge[trans_id].middle]
+                self.sim_boat_hold.loc[len(self.sim_boat_hold)] = [meas.discharge[trans_id].total,
+                                                                   meas_temp.discharge[trans_id].middle]
 
     @staticmethod
     def compute_draft_max_min(transect, draft_error_user=None):

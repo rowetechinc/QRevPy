@@ -115,7 +115,7 @@ class Measurement(object):
             elif source == 'Nortek':
                 self.load_sontek(in_file)
 
-            # Process TRDI and SonTek data
+            # Process data
             if len(self.transects) > 0:
 
                 # Save initial settings
@@ -195,6 +195,9 @@ class Measurement(object):
                                             transect_type=transect_type,
                                             checked=checked)
 
+        # Identify checked transects
+        self.checked_transect_idx = self.checked_transects(self)
+
         # Create object for pre-measurement tests
         if isinstance(mmt.qaqc, dict) or isinstance(mmt.mbt_transects, list):
             self.qaqc_trdi(mmt)
@@ -222,30 +225,30 @@ class Measurement(object):
 
         # Water track filter threshold settings
         threshold_settings['wt_settings']['beam'] = \
-            self.set_num_beam_wt_threshold_trdi(mmt.transects[0])
+            self.set_num_beam_wt_threshold_trdi(mmt.transects[self.checked_transect_idx[0]])
         threshold_settings['wt_settings']['difference'] = 'Manual'
         threshold_settings['wt_settings']['difference_threshold'] = \
-            mmt.transects[0].active_config['Proc_WT_Error_Velocity_Threshold']
+            mmt.transects[self.checked_transect_idx[0]].active_config['Proc_WT_Error_Velocity_Threshold']
         threshold_settings['wt_settings']['vertical'] = 'Manual'
         threshold_settings['wt_settings']['vertical_threshold'] = \
-            mmt.transects[0].active_config['Proc_WT_Up_Vel_Threshold']
+            mmt.transects[self.checked_transect_idx[0]].active_config['Proc_WT_Up_Vel_Threshold']
 
         # Bottom track filter threshold settings
         threshold_settings['bt_settings']['beam'] = \
-            self.set_num_beam_bt_threshold_trdi(mmt.transects[0])
+            self.set_num_beam_bt_threshold_trdi(mmt.transects[self.checked_transect_idx[0]])
         threshold_settings['bt_settings']['difference'] = 'Manual'
         threshold_settings['bt_settings']['difference_threshold'] = \
-            mmt.transects[0].active_config['Proc_BT_Error_Vel_Threshold']
+            mmt.transects[self.checked_transect_idx[0]].active_config['Proc_BT_Error_Vel_Threshold']
         threshold_settings['bt_settings']['vertical'] = 'Manual'
         threshold_settings['bt_settings']['vertical_threshold'] = \
-            mmt.transects[0].active_config['Proc_BT_Up_Vel_Threshold']
+            mmt.transects[self.checked_transect_idx[0]].active_config['Proc_BT_Up_Vel_Threshold']
 
         # Depth filter and averaging settings
         threshold_settings['depth_settings']['depth_weighting'] = \
-            self.set_depth_weighting_trdi(mmt.transects[0])
+            self.set_depth_weighting_trdi(mmt.transects[self.checked_transect_idx[0]])
         threshold_settings['depth_settings']['depth_valid_method'] = 'TRDI'
         threshold_settings['depth_settings']['depth_screening'] = \
-            self.set_depth_screening_trdi(mmt.transects[0])
+            self.set_depth_screening_trdi(mmt.transects[self.checked_transect_idx[0]])
 
         # Determine reference used in WR2 if available
         reference = 'BT'
@@ -428,6 +431,9 @@ class Measurement(object):
             self.transects.append(TransectData())
             self.transects[-1].sontek(rsdata, file_name)
 
+        # Identify checked transects
+        self.checked_transect_idx = self.checked_transects(self)
+
         # Site information pulled from last file
         if hasattr(rsdata, 'SiteInfo'):
             if hasattr(rsdata.SiteInfo, 'Site_Name'):
@@ -441,7 +447,7 @@ class Measurement(object):
             transect.change_coord_sys(new_coord_sys='Earth')
             transect.change_nav_reference(
                 update=False,
-                new_nav_ref=self.transects[0].boat_vel.selected)
+                new_nav_ref=self.transects[self.checked_transect_idx[0]].boat_vel.selected)
             transect.boat_interpolations(update=False,
                                          target='BT',
                                          method='Hold9')
@@ -675,6 +681,9 @@ class Measurement(object):
 
             if type(self.discharge[n].correction_factor) is list:
                 self.discharge[n].correction_factor = self.discharge[n].total / self.discharge[n].total_uncorrected
+
+        # Identify checked transects
+        self.checked_transect_idx = self.checked_transects(self)
 
         self.uncertainty = Uncertainty()
         self.uncertainty.populate_from_qrev_mat(meas_struct)
@@ -1098,7 +1107,7 @@ class Measurement(object):
             # interpolations because the TRDI approach for power/power
             # using the power curve and exponent to estimate invalid cells.
 
-            if self.transects[0].w_vel.interpolate_cells == 'TRDI':
+            if self.transects[self.checked_transect_idx[0]].w_vel.interpolate_cells == 'TRDI':
                 if self.extrap_fit is None:
                     self.extrap_fit = ComputeExtrap()
                     self.extrap_fit.populate_data(transects=self.transects, compute_sensitivity=False)
@@ -1282,7 +1291,7 @@ class Measurement(object):
         settings = dict()
 
         # Navigation reference
-        settings['NavRef'] = self.transects[0].boat_vel.selected
+        settings['NavRef'] = self.transects[self.checked_transect_idx[0]].boat_vel.selected
 
         # Composite tracks
         settings['CompTracks'] = 'Off'
@@ -1295,16 +1304,16 @@ class Measurement(object):
         settings['WTwFilterThreshold'] = np.nan
         settings['WTsmoothFilter'] = 'Off'
 
-        if self.transects[0].adcp.manufacturer == 'TRDI':
+        if self.transects[self.checked_transect_idx[0]].adcp.manufacturer == 'TRDI':
             settings['WTsnrFilter'] = 'Off'
         else:
             settings['WTsnrFilter'] = 'Auto'
 
         temp = [x.w_vel for x in self.transects]
         excluded_dist = np.nanmin([x.excluded_dist_m for x in temp])
-        if excluded_dist < 0.158 and self.transects[0].adcp.model == 'M9':
+        if excluded_dist < 0.158 and self.transects[self.checked_transect_idx[0]].adcp.model == 'M9':
             settings['WTExcludedDistance'] = 0.16
-        elif excluded_dist < 0.248 and self.transects[0].adcp.model == 'RioPro':
+        elif excluded_dist < 0.248 and self.transects[self.checked_transect_idx[0]].adcp.model == 'RioPro':
             settings['WTExcludedDistance'] = 0.25
         else:
             settings['WTExcludedDistance'] = excluded_dist
@@ -1377,7 +1386,7 @@ class Measurement(object):
 
         settings = dict()
 
-        settings['NavRef'] = self.transects[0].boatVel.selected
+        settings['NavRef'] = self.transects[self.checked_transect_idx[0]].boatVel.selected
 
         # Composite tracks
         settings['CompTracks'] = 'Off'
@@ -1478,6 +1487,8 @@ class Measurement(object):
         self.uncertainty = Uncertainty()
         self.uncertainty.compute_uncertainty(self)
         self.qa = QAData(self)
+        self.oursin = Oursin()
+        self.oursin.compute_oursin(self)
 
     def compute_discharge(self):
         """Computes the discharge for all transects in the measurement.
@@ -1924,7 +1935,7 @@ class Measurement(object):
 
         return data, serial_time
 
-    def xml_output(self, version, file_name):
+    def xml_output(self, version, file_name, checked_transect_idx):
         channel = ETree.Element('Channel', QRevFilename=os.path.basename(file_name[:-4]), QRevVersion=version)
 
         # (2) SiteInformation Node
@@ -2029,7 +2040,7 @@ class Measurement(object):
         compass_text = ''
         try:
             for each in self.compass_cal:
-                if self.transects[0].adcp.manufacturer == 'SonTek':
+                if self.transects[self.checked_transect_idx[0]].adcp.manufacturer == 'SonTek':
                     idx = each.data.find('CAL_TIME')
                     compass_text += each.data[idx:]
                 else:
@@ -2038,7 +2049,7 @@ class Measurement(object):
             pass
         try:
             for each in self.compass_eval:
-                if self.transects[0].adcp.manufacturer == 'SonTek':
+                if self.transects[self.checked_transect_idx[0]].adcp.manufacturer == 'SonTek':
                     idx = each.data.find('CAL_TIME')
                     compass_text += each.data[idx:]
                 else:
@@ -2193,27 +2204,27 @@ class Measurement(object):
         instrument = ETree.SubElement(channel, 'Instrument')
 
         # (3) Manufacturer Node
-        ETree.SubElement(instrument, 'Manufacturer', type='char').text = self.transects[0].adcp.manufacturer
+        ETree.SubElement(instrument, 'Manufacturer', type='char').text = self.transects[self.checked_transect_idx[0]].adcp.manufacturer
 
         # (3) Model Node
-        ETree.SubElement(instrument, 'Model', type='char').text = self.transects[0].adcp.model
+        ETree.SubElement(instrument, 'Model', type='char').text = self.transects[self.checked_transect_idx[0]].adcp.model
 
         # (3) SerialNumber Node
-        sn = self.transects[0].adcp.serial_num
+        sn = self.transects[self.checked_transect_idx[0]].adcp.serial_num
         ETree.SubElement(instrument, 'SerialNumber', type='char').text = str(sn)
 
         # (3) FirmwareVersion Node
-        ver = self.transects[0].adcp.firmware
+        ver = self.transects[self.checked_transect_idx[0]].adcp.firmware
         ETree.SubElement(instrument, 'FirmwareVersion', type='char').text = str(ver)
 
         # (3) Frequency Node
-        freq = self.transects[0].adcp.frequency_khz
+        freq = self.transects[self.checked_transect_idx[0]].adcp.frequency_khz
         if type(freq) == np.ndarray:
             freq = "Multi"
         ETree.SubElement(instrument, 'Frequency', type='char', unitsCode='kHz').text = str(freq)
 
         # (3) BeamAngle Node
-        ang = self.transects[0].adcp.beam_angle_deg
+        ang = self.transects[self.checked_transect_idx[0]].adcp.beam_angle_deg
         ETree.SubElement(instrument, 'BeamAngle', type='double', unitsCode='deg').text = '{:.1f}'.format(ang)
 
         # (3) BlankingDistance Node
@@ -2225,16 +2236,16 @@ class Measurement(object):
             blank.append(each.blanking_distance_m)
         if isinstance(blank[0], float):
             temp = np.mean(blank)
-            if self.transects[0].w_vel.excluded_dist_m > temp:
-                temp = self.transects[0].w_vel.excluded_dist_m
+            if self.transects[self.checked_transect_idx[0]].w_vel.excluded_dist_m > temp:
+                temp = self.transects[self.checked_transect_idx[0]].w_vel.excluded_dist_m
         else:
-            temp = self.transects[0].w_vel.excluded_dist_m
+            temp = self.transects[self.checked_transect_idx[0]].w_vel.excluded_dist_m
         ETree.SubElement(instrument, 'BlankingDistance', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
 
         # (3) InstrumentConfiguration Node
         commands = ''
-        if self.transects[0].adcp.configuration_commands is not None:
-            for each in self.transects[0].adcp.configuration_commands:
+        if self.transects[self.checked_transect_idx[0]].adcp.configuration_commands is not None:
+            for each in self.transects[self.checked_transect_idx[0]].adcp.configuration_commands:
                 if type(each) is str:
                     commands += each + '  '
             ETree.SubElement(instrument, 'InstrumentConfiguration', type='char').text = commands
@@ -2255,18 +2266,21 @@ class Measurement(object):
         navigation = ETree.SubElement(processing, 'Navigation')
 
         # (4) Reference Node
-        ETree.SubElement(navigation, 'Reference', type='char').text = self.transects[0].w_vel.nav_ref
+        ETree.SubElement(navigation, 'Reference', type='char').text = \
+            self.transects[self.checked_transect_idx[0]].w_vel.nav_ref
 
         # (4) CompositeTrack
-        ETree.SubElement(navigation, 'CompositeTrack', type='char').text = self.transects[0].boat_vel.composite
+        ETree.SubElement(navigation, 'CompositeTrack', type='char').text = \
+            self.transects[self.checked_transect_idx[0]].boat_vel.composite
 
         # (4) MagneticVariation Node
-        mag_var = self.transects[0].sensors.heading_deg.internal.mag_var_deg
+        mag_var = self.transects[self.checked_transect_idx[0]].sensors.heading_deg.internal.mag_var_deg
         ETree.SubElement(navigation, 'MagneticVariation', type='double',
                          unitsCode='deg').text = '{:.2f}'.format(mag_var)
 
         # (4) BeamFilter
-        nav_data = getattr(self.transects[0].boat_vel, self.transects[0].boat_vel.selected)
+        nav_data = getattr(self.transects[self.checked_transect_idx[0]].boat_vel,
+                           self.transects[self.checked_transect_idx[0]].boat_vel.selected)
         temp = nav_data.beam_filter
         if temp < 0:
             temp = 'Auto'
@@ -2301,21 +2315,21 @@ class Measurement(object):
         temp = nav_data.gps_altitude_filter
         if temp:
             if temp == 'Manual':
-                temp = self.transects[0].boat_vel.gps_altitude_filter_change
+                temp = self.transects[self.checked_transect_idx[0]].boat_vel.gps_altitude_filter_change
             ETree.SubElement(navigation, 'GPSAltitudeFilter', type='char', unitsCode='m').text = str(temp)
 
         # (4) HDOPChangeFilter
         temp = nav_data.gps_HDOP_filter
         if temp:
             if temp == 'Manual':
-                temp = '{:.2f}'.format(self.transects[0].boat_vel.gps_hdop_filter_change)
+                temp = '{:.2f}'.format(self.transects[self.checked_transect_idx[0]].boat_vel.gps_hdop_filter_change)
             ETree.SubElement(navigation, 'HDOPChangeFilter', type='char').text = temp
 
         # (4) HDOPThresholdFilter
         temp = nav_data.gps_HDOP_filter
         if temp:
             if temp == 'Manual':
-                temp = '{:.2f}'.format(self.transects[0].boat_vel.gps_HDOP_filter_max)
+                temp = '{:.2f}'.format(self.transects[self.checked_transect_idx[0]].boat_vel.gps_HDOP_filter_max)
             ETree.SubElement(navigation, 'HDOPThresholdFilter', type='char').text = temp
 
         # (4) InterpolationType Node
@@ -2326,19 +2340,21 @@ class Measurement(object):
         depth = ETree.SubElement(processing, 'Depth')
 
         # (4) Reference Node
-        if self.transects[0].depths.selected == 'bt_depths':
+        if self.transects[self.checked_transect_idx[0]].depths.selected == 'bt_depths':
             temp = 'BT'
-        elif self.transects[0].depths.selected == 'vb_depths':
+        elif self.transects[self.checked_transect_idx[0]].depths.selected == 'vb_depths':
             temp = 'VB'
-        elif self.transects[0].depths.selected == 'ds_depths':
+        elif self.transects[self.checked_transect_idx[0]].depths.selected == 'ds_depths':
             temp = 'DS'
         ETree.SubElement(depth, 'Reference', type='char').text = temp
 
         # (4) CompositeDepth Node
-        ETree.SubElement(depth, 'CompositeDepth', type='char').text = self.transects[0].depths.composite
+        ETree.SubElement(depth, 'CompositeDepth', type='char').text = \
+            self.transects[self.checked_transect_idx[0]].depths.composite
 
         # (4) ADCPDepth Node
-        depth_data = getattr(self.transects[0].depths, self.transects[0].depths.selected)
+        depth_data = getattr(self.transects[self.checked_transect_idx[0]].depths,
+                             self.transects[self.checked_transect_idx[0]].depths.selected)
         temp = depth_data.draft_use_m
         ETree.SubElement(depth, 'ADCPDepth', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
 
@@ -2376,11 +2392,11 @@ class Measurement(object):
         water_track = ETree.SubElement(processing, 'WaterTrack')
 
         # (4) ExcludedDistance Node
-        temp = self.transects[0].w_vel.excluded_dist_m
+        temp = self.transects[self.checked_transect_idx[0]].w_vel.excluded_dist_m
         ETree.SubElement(water_track, 'ExcludedDistance', type='double', unitsCode='m').text = '{:.4f}'.format(temp)
 
         # (4) BeamFilter Node
-        temp = self.transects[0].w_vel.beam_filter
+        temp = self.transects[self.checked_transect_idx[0]].w_vel.beam_filter
         if temp < 0:
             temp = 'Auto'
         else:
@@ -2388,42 +2404,42 @@ class Measurement(object):
         ETree.SubElement(water_track, 'BeamFilter', type='char').text = temp
 
         # (4) ErrorVelocityFilter Node
-        temp = self.transects[0].w_vel.d_filter
+        temp = self.transects[self.checked_transect_idx[0]].w_vel.d_filter
         if temp == 'Manual':
-            temp = '{:.4f}'.format(self.transects[0].w_vel.d_filter_threshold)
+            temp = '{:.4f}'.format(self.transects[self.checked_transect_idx[0]].w_vel.d_filter_threshold)
         ETree.SubElement(water_track, 'ErrorVelocityFilter', type='char', unitsCode='mps').text = temp
 
         # (4) VerticalVelocityFilter Node
-        temp = self.transects[0].w_vel.w_filter
+        temp = self.transects[self.checked_transect_idx[0]].w_vel.w_filter
         if temp == 'Manual':
-            temp = '{:.4f}'.format(self.transects[0].w_vel.w_filter_threshold)
+            temp = '{:.4f}'.format(self.transects[self.checked_transect_idx[0]].w_vel.w_filter_threshold)
         ETree.SubElement(water_track, 'VerticalVelocityFilter', type='char', unitsCode='mps').text = temp
 
         # (4) OtherFilter Node
-        temp = self.transects[0].w_vel.smooth_filter
+        temp = self.transects[self.checked_transect_idx[0]].w_vel.smooth_filter
         ETree.SubElement(water_track, 'OtherFilter', type='char').text = temp
 
         # (4) SNRFilter Node
-        temp = self.transects[0].w_vel.snr_filter
+        temp = self.transects[self.checked_transect_idx[0]].w_vel.snr_filter
         ETree.SubElement(water_track, 'SNRFilter', type='char').text = temp
 
         # (4) CellInterpolation Node
-        temp = self.transects[0].w_vel.interpolate_cells
+        temp = self.transects[self.checked_transect_idx[0]].w_vel.interpolate_cells
         ETree.SubElement(water_track, 'CellInterpolation', type='char').text = temp
 
         # (4) EnsembleInterpolation Node
-        temp = self.transects[0].w_vel.interpolate_ens
+        temp = self.transects[self.checked_transect_idx[0]].w_vel.interpolate_ens
         ETree.SubElement(water_track, 'EnsembleInterpolation', type='char').text = temp
 
         # (3) Edge Node
         edge = ETree.SubElement(processing, 'Edge')
 
         # (4) RectangularEdgeMethod Node
-        temp = self.transects[0].edges.rec_edge_method
+        temp = self.transects[self.checked_transect_idx[0]].edges.rec_edge_method
         ETree.SubElement(edge, 'RectangularEdgeMethod', type='char').text = temp
 
         # (4) VelocityMethod Node
-        temp = self.transects[0].edges.vel_method
+        temp = self.transects[self.checked_transect_idx[0]].edges.vel_method
         ETree.SubElement(edge, 'VelocityMethod', type='char').text = temp
 
         # (4) LeftType Node
@@ -2490,15 +2506,15 @@ class Measurement(object):
         extrap = ETree.SubElement(processing, 'Extrapolation')
 
         # (4) TopMethod Node
-        temp = self.transects[0].extrap.top_method
+        temp = self.transects[self.checked_transect_idx[0]].extrap.top_method
         ETree.SubElement(extrap, 'TopMethod', type='char').text = temp
 
         # (4) BottomMethod Node
-        temp = self.transects[0].extrap.bot_method
+        temp = self.transects[self.checked_transect_idx[0]].extrap.bot_method
         ETree.SubElement(extrap, 'BottomMethod', type='char').text = temp
 
         # (4) Exponent Node
-        temp = self.transects[0].extrap.exponent
+        temp = self.transects[self.checked_transect_idx[0]].extrap.exponent
         ETree.SubElement(extrap, 'Exponent', type='double').text = '{:.4f}'.format(temp)
 
         # (3) Sensor Node
