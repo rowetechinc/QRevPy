@@ -140,10 +140,14 @@ class ExtrapPlot(object):
             if min_avg > 0 and max_avg > 0:
                 min_avg = 0
                 lower = 0
+            elif np.isnan(min_avg):
+                lower = 0
             else:
                 lower = min_avg * 1.2
 
             if max_avg < 0 and min_avg < 0:
+                upper = 0
+            elif np.isnan(max_avg):
                 upper = 0
             else:
                 upper = max_avg * 1.2

@@ -4384,6 +4384,41 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
 
+        # Intialize connections
+        if not self.bt_initialized:
+            tbl.cellClicked.connect(self.bt_table_clicked)
+
+            # Connect plot variable checkboxes
+            self.cb_bt_bt.stateChanged.connect(self.bt_plot_change)
+            self.cb_bt_gga.stateChanged.connect(self.bt_plot_change)
+            self.cb_bt_vtg.stateChanged.connect(self.bt_plot_change)
+            self.cb_bt_vectors.stateChanged.connect(self.bt_plot_change)
+
+            # Connect radio buttons
+            self.rb_bt_beam.toggled.connect(self.bt_radiobutton_control)
+            self.rb_bt_error.toggled.connect(self.bt_radiobutton_control)
+            self.rb_bt_vert.toggled.connect(self.bt_radiobutton_control)
+            self.rb_bt_other.toggled.connect(self.bt_radiobutton_control)
+            self.rb_bt_source.toggled.connect(self.bt_radiobutton_control)
+
+            # Connect manual entry
+            self.ed_bt_error_vel_threshold.editingFinished.connect(
+                self.change_error_vel_threshold)
+            self.ed_bt_vert_vel_threshold.editingFinished.connect(
+                self.change_vert_vel_threshold)
+
+            # Connect filters
+            self.combo_bt_3beam.currentIndexChanged[str].connect(
+                self.change_bt_beam)
+            self.combo_bt_error_velocity.activated[str].connect(
+                self.change_bt_error)
+            self.combo_bt_vert_velocity.currentIndexChanged[str].connect(
+                self.change_bt_vertical)
+            self.combo_bt_other.currentIndexChanged[str].connect(
+                self.change_bt_other)
+
+            self.bt_initialized = True
+
         selected = self.meas.transects[self.checked_transects_idx[0]].boat_vel.selected
 
         # Turn signals off
@@ -4445,16 +4480,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         elif self.transect.boat_vel.bt_vel.smooth_filter == 'On':
             self.combo_bt_other.setCurrentIndex(1)
 
-        # Turn signals on
-        self.cb_bt_bt.blockSignals(False)
-        self.cb_bt_gga.blockSignals(False)
-        self.cb_bt_vtg.blockSignals(False)
-        self.cb_bt_vectors.blockSignals(False)
-        self.combo_bt_3beam.blockSignals(False)
-        self.combo_bt_error_velocity.blockSignals(False)
-        self.combo_bt_vert_velocity.blockSignals(False)
-        self.combo_bt_other.blockSignals(False)
-
         # Display content
         if old_discharge is None:
             old_discharge = self.meas.discharge
@@ -4470,39 +4495,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.toolbars = [self.bt_shiptrack_toolbar, self.bt_top_toolbar,
                          self.bt_bottom_toolbar]
 
-        if not self.bt_initialized:
-            tbl.cellClicked.connect(self.bt_table_clicked)
+        # Turn signals on
+        self.cb_bt_bt.blockSignals(False)
+        self.cb_bt_gga.blockSignals(False)
+        self.cb_bt_vtg.blockSignals(False)
+        self.cb_bt_vectors.blockSignals(False)
+        self.combo_bt_3beam.blockSignals(False)
+        self.combo_bt_error_velocity.blockSignals(False)
+        self.combo_bt_vert_velocity.blockSignals(False)
+        self.combo_bt_other.blockSignals(False)
 
-            # Connect plot variable checkboxes
-            self.cb_bt_bt.stateChanged.connect(self.bt_plot_change)
-            self.cb_bt_gga.stateChanged.connect(self.bt_plot_change)
-            self.cb_bt_vtg.stateChanged.connect(self.bt_plot_change)
-            self.cb_bt_vectors.stateChanged.connect(self.bt_plot_change)
 
-            # Connect radio buttons
-            self.rb_bt_beam.toggled.connect(self.bt_radiobutton_control)
-            self.rb_bt_error.toggled.connect(self.bt_radiobutton_control)
-            self.rb_bt_vert.toggled.connect(self.bt_radiobutton_control)
-            self.rb_bt_other.toggled.connect(self.bt_radiobutton_control)
-            self.rb_bt_source.toggled.connect(self.bt_radiobutton_control)
 
-            # Connect manual entry
-            self.ed_bt_error_vel_threshold.editingFinished.connect(
-                self.change_error_vel_threshold)
-            self.ed_bt_vert_vel_threshold.editingFinished.connect(
-                self.change_vert_vel_threshold)
-
-            # Connect filters
-            self.combo_bt_3beam.currentIndexChanged[str].connect(
-                self.change_bt_beam)
-            self.combo_bt_error_velocity.activated[str].connect(
-                self.change_bt_error)
-            self.combo_bt_vert_velocity.currentIndexChanged[str].connect(
-                self.change_bt_vertical)
-            self.combo_bt_other.currentIndexChanged[str].connect(
-                self.change_bt_other)
-
-            self.bt_initialized = True
 
     def update_bt_table(self, old_discharge, new_discharge):
         """Updates the bottom track table with new or reprocessed data.
@@ -5504,28 +5508,28 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Determine transect selected
             transect_id = self.checked_transects_idx[self.transect_row]
             self.transect = self.meas.transects[transect_id]
-            if self.transect.boat_vel.gga_vel is not None:
+            # if self.transect.boat_vel.gga_vel is not None:
                 # self.invalid_gps = np.logical_not(self.transect.boat_vel.gga_vel.valid_data)
 
-                # Identify transect to be plotted in table
-                for row in range(nrows):
-                    self.table_gps.item(row, 0).setFont(self.font_normal)
-                # Set selected file to bold font
-                self.table_gps.item(self.transect_row, 0).setFont(self.font_bold)
+            # Identify transect to be plotted in table
+            for row in range(nrows):
+                self.table_gps.item(row, 0).setFont(self.font_normal)
+            # Set selected file to bold font
+            self.table_gps.item(self.transect_row, 0).setFont(self.font_bold)
 
-                # Update plots
-                self.gps_shiptrack()
-                self.gps_boat_speed()
-                self.gps_filter_plots()
+            # Update plots
+            self.gps_shiptrack()
+            self.gps_boat_speed()
+            self.gps_filter_plots()
 
-            else:
-                if self.gps_shiptrack_fig is not None:
-                    self.gps_shiptrack_fig.fig.clear()
-                    self.gps_shiptrack_canvas.draw()
-                    self.gps_top_fig.fig.clear()
-                    self.gps_top_canvas.draw()
-                    self.gps_bottom_fig.fig.clear()
-                    self.gps_bottom_canvas.draw()
+            # else:
+            #     if self.gps_shiptrack_fig is not None:
+            #         self.gps_shiptrack_fig.fig.clear()
+            #         self.gps_shiptrack_canvas.draw()
+            #         self.gps_top_fig.fig.clear()
+            #         self.gps_top_canvas.draw()
+            #         self.gps_bottom_fig.fig.clear()
+            #         self.gps_bottom_canvas.draw()
 
             # Update list of figs
             self.figs = [self.gps_shiptrack_fig, self.gps_top_fig, self.gps_bottom_fig]

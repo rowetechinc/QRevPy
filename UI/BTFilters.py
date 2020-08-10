@@ -166,7 +166,12 @@ class BTFilters(object):
                 boat_selected = transect.boat_vel.gga_vel
             else:
                 boat_selected = transect.boat_vel.bt_vel
-            source = boat_selected.processed_source
+
+            # Handle situation where transect does not contain the selected source
+            if boat_selected is None:
+                source = np.tile('INV', len(ensembles))
+            else:
+                source = boat_selected.processed_source
 
             # Plot dummy data to establish consistent order of y axis
             self.source = self.fig.ax.plot([-10, -10, -10, -10, -10], ['INV', 'INT', 'BT', 'GGA', 'VTG'], 'w-')
