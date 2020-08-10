@@ -58,7 +58,7 @@ class Measurement(object):
         Dictionary of external temperature readings
     """
 
-    def __init__(self, in_file, source, proc_type='QRev', checked=False):
+    def __init__(self, in_file, source, proc_type='QRev', checked=False, run_oursin=False):
         """Initialize instance variables and initiate processing of measurement
         data.
 
@@ -74,8 +74,11 @@ class Measurement(object):
         checked: bool
             Boolean to determine if only checked transects should be load for
             TRDI data.
+        run_oursin: bool
+            Determines if the Oursin uncertainty model should be run
         """
 
+        self.run_oursin = run_oursin
         self.station_name = None
         self.station_number = None
         self.transects = []
@@ -160,8 +163,9 @@ class Measurement(object):
                 self.uncertainty.compute_uncertainty(self)
 
                 self.qa = QAData(self)
-                self.oursin = Oursin()
-                self.oursin.compute_oursin(self)
+                # if self.run_oursin:
+                #     self.oursin = Oursin()
+                #     self.oursin.compute_oursin(self)
                 #
                 # self.oursin_orig = Oursin_orig()
                 # self.oursin_orig.compute_oursin(self)
@@ -1160,8 +1164,9 @@ class Measurement(object):
         self.uncertainty = Uncertainty()
         self.uncertainty.compute_uncertainty(self)
         self.qa = QAData(self)
-        self.oursin = Oursin()
-        self.oursin.compute_oursin(self)
+        if self.run_oursin:
+            self.oursin = Oursin()
+            self.oursin.compute_oursin(self)
 
     def current_settings(self):
         """Saves the current settings for a measurement. Since all settings
@@ -1902,6 +1907,7 @@ class Measurement(object):
     def checked_transects(meas):
         """Create a list of indices of the checked transects.
         """
+
         checked_transect_idx = []
         for n in range(len(meas.transects)):
             if meas.transects[n].checked:

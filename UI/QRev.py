@@ -18,6 +18,7 @@ from Classes.Measurement import Measurement
 from Classes.Python2Matlab import Python2Matlab
 from Classes.Sensors import Sensors
 from Classes.MovingBedTests import MovingBedTests
+from Classes.CoordError import CoordError
 import UI.QRev_gui as QRev_gui
 from UI.selectFile import SaveMeasurementDialog
 from UI.OpenMeasurementDialog import OpenMeasurementDialog
@@ -113,8 +114,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         Indicates if all transects should be save (True) or only the checked transects (False)
     QRev_version: str
         QRev version number
-    current_tab: int
-        Index of currently viewed tab
+    current_tab: str
+        Name of currently viewed tab
     transect_row: int
         Row index of selected transect
     figs: list
@@ -363,7 +364,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.change = False
 
         # Set the initial tab to the main tab
-        self.current_tab = 0
+        self.current_tab = 'Main'
         self.transect_row = 0
 
         # Initialize emtpy tab setting dict
@@ -438,6 +439,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.icon_unChecked.addPixmap(QtGui.QPixmap(":/images/24x24/check-mark-orange.png"),
                                       QtGui.QIcon.Normal, QtGui.QIcon.Off)
 
+        self.run_oursin = False
         self.checked_transects_idx = []
         self.meas = None
         self.h_external_valid = False
@@ -580,6 +582,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         else:
             self.actionSave.triggered.connect(self.save_measurement)
 
+        # Remove uncertainty tab
+        self.tab_all.removeTab(self.tab_all.indexOf(self.tab_all.findChild(QtWidgets.QWidget, 'tab_uncertainty')))
+
         # Show QRev maximized on the display
         self.showMaximized()
 
@@ -602,15 +607,23 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     # Show folder name in GUI header
                     self.setWindowTitle(self.QRev_version + ': ' + select.pathName)
                     # Create measurement object
-                    self.meas = Measurement(in_file=select.fullName, source='SonTek', proc_type='QRev')
-
+                    try:
+                        self.meas = Measurement(in_file=select.fullName,
+                                                source='SonTek',
+                                                proc_type='QRev',
+                                                run_oursin=self.run_oursin)
+                    except CoordError as error:
+                        self.popup_message(error.text)
             # Load and process Sontek data
             if select.type == 'Nortek':
                 with self.wait_cursor():
                     # Show folder name in GUI header
                     self.setWindowTitle(self.QRev_version + ': ' + select.pathName)
                     # Create measurement object
-                    self.meas = Measurement(in_file=select.fullName, source='Nortek', proc_type='QRev')
+                    self.meas = Measurement(in_file=select.fullName,
+                                            source='Nortek',
+                                            proc_type='QRev',
+                                            run_oursin=self.run_oursin)
 
             # Load and process TRDI data
             elif select.type == 'TRDI':
@@ -621,7 +634,8 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     self.meas = Measurement(in_file=select.fullName[0],
                                             source='TRDI',
                                             proc_type='QRev',
-                                            checked=select.checked)
+                                            checked=select.checked,
+                                            run_oursin=self.run_oursin)
 
             # Load QRev data
             elif select.type == 'QRev':
@@ -644,31 +658,41 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     # Process QRev data
                     with self.wait_cursor():
                         if response == QtWidgets.QMessageBox.No:
-                            self.meas = Measurement(in_file=mat_data, source='QRev', proc_type='None')
+                            self.meas = Measurement(in_file=mat_data,
+                                                    source='QRev',
+                                                    proc_type='None',
+                                                    run_oursin=self.run_oursin)
                         else:
-                            self.meas = Measurement(in_file=mat_data, source='QRev', proc_type='QRev')
+                            self.meas = Measurement(in_file=mat_data,
+                                                    source='QRev',
+                                                    proc_type='QRev',
+                                                    run_oursin=self.run_oursin)
                 else:
-                    self.meas = Measurement(in_file=mat_data, source='QRev', proc_type='None')
+                    self.meas = Measurement(in_file=mat_data,
+                                            source='QRev',
+                                            proc_type='None',
+                                            run_oursin=self.run_oursin)
 
-            with self.wait_cursor():
-                # Identify transects to be used in discharge computation
-                self.checked_transects_idx = Measurement.checked_transects(self.meas)
+            if self.meas is not None:
+                with self.wait_cursor():
+                    # Identify transects to be used in discharge computation
+                    self.checked_transects_idx = Measurement.checked_transects(self.meas)
 
-                # Determine if external heading is included in the data
-                self.h_external_valid = Measurement.h_external_valid(self.meas)
+                    # Determine if external heading is included in the data
+                    self.h_external_valid = Measurement.h_external_valid(self.meas)
 
-                # Initialize GUI
-                self.tab_settings = {'tab_bt': 'Default',
-                                     'tab_wt': 'Default',
-                                     'tab_depth': 'Default',
-                                     'tab_extrap': 'Default',
-                                     'tab_tempsal': 'Default',
-                                     'tab_gps': 'Default'}
-                self.transect_row = 0
-                self.config_gui()
-                self.change = True
-                self.tab_manager(tab_idx=0)
-                # self.set_tab_color()
+                    # Initialize GUI
+                    self.tab_settings = {'tab_bt': 'Default',
+                                         'tab_wt': 'Default',
+                                         'tab_depth': 'Default',
+                                         'tab_extrap': 'Default',
+                                         'tab_tempsal': 'Default',
+                                         'tab_gps': 'Default'}
+                    self.transect_row = 0
+                    self.config_gui()
+                    self.change = True
+                    self.tab_manager(tab_idx='Main')
+                    # self.set_tab_color()
 
     def save_measurement(self):
         """Save measurement in Matlab format.
@@ -710,8 +734,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Add comment triggered by actionComment
         """
         # Initialize comment dialog
-        tab_idx = self.current_tab
-        tab_name = self.tab_all.tabText(tab_idx)
+        tab_name = self.tab_all.tabText(self.tab_all.currentIndex())
         comment = Comment(tab_name)
         comment_entered = comment.exec_()
 
@@ -4504,9 +4527,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.combo_bt_error_velocity.blockSignals(False)
         self.combo_bt_vert_velocity.blockSignals(False)
         self.combo_bt_other.blockSignals(False)
-
-
-
 
     def update_bt_table(self, old_discharge, new_discharge):
         """Updates the bottom track table with new or reprocessed data.
@@ -9575,7 +9595,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Add transect data
         for row in range(nrows):
             col = 0
-            transect_id = row
+            transect_id = self.checked_transects_idx[row]
 
             checked = QtWidgets.QTableWidgetItem(self.meas.transects[transect_id].file_name[:-4])
             checked.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
@@ -10069,9 +10089,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         e: event
             Event generated by key pressed by user
         """
+        if self.meas is None:
+            if e.key() == QtCore.Qt.Key_F12:
+                self.tab_all.addTab(self.tab_uncertainty, 'Uncertainty')
+                self.run_oursin = True
+
 
         # Change displayed transect
-        if self.current_tab != 4 and self.current_tab != 1:
+        if self.current_tab != 'MovBedTst' and self.current_tab != 'SysTest':
 
             # Select transect above in table or wrap to bottom
             if e.key() == QtCore.Qt.Key_Up:
@@ -10080,7 +10105,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 else:
                     self.transect_row -= 1
                 self.change = True
-                # self.tab_manager()
                 self.change_selected_transect()
 
             # Select transect below in table or wrap to top
@@ -10090,11 +10114,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 else:
                     self.transect_row += 1
                 self.change = True
-                # self.tab_manager()
                 self.change_selected_transect()
 
         # Change displayed moving-bed test
-        elif self.current_tab == 4:
+        elif self.current_tab == 'MovBedTst':
             # Select transect above in table or wrap to bottom
             if e.key() == QtCore.Qt.Key_Up:
                 if self.mb_row < 0:
@@ -10115,34 +10138,35 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         """Coordinates changing the displayed transect when changing transects with the up/down arrow keys.
         """
 
-        tab_idx = self.current_tab
+        tab_idx = self.tab_all.tabText(self.tab_all.currentIndex())
         col = 0
 
         # Main tab
-        if tab_idx == 0:
+        if tab_idx == 'Main':
             self.select_transect(self.transect_row + 1, col)
 
         # Compass/PR tab
-        elif tab_idx == 2:
+        elif tab_idx == 'Compass/P/R':
             self.compass_table_clicked(self.transect_row, col)
 
         # Bottom track tab
-        elif tab_idx == 5:
+        elif tab_idx == 'BT':
             self.bt_table_clicked(self.transect_row, col)
 
         # GPS tab
-        elif tab_idx == 6:
+        elif tab_idx == 'GPS':
             self.gps_table_clicked(self.transect_row, col)
 
         # Depth tab
-        elif tab_idx == 7:
+        elif tab_idx == 'Depth':
             self.depth_table_clicked(self.transect_row, col)
+
         # Water track tab
-        elif tab_idx == 8:
+        elif tab_idx == 'WT':
             self.wt_table_clicked(self.transect_row, col)
 
         # Edges tab
-        elif tab_idx == 10:
+        elif tab_idx == 'Edges':
             self.edges_table_clicked(self.transect_row, col)
 
     @staticmethod
@@ -10207,11 +10231,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Determine the selected tab
         if tab_idx is None:
             tab_idx = self.current_tab
-        else:
-            self.current_tab = tab_idx
+        elif type(tab_idx) is int:
+            tab_idx = self.tab_all.tabText(tab_idx)
+
+        self.current_tab = tab_idx
 
         # Main tab
-        if tab_idx == 0:
+        if tab_idx == 'Main':
             if self.change:
                 # If data has changed update main tab display
                 self.update_main()
@@ -10226,51 +10252,51 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.tab_main.show()
 
         # System tab
-        elif tab_idx == 1:
+        elif tab_idx == 'SysTest':
             self.system_tab()
 
         # Compass/PR tab
-        elif tab_idx == 2:
+        elif tab_idx == 'Compass/P/R':
             self.compass_tab(old_discharge=old_discharge)
 
         # Temp/Sal tab
-        elif tab_idx == 3:
+        elif tab_idx == 'Temp/Sal':
             self.tempsal_tab(old_discharge=old_discharge)
 
         # Moving-bed test tab
-        elif tab_idx == 4:
+        elif tab_idx == 'MovBedTst':
             self.movbedtst_tab()
 
         # Bottom track tab
-        elif tab_idx == 5:
+        elif tab_idx == 'BT':
             self.bt_tab(old_discharge=old_discharge)
 
         # GPS tab
-        elif tab_idx == 6:
+        elif tab_idx == 'GPS':
             self.gps_tab(old_discharge=old_discharge)
 
         # Depth tab
-        elif tab_idx == 7:
+        elif tab_idx == 'Depth':
             self.depth_tab(old_discharge=old_discharge)
 
         # Water track tab
-        elif tab_idx == 8:
+        elif tab_idx == 'WT':
             self.wt_tab(old_discharge=old_discharge)
 
         # Extrapolation tab
-        elif tab_idx == 9:
+        elif tab_idx == 'Extrap':
             self.extrap_tab()
 
         # Edges tab
-        elif tab_idx == 10:
+        elif tab_idx == 'Edges':
             self.edges_tab()
 
         # Uncertainty tab
-        elif tab_idx == 11:
+        elif tab_idx == 'Uncertainty':
             self.uncertainty_tab()
 
         # EDI tab
-        elif tab_idx == 12:
+        elif tab_idx == 'EDI':
             self.edi_tab()
 
         self.set_tab_color()
@@ -10291,48 +10317,52 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.current_tab = tab_idx
 
         # Main
-        if tab_idx == 0:
+        if tab_idx == "Main":
             self.comments_tab()
 
         # System Test
-        elif tab_idx == 1:
+        elif tab_idx == "SysTest":
             self.systest_comments_messages()
 
         # Compass/PR
-        elif tab_idx == 2:
+        elif tab_idx == 'Compass/P/R':
             self.compass_comments_messages()
 
         # Temp/Sal
-        elif tab_idx == 3:
+        elif tab_idx == 'Temp/Sal':
             self.tempsal_comments_messages()
 
         # Moving-bed test
-        elif tab_idx == 4:
+        elif tab_idx == "MovBedTst":
             self.mb_comments_messages()
 
         # Bottom track
-        elif tab_idx == 5:
+        elif tab_idx == 'BT':
             self.bt_comments_messages()
 
         # GPS
-        elif tab_idx == 6:
+        elif tab_idx == 'GPS':
             self.gps_comments_messages()
 
         # Depth
-        elif tab_idx == 7:
+        elif tab_idx == 'Depth':
             self.depth_comments_messages()
 
         # WT
-        elif tab_idx == 8:
+        elif tab_idx == 'WT':
             self.wt_comments_messages()
 
         # Extrapolation
-        elif tab_idx == 9:
+        elif tab_idx == 'Extrap':
             self.extrap_comments_messages()
 
         # Edges
-        elif tab_idx == 10:
+        elif tab_idx == 'Edges':
             self.edges_comments_messages()
+
+        # Uncertainty
+        elif tab_idx == 'Uncertainty':
+            self.uncertainty_comments_messages()
 
     def config_gui(self):
         """Configure the user interface based on the available data.

@@ -15,6 +15,7 @@ from Classes.HeadingData import HeadingData
 from Classes.DateTime import DateTime
 from Classes.InstrumentData import InstrumentData
 from Classes.MultiThread import MultiThread
+from Classes.CoordError import CoordError
 from MiscLibs.common_functions import nandiff, cosd, arctand, tand, nans
 
 
@@ -723,11 +724,11 @@ class TransectData(object):
         # This implementation forces all versions to use the earth coordinate system.
         if rsdata.Setup.coordinateSystem == 0:
             # ref_coord = 'Beam'
-            raise ValueError('Beam Coordinates are not supported for all RiverSuveyor firmware releases, ' +
+            raise CoordError('Beam Coordinates are not supported for all RiverSuveyor firmware releases, ' +
                              'use Earth coordinates.')
         elif rsdata.Setup.coordinateSystem == 1:
             # ref_coord = 'Inst'
-            raise ValueError('Instrument Coordinates are not supported for all RiverSuveyor firmware releases, ' +
+            raise CoordError('Instrument Coordinates are not supported for all RiverSuveyor firmware releases, ' +
                              'use Earth coordinates.')
         elif rsdata.Setup.coordinateSystem == 2:
             ref_coord = 'Earth'
