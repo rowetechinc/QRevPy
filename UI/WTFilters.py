@@ -138,7 +138,7 @@ class WTFilters(object):
                                              transect.w_vel.snr_rng[invalid_snr],
                                              'ro', markerfacecolor='none')[0])
             self.fig.ax.set_ylim(top=max_y , bottom=min_y)
-            self.fig.ax.set_ylabel(self.canvas.tr('SNR (dB)'))
+            self.fig.ax.set_ylabel(self.canvas.tr('SNR Range (dB)'))
 
         elif selected == 'speed':
             # Plot speed

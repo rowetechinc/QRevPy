@@ -492,8 +492,8 @@ class Oursin(object):
         """
 
         # Create a Dataframe with all computed uncertainty for each checked transect
-        u = pd.DataFrame(columns=['u_meas', 'u_movbed', 'u_syst', 'u_compass', 'u_ens', 'u_water', 'u_top', 'u_bot',
-                                  'u_left', 'u_right', 'u_boat', 'u_depth', 'u_cov'])
+        u = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas', 'u_top', 'u_bot',
+                                  'u_left', 'u_right', 'u_boat', 'u_depth', 'u_water', 'u_cov'])
         u['u_syst'] = u_syst
         u['u_compass'] = u_compass
         u['u_movbed'] = u_movbed
@@ -917,7 +917,7 @@ class Oursin(object):
                                                          self.sim_draft_max,
                                                          self.sim_draft_min],
                                               col_name='q_top') \
-                          / self.sim_original['q_total']
+                          / np.abs(self.sim_original['q_total'])
 
         if self.user_specified_u['u_top_mean_user'] is not None:
             self.u_top_mean_user_list = [0.01 * self.user_specified_u['u_top_mean_user']] * self.nb_transects
@@ -937,7 +937,7 @@ class Oursin(object):
                                                          self.sim_extrap_cns_max,
                                                          self.sim_extrap_3pns_opt],
                                               col_name='q_bot') \
-                          / self.sim_original['q_total']
+                          / np.abs(self.sim_original['q_total'])
 
         if self.user_specified_u['u_bot_mean_user'] is not None:
             self.u_bot_mean_user_list = [0.01 * self.user_specified_u['u_bot_mean_user']] * self.nb_transects
@@ -954,7 +954,7 @@ class Oursin(object):
                                                           self.sim_draft_min,
                                                           self.sim_draft_max],
                                                col_name='q_left') \
-                           / self.sim_original['q_total']
+                           / np.abs(self.sim_original['q_total'])
 
         if self.user_specified_u['u_left_mean_user'] is not None:
             self.u_left_mean_user_list = [0.01 * self.user_specified_u['u_left_mean_user']] * self.nb_transects
@@ -971,7 +971,7 @@ class Oursin(object):
                                                            self.sim_draft_min,
                                                            self.sim_draft_max],
                                                 col_name='q_right') \
-                            / self.sim_original['q_total']
+                            / np.abs(self.sim_original['q_total'])
 
         if self.user_specified_u['u_right_mean_user'] is not None:
             self.u_right_mean_user_list = [0.01 * self.user_specified_u['u_right_mean_user']] * self.nb_transects
@@ -986,7 +986,7 @@ class Oursin(object):
                                                                    self.sim_depth_hold,
                                                                    self.sim_depth_next],
                                                         col_name='q_total') \
-                                    / self.sim_original['q_total']
+                                    / np.abs(self.sim_original['q_total'])
 
         if self.user_specified_u['u_invalid_depth_user'] is not None:
             self.u_invalid_depth_user_list = [0.01 * self.user_specified_u[
@@ -1002,7 +1002,7 @@ class Oursin(object):
                                                                   self.sim_boat_hold,
                                                                   self.sim_boat_next],
                                                        col_name='q_total') \
-                                   / self.sim_original['q_total']
+                                   / np.abs(self.sim_original['q_total'])
 
         if self.user_specified_u['u_invalid_boat_user'] is not None:
             self.u_invalid_boat_user_list = [0.01 * self.user_specified_u['u_invalid_boat_user']] * self.nb_transects
@@ -1022,7 +1022,7 @@ class Oursin(object):
                                                                    self.sim_cells_after,
                                                                    self.sim_shallow],
                                                         col_name='q_total') \
-                                    / self.sim_original['q_total']
+                                    / np.abs(self.sim_original['q_total'])
 
         if self.user_specified_u['u_invalid_water_user'] is not None:
             self.u_invalid_water_user_list = [0.01 * self.user_specified_u['u_invalid_water_user']] \

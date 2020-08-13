@@ -5711,17 +5711,39 @@
            <attribute name="title">
             <string>Data</string>
            </attribute>
-           <layout class="QGridLayout" name="gridLayout_46">
+           <layout class="QGridLayout" name="gridLayout_50">
             <item row="0" column="0">
-             <layout class="QVBoxLayout" name="verticalLayout_66" stretch="5,1,4">
+             <layout class="QVBoxLayout" name="verticalLayout_66" stretch="5,5">
               <item>
                <widget class="QTableWidget" name="table_uncertainty_results"/>
               </item>
               <item>
-               <widget class="QTableWidget" name="table_uncertainty_user"/>
-              </item>
-              <item>
-               <widget class="QWidget" name="graph_uncertainty" native="true"/>
+               <layout class="QHBoxLayout" name="horizontalLayout_69" stretch="3,7">
+                <item>
+                 <widget class="QGroupBox" name="qb_contrib_meas_area">
+                  <property name="title">
+                   <string>Contributions to Meas. Q Uncertainty</string>
+                  </property>
+                  <layout class="QHBoxLayout" name="horizontalLayout_71">
+                   <item>
+                    <widget class="QWidget" name="graph_u_meas" native="true"/>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QGroupBox" name="gb_contrib_measurement">
+                  <property name="title">
+                   <string>Contributions to Measurement Uncertainty</string>
+                  </property>
+                  <layout class="QHBoxLayout" name="horizontalLayout_70">
+                   <item>
+                    <widget class="QWidget" name="graph_u_measurement" native="true"/>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+               </layout>
               </item>
              </layout>
             </item>

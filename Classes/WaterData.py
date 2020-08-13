@@ -712,6 +712,7 @@ class WaterData(object):
         u_nr_rotated, v_nr_rotated = pol2cart(direction - np.deg2rad(heading_chng), mag)
         self.u_earth_no_ref_mps = u_nr_rotated
         self.v_earth_no_ref_mps = v_nr_rotated
+
         # Reprocess water data to get navigation reference corrected velocities
         self.set_nav_reference(boat_vel)
         

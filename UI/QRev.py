@@ -51,6 +51,8 @@ from UI.StartEdge import StartEdge
 from UI.EdgeType import EdgeType
 from UI.EdgeDist import EdgeDist
 from UI.EdgeEns import EdgeEns
+from UI.UMeasurement import UMeasurement
+from UI.UMeasQ import UMeasQ
 from UI.MplCanvas import MplCanvas
 
 
@@ -304,6 +306,18 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         Right edge shiptrack toolbar
     right_edge_st_fig: ShipTrack
         Right edge shiptrack figure
+    uncertainty_meas_q_canvas: MplCanvas
+        Uncertainty measured discharge canvas
+    uncertainty_meas_q_fig: UMeasQ
+        Uncertainty measured discharge figure
+    uncertainty_meas_q_toolbar: NavigationToolbar
+        Uncertainty measured discharge toolbar
+    uncertainty_measurement_canvas: MplCanvas
+        Uncertainty measurement canvas
+    uncertainty_measurement_fig: UMeasurement
+        Uncertainty measurement figure
+    uncertainty_measurement_toolbar: NavigationToolbar
+        Uncertainty measurement toolbar
     """
     handle_args_trigger = pyqtSignal()
     gui_initialized = False
@@ -439,7 +453,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.icon_unChecked.addPixmap(QtGui.QPixmap(":/images/24x24/check-mark-orange.png"),
                                       QtGui.QIcon.Normal, QtGui.QIcon.Off)
 
-        self.run_oursin = False
+        self.run_oursin = True
         self.checked_transects_idx = []
         self.meas = None
         self.h_external_valid = False
@@ -530,6 +544,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.right_edge_st_canvas = None
         self.right_edge_st_toolbar = None
         self.right_edge_st_fig = None
+        self.uncertainty_meas_q_canvas = None
+        self.uncertainty_meas_q_fig = None
+        self.uncertainty_meas_q_toolbar = None
+        self.uncertainty_measurement_canvas = None
+        self.uncertainty_measurement_fig = None
+        self.uncertainty_measurement_toolbar = None
         self.mb_row = 0
 
         # Tab initialization tracking setup
@@ -583,7 +603,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.actionSave.triggered.connect(self.save_measurement)
 
         # Remove uncertainty tab
-        self.tab_all.removeTab(self.tab_all.indexOf(self.tab_all.findChild(QtWidgets.QWidget, 'tab_uncertainty')))
+        # self.tab_all.removeTab(self.tab_all.indexOf(self.tab_all.findChild(QtWidgets.QWidget, 'tab_uncertainty')))
 
         # Show QRev maximized on the display
         self.showMaximized()
@@ -941,7 +961,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             os.startfile(fullname)
         except os.error:
             self.popup_message(text='Google Earth is not installed or is not associated with kml files.')
-
 
     def help(self):
         """Opens pdf help file user's default pdf viewer.
@@ -9020,6 +9039,14 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
     def uncertainty_tab(self):
         self.uncertainty_results_table()
         self.advanced_settings_table()
+        self.uncertainty_meas_q_plot()
+        self.uncertainty_measurement_plot()
+        self.uncertainty_comments_messages()
+
+        # Setup list for use by graphics controls
+        self.canvases = [self.uncertainty_meas_q_canvas, self.uncertainty_measurement_canvas]
+        self.figs = [self.uncertainty_meas_q_fig, self.uncertainty_measurement_fig]
+        self.toolbars = [self.uncertainty_meas_q_toolbar, self.uncertainty_measurement_toolbar]
 
     def uncertainty_results_table(self):
         """Create and populate uncertainty results table.
@@ -9048,10 +9075,10 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.custom_header(tbl, 1, 3, 2, 1, self.tr('Moving-bed'))
             self.custom_header(tbl, 1, 4, 2, 1, self.tr('# Ensembles'))
             self.custom_header(tbl, 1, 5, 2, 1, self.tr('Meas. Q'))
-            self.custom_header(tbl, 1, 6, 2, 1, self.tr('Left Q'))
-            self.custom_header(tbl, 1, 7, 2, 1, self.tr('Right Q'))
-            self.custom_header(tbl, 1, 8, 2, 1, self.tr('Top Q'))
-            self.custom_header(tbl, 1, 9, 2, 1, self.tr('Bottom Q'))
+            self.custom_header(tbl, 1, 6, 2, 1, self.tr('Top Q'))
+            self.custom_header(tbl, 1, 7, 2, 1, self.tr('Bottom Q'))
+            self.custom_header(tbl, 1, 8, 2, 1, self.tr('Left Q'))
+            self.custom_header(tbl, 1, 9, 2, 1, self.tr('Right Q'))
             self.custom_header(tbl, 1, 10, 1, 3, self.tr('Invalid Data'))
             tbl.item(1, 10).setTextAlignment(QtCore.Qt.AlignCenter)
             self.custom_header(tbl, 2, 10, 1, 1, self.tr('Boat'))
@@ -9106,25 +9133,25 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # Left Q
                 col += 1
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
-                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_left'])))
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_top'])))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Right Q
                 col += 1
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
-                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_right'])))
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_bot'])))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Top Q
                 col += 1
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
-                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_top'])))
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_left'])))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Bottom Q
                 col += 1
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
-                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_bot'])))
+                    '{:5.2f}'.format(self.meas.oursin.u.iloc[trans_row]['u_right'])))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Boat
@@ -9224,38 +9251,38 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Left Q
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
-                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_left'])))
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_top'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
             if self.meas.oursin.user_specified_u['u_left_mean_user'] is not None:
                 tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
-                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_left_mean_user'])))
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_top_mean_user'])))
 
             # Right Q
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
-                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_right'])))
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_bot'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
             if self.meas.oursin.user_specified_u['u_right_mean_user'] is not None:
                 tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
-                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_right_mean_user'])))
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_bot_mean_user'])))
 
             # Top Q
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
-                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_top'])))
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_left'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
             if self.meas.oursin.user_specified_u['u_top_mean_user'] is not None:
                 tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
-                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_top_mean_user'])))
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_left_mean_user'])))
 
             # Bottom Q
             col += 1
             tbl.setItem(row, col, QtWidgets.QTableWidgetItem(
-                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_bot'])))
+                '{:5.2f}'.format(self.meas.oursin.u_measurement.iloc[0]['u_right'])))
             tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
             if self.meas.oursin.user_specified_u['u_bot_mean_user'] is not None:
                 tbl.setItem(row_user, col, QtWidgets.QTableWidgetItem(
-                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_bot_mean_user'])))
+                    '{:5.2f}'.format(self.meas.oursin.user_specified_u['u_right_mean_user'])))
 
             # Boat
             col += 1
@@ -9498,13 +9525,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             elif col_index == 5:
                 self.meas.oursin.user_specified_u['u_meas_mean_user'] = new_value
             elif col_index == 6:
-                self.meas.oursin.user_specified_u['u_left_mean_user'] = new_value
-            elif col_index == 7:
-                self.meas.oursin.user_specified_u['u_right_mean_user'] = new_value
-            elif col_index == 8:
                 self.meas.oursin.user_specified_u['u_top_mean_user'] = new_value
-            elif col_index == 9:
+            elif col_index == 7:
                 self.meas.oursin.user_specified_u['u_bot_mean_user'] = new_value
+            elif col_index == 8:
+                self.meas.oursin.user_specified_u['u_left_mean_user'] = new_value
+            elif col_index == 9:
+                self.meas.oursin.user_specified_u['u_right_mean_user'] = new_value
             elif col_index == 10:
                 self.meas.oursin.user_specified_u['u_invalid_boat_user'] = new_value
             elif col_index == 11:
@@ -9564,6 +9591,93 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Update table
             self.uncertainty_results_table()
             self.advanced_settings_table()
+
+    def uncertainty_measurement_plot(self):
+        """Create or update measurement uncertainty plot.
+        """
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if self.uncertainty_measurement_canvas is None:
+            # Create the canvas
+            self.uncertainty_measurement_canvas = MplCanvas(parent=self.graph_u_measurement, width=20, height=4, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_u_measurement)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.uncertainty_measurement_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.uncertainty_measurement_toolbar = NavigationToolbar(self.uncertainty_measurement_canvas, self)
+            self.uncertainty_measurement_toolbar.hide()
+
+        # Initialize the contour figure and assign to the canvas
+        self.uncertainty_measurement_fig = UMeasurement(canvas=self.uncertainty_measurement_canvas)
+        # Create the figure with the specified data
+        self.uncertainty_measurement_fig.create(self.meas.oursin)
+
+        # Set margins and padding for figure
+        self.uncertainty_measurement_canvas.fig.subplots_adjust(left=0.05, bottom=0.1, right=0.88, top=0.98, wspace=0,
+                                                          hspace=0)
+        # Draw canvas
+        self.uncertainty_measurement_canvas.draw()
+
+    def uncertainty_meas_q_plot(self):
+        """Create or update measured discharge uncertainty plot.
+        """
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if self.uncertainty_meas_q_canvas is None:
+            # Create the canvas
+            self.uncertainty_meas_q_canvas = MplCanvas(parent=self.graph_u_meas, width=4, height=4, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_u_meas)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.uncertainty_meas_q_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.uncertainty_meas_q_toolbar = NavigationToolbar(self.uncertainty_meas_q_canvas, self)
+            self.uncertainty_meas_q_toolbar.hide()
+
+        # Initialize the contour figure and assign to the canvas
+        self.uncertainty_meas_q_fig = UMeasQ(canvas=self.uncertainty_meas_q_canvas)
+        # Create the figure with the specified data
+        self.uncertainty_meas_q_fig.create(self.meas.oursin)
+
+        # Set margins and padding for figure
+        self.uncertainty_meas_q_canvas.fig.subplots_adjust(left=0.12, bottom=0.1, right=0.77, top=0.98, wspace=0.1,
+                                                          hspace=0)
+        # Draw canvas
+        self.uncertainty_meas_q_canvas.draw()
+
+    def uncertainty_comments_messages(self):
+        """Displays comments and messages associated with uncertainty in Messages tab.
+        """
+
+        # Clear comments and messages
+        self.display_uncertainty_comments.clear()
+        self.display_uncertainty_messages.clear()
+
+        if self.meas is not None:
+            # Display each comment on a new line
+            self.display_uncertainty_comments.moveCursor(QtGui.QTextCursor.Start)
+            for comment in self.meas.comments:
+                self.display_uncertainty_comments.textCursor().insertText(comment)
+                self.display_uncertainty_comments.moveCursor(QtGui.QTextCursor.End)
+                self.display_uncertainty_comments.textCursor().insertBlock()
+
+            # # Display each message on a new line
+            # self.display_uncertainty_messages.moveCursor(QtGui.QTextCursor.Start)
+            # for message in self.meas.qa.edges['messages']:
+            #     if type(message) is str:
+            #         self.display_uncertainty_messages.textCursor().insertText(message)
+            #     else:
+            #         self.display_uncertainty_messages.textCursor().insertText(message[0])
+            #     self.display_uncertainty_messages.moveCursor(QtGui.QTextCursor.End)
+            #     self.display_uncertainty_messages.textCursor().insertBlock()
+
+            self.update_tab_icons()
+            # self.setTabIcon('tab_edges', self.meas.qa.edges['status'])
 
     # EDI tab
     # =======
