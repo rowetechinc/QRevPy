@@ -220,3 +220,5 @@ class StationaryGraphs(object):
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)
             self.hover_connection = None
+            self.annot.set_visible(False)
+            self.canvas.draw_idle()

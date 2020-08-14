@@ -52,6 +52,9 @@ class UMeasurement(object):
         # Create dataframe to plot
         self.plot_df = oursin.u_contribution_measurement_user.drop(['total'], axis=1)
         self.plot_df = self.plot_df.append(oursin.u_contribution_user.drop(['total'], axis=1), ignore_index=True)
+        self.plot_df = self.plot_df * 100
+
+        # Create dataframe to use for data cursor
         self.plot_df_cumsum = self.plot_df.cumsum(axis='columns')
 
         # Create x tick labels
@@ -63,16 +66,19 @@ class UMeasurement(object):
         custom_labels = ['System', 'Compass', 'Moving-bed', '# Ensembles', 'Meas. Q', 'Top Q', 'Bottom Q',
                   'Left Q', 'Right Q', 'Inv. Boat', 'Inv. Depth', 'Inv. Water', 'COV']
 
+        # Generate bar graph
         self.plot_df.plot(kind='bar', stacked=True, ax=self.fig.ax, legend=False)
 
         # Set margins and padding for figure
         self.fig.subplots_adjust(left=0.01, bottom=0.01, right=0.95, top=0.99, wspace=0, hspace=0)
-        self.fig.ax.set_ylabel(self.canvas.tr('Scaled 95% Uncertainty (%)'))
+        self.fig.ax.set_ylabel(self.canvas.tr('Percent of Total Uncertainty'))
         self.fig.ax.set_xlabel(self.canvas.tr('Transects'))
         self.fig.ax.set_xticklabels(x_tick_labels, rotation='horizontal', fontsize=12)
         self.fig.ax.xaxis.label.set_fontsize(12)
         self.fig.ax.yaxis.label.set_fontsize(12)
         self.fig.ax.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+
+        # Arrange legend in reverse order to match stacked bars
         handles, labels = self.fig.ax.get_legend_handles_labels()
         self.fig.ax.legend(reversed(handles), reversed(custom_labels), fontsize=12, loc='center left',
                            bbox_to_anchor=(1, 0.5))
@@ -178,3 +184,5 @@ class UMeasurement(object):
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)
             self.hover_connection = None
+            self.annot.set_visible(False)
+            self.canvas.draw_idle()

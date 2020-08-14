@@ -583,6 +583,8 @@ class Shiptrack(object):
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)
             self.hover_connection = None
+            self.annot.set_visible(False)
+            self.canvas.draw_idle()
 
     def update_annot(self, ind, plt_ref, vector_ref, ref_label):
         """Updates the location and text and makes visible the previously initialized and hidden annotation.

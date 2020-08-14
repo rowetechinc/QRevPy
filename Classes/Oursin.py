@@ -380,6 +380,8 @@ class Oursin(object):
         meas: Measurement
             Object of class Measurement
         """
+
+        # Initialize lists
         self.checked_idx = []
         self.u_syst_list = []
         self.u_meas_list = []
@@ -393,6 +395,7 @@ class Oursin(object):
         self.u_left_list = []
         self.u_right_list = []
 
+        # Prep data for computations
         self.data_prep(meas)
         self.compute_measurement_cov(meas=meas)
 
@@ -497,7 +500,7 @@ class Oursin(object):
         u['u_syst'] = u_syst
         u['u_compass'] = u_compass
         u['u_movbed'] = u_movbed
-        u['u_meas'] = u_meas  # the only purely random uncertainty component source
+        u['u_meas'] = u_meas
         u['u_ens'] = u_ens
         u['u_water'] = u_water
         u['u_top'] = u_top
@@ -548,58 +551,17 @@ class Oursin(object):
         u_measurement['total_95'] = u_measurement['total'] * 2
         u_measurement = u_measurement * 100
 
-
+        # Compute relative contributions from each source
         u_contribution_measurement = u2_measurement.copy()
         u_contribution_measurement['u_meas'] = u2_measurement['u_meas'] / (n_transects**2)
         u_contribution_measurement = u_contribution_measurement.div(u_contribution_measurement['total'], axis=0)
-        u_contribution_measurement = u_contribution_measurement.mul(u_measurement['total_95'], axis=0)
 
         u_contribution = u2.copy()
         u_contribution['u_meas'] = u2['u_meas'].div(n_transects**2, axis=0)
         u_contribution['total'] = u_contribution.sum(axis=1)
         u_contribution = u_contribution.div(u_contribution['total'], axis=0)
-        u_contribution = u_contribution.mul(u['total_95'], axis=0)
 
         return u, u_measurement, u_contribution, u_contribution_measurement, u_nocov, u_measurement_nocov
-
-        # # Average of each terms
-        # # Average contribution to the combined uncertainty
-        # # Measured uncertainty then other uncertainty sources
-        # u_contribution_transects = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas',
-        #                                                  'u_left', 'u_right', 'u_top', 'u_bot',
-        #                                                  'u_boat', 'u_depth', 'u_water', 'u_cov'])
-        # u_contribution_measurement = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas',
-        #                                                    'u_left', 'u_right', 'u_top', 'u_bot',
-        #                                                    'u_boat', 'u_depth', 'u_water', 'u_cov'])
-        # u_terms = []
-        # contrib_terms_total = []
-        # # # TODO why should the user value not be divided by number of transects
-        # # if self.u_meas_mean_user is not None:
-        # #     u_terms.append(self.u_meas_mean_user)
-        # #     contrib_terms_total.append(100 * ( ((0.01 * self.u_meas_mean_user) ** 2) ) / u2_c_gauging)
-        # # else:
-        # u_terms.append(100 * ((1 / self.nb_transects) * u2['u_meas'].mean()) ** 0.5)
-        # u_terms = u_terms + [100 * x ** 0.5 for x in u2_syst]
-        #
-        # contrib_terms_total.append(100 * ((1 / self.nb_transects) * u2_random) / u2_measurement['total'])
-        # contrib_terms_total = contrib_terms_total + [100 * x / u2_c_gauging for x in u2_syst]
-        #
-        # # Store results : reordering so that syst, moving bed and measured are the three first sources
-        # self.u_terms = [u_terms[i] for i in [2, 1, 0, 3, 4, 5, 6, 7, 8, 9, 10]]
-        # self.u_combined_total = u_combined_total
-        # self.u_total_95 = u_total_95
-        # self.variance_terms_by_transect = u2
-        # self.contrib_terms_total = [contrib_terms_total[i] for i in [2, 1, 0, 3, 4, 5, 6, 7, 8, 9, 10]]
-        # self.contrib_legend = list(u.columns)
-        #
-        # Convert relative uncertainties in m3/s and relative variance in m6/s2
-        # self.u_syst_mean_abs = self.u_syst_mean*np.mean(self.sim_original['q_total'])
-        # self.u_combined_by_transect_abs = np.asarray(self.u_combined_by_transect) * np.asarray(self.sim_original['q_total']) * 0.01
-        # self.u_terms_abs = np.asarray(self.u_terms)*0.01*np.mean(self.sim_original['q_total'])
-        # self.u_combined_total_abs = 0.01*self.u_combined_total*np.mean(self.sim_original['q_total'])
-        # self.u_total_by_transect_abs = np.asarray(self.u_total_by_transect) * np.asarray(self.sim_original['q_total']) * 0.01
-        # self.u_total_95_abs = 0.01*self.u_total_95*np.mean(self.sim_original['q_total'])
-        # self.variance_terms_by_transect_abs=np.transpose(np.transpose(self.variance_terms_by_transect) * np.asarray(self.sim_original['q_total']) ** 2)
 
     def data_prep(self, meas):
         """Determine checked transects and max and min exponents for power and no slip extrapolation.
@@ -1394,6 +1356,22 @@ class Oursin(object):
     @staticmethod
     def compute_draft_max_min(transect, draft_error_user=None):
         """Determine the max and min values of the ADCP draft.
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of transect data
+        draft_error_user: float
+            User specified draft error in m
+
+        Returns
+        -------
+        draft_max: float
+            Maximum draft in m for simulations
+        draft_min: float
+            Minimum draft in m for simulations
+        draft_error: float
+            Draft error in m
         """
         depths = transect.depths.bt_depths.depth_processed_m  # depth by ens
         depth_90 = np.quantile(depths, q=0.9)  # quantile 90% to avoid spikes
@@ -1453,6 +1431,30 @@ class Oursin(object):
     @staticmethod
     def compute_pp_max_min(meas, exp_95ic_min, exp_95ic_max, pp_exp, exp_pp_min_user, exp_pp_max_user):
         """Determine the max and min exponents for power fit.
+
+        Parameters
+        ----------
+        meas: MeasurementData
+            Object of MeasurementData
+        exp_95ic_min: list
+            Minimum power fit exponent from the 95% confidence interval for each transect
+        exp_95ic_max: list
+            Maximum power fit exponent from the 95% confidence interval for each transect
+        pp_exp: list
+            Optimized power fit exponent for each transect
+        exp_pp_min_user: float
+            User supplied minimum power fit exponent
+        exp_pp_max_user: float
+            User supplied maximum power fit exponent
+
+        Returns
+        -------
+        skip_PP_min_max: bool
+            Boolean to identify if power fit simulations should be skipped
+        exp_pp_max: float
+            Maximum power fit exponent to be used in simulations
+        exp_pp_min: float
+            Minimum power fit exponent to be used in simulations
         """
         skip_PP_min_max = False
         if len(pp_exp) == 0:
@@ -1505,6 +1507,26 @@ class Oursin(object):
     @staticmethod
     def compute_ns_max_min(meas, ns_exp, exp_ns_min_user=None, exp_ns_max_user=None ):
         """Determine the max and min no slip exponents.
+
+        Parameters
+        ----------
+        meas: MeasurementData
+            Object of MeasurementData
+        ns_exp: list
+            List of maximum and minimum no slip exponents.
+        exp_ns_min_user: float
+            User supplied minimum no slip exponent
+        exp_ns_max_user: float
+            User supplied maximum no slip exponent
+
+        Returns
+        -------
+        skip_NS_min_max: bool
+            Boolean to identify if no slip simulations should be skipped
+        exp_ns_max: float
+            Maximum no slip exponent to be used in simulations
+        exp_ns_min: float
+            Minimum no slip exponent to be used in simulations
         """
         skip_NS_min_max = False
         if len(ns_exp) == 0:
@@ -1549,6 +1571,16 @@ class Oursin(object):
     def depth_error_boat_motion(transect):
         """Relative depth error due to vertical velocity of boat
            the height [m] is vertical velocity times ensemble duration
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+
+        Returns
+        -------
+        relative_error_depth: float
+            Random depth error by ensemble
        """
 
         d_ens = transect.depths.bt_depths.depth_processed_m
@@ -1559,7 +1591,19 @@ class Oursin(object):
 
     @staticmethod
     def water_std_by_error_velocity(transect):
-        """Compute the relative standard deviation of the water velocity using the fact that the error velocity is scaled so that the standard deviation of the error velocity is the same as the standard deviation of the horizontal water velocity.
+        """Compute the relative standard deviation of the water velocity using the fact that the error velocity is
+        scaled so that the standard deviation of the error velocity is the same as the standard deviation
+        of the horizontal water velocity.
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+
+        Returns
+        -------
+        std_ev_WT_ens: float
+            Standard deviation of water track error velocity for each ensemble
         """
 
         # Computer water speed
@@ -1582,7 +1626,9 @@ class Oursin(object):
 
     @staticmethod
     def boat_std_by_error_velocity(transect):
-        """Compute the relative standard deviation of the boat velocity using the fact that the error velocity is scaled so that the standard deviation of the error velocity is the same as the standard deviation of the horizontal boat velocity.
+        """Compute the relative standard deviation of the boat velocity using the fact that the error velocity is
+        scaled so that the standard deviation of the error velocity is the same as the standard deviation
+        of the horizontal boat velocity.
 
         Parameters
         ----------
@@ -1592,7 +1638,7 @@ class Oursin(object):
         Returns
         -------
         std_ev_BT: float
-            Standard devation of bottom track error velocity
+            Standard deviation of bottom track error velocity
         """
 
         # Compute boat speed
@@ -1608,7 +1654,7 @@ class Oursin(object):
         # Compute relative standard deviation of error velocity
         all_std_ev_BT = np.nanstd(d_vel_filtered)
         std_ev_BT = np.abs(all_std_ev_BT) / speed
-        # TODO Consider substituting the overal std for nan rather than 0
+        # TODO Consider substituting the overall std for nan rather than 0
         # std_ev_BT[np.isnan(std_ev_BT)] = all_std_ev_BT
         std_ev_BT[np.isnan(std_ev_BT)] = 0.00
 
@@ -1616,179 +1662,28 @@ class Oursin(object):
 
     @staticmethod
     def apply_u_rect(list_sims, col_name):
-        # Compute the uncertainty using list of simulated discharges following a ranctangular law
-        # simu = pd.DataFrame()
-        # for i in range(len(list_simu)):
-        #     name_col = 'simu' + str(i)
-        #     simu[name_col] = list_simu[i]
+        """Compute the uncertainty using list of simulated discharges following a ranctangular law
+
+        Parameters
+        ----------
+        list_sims: list
+            List of simulation data frames to be used in the computation
+        col_name: str
+            Name of column in the data frames to be used in the computation
+
+        Returns
+        -------
+        u_rect: float
+            Result of rectangular law
+        """
+
+        # Combine data frames
         vertical_stack = pd.concat(list_sims, axis=0, sort=True)
+
+        # Apply rectangular law
         u_rect = (vertical_stack.groupby(vertical_stack.index)[col_name].max()
                   - vertical_stack.groupby(vertical_stack.index)[col_name].min()) / (2 * (3 ** 0.5))
 
         return (u_rect)
-
-    # ==================================
-    # def plot_u_meas_contrib(self, plot=False, name_plot_u_meas='Contrib_u_meas.png'):
-    #     """
-    #     Plot a barplot showing the contribution of uncertainty terms to the measured uncertainty
-    #
-    #     :param plot:
-    #         if True save the barplot
-    #     :param name_plot_u_meas:
-    #         name of the file to be saved if plot is True
-    #     :return:
-    #     """
-    #     # ----- Store in dataframe
-    #     Contrib_meas = pd.DataFrame()
-    #     Contrib_meas['v_boat'] = self.u_contrib_meas_v_boat
-    #     Contrib_meas['error_vel_boat'] = self.u_contrib_errv_v_boat
-    #     Contrib_meas['depth vertical_vel_boat'] = self.u_contrib_verv_h_depth
-    #     Contrib_meas['error_vel_water'] = self.u_contrib_errv_v_wate
-    #     Contrib_meas['v_water'] = self.u_contrib_meas_v_wate
-    #     Contrib_meas['cell size'] = self.u_contrib_meas_u_dzi
-    #     Contrib_meas_prct = 100 * Contrib_meas  # Convert into percentage
-    #
-    #     # ----- Plot
-    #     plt.rcParams.update({'font.size': 14})
-    #     Contrib_meas_prct.plot.bar(stacked=True, figsize=(10, 7))
-    #     plt.xlabel('Transect index')
-    #     plt.grid(True, linestyle='--', axis='y')
-    #     plt.ylabel('Contribution to $u_{meas}$ uncertainty [%]')
-    #
-    #     if self.u_meas_mean_user is not None:
-    #         plt.legend(title=" WARNING ! \n $u_{meas}$ has been \n modified by the user", labels=[],
-    #                    shadow=False, framealpha=1,
-    #                    title_fontsize=40,
-    #                    loc="center",
-    #                    bbox_to_anchor=(0.5, 0.5))
-    #     else:
-    #         plt.legend(title="Error sources",
-    #                loc="center left",
-    #                labelspacing=-2.1,
-    #                frameon=False,
-    #                bbox_to_anchor=(1, 0.5))
-    #
-    #     # ---- If plot is True save the plot
-    #     if plot:
-    #         plt.savefig(name_plot_u_meas, bbox_inches='tight')
-    #     plt.show()
-    #
-    # def plot_u_contrib(self, plot=False, name_plot_u_contrib='Contrib_u.png'):
-    #     """
-    #     Plot a barplot showing the contribution in terms of variance
-    #     of each uncertainty component for each transect
-    #
-    #     :param plot:
-    #         if True save the plot in a file
-    #     :param name_plot_u_contrib:
-    #         name of the file to be saved if plot is True
-    #     :return: barplot
-    #     """
-    #     # --- Variance in m6/s2
-    #     Contrib_all = self.variance_terms_by_transect_abs  # m6/s2
-    #     list_basic_color_oursin = [u'#d62728', u'#7f7f7f', u'#ff7f0e', 'gold',
-    #                                u'#bcbd22', u'#2ca02c', u'#e377c2',
-    #                                u'#8c564b', u'#17becf', u'#1f77b4', u'#9467bd']
-    #     # ----- Plot
-    #     plt.rcParams.update({'font.size': 14})
-    #     Contrib_all.plot.bar(stacked=True, color=list_basic_color_oursin, figsize=(10, 7))
-    #     plt.xlabel('Transect index')
-    #     plt.grid(True, linestyle='--', axis='y')
-    #     # plt.ylabel('Sum of variance [%]')
-    #     plt.ylabel(r'Variance [$m^6/s^{-2}$]')
-    #     plt.legend(title="Uncertainty components",
-    #                loc="center left",
-    #                labelspacing=-2.1,
-    #                frameon=False,
-    #                bbox_to_anchor=(1, 0.5))
-    #
-    #     plt.title("U(Q) = " + str('%.1f' % self.u_total_95) +
-    #               "% PP: " + str('%.2f' % self.exp_pp_min) +
-    #               "-" + str('%.2f' % self.exp_pp_max) + " NS: " +
-    #               str('%.2f' % self.exp_ns_min) + "-" +
-    #               str('%.2f' % self.exp_ns_max))
-    #
-    #
-    #
-    #     # ---- If plot is True save the plot
-    #     if plot:
-    #         plt.savefig(name_plot_u_contrib, bbox_inches='tight')
-    #     plt.show()
-    #
-    # def plot_u_contrib_relative(self, plot=False, name_plot_u_contrib='Contrib_u.png'):
-    #     """
-    #     Plot a barplot showing the contribution in terms of variance
-    #     of each uncertainty component for each transect
-    #
-    #     :param plot:
-    #         if True save the plot in a file
-    #     :param name_plot_u_contrib:
-    #         name of the file to be saved if plot is True
-    #     :return: barplot
-    #     """
-    #     # --- Variance in m6/s2
-    #     Contrib_all = 100*100*self.variance_terms_by_transect  # m6/s2
-    #     list_basic_color_oursin = [u'#d62728', u'#7f7f7f', u'#ff7f0e', 'gold',
-    #                                u'#bcbd22', u'#2ca02c', u'#e377c2',
-    #                                u'#8c564b', u'#17becf', u'#1f77b4', u'#9467bd']
-    #     # ----- Plot
-    #     plt.rcParams.update({'font.size': 14})
-    #     Contrib_all.plot.bar(stacked=True, color=list_basic_color_oursin, figsize=(10, 7))
-    #     plt.xlabel('Transect index')
-    #     plt.grid(True, linestyle='--', axis='y')
-    #     plt.ylabel('Sum of variance [%]')
-    #     # plt.ylabel(r'Variance [$m^6/s^{-2}$]')
-    #     plt.legend(title="Uncertainty components",
-    #                loc="center left",
-    #                labelspacing=-2.1,
-    #                frameon=False,
-    #                bbox_to_anchor=(1, 0.5))
-    #
-    #     plt.title("U(Q) = " + str('%.1f' % self.u_total_95) +
-    #               "% PP: " + str('%.2f' % self.exp_pp_min) +
-    #               "-" + str('%.2f' % self.exp_pp_max) + " NS: " +
-    #               str('%.2f' % self.exp_ns_min) + "-" +
-    #               str('%.2f' % self.exp_ns_max))
-    #
-    #     # ---- If plot is True save the plot
-    #     if plot:
-    #         plt.savefig(name_plot_u_contrib, bbox_inches='tight')
-    #     plt.show()
-    #
-    # def plot_u_mean_pie(self, plot=False, name_plot_u_pie='Mean_pie_u.png'):
-    #     """
-    #     Plot a pie showing the average contribution of each uncertainty source to the total uncertainty
-    #
-    #     :param plot:
-    #         if True save the figure
-    #     :param name_plot_u_pie:
-    #         Name of the file if plot is True
-    #     :return: plot
-    #     """
-    #     list_basic_color_oursin = [u'#d62728', u'#7f7f7f', u'#ff7f0e', 'gold',
-    #                                u'#bcbd22', u'#2ca02c', u'#e377c2',
-    #                                u'#8c564b', u'#17becf', u'#1f77b4', u'#9467bd']
-    #
-    #     def my_autopct(pct):
-    #         return (str('%.1f' % pct) + '%') if pct > 2 else ''
-    #
-    #     u_terms = [self.u_terms[i] for i in [1, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10]]
-    #     contrib_terms_total = [self.contrib_terms_total[i] for i in [1, 0, 2, 3, 4, 5, 6, 7, 8, 9, 10]]
-    #
-    #     plt.rcParams.update({'font.size': 14})
-    #     plt.pie(x=contrib_terms_total,
-    #             colors=list_basic_color_oursin,
-    #             autopct=my_autopct,  # lambda x: str(round(x, 2)) + '%',
-    #             pctdistance=1.25
-    #             )
-    #     plt.legend(labels=[str(y) + ' = ' + str('%.1f' % x) + '%' for x, y in zip(u_terms, self.contrib_legend)],
-    #                title="Uncertainty components (68% IC)",
-    #                loc="center left",
-    #                labelspacing=-2.1,
-    #                frameon=False,
-    #                bbox_to_anchor=(1, 0.5))
-    #     if plot:
-    #         plt.savefig(name_plot_u_pie, bbox_inches='tight')
-    #     plt.show()
 
 

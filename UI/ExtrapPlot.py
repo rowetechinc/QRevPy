@@ -355,6 +355,8 @@ class ExtrapPlot(object):
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)
             self.hover_connection = None
+            self.annot.set_visible(False)
+            self.canvas.draw_idle()
 
     def update_annot(self, x, y):
         """Updates the location and text and makes visible the previously initialized and hidden annotation.

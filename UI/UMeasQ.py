@@ -48,6 +48,8 @@ class UMeasQ(object):
 
         # Create dataframe to plot
         self.plot_df = oursin.u_contribution_meas * 100
+
+        # Create dataframe for data cursor
         self.plot_df_cumsum = self.plot_df.cumsum(axis='columns')
 
         # Create x tick labels
@@ -62,12 +64,14 @@ class UMeasQ(object):
 
         # Set margins and padding for figure
         self.fig.subplots_adjust(left=0.01, bottom=0.01, right=0.95, top=0.99, wspace=0, hspace=0)
-        self.fig.ax.set_ylabel(self.canvas.tr('Percent of Measured Q Uncertainty (%)'))
+        self.fig.ax.set_ylabel(self.canvas.tr('Percent of Measured Q Uncertainty'))
         self.fig.ax.set_xlabel(self.canvas.tr('Transects'))
         self.fig.ax.set_xticklabels(x_tick_labels, rotation='horizontal', fontsize=12)
         self.fig.ax.xaxis.label.set_fontsize(12)
         self.fig.ax.yaxis.label.set_fontsize(12)
         self.fig.ax.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
+
+        # Reverse legend to match stacked bars
         handles, labels = self.fig.ax.get_legend_handles_labels()
         self.fig.ax.legend(reversed(handles), reversed(custom_labels), fontsize=12, loc='center left',
                            bbox_to_anchor=(1, 0.5))
@@ -173,3 +177,5 @@ class UMeasQ(object):
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)
             self.hover_connection = None
+            self.annot.set_visible(False)
+            self.canvas.draw_idle()
