@@ -5,7 +5,6 @@ from Classes.QComp import QComp
 from scipy.stats import t
 from profilehooks import profile
 from MiscLibs.common_functions import cosd, sind
-# import matplotlib.pyplot as plt
 
 
 class Oursin(object):
@@ -13,59 +12,6 @@ class Oursin(object):
 
     Attributes
     ----------
-    exp_pp_min_user: float
-        User provided minimum power-power exponent for simulating possible discharge
-    exp_pp_max_user: float
-        User provided maximum power-power exponent for simulating possible discharge
-    exp_ns_min_user: float
-        User provided minimum no-slip exponent for simulating possible discharge
-    exp_ns_max_user: float
-        User provided maximum no-slip exponent for simulating possible discharge
-    draft_error_user: float
-        User provided draft error (in cm) for simulating possible discharge
-    d_right_error_user: float
-        User provided distance error (in %) for the right edge
-    d_left_error_user: float
-        User provided distance error (in %) for the left edge
-    u_movbed_user: float
-        User provided estimate of 68% uncertainty due to moving-bed tests and conditions (in %)
-    u_syst_mean_user: float
-        User provided estimate of 68% uncertainty due to systematic errors (in %)
-    u_cov_68_user: float
-        User provided estimate of 68% uncertainty due to coefficient of variation(in %)
-    u_ens_user: float
-        User provided estimate of 68% uncertainty due the limited number of ensembles (in %)
-    u_meas_mean_user: float
-        User provided estimate of 68% uncertainty from the measured area (in %)
-    u_top_mean_user: float
-        User provided estimate of 68% uncertainty due the top extrapolated discharge (in %)
-    u_bot_mean_user: float
-        User provided estimate of 68% uncertainty due the bottom extrapolated discharge  (in %)
-    u_right_mean_user: float
-        User provided estimate of 68% uncertainty due the right edge discharge (in %)
-    u_left_mean_user: float
-        User provided estimate of 68% uncertainty due the left edge discharge (in %)
-    u_badcell_user: float
-        User provided estimate of 68% uncertainty due bad cells interpolation (in %)
-    u_badens_user: float
-        User provided estimate of 68% uncertainty due bad ensembles interpolation (in %)
-    u_total_95_user: float
-        User provided estimate of 95% total uncertainty (in %)
-
-    u_prct_dzi: float
-        The uncertainty related to depth cell size
-    r_corr_cell: float
-        The correlation between contiguous cells
-    amb_vel: float
-        The ambiguity velocity (m/s)
-    nb_cyc: float
-        the number of carrier cycles per pulse code element
-        (4 or 16 when the ADCP is set up with WB0 or WB1 commands, respectively)
-    r_corr_signal: float
-        The correlation of the beam i in the cell j where the calculations are being done
-    n_pings_wt: float
-        The number of pings averaged together to obtain the water velocity estimate
-
     bot_meth: list
         List that contains the method proposed by Extrap for each transect
     exp_95ic_min: list
@@ -76,14 +22,13 @@ class Oursin(object):
         List that contains the power-power exponent computed by Extrap for Power-Power transect only
     ns_exp: list
         List that contains the no-slip exponent computed by Extrap for No-Slip method transect only
-
-    exp_pp_min: float
+    exp_pp_min: list
         Minimum power-power exponent used for simulating possible discharge
-    exp_pp_max: float
+    exp_pp_max: list
         Maximum power-power exponent used for simulating possible discharge
-    exp_ns_min: float
+    exp_ns_min: list
         Minimum no-slip exponent used for simulating possible discharge
-    exp_ns_max: float
+    exp_ns_max: list
         Maximum no-slip exponent used for simulating possible discharge
     d_right_error_min: list
         List that contains the minimum right distance (in m) used for simulating the discharge for each transect
@@ -93,21 +38,24 @@ class Oursin(object):
         List that contains the maximum right distance (in m) used for simulating the discharge for each transect
     d_left_error_max: list
         List that contains the maximum left distance (in m) used for simulating the discharge for each transect
-    list_draft_error: list
+    draft_error_list: list
         List that contains the draft (in cm) used for simulating the discharge for each transect
-
     u_syst_list: list
         List that contains the computed systematic uncertainty (68%) for each transect
+    u_compass_list: list
+        List that contains the computed uncertainty (68%) due to compass error for each transect
     u_meas_list: list
         List that contains the computed measured area uncertainty (68%) for each transect
     u_ens_list: list
        List that contains the computed uncertainty (68%) due to limited number of ensemble for each transect
     u_movbed_list: list
        List that contains the estimated uncertainty (68%) due to moving bed for each transect
-    u_badens_list: list
-       List that contains the computed uncertainty (68%) due to bad ensembles interpolation for each transect
-    u_badcell_list: list
-       List that contains the computed uncertainty (68%) due to bad cells interpolation  for each transect
+    u_invalid_water_list: list
+        List that contains the computed uncertainty (68%) due to invalid water velocities for each transect
+    u_invalid_boat_list: list
+        List that contains the computed uncertainty (68%) due to invalid boat velocities for each transect
+    u_invalid_depth_list: list
+       List that contains the computed uncertainty (68%) due to invalid depths for each transect
     u_top_list: list
        List that contains the computed uncertainty (68%) due to top discharge extrapolation for each transect
     u_bot_list: list
@@ -116,125 +64,179 @@ class Oursin(object):
        List that contains the computed uncertainty (68%) due to left discharge extrapolation for each transect
     u_right_list: list
        List that contains the computed uncertainty (68%) due to right discharge extrapolation for each transect
-    cov_68 =  None
+               self.u_compass_user_list = []
+    u_syst_mean_user_list: list
+        List that contains the user specified  systematic uncertainty (68%) for each transect
+    u_compass_user_list: list
+        List that contains user specified uncertainty (68%) due to compass error for each transect
+    u_meas_mean_user_list: list
+        List that contains the user specified measured area uncertainty (68%) for each transect
+    u_ens_user_list: list
+       List that contains the user specified uncertainty (68%) due to limited number of ensemble for each transect
+    u_movbed_user_list: list
+       List that contains the user specified uncertainty (68%) due to moving bed for each transect
+    u_invalid_water_user_list: list
+        List that contains the user specified uncertainty (68%) due to invalid water velocities for each transect
+    u_invalid_boat_user_list: list
+        List that contains the user specified uncertainty (68%) due to invalid boat velocities for each transect
+    u_invalid_depth_user_list: list
+       List that contains the user specified uncertainty (68%) due to invalid depths for each transect
+    u_top_mean_user_list: list
+       List that contains the user specified uncertainty (68%) due to top discharge extrapolation for each transect
+    u_bot_mean_user_list: list
+       List that contains the user specified uncertainty (68%) due to bottom discharge extrapolation for each transect
+    u_left_mean_user_list: list
+       List that contains the user specified uncertainty (68%) due to left discharge extrapolation for each transect
+    u_right_mean_user_list: list
+       List that contains the user specified uncertainty (68%) due to right discharge extrapolation for each transect
+    cov_68: float
        Computed uncertainty (68%) due to coefficient of variation
-
-    u_contrib_meas_v_boat: list
-        Relative contribution (in %) of v_boat uncertainty to the measured uncertainty for each transect
-    u_contrib_errv_v_boat: list
-        Relative contribution (in %) of v_boat error velocity to the measured uncertainty for each transect
-    u_contrib_verv_h_depth: list
-       Relative contribution (in %) of v_boat vertical velocity to the measured uncertainty for each transect
-    u_contrib_errv_v_wate: list
-       Relative contribution (in %) of v_water error velocity to the measured uncertainty for each transect
-    u_contrib_meas_v_wate: list
-       Relative contribution (in %) of v_water uncertainty to the measured uncertainty for each transect
-    u_contrib_meas_u_dzi : list
-       Relative contribution (in %) of depth cell uncertainty to the measured uncertainty for each transect
-
-    # --- Relative uncertainty
-    u_syst_mean: float
-        Systematic uncertainty (68%) used for the measurement
-    u_combined_by_transect: list
-        List that contains the combined uncertainty (68%) for each transect
-    u_terms: list
-        List of computed uncertainty terms for the measurement
-    contrib_terms_total: list
-        List of contribution of each terms to the total uncertainty
-    contrib_legend: list
-        List of term labels associated with u_terms and contrib_terms_total
-    u_combined_total: float
-        Combined uncertainty (68%) for the measurement
-    u_total_by_transect: list
-        List that contains the total combined uncertainty (95%) for each transect
-    u_total_95: float
-        Total uncertainty (95%) for the measurement
-    variance_terms_by_transect: DataFrame
-        Variance (68%²) for each term and for each transect
-
-
-    # -- Absolute uncertainty (in m3/s or variance in m6/s2)
-    u_syst_mean_abs: float
-        Systematic uncertainty (68%) used for the measurement
-    u_combined_by_transect_abs: list
-        List that contains the combined uncertainty (68%) for each transect
-    u_terms_abs: list
-        List of computed uncertainty terms for the measurement
-    u_combined_total_abs: float
-        Combined uncertainty (68%) for the measurement
-    u_total_by_transect_abs: list
-        List that contains the total combined uncertainty (95%) for each transect
-    u_total_95_abs: float
-        Total uncertainty (95%) for the measurement
-    variance_terms_by_transect_abs: DataFrame
-        Variance (68% m6/s2) for each term and for each transect
-
-
+    sim_original: DataFrame
+        Discharges (total, and subareas) computed for the processed discharge
+    sim_extrap_pp_16: DataFrame
+        Discharges (total, and subareas) computed using power fit with 1/6th exponent
+    sim_extrap_pp_min: DataFrame
+        Discharges (total, and subareas) computed using power fit with minimum exponent
+    sim_extrap_pp_max: DataFrame
+        Discharges (total, and subareas) computed using power fit with maximum exponent
+    sim_extrap_cns_16: DataFrame
+        Discharges (total, and subareas) computed using constant no slip with 1/6th exponent
+    sim_extrap_cns_min: DataFrame
+        Discharges (total, and subareas) computed using constant no slip with minimum exponent
+    sim_extrap_cns_max: DataFrame
+        Discharges (total, and subareas) computed using constant no slip with maximum exponent
+    sim_extrap_3pns_16: DataFrame
+        Discharges (total, and subareas) computed using 3pt no slip with 1/6the exponent
+    sim_extrap_3pns_opt: DataFrame
+        Discharges (total, and subareas) computed using 3pt no slip with optimized exponent
+    sim_edge_min: DataFrame
+        Discharges (total, and subareas) computed using minimum edge q
+    sim_edge_max: DataFrame
+        Discharges (total, and subareas) computed using maximum edge q
+    sim_draft_min: DataFrame
+        Discharges (total, and subareas) computed using minimum draft
+    sim_draft_max: DataFrame
+        Discharges (total, and subareas) computed using maximum draft
+    sim_cells_trdi: DataFrame
+        Discharges (total, and subareas) computed using TRDI method for invalid cells
+    sim_cells_above: DataFrame
+        Discharges (total, and subareas) computed using cells above for invalid cells
+    sim_cells_below: DataFrame
+        Discharges (total, and subareas) computed using cells below for invalid cells
+    sim_cells_before: DataFrame
+        Discharges (total, and subareas) computed for using cells before for invalid cells
+    sim_cells_after: DataFrame
+        Discharges (total, and subareas) computed for using cells before for invalid cells
     nb_transects: float
         Number of transects used
-
-    # --- Store results of all simulations in DataFrame
-    sim_original: DataFrame
-        Discharges (total, and subareas) computed for simulation 1
-    sim_extrap_pp_16: DataFrame
-        Discharges (total, and subareas) computed for simulation 2
-    sim_extrap_pp_min: DataFrame
-        Discharges (total, and subareas) computed for simulation 3
-    simu3min: DataFrame
-        Discharges (total, and subareas) computed for simulation 3min
-    simu3max: DataFrame
-        Discharges (total, and subareas) computed for simulation 3max
-    sim_extrap_cns_16: DataFrame
-        Discharges (total, and subareas) computed for simulation 4
-    sim_extrap_cns_min: DataFrame
-        Discharges (total, and subareas) computed for simulation 5
-    simu5min: DataFrame
-        Discharges (total, and subareas) computed for simulation 5min
-    simu5max: DataFrame
-        Discharges (total, and subareas) computed for simulation 5max
-    sim_extrap_3pns_16: DataFrame
-        Discharges (total, and subareas) computed for simulation 6
-    sim_extrap_3pns_opt: DataFrame
-        Discharges (total, and subareas) computed for simulation 7
-    simu8: DataFrame # not used
-        Discharges (total, and subareas) computed for simulation 8
-    sim_edge_min: DataFrame # edge
-        Discharges (total, and subareas) computed for simulation 9
-    sim_edge_max: DataFrame # edge
-        Discharges (total, and subareas) computed for simulation 10
-    sim_draft_min: DataFrame # draft
-        Discharges (total, and subareas) computed for simulation 11
-    sim_draft_max: DataFrame # draft
-        Discharges (total, and subareas) computed for simulation 12
-    simu13: DataFrame # missing ens
-        Discharges (total, and subareas) computed for simulation 13
-    simu14: DataFrame # missing ens
-        Discharges (total, and subareas) computed for simulation 14
-    simu15: DataFrame # missing ens
-        Discharges (total, and subareas) computed for simulation 15
-    simu16: DataFrame
-        Discharges (total, and subareas) computed for simulation 16
-    simu17: DataFrame
-        Discharges (total, and subareas) computed for simulation 17
-    sim_cells_trdi: DataFrame # missing cells
-        Discharges (total, and subareas) computed for simulation 18
-    sim_cells_above: DataFrame # missing cells
-        Discharges (total, and subareas) computed for simulation 19
-    sim_cells_below: DataFrame # missing cells
-        Discharges (total, and subareas) computed for simulation 20
-    sim_cells_before: DataFrame # missing cells
-        Discharges (total, and subareas) computed for simulation 22
-    sim_cells_after: DataFrame # missing cells
-        Discharges (total, and subareas) computed for simulation 23
-
-    simu_checked: Dict
-        Dict that shows which simulation are used to compute the uncertainty
-    simu_checked_user: Dict
-        User provided dict for selecting which simulation to be used to compute the uncertainty
-    simu_discharge: Dict
-        Dict that gathers all simulations
     checked_idx: list
         List of indices of checked transects
+    user_advanced_settings: dict
+        Dictionary of user specified advanced settings
+        exp_pp_min_user: float
+            User specified minimum exponent for power fit
+        exp_pp_max_user: float
+            User specified maximum exponent for power fit
+        exp_ns_min_user: float
+            User specified minimum exponent for no slip fit
+        exp_ns_max_user: float
+            User specified maximum exponent for no slip fit
+        draft_error_user: float
+            User specified draft error in m
+        dzi_prct_user: float
+            User specified percent error in depth cell size
+        right_edge_dist_prct_user: float
+            User specified percent error in right edge distance
+        left_edge_dist_prct_user: float
+            User specified percent error in left edge distance
+        gga_boat_user: float
+            User specified standard deviation of boat velocities based on gga in m/s
+        vtg_boat_user: float
+            User specified standard deviation of boat velocities based on vtg in m/s
+        compass_error_user: float
+            User specified compass error in degrees
+    default_advanced_settings: dict
+        Dictionary of default values for advanced settings
+        exp_pp_min: float
+            Default minimum exponent for power fit
+        exp_pp_max: float
+            Default maximum exponent for power fit
+        exp_ns_min: float
+            Default minimum exponent for no slip fit
+        exp_ns_max: float
+            Default maximum exponent for no slip fit
+        draft_error: float
+            Default draft error in m
+        dzi_prct: float
+            Default percent error in depth cell size
+        right_edge_dist_prct: float
+            Default percent error in right edge distance
+        left_edge_dist_prct: float
+            Default percent error in left edge distance
+        gga_boat: float
+            Default standard deviation of boat velocities based on gga in m/s
+        vtg_boat: float
+            Default standard deviation of boat velocities based on vtg in m/s
+        compass_error: float
+            Default compass error in degrees
+    user_specified_u: dict
+        Dictionary of user specified uncertainties as standard deviation in percent
+        u_syst_mean_user: float
+            User specified uncertianty (bias) due to the system, in percent
+        u_movbed_user: float
+            User specified uncertianty (bias) due to the moving-bed conditions, in percent
+        u_compass_user: float
+            User specified uncertianty (bias) due to the compass error, in percent
+        u_ens_user: float
+            User specified uncertianty (bias) due to the number of ensembles collected, in percent
+        u_meas_mean_user: float
+            User specified uncertianty (random) of the measured portion of the cross section, in percent
+        u_top_mean_user: float
+            User specified uncertianty (bias) due to the top extrapolation, in percent
+        u_bot_mean_user: float
+            User specified uncertianty (bias) due to the bottom extrapolation, in percent
+        u_right_mean_user: float
+            User specified uncertianty (bias) due to the right edge discharge estimate, in percent
+        u_left_mean_user: float
+            User specified uncertianty (bias) due to the left edge discharge estimate, in percent
+        u_invalid_boat_user: float
+            User specified uncertianty (bias) due to invalid boat velocities, in percent
+        u_invalid_depth_user
+            User specified uncertianty (bias) due to invalid depths, in percent
+        u_invalid_water_user: float
+            User specified uncertianty (bias) due to invalid water velocities, in percent
+    u: DataFrame
+        DataFrame containing standard deviations in percent for each transect: u_syst, u_compass, u_movbed, u_ens,
+        u_meas, u_top, u_bot, u_left, u_right, u_boat, u_depth, u_water, u_cov, total, and total_95
+     u_contribution_meas: DataFrame
+        DataFrame containing measured discharge uncertainty contribution from: boat, water, depth, and dzi
+    u_measurement: DataFrame
+        DataFrame containing standard deviations in percent for the whole measurement: u_syst, u_compass, u_movbed,
+        u_ens, u_meas, u_top, u_bot, u_left, u_right, u_boat, u_depth, u_water, u_cov, total, and total_95
+    u_contribution_measurement: DataFrame
+        DataFrame containing uncertainty contribution in percent from: u_syst, u_compass, u_movbed,
+        u_ens, u_meas, u_top, u_bot, u_left, u_right, u_boat, u_depth, u_water, u_cov, and total
+    u_nocov: DataFrame
+        DataFrame containing standard deviations in percent for each transect, without COV: u_syst, u_compass, u_movbed,
+        u_ens, u_meas, u_top, u_bot, u_left, u_right, u_boat, u_depth, u_water, total, and total_95
+    u_measurement_nocov: DataFrame
+        DataFrame containing uncertainty contribution in percent from: u_syst, u_compass, u_movbed,
+        u_ens, u_meas, u_top, u_bot, u_left, u_right, u_boat, u_depth, u_water, and total
+    u_user: DataFrame
+        DataFrame containing standard deviations in percent for each transect: u_syst, u_compass, u_movbed, u_ens,
+        u_meas, u_top, u_bot, u_left, u_right, u_boat, u_depth, u_water, u_cov, total, and total_95
+    u_measurement_user: DataFrame
+        DataFrame containing standard deviations in percent for the whole measurement: u_syst, u_compass, u_movbed,
+        u_ens, u_meas, u_top, u_bot, u_left, u_right, u_boat, u_depth, u_water, u_cov, total, and total_95
+    u_contribution_measurement_user: DataFrame
+        DataFrame containing uncertainty contribution in percent from: u_syst, u_compass, u_movbed,
+        u_ens, u_meas, u_top, u_bot, u_left, u_right, u_boat, u_depth, u_water, u_cov, and total
+    u_nocov_user: DataFrame
+        DataFrame containing standard deviations in percent for each transect, without COV: u_syst, u_compass, u_movbed,
+        u_ens, u_meas, u_top, u_bot, u_left, u_right, u_boat, u_depth, u_water, total, and total_95
+    u_measurement_nocov_user: DataFrame
+        DataFrame containing uncertainty contribution in percent from: u_syst, u_compass, u_movbed,
+        u_ens, u_meas, u_top, u_bot, u_left, u_right, u_boat, u_depth, u_water, and total
     """
 
     def __init__(self):
@@ -254,16 +256,16 @@ class Oursin(object):
                                        'compass_error_user': None}
 
         self.default_advanced_settings = {'exp_pp_min': 'computed',
-                                        'exp_pp_max': 'computed',
-                                        'exp_ns_min': 'computed',
-                                        'exp_ns_max': 'computed',
-                                        'draft_error_m': 'computed',
-                                        'dzi_prct': 0.5,
-                                        'right_edge_dist_prct': 20,
-                                        'left_edge_dist_prct': 20,
-                                        'gga_boat_mps': 'computed',
-                                        'vtg_boat_mps': 0.05,
-                                        'compass_error_deg': 1}
+                                          'exp_pp_max': 'computed',
+                                          'exp_ns_min': 'computed',
+                                          'exp_ns_max': 'computed',
+                                          'draft_error_m': 'computed',
+                                          'dzi_prct': 0.5,
+                                          'right_edge_dist_prct': 20,
+                                          'left_edge_dist_prct': 20,
+                                          'gga_boat_mps': 'computed',
+                                          'vtg_boat_mps': 0.05,
+                                          'compass_error_deg': 1}
 
         self.user_specified_u = {'u_syst_mean_user': None,
                                  'u_movbed_user': None,
@@ -286,18 +288,19 @@ class Oursin(object):
         self.ns_exp = []
 
         # Parameters used for computing the uncertainty
-        self.exp_pp_min = None  # float Min power-power exponent (between 0 and 1)
-        self.exp_pp_max = None  # float Max power-power exponent (between 0 and 1)
-        self.exp_ns_min = None  # float Min no-slip exponent (between 0 and 1)
-        self.exp_ns_max = None  # float Max no-Slip  exponent (between 0 and 1)
-        self.d_right_error_min = []  # list of min distance for right edge
-        self.d_left_error_min = []  # list of max distance for right edge
-        self.d_right_error_max = []  # list of min distance for left edge
-        self.d_left_error_max = []  # list of max distance for left edge
-        self.list_draft_error = []  # store draft error in a list
+        self.exp_pp_min = None
+        self.exp_pp_max = None
+        self.exp_ns_min = None
+        self.exp_ns_max = None
+        self.d_right_error_min = []
+        self.d_left_error_min = []
+        self.d_right_error_max = []
+        self.d_left_error_max = []
+        self.draft_error_list = []
 
         # Terms computed by transect (list at 68% level)
         self.u_syst_list = []
+        self.u_compass_list = []
         self.u_meas_list = []
         self.u_ens_list = []
         self.u_movbed_list = []
@@ -309,37 +312,24 @@ class Oursin(object):
         self.u_left_list = []
         self.u_right_list = []
 
+        self.u_syst_mean_user_list = []
+        self.u_compass_user_list = []
+        self.u_movbed_user_list = []
+        self.u_meas_mean_user_list = []
+        self.u_ens_user_list = []
+        self.u_top_mean_user_list = []
+        self.u_bot_mean_user_list = []
+        self.u_left_mean_user_list = []
+        self.u_right_mean_user_list = []
+        self.u_invalid_boat_user_list = []
+        self.u_invalid_depth_user_list = []
+        self.u_invalid_water_user_list = []
+
         # Term computed for measurement
         self.cov_68 = None
 
-        # Relative contribution of each component to the measured uncertainty by transect
-        self.u_contrib_meas_v_boat = []
-        self.u_contrib_errv_v_boat = []
-        self.u_contrib_verv_h_depth = []
-        self.u_contrib_errv_v_wate = []
-        self.u_contrib_meas_v_wate = []
-        self.u_contrib_meas_u_dzi = []
-
-        # Overall measurement average
-        self.u_syst_mean = None
-        self.u_combined_by_transect = []
-        self.u_total_by_transect = []
-        self.u_terms = []
-        self.u_combined_total = None
-        self.u_total_95 = None
-        self.variance_terms_by_transect = pd.DataFrame()
-        self.contrib_terms_total = []
-        self.contrib_legend = []
         self.nb_transects = None
-
-        # Absolute uncertainties
-        self.u_syst_mean_abs = None
-        self.u_combined_by_transect_abs = []
-        self.u_terms_abs = []
-        self.u_combined_total_abs = []
-        self.u_total_by_transect_abs = []
-        self.u_total_95_abs = None
-        self.variance_terms_by_transect_abs = pd.DataFrame()
+        self.checked_idx = []
 
         # --- Store results of all simulations in DataFrame
         self.sim_original = pd.DataFrame(columns=['q_total', 'q_top', 'q_bot', 'q_left', 'q_right', 'q_middle'])
@@ -367,8 +357,42 @@ class Oursin(object):
         self.sim_depth_next = pd.DataFrame(columns=['q_total', 'q_middle'])
         self.sim_boat_hold = pd.DataFrame(columns=['q_total', 'q_middle'])
         self.sim_boat_next = pd.DataFrame(columns=['q_total', 'q_middle'])
-
         self.u_contribution_meas = pd.DataFrame(columns=['boat', 'water', 'depth', 'dzi'])
+        self.u = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas', 'u_top', 'u_bot',
+                                       'u_left', 'u_right', 'u_boat', 'u_depth', 'u_water', 'u_cov', 'total',
+                                       'total_95'])
+        self.u_measurement = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas', 'u_top',
+                                                   'u_bot', 'u_left', 'u_right', 'u_boat', 'u_depth', 'u_water',
+                                                   'u_cov', 'total', 'total_95'])
+        self.u_contribution = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas', 'u_top',
+                                                    'u_bot', 'u_left', 'u_right', 'u_boat', 'u_depth', 'u_water',
+                                                    'u_cov', 'total'])
+        self.u_contribution_measurement = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas',
+                                                                'u_top', 'u_bot', 'u_left', 'u_right', 'u_boat',
+                                                                'u_depth', 'u_water', 'u_cov', 'total'])
+        self.u_nocov = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas', 'u_top', 'u_bot',
+                                             'u_left', 'u_right', 'u_boat', 'u_depth', 'u_water', 'total', 'total_95'])
+        self.u_measurement_nocov = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas', 'u_top',
+                                                         'u_bot', 'u_left', 'u_right', 'u_boat', 'u_depth', 'u_water',
+                                                         'total', 'total_95'])
+        self.u_user = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas', 'u_top', 'u_bot',
+                                            'u_left', 'u_right', 'u_boat', 'u_depth', 'u_water', 'u_cov', 'total',
+                                            'total_95'])
+        self.u_measurement_user = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas', 'u_top',
+                                                        'u_bot', 'u_left', 'u_right', 'u_boat', 'u_depth', 'u_water',
+                                                        'u_cov', 'total', 'total_95'])
+        self.u_contribution_user = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas', 'u_top',
+                                                         'u_bot', 'u_left', 'u_right', 'u_boat', 'u_depth', 'u_water',
+                                                         'u_cov', 'total'])
+        self.u_contribution_measurement_user = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens',
+                                                                     'u_meas', 'u_top', 'u_bot', 'u_left', 'u_right',
+                                                                     'u_boat', 'u_depth', 'u_water', 'u_cov', 'total'])
+        self.u_nocov_user = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas', 'u_top',
+                                                  'u_bot', 'u_left', 'u_right', 'u_boat', 'u_depth', 'u_water', 'total',
+                                                  'total_95'])
+        self.u_measurement_nocov_user = pd.DataFrame(columns=['u_syst', 'u_compass', 'u_movbed', 'u_ens', 'u_meas',
+                                                              'u_top', 'u_bot', 'u_left', 'u_right', 'u_boat',
+                                                              'u_depth', 'u_water', 'total', 'total_95'])
 
     @profile
     def compute_oursin(self, meas):
@@ -489,9 +513,23 @@ class Oursin(object):
 
         Returns
         -------
-        u_combined_by_transect
-        u_total_by_transect
-        u_total_95
+        u_contribution_meas: DataFrame
+            DataFrame containing measured discharge uncertainty contribution from: boat, water, depth, and dzi
+        u: DataFrame
+            DataFrame containing standard deviations in percent for each transect: u_syst, u_compass, u_movbed, u_ens,
+            u_meas, u_top, u_bot, u_left, u_right, u_boat, u_depth, u_water, u_cov, total, and total_95
+        u_measurement: DataFrame
+            DataFrame containing standard deviations in percent for the whole measurement: u_syst, u_compass, u_movbed,
+            u_ens, u_meas, u_top, u_bot, u_left, u_right, u_boat, u_depth, u_water, u_cov, total, and total_95
+        u_contribution_measurement: DataFrame
+            DataFrame containing uncertainty contribution in percent from: u_syst, u_compass, u_movbed,
+            u_ens, u_meas, u_top, u_bot, u_left, u_right, u_boat, u_depth, u_water, u_cov, and total
+        u_nocov: DataFrame
+            DataFrame containing standard deviations in percent for each transect, without COV: u_syst, u_compass,
+            u_movbed, u_ens, u_meas, u_top, u_bot, u_left, u_right, u_boat, u_depth, u_water, total, and total_95
+        u_measurement_nocov: DataFrame
+            DataFrame containing uncertainty contribution in percent from: u_syst, u_compass, u_movbed,
+            u_ens, u_meas, u_top, u_bot, u_left, u_right, u_boat, u_depth, u_water, and total
         """
 
         # Create a Dataframe with all computed uncertainty for each checked transect
@@ -724,11 +762,11 @@ class Oursin(object):
             # Compute the contribution of all terms to u_meas (sum of a0 to g0 =1)
             u_contrib_boat = (np.nan_to_num(q_2_ens * (u_boat ** 2)).sum() / q_2_tran) / u_2_prct_meas
             u_contrib_depth = (np.nan_to_num(q_2_ens * (relative_error_depth ** 2)).sum()
-                                      / q_2_tran) / u_2_prct_meas
+                               / q_2_tran) / u_2_prct_meas
             u_contrib_water = (np.nan_to_num(q_2_ens * ((1 / n_cell_ens) * (std_ev_wt_ens ** 2))).sum()
-                                     / q_2_tran) / u_2_prct_meas
+                               / q_2_tran) / u_2_prct_meas
             u_contrib_dzi = (np.nan_to_num(q_2_ens * ((1 / n_cell_ens) * (u_dzi ** 2))).sum()
-                                    / q_2_tran) / u_2_prct_meas
+                             / q_2_tran) / u_2_prct_meas
 
             self.u_contribution_meas.loc[len(self.u_contribution_meas)] = [u_contrib_boat,
                                                                            u_contrib_water,
@@ -857,7 +895,7 @@ class Oursin(object):
 
             meas_stats = meas.compute_measurement_properties(meas)
             speed_ratio = meas_stats['avg_boat_speed'][self.checked_idx] / \
-                          meas_stats['avg_water_speed'][self.checked_idx]
+                meas_stats['avg_water_speed'][self.checked_idx]
             self.u_compass_list = np.abs(1 - (cosd(compass_error) + 0.5 * speed_ratio * sind(compass_error)))
         if self.user_specified_u['u_compass_user'] is None:
             self.u_compass_user_list = self.u_compass_list
@@ -879,7 +917,7 @@ class Oursin(object):
                                                          self.sim_draft_max,
                                                          self.sim_draft_min],
                                               col_name='q_top') \
-                          / np.abs(self.sim_original['q_total'])
+            / np.abs(self.sim_original['q_total'])
 
         if self.user_specified_u['u_top_mean_user'] is not None:
             self.u_top_mean_user_list = [0.01 * self.user_specified_u['u_top_mean_user']] * self.nb_transects
@@ -899,7 +937,7 @@ class Oursin(object):
                                                          self.sim_extrap_cns_max,
                                                          self.sim_extrap_3pns_opt],
                                               col_name='q_bot') \
-                          / np.abs(self.sim_original['q_total'])
+            / np.abs(self.sim_original['q_total'])
 
         if self.user_specified_u['u_bot_mean_user'] is not None:
             self.u_bot_mean_user_list = [0.01 * self.user_specified_u['u_bot_mean_user']] * self.nb_transects
@@ -916,7 +954,7 @@ class Oursin(object):
                                                           self.sim_draft_min,
                                                           self.sim_draft_max],
                                                col_name='q_left') \
-                           / np.abs(self.sim_original['q_total'])
+            / np.abs(self.sim_original['q_total'])
 
         if self.user_specified_u['u_left_mean_user'] is not None:
             self.u_left_mean_user_list = [0.01 * self.user_specified_u['u_left_mean_user']] * self.nb_transects
@@ -933,7 +971,7 @@ class Oursin(object):
                                                            self.sim_draft_min,
                                                            self.sim_draft_max],
                                                 col_name='q_right') \
-                            / np.abs(self.sim_original['q_total'])
+            / np.abs(self.sim_original['q_total'])
 
         if self.user_specified_u['u_right_mean_user'] is not None:
             self.u_right_mean_user_list = [0.01 * self.user_specified_u['u_right_mean_user']] * self.nb_transects
@@ -948,7 +986,7 @@ class Oursin(object):
                                                                    self.sim_depth_hold,
                                                                    self.sim_depth_next],
                                                         col_name='q_total') \
-                                    / np.abs(self.sim_original['q_total'])
+            / np.abs(self.sim_original['q_total'])
 
         if self.user_specified_u['u_invalid_depth_user'] is not None:
             self.u_invalid_depth_user_list = [0.01 * self.user_specified_u[
@@ -964,7 +1002,7 @@ class Oursin(object):
                                                                   self.sim_boat_hold,
                                                                   self.sim_boat_next],
                                                        col_name='q_total') \
-                                   / np.abs(self.sim_original['q_total'])
+            / np.abs(self.sim_original['q_total'])
 
         if self.user_specified_u['u_invalid_boat_user'] is not None:
             self.u_invalid_boat_user_list = [0.01 * self.user_specified_u['u_invalid_boat_user']] * self.nb_transects
@@ -984,7 +1022,7 @@ class Oursin(object):
                                                                    self.sim_cells_after,
                                                                    self.sim_shallow],
                                                         col_name='q_total') \
-                                    / np.abs(self.sim_original['q_total'])
+            / np.abs(self.sim_original['q_total'])
 
         if self.user_specified_u['u_invalid_water_user'] is not None:
             self.u_invalid_water_user_list = [0.01 * self.user_specified_u['u_invalid_water_user']] \
@@ -1007,7 +1045,7 @@ class Oursin(object):
         if self.nb_transects > 1:
             total_q = []
             for trans_id in self.checked_idx:
-               total_q.append(meas.discharge[trans_id].total)
+                total_q.append(meas.discharge[trans_id].total)
 
             # Compute coefficient of variation
             cov = np.abs(np.nanstd(total_q, ddof=1) / np.nanmean(total_q))
@@ -1027,7 +1065,7 @@ class Oursin(object):
         #     self.u_cov_68_user = u_cov_68_user * 0.01
         #     self.u_cov_68_user_value = self.u_cov_68_user
         # else:
-        self.u_cov_68_user_value = self.cov_68
+        # self.u_cov_68_user_value = self.cov_68
 
     def sim_orig(self, meas):
         """Stores original measurement results in a data frame
@@ -1037,7 +1075,7 @@ class Oursin(object):
         meas: MeasurementData
             Object of MeasurementData
         """
-        transect_q=dict()
+        transect_q = dict()
         for trans_id in self.checked_idx:
             transect_q['q_total'] = meas.discharge[trans_id].total
             transect_q['q_top'] = meas.discharge[trans_id].top
@@ -1081,6 +1119,9 @@ class Oursin(object):
         else:
             # Compute q for min and max values
             q = QComp()
+            self.sim_extrap_cns_min = pd.DataFrame(columns=self.sim_extrap_cns_min.columns)
+            self.sim_extrap_cns_max = pd.DataFrame(columns=self.sim_extrap_cns_max.columns)
+
             for trans_id in self.checked_idx:
                 # Compute min values
                 q.populate_data(data_in=meas.transects[trans_id],
@@ -1137,6 +1178,9 @@ class Oursin(object):
                 self.sim_extrap_pp_max['q_bot'] = meas.extrap_fit.q_sensitivity.q_bot_pp_opt_list
             else:
                 q = QComp()
+                self.sim_extrap_pp_min = pd.DataFrame(columns=self.sim_extrap_pp_min.columns)
+                self.sim_extrap_pp_max = pd.DataFrame(columns=self.sim_extrap_pp_max.columns)
+
                 for trans_id in self.checked_idx:
                     q.populate_data(data_in=meas.transects[trans_id],
                                     top_method='Power',
@@ -1159,6 +1203,14 @@ class Oursin(object):
             Object of measurement data
         """
 
+        # Clear variables
+        self.d_right_error_min = []
+        self.d_left_error_min = []
+        self.d_right_error_max = []
+        self.d_left_error_max = []
+        self.sim_edge_min = pd.DataFrame(columns=self.sim_edge_min.columns)
+        self.sim_edge_max = pd.DataFrame(columns=self.sim_edge_max.columns)
+
         # Create measurement copy to allow changes without affecting original
         meas_temp = copy.deepcopy(meas)
 
@@ -1178,7 +1230,7 @@ class Oursin(object):
             meas_temp.transects[trans_id].edges.left.type = 'Triangular'
             meas_temp.transects[trans_id].edges.right.type = 'Triangular'
             meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
-                                                         moving_bed_data=meas_temp.mb_tests)
+                                                        moving_bed_data=meas_temp.mb_tests)
             self.sim_edge_min.loc[len(self.sim_edge_min)] = [meas_temp.discharge[trans_id].total,
                                                              meas_temp.discharge[trans_id].left,
                                                              meas_temp.discharge[trans_id].right]
@@ -1191,7 +1243,7 @@ class Oursin(object):
             meas_temp.transects[trans_id].edges.left.type = 'Rectangular'
             meas_temp.transects[trans_id].edges.right.type = 'Rectangular'
             meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
-                                                         moving_bed_data=meas_temp.mb_tests)
+                                                        moving_bed_data=meas_temp.mb_tests)
             self.sim_edge_max.loc[len(self.sim_edge_max)] = [meas_temp.discharge[trans_id].total,
                                                              meas_temp.discharge[trans_id].left,
                                                              meas_temp.discharge[trans_id].right]
@@ -1204,6 +1256,12 @@ class Oursin(object):
         meas: MeasurementData
             Object of MeasurementData
         """
+
+        # Reset variables
+        self.draft_error_list = []
+        self.sim_draft_min = pd.DataFrame(columns=self.sim_draft_min.columns)
+        self.sim_draft_max = pd.DataFrame(columns=self.sim_draft_max.columns)
+
         # Create copy of meas to avoid changing original
         meas_temp = copy.deepcopy(meas)
 
@@ -1212,12 +1270,12 @@ class Oursin(object):
             draft_max, draft_min, draft_error = \
                 self.compute_draft_max_min(transect=meas.transects[trans_id],
                                            draft_error_user=self.user_advanced_settings['draft_error_user'])
-            self.list_draft_error.append(draft_error)
+            self.draft_error_list.append(draft_error)
 
             # Compute discharge for draft min
             meas_temp.transects[trans_id].change_draft(draft_min)
             meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
-                                                         moving_bed_data=meas_temp.mb_tests)
+                                                        moving_bed_data=meas_temp.mb_tests)
             self.sim_draft_min.loc[len(self.sim_draft_min)] = [meas_temp.discharge[trans_id].total,
                                                                meas_temp.discharge[trans_id].top,
                                                                meas_temp.discharge[trans_id].left,
@@ -1225,7 +1283,7 @@ class Oursin(object):
             # Compute discharge for draft max
             meas_temp.transects[trans_id].change_draft(draft_max)
             meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
-                                                         moving_bed_data=meas_temp.mb_tests)
+                                                        moving_bed_data=meas_temp.mb_tests)
             self.sim_draft_max.loc[len(self.sim_draft_max)] = [meas_temp.discharge[trans_id].total,
                                                                meas_temp.discharge[trans_id].top,
                                                                meas_temp.discharge[trans_id].left,
@@ -1240,38 +1298,45 @@ class Oursin(object):
             Object of MeasurementData
         """
 
+        # Reset data frames
+        self.sim_cells_trdi = pd.DataFrame(columns=self.sim_cells_trdi.columns)
+        self.sim_cells_above = pd.DataFrame(columns=self.sim_cells_above.columns)
+        self.sim_cells_below = pd.DataFrame(columns=self.sim_cells_below.columns)
+        self.sim_cells_before = pd.DataFrame(columns=self.sim_cells_before.columns)
+        self.sim_cells_after = pd.DataFrame(columns=self.sim_cells_after.columns)
+
         # Simulations for invalid cells and ensembles
         meas_temp = copy.deepcopy(meas)
         for trans_id in self.checked_idx:
             # TRDI method
             meas_temp.transects[trans_id].w_vel.interpolate_cells_trdi(meas_temp.transects[trans_id])
             meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
-                                                         moving_bed_data=meas_temp.mb_tests)
+                                                        moving_bed_data=meas_temp.mb_tests)
             self.sim_cells_trdi.loc[len(self.sim_cells_trdi)] = [meas_temp.discharge[trans_id].total,
-                                                                     meas_temp.discharge[trans_id].middle]
+                                                                 meas_temp.discharge[trans_id].middle]
 
             # Above only
             meas_temp.transects[trans_id].w_vel.interpolate_abba(meas_temp.transects[trans_id], search_loc=['above'])
             meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
-                                                         moving_bed_data=meas_temp.mb_tests)
+                                                        moving_bed_data=meas_temp.mb_tests)
             self.sim_cells_above.loc[len(self.sim_cells_above)] = [meas_temp.discharge[trans_id].total,
-                                                                 meas_temp.discharge[trans_id].middle]
+                                                                   meas_temp.discharge[trans_id].middle]
             # Below only
             meas_temp.transects[trans_id].w_vel.interpolate_abba(meas_temp.transects[trans_id], search_loc=['below'])
             meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
-                                                         moving_bed_data=meas_temp.mb_tests)
+                                                        moving_bed_data=meas_temp.mb_tests)
             self.sim_cells_below.loc[len(self.sim_cells_below)] = [meas_temp.discharge[trans_id].total,
                                                                    meas_temp.discharge[trans_id].middle]
             # Before only
             meas_temp.transects[trans_id].w_vel.interpolate_abba(meas_temp.transects[trans_id], search_loc=['before'])
             meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
-                                                         moving_bed_data=meas_temp.mb_tests)
+                                                        moving_bed_data=meas_temp.mb_tests)
             self.sim_cells_before.loc[len(self.sim_cells_before)] = [meas_temp.discharge[trans_id].total,
                                                                      meas_temp.discharge[trans_id].middle]
             # After only
             meas_temp.transects[trans_id].w_vel.interpolate_abba(meas_temp.transects[trans_id], search_loc=['after'])
             meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
-                                                         moving_bed_data=meas_temp.mb_tests)
+                                                        moving_bed_data=meas_temp.mb_tests)
             self.sim_cells_after.loc[len(self.sim_cells_after)] = [meas_temp.discharge[trans_id].total,
                                                                    meas_temp.discharge[trans_id].middle]
 
@@ -1284,6 +1349,9 @@ class Oursin(object):
         meas: MeasurementData
             Object of MeasurementData
         """
+
+        # Reset data frame
+        self.sim_shallow = pd.DataFrame(columns=self.sim_shallow.columns)
 
         for trans_id in self.checked_idx:
             shallow_estimate = np.nansum(meas.discharge[trans_id].middle_ens) \
@@ -1304,6 +1372,10 @@ class Oursin(object):
            Object of MeasurementData
         """
 
+        # Reset dataframes
+        self.sim_depth_hold = pd.DataFrame(columns=self.sim_depth_hold.columns)
+        self.sim_depth_next = pd.DataFrame(columns=self.sim_depth_next.columns)
+
         # Simulations for invalid depths
         meas_temp = copy.deepcopy(meas)
         for trans_id in self.checked_idx:
@@ -1311,7 +1383,7 @@ class Oursin(object):
             # Hold last
             depths.interpolate_hold_last()
             meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
-                                                         moving_bed_data=meas_temp.mb_tests)
+                                                        moving_bed_data=meas_temp.mb_tests)
             self.sim_depth_hold.loc[len(self.sim_depth_hold)] = [meas_temp.discharge[trans_id].total,
                                                                  meas_temp.discharge[trans_id].middle]
             # Fill with next
@@ -1330,6 +1402,10 @@ class Oursin(object):
            Object of MeasurementData
         """
 
+        # Reset dataframes
+        self.sim_boat_hold = pd.DataFrame(columns=self.sim_boat_hold.columns)
+        self.sim_boat_next = pd.DataFrame(columns=self.sim_boat_next.columns)
+
         # Simulations for invalid boat velocity
         meas_temp = copy.deepcopy(meas)
         for trans_id in self.checked_idx:
@@ -1340,7 +1416,7 @@ class Oursin(object):
                 meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
                                                             moving_bed_data=meas_temp.mb_tests)
                 self.sim_boat_hold.loc[len(self.sim_boat_hold)] = [meas_temp.discharge[trans_id].total,
-                                                                    meas_temp.discharge[trans_id].middle]
+                                                                   meas_temp.discharge[trans_id].middle]
                 # Fill with next
                 boat_data.interpolate_next()
                 meas_temp.discharge[trans_id].populate_data(data_in=meas_temp.transects[trans_id],
@@ -1389,7 +1465,7 @@ class Oursin(object):
         draft_min = transect.depths.bt_depths.draft_orig_m - draft_error
         draft_max = transect.depths.bt_depths.draft_orig_m + draft_error
 
-        if draft_min <=0:
+        if draft_min <= 0:
             draft_min = 0.01
 
         return draft_max, draft_min, draft_error
@@ -1449,16 +1525,16 @@ class Oursin(object):
 
         Returns
         -------
-        skip_PP_min_max: bool
+        skip_pp_min_max: bool
             Boolean to identify if power fit simulations should be skipped
         exp_pp_max: float
             Maximum power fit exponent to be used in simulations
         exp_pp_min: float
             Minimum power fit exponent to be used in simulations
         """
-        skip_PP_min_max = False
+        skip_pp_min_max = False
         if len(pp_exp) == 0:
-            skip_PP_min_max = True
+            skip_pp_min_max = True
             min_pp = meas.extrap_fit.q_sensitivity.pp_exp
             max_pp = meas.extrap_fit.q_sensitivity.pp_exp
         else:
@@ -1502,10 +1578,10 @@ class Oursin(object):
         else:
             exp_pp_max = exp_pp_max_user
 
-        return skip_PP_min_max, exp_pp_max, exp_pp_min
+        return skip_pp_min_max, exp_pp_max, exp_pp_min
 
     @staticmethod
-    def compute_ns_max_min(meas, ns_exp, exp_ns_min_user=None, exp_ns_max_user=None ):
+    def compute_ns_max_min(meas, ns_exp, exp_ns_min_user=None, exp_ns_max_user=None):
         """Determine the max and min no slip exponents.
 
         Parameters
@@ -1521,16 +1597,16 @@ class Oursin(object):
 
         Returns
         -------
-        skip_NS_min_max: bool
+        skip_ns_min_max: bool
             Boolean to identify if no slip simulations should be skipped
         exp_ns_max: float
             Maximum no slip exponent to be used in simulations
         exp_ns_min: float
             Minimum no slip exponent to be used in simulations
         """
-        skip_NS_min_max = False
+        skip_ns_min_max = False
         if len(ns_exp) == 0:
-            skip_NS_min_max = True
+            skip_ns_min_max = True
             min_ns = meas.extrap_fit.q_sensitivity.ns_exp
             max_ns = meas.extrap_fit.q_sensitivity.ns_exp
         else:
@@ -1565,7 +1641,7 @@ class Oursin(object):
         else:
             exp_ns_max = exp_ns_max_user
 
-        return skip_NS_min_max, exp_ns_max, exp_ns_min
+        return skip_ns_min_max, exp_ns_max, exp_ns_min
 
     @staticmethod
     def depth_error_boat_motion(transect):
@@ -1602,7 +1678,7 @@ class Oursin(object):
 
         Returns
         -------
-        std_ev_WT_ens: float
+        std_ev_wt_ens: float
             Standard deviation of water track error velocity for each ensemble
         """
 
@@ -1616,13 +1692,13 @@ class Oursin(object):
         d_vel_filtered[transect.w_vel.valid_data[0]] = transect.w_vel.d_mps[transect.w_vel.valid_data[0]]
 
         # Compute relative standard deviation of error velocity
-        std_ev_WT = np.nanstd(d_vel_filtered) / np.abs(v_wa_cell_abs)
-        std_ev_WT_ens = np.nanmedian(std_ev_WT, axis=0)
+        std_ev_wt = np.nanstd(d_vel_filtered) / np.abs(v_wa_cell_abs)
+        std_ev_wt_ens = np.nanmedian(std_ev_wt, axis=0)
         # TODO consider substituting the overall std for nan rather than 0
         # all_std_ev_WT = np.nanstd(d_vel_filtered[:])
-        # std_ev_WT_ens[np.isnan(std_ev_WT_ens)] = all_std_ev_WT
-        std_ev_WT_ens[np.isnan(std_ev_WT_ens)] = 0.00
-        return std_ev_WT_ens
+        # std_ev_wt_ens[np.isnan(std_ev_wt_ens)] = all_std_ev_WT
+        std_ev_wt_ens[np.isnan(std_ev_wt_ens)] = 0.00
+        return std_ev_wt_ens
 
     @staticmethod
     def boat_std_by_error_velocity(transect):
@@ -1637,7 +1713,7 @@ class Oursin(object):
 
         Returns
         -------
-        std_ev_BT: float
+        std_ev_bt: float
             Standard deviation of bottom track error velocity
         """
 
@@ -1652,13 +1728,13 @@ class Oursin(object):
             transect.boat_vel.bt_vel.d_mps[transect.boat_vel.bt_vel.valid_data[0]]
 
         # Compute relative standard deviation of error velocity
-        all_std_ev_BT = np.nanstd(d_vel_filtered)
-        std_ev_BT = np.abs(all_std_ev_BT) / speed
+        all_std_ev_bt = np.nanstd(d_vel_filtered)
+        std_ev_bt = np.abs(all_std_ev_bt) / speed
         # TODO Consider substituting the overall std for nan rather than 0
-        # std_ev_BT[np.isnan(std_ev_BT)] = all_std_ev_BT
-        std_ev_BT[np.isnan(std_ev_BT)] = 0.00
+        # std_ev_bt[np.isnan(std_ev_bt)] = all_std_ev_bt
+        std_ev_bt[np.isnan(std_ev_bt)] = 0.00
 
-        return std_ev_BT
+        return std_ev_bt
 
     @staticmethod
     def apply_u_rect(list_sims, col_name):
@@ -1684,6 +1760,4 @@ class Oursin(object):
         u_rect = (vertical_stack.groupby(vertical_stack.index)[col_name].max()
                   - vertical_stack.groupby(vertical_stack.index)[col_name].min()) / (2 * (3 ** 0.5))
 
-        return (u_rect)
-
-
+        return u_rect
