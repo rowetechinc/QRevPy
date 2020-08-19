@@ -71,6 +71,7 @@ class QAData(object):
         self.w_vel = dict()
         self.extrapolation = dict()
         self.edges = dict()
+        self.settings_dict = dict()
 
         if compute:
             # Apply QA checks
@@ -85,8 +86,19 @@ class QAData(object):
             self.water_qa(meas)
             self.extrapolation_qa(meas)
             self.edges_qa(meas)
+
         else:
             self.populate_from_qrev_mat(meas, mat_struct)
+
+        self.check_bt_setting(meas, compute)
+        self.check_wt_settings(meas, compute)
+        self.check_depth_settings(meas, compute)
+        self.check_gps_settings(meas, compute)
+        # self.check_edge_settings(meas, compute)
+        self.check_extrap_settings(meas, compute)
+        self.check_tempsal_settings(meas, compute)
+        self.check_gps_settings(meas, compute)
+        self.check_mbt_settings(meas)
 
     def populate_from_qrev_mat(self, meas, meas_struct):
         """Populates the object using data from previously saved QRev Matlab file.
@@ -1052,6 +1064,8 @@ class QAData(object):
                         self.movingbed['code'] = 2
                         self.movingbed['status'] = 'caution'
 
+        self.check_mbt_settings(meas)
+
     def user_qa(self, meas):
         """Apply quality checks to user input data.
 
@@ -1835,3 +1849,393 @@ class QAData(object):
             right_dist_moved = np.nan
 
         return right_dist_moved, left_dist_moved, dmg
+    
+    # check for user changes
+    def check_bt_setting(self, meas, compute):
+        """Checks the bt settings to see if they are still on the default
+                        settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
+
+        s = meas.current_settings()
+        d = meas.qrev_default_settings()
+
+        beam_sol = s['BTbeamFilter']
+        bt_error = s['BTdFilter']
+        bt_vert = s['BTwFilter']
+        other = s['BTsmoothFilter']
+
+        d_beam_sol = d['BTbeamFilter']
+        d_bt_error = d['BTdFilter']
+        d_bt_vert = d['BTwFilter']
+        d_other = d['BTsmoothFilter']
+
+        settings = [beam_sol, bt_error, bt_vert, other]
+        default = [d_beam_sol, d_bt_error, d_bt_vert, d_other]
+
+        if settings == default:
+            self.settings_dict['tab_bt'] = 'Default'
+        else:
+            self.settings_dict['tab_bt'] = 'Custom'
+
+            if compute:
+
+                self.bt_vel['messages'].append(['BT: User modified default '
+                                                'filters.',3,8])
+
+    def check_wt_settings(self, meas, compute):
+        """Checks the wt settings to see if they are still on the default
+                settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
+
+        s = meas.current_settings()
+        d = meas.qrev_default_settings()
+
+        beam_sol = s['WTbeamFilter']
+        wt_error = s['WTdFilter']
+        wt_vert = s['WTwFilter']
+        wt_snr = s['WTsnrFilter']
+
+        d_beam_sol = d['WTbeamFilter']
+        d_wt_error = d['WTdFilter']
+        d_wt_vert = d['WTwFilter']
+        d_wt_snr = d['WTsnrFilter']
+
+        settings = [beam_sol, wt_error, wt_vert, wt_snr]
+        default = [d_beam_sol, d_wt_error, d_wt_vert, d_wt_snr]
+
+        if settings == default:
+            self.settings_dict['tab_wt'] = 'Default'
+        else:
+            self.settings_dict['tab_wt'] = 'Custom'
+            
+            if compute:
+                self.w_vel['messages'].append(['WT: User modified default '
+                                               'filters.',3,11])
+
+
+    def check_extrap_settings(self, meas, compute):
+        """Checks the extrap to see if they are still on the default
+        settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
+
+        # Check fit parameters
+        if meas.extrap_fit.sel_fit[0].fit_method == 'Automatic':
+            fit = 'Automatic'
+        else:
+            fit = 'Manual'
+
+        # Check subsection parameters
+        if meas.extrap_fit.sel_fit[-1].data_type.lower() != 'q':
+            d_used = 'Manual'
+        elif meas.extrap_fit.threshold != 20:
+            d_used = 'Manual'
+        elif meas.extrap_fit.subsection[0] != 0 or \
+                meas.extrap_fit.subsection[1] != 100:
+            d_used = 'Manual'
+        else:
+            d_used = 'Automatic'
+
+        settings = [fit, d_used]
+        default = ['Automatic', 'Automatic']
+
+        if settings == default:
+            self.settings_dict['tab_extrap'] = 'Default'
+        else:
+            self.settings_dict['tab_extrap'] = 'Custom'
+            
+            if compute:
+                self.extrapolation['messages'].append(['Extrapolation: User '
+                                                       'modified default '
+                                                       'settings.'
+                                                       ,3,12])
+
+    def check_tempsal_settings(self, meas, compute):
+
+        """Checks the temp and salinity settings to see if they are still on
+        the default settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
+
+        t_source = []
+        s_sound = []
+        
+        for transect in meas.transects:
+            if transect.checked:
+
+                # Temperature source
+                if transect.sensors.temperature_deg_c.selected != 'internal':
+                    source = 'Custom'
+
+                else:
+                    source = 'Default'
+
+                t_source.append(source)
+
+                # Speed of Sound
+                if transect.sensors.speed_of_sound_mps.selected == 'internal':
+
+                    source = 'Default'
+
+                else:
+                    source = 'Custom'
+
+                s_sound.append(source)
+
+        self.settings_dict['tab_tempsal'] = 'Default'
+
+        if 'Custom' in t_source:
+
+            self.settings_dict['tab_tempsal'] = 'Custom'
+            
+            if compute:
+                self.temperature['messages'].append(['Temperature: User '
+                                                     'modified '
+                                                     'temperature source.'
+                                                     ,3,5])
+
+
+        if 'Custom' in s_sound:
+
+            self.settings_dict['tab_tempsal'] = 'Custom'
+            
+            if compute:
+                self.temperature['messages'].append(['Temperature: User '
+                                                     'modified speed of sound '
+                                                     'source.',3,5])
+         
+    def check_gps_settings(self, meas, compute):
+        """Checks the gps settings to see if they are still on the default
+        settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
+        gps = False
+        for transect in meas.transects:
+            if transect.boat_vel.gga_vel is not None:
+                gps = True
+                break
+
+        if gps is True:
+            s = meas.current_settings()
+            d = meas.qrev_default_settings()
+
+            quality = s['ggaDiffQualFilter']
+            alt_change = s['ggaAltitudeFilter']
+            hdop = s['GPSHDOPFilter']
+            other = s['GPSSmoothFilter']
+
+            d_quality = d['ggaDiffQualFilter']
+            d_alt_change = d['ggaAltitudeFilter']
+            d_hdop = d['GPSHDOPFilter']
+            d_other = d['GPSSmoothFilter']
+
+            settings = [quality, alt_change, hdop, other]
+            default = [d_quality, d_alt_change, d_hdop, d_other]
+
+            if settings == default:
+                self.settings_dict['tab_gps'] = 'Default'
+
+            else:
+                self.settings_dict['tab_gps'] = 'Custom'
+
+                if compute:
+                    self.gga_vel['messages'].append(['GPS: User modified default '
+                                                     'filters.', 3, 8])
+
+    def check_depth_settings(self, meas, compute):
+        """Checks the depth settings to see if they are still on the default
+                settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
+
+        s = meas.current_settings()
+        d = meas.qrev_default_settings()
+
+        depth_ref = s['depthReference']
+        bt_average = s['depthAvgMethod']
+        s_filter = s['depthFilterType']
+
+        d_depth_ref = d['depthReference']
+        d_bt_average = d['depthAvgMethod']
+        d_filter = d['depthFilterType']
+
+        settings = [depth_ref, bt_average, s_filter]
+        default = [d_depth_ref, d_bt_average, d_filter]
+
+        orig_draft = []
+        cur_draft = []
+
+        for transect in meas.transects:
+            if transect.checked:
+
+                orig_draft.append(transect.depths.bt_depths.draft_orig_m)
+                cur_draft.append(transect.depths.bt_depths.draft_use_m)
+
+        if settings != default:
+            self.settings_dict['tab_depth'] = 'Custom'
+            
+            if compute:
+                self.depths['messages'].append(['Depths: User modified '
+                                                'default settings.', 3, 10])
+
+        if orig_draft != cur_draft:
+            self.settings_dict['tab_depth'] = 'Custom'
+            
+            if compute:
+                self.depths['messages'].append(['Depths: User modified '
+                                                'draft.', 3, 10])
+                
+        if settings == default and orig_draft == cur_draft:
+            self.settings_dict['tab_depth'] = 'Default'
+
+    def check_edge_settings(self, meas, compute):
+        """Checks the edge settings to see if they are still on the original
+                settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
+
+        orig_start = []
+        orig_left_type = []
+        orig_left_coef = []
+        orig_left_dist = []
+        orig_left_ens = []
+        orig_left_q = []
+        orig_right_type = []
+        orig_right_coef = []
+        orig_right_dist = []
+        orig_right_ens = []
+        orig_right_q = []
+
+        curr_start = []
+        curr_left_type = []
+        curr_left_coef = []
+        curr_left_dist = []
+        curr_left_ens = []
+        curr_left_q = []
+        curr_right_type = []
+        curr_right_coef = []
+        curr_right_dist = []
+        curr_right_ens = []
+        curr_right_q = []
+
+        for transect in meas.transects:
+            if transect.checked:
+
+                #check start edge
+                orig_start.append(transect.start_edge)
+            
+                #check left type
+                orig_left_type.append(transect.edges.left.type)
+            
+                #check left dist
+                orig_left_dist.append(transect.edges.left.distance_m)
+            
+                #check left ens
+                orig_left_ens.append(transect.edges.left.number_ensembles)
+            
+                # check right type
+                orig_right_type.append(transect.edges.right.type)
+
+                # check right dist
+                orig_right_dist.append(transect.edges.right.distance_m)
+            
+                # check right ens
+                orig_right_ens.append(transect.edges.right.number_ensembles)
+
+            original = [orig_start, orig_left_type, orig_left_coef, orig_left_dist,
+                        orig_left_ens, orig_left_q, orig_right_type,
+                        orig_right_coef, orig_right_dist, orig_right_ens,
+                        orig_right_q]
+
+            current = [curr_start, curr_left_type, curr_left_coef, curr_left_dist,
+                       curr_left_ens, curr_left_q, curr_right_type,
+                       curr_right_coef, curr_right_dist, curr_right_ens,
+                       curr_right_q]
+
+        if original == current:
+            self.settings_dict['tab_edges'] = 'Default'
+        else:
+            self.settings_dict['tab_edges'] = 'Custom'
+
+    def check_mbt_settings(self, meas):
+        """Checks the mbt settings to see if they are still on the original
+                settings.
+
+        Parameters
+        ----------
+        meas: Measurement
+            Object of class Measurement
+        """
+        # if there are mb tests check for user changes
+        if len(meas.mb_tests) >= 1:
+            mbt = meas.mb_tests
+
+            mb_present = []
+            mb_user_valid = []
+            mb_test_quality = []
+            mb_used = []
+
+            for test in mbt:
+
+                if test.user_valid:
+                    mb_user_valid.append(True)
+                else:
+                    mb_user_valid.append(False)
+
+                if 'Yes' in test.moving_bed:
+                    mb_present.append(True)
+                else:
+                    mb_present.append(False)
+
+                if 'Good' in test.test_quality:
+                    mb_test_quality.append(True)
+                else:
+                    mb_test_quality.append(False)
+
+                if test.use_2_correct is True:
+                    mb_used.append(True)
+                else:
+                    mb_used.append(False)
+
+            if mb_test_quality != mb_user_valid:
+                self.settings_dict['tab_mbt'] = 'Custom'
+                self.movingbed['messages'].append(['Moving-Bed Test: '
+                                                   'User modified default '
+                                                   'settings.', 3, 6])
+            elif mb_used != mb_present:
+                self.settings_dict['tab_mbt'] = 'Custom'
+                self.movingbed['messages'].append(['Moving-Bed Test: '
+                                                   'User modified default '
+                                                   'settings.', 3, 6])
+            else:
+                self.settings_dict['tab_mbt'] = 'Default'
