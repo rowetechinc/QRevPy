@@ -19,6 +19,8 @@ class HeadingData(object):
         Original magnetic variation, in degrees (East +, West -).
     align_correction_deg: float
         Alignment correction to align compass with instrument (used for external heading), in degrees CW.
+    align_correction_orig_deg: float
+        Alignment correction to align compass with instrument (used for external heading), in degrees CW.
     mag_error: np.array(float)
         Percent change in mean magnetic field from calibration (SonTek only).`
     pitch_limit: np.array(float)
@@ -36,6 +38,7 @@ class HeadingData(object):
         self.mag_var_deg = None  # Magnetic variation for these self.data data
         self.mag_var_orig_deg = None  # Original magnetic variation
         self.align_correction_deg = None  # Alignment correction to align compass with instrument
+        self.align_correction_orig_deg = None
         self.mag_error = None  # Percent change in mean magnetic field from calibration`
         self.pitch_limit = None  # Pitch limit of compass calibration (SonTek only), in degrees.
         self.roll_limit = None  # Roll limit of compass calibration (SonTek only), in degrees.
@@ -65,7 +68,8 @@ class HeadingData(object):
         self.source = source_in
         self.mag_var_deg = float(magvar)
         self.mag_var_orig_deg = float(magvar)
-        self.align_correction_deg = align
+        self.align_correction_deg = float(align)
+        self.align_correction_orig_deg = float(align)
         self.mag_error = mag_error
 
         if pitch_limit is not None and len(pitch_limit.shape) > 1:
@@ -101,6 +105,10 @@ class HeadingData(object):
         self.mag_var_deg = float(mat_data.magVar_deg)
         self.mag_var_orig_deg = float(mat_data.magVarOrig_deg)
         self.align_correction_deg = mat_data.alignCorrection_deg
+        if hasattr(mat_data, 'align_correction_orig_deg'):
+            self.align_correction_orig_deg = mat_data.align_correction_orig_deg
+        else:
+            self.align_correction_orig_deg = mat_data.alignCorrection_deg
 
         # Only available for SonTek G3 compass
         if len(mat_data.magError) > 0:

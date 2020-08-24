@@ -44,6 +44,8 @@ class TransectData(object):
         Object of ExtrapData
     start_edge: str
         Starting edge of transect looking downstream (Left or Right)
+    orig_start_edge: str
+        Original starting edge of transect looking downstream (Left or Right)
     date_time: DateTime
         Object of DateTime
     checked: bool
@@ -63,6 +65,7 @@ class TransectData(object):
         self.edges = None  # object of clsEdges(left and right object of clsEdgeData)
         self.extrap = None  # object of clsExtrapData
         self.start_edge = None  # starting edge of transect looking downstream (Left or Right)
+        self.orig_start_edge = None
         self.date_time = None  # object of DateTime
         self.checked = None  # transect was checked for use in mmt file assumed checked for SonTek
         self.in_transect_idx = None  # index of ensemble data associated with the moving-boat portion of the transect
@@ -405,10 +408,12 @@ class TransectData(object):
                 dist_left = float(mmt_config['Edge_Begin_Shore_Distance'])
                 dist_right = float(mmt_config['Edge_End_Shore_Distance'])
                 self.start_edge = 'Left'
+                self.orig_start_edge = 'Left'
             else:
                 dist_left = float(mmt_config['Edge_End_Shore_Distance'])
                 dist_right = float(mmt_config['Edge_Begin_Shore_Distance'])
                 self.start_edge = 'Right'
+                self.orig_start_edge = 'Right'
                 
             # Create left edge
             if mmt_config['Q_Left_Edge_Type'] == 0:
@@ -887,10 +892,12 @@ class TransectData(object):
             ensembles_right = np.nansum(rsdata.System.Step == 2)
             ensembles_left = np.nansum(rsdata.System.Step == 4)
             self.start_edge = 'Right'
+            self.orig_start_edge = 'Right'
         else:
             ensembles_right = np.nansum(rsdata.System.Step == 4)
             ensembles_left = np.nansum(rsdata.System.Step == 2)
             self.start_edge = 'Left'
+            self.orig_start_edge = 'Left'
         self.in_transect_idx = np.where(rsdata.System.Step == 3)[0]
 
         # Create left edge object
@@ -1115,6 +1122,10 @@ class TransectData(object):
         self.extrap = ExtrapData()
         self.extrap.populate_from_qrev_mat(transect)
         self.start_edge = transect.startEdge
+        if hasattr(transect, 'orig_start_edge'):
+            self.orig_start_edge = transect.orig_start_edge
+        else:
+            self.orig_start_edge = transect.startEdge
         self.date_time = DateTime()
         self.date_time.populate_from_qrev_mat(transect)
         self.checked = bool(transect.checked)

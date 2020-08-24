@@ -3,7 +3,7 @@ import copy
 from Classes.BoatStructure import *
 from Classes.QComp import QComp
 from scipy.stats import t
-from profilehooks import profile
+# from profilehooks import profile
 from MiscLibs.common_functions import cosd, sind
 
 
@@ -394,7 +394,7 @@ class Oursin(object):
                                                               'u_top', 'u_bot', 'u_left', 'u_right', 'u_boat',
                                                               'u_depth', 'u_water', 'total', 'total_95'])
 
-    @profile
+    # @profile
     def compute_oursin(self, meas):
         """Computes the uncertainty for the components of the discharge measurement
         using measurement data or user provided values.

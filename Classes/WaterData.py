@@ -86,6 +86,8 @@ class WaterData(object):
             Threshold for vertical velocity filter.
         excluded_dist_m: float
             Distance below transucer for which data are excluded or marked invalid, in m.
+        orig_excluded_dist_m: float
+            Original distance below transucer for which data are excluded or marked invalid, in m.
         smooth_filter: str
             Set filter based on smoothing function "On", "Off".
         smooth_speed: np.array(float)
@@ -154,6 +156,7 @@ class WaterData(object):
         self.w_filter = None
         self.w_filter_threshold = None
         self.excluded_dist_m = None
+        self.orig_excluded_dist_m = None
         self.smooth_filter = None
         self.smooth_speed = None
         self.smooth_upper_limit = None
@@ -278,6 +281,7 @@ class WaterData(object):
 
         self.water_mode = wm_in
         self.excluded_dist_m = excluded_dist_in
+        self.orig_excluded_dist_m = excluded_dist_in
 
         # In some rare situations the blank is empty so it is set to the excluded_dist_in
         try:
@@ -438,6 +442,10 @@ class WaterData(object):
         self.w_filter = transect.wVel.wFilter
         self.w_filter_threshold = transect.wVel.wFilterThreshold
         self.excluded_dist_m = transect.wVel.excludedDist
+        if hasattr(transect.wVel, 'orig_excludedDist'):
+            self.orig_excluded_dist_m = transect.wVel.orig_excludedDist
+        else:
+            self.orig_excluded_dist_m = transect.wVel.excludedDist
         self.smooth_filter = transect.wVel.smoothFilter
         self.smooth_speed = transect.wVel.smoothSpeed
         self.smooth_upper_limit = transect.wVel.smoothUpperLimit

@@ -94,7 +94,7 @@ class Measurement(object):
         self.qa = None
         self.user_rating = None
         self.comments = []
-        self.ext_temp_chk = {'user': np.nan, 'units': 'C', 'adcp': np.nan}
+        self.ext_temp_chk = {'user': np.nan, 'units': 'C', 'adcp': np.nan, 'user_orig': np.nan, 'adcp_orig': np.nan}
 
         # Load data from selected source
         if source == 'QRev':
@@ -141,7 +141,8 @@ class Measurement(object):
                 # Set processing type
                 if proc_type == 'QRev':
                     # Apply QRev default settings
-                    settings = self.qrev_default_settings()
+                    settings = self.qrev_default_settings(check_user_excluded_dist=True)
+
                     settings['Processing'] = 'QRev'
                     self.apply_settings(settings)
 
@@ -199,7 +200,6 @@ class Measurement(object):
                                             transect_type=transect_type,
                                             checked=checked)
 
-        # Identify checked transects
         self.checked_transect_idx = self.checked_transects(self)
 
         # Create object for pre-measurement tests
@@ -220,6 +220,7 @@ class Measurement(object):
         if type(mmt.site_info['Water_Temperature']) is float:
             self.ext_temp_chk['user'] = mmt.site_info['Water_Temperature']
             self.ext_temp_chk['units'] = 'C'
+            self.ext_temp_chk['user_orig'] = mmt.site_info['Water_Temperature']
 
         # Initialize thresholds settings dictionary
         threshold_settings = dict()
@@ -631,6 +632,16 @@ class Measurement(object):
                              'units': meas_struct.extTempChk.units,
                              'adcp': meas_struct.extTempChk.adcp}
 
+        if hasattr(meas_struct.extTempChk, 'user_orig'):
+            self.ext_temp_chk['user_orig'] = meas_struct.extTempChk.user_orig
+        else:
+            self.ext_temp_chk['user_orig'] = meas_struct.extTempChk.user
+
+        if hasattr(meas_struct.extTempChk, 'adcp_orig'):
+            self.ext_temp_chk['adcp_orig'] = meas_struct.extTempChk.adcp_orig
+        else:
+            self.ext_temp_chk['adcp_orig'] = meas_struct.extTempChk.adcp
+
         if type(self.ext_temp_chk['user']) is str:
             self.ext_temp_chk['user'] = np.nan
         if type(self.ext_temp_chk['adcp']) is str:
@@ -639,6 +650,14 @@ class Measurement(object):
             self.ext_temp_chk['user'] = np.nan
         if type(self.ext_temp_chk['adcp']) is np.ndarray:
             self.ext_temp_chk['adcp'] = np.nan
+        if type(self.ext_temp_chk['user_orig']) is str:
+            self.ext_temp_chk['user_orig'] = np.nan
+        if type(self.ext_temp_chk['adcp_orig']) is str:
+            self.ext_temp_chk['adcp_orig'] = np.nan
+        if type(self.ext_temp_chk['user_orig']) is np.ndarray:
+            self.ext_temp_chk['user_orig'] = np.nan
+        if type(self.ext_temp_chk['adcp_orig']) is np.ndarray:
+            self.ext_temp_chk['adcp_orig'] = np.nan
 
         self.system_tst = PreMeasurement.sys_test_qrev_mat_in(meas_struct)
 
@@ -859,6 +878,9 @@ class Measurement(object):
         # Recompute is specified
         if recompute:
             self.apply_settings(s)
+        else:
+            self.qa.compass_qa(self)
+            self.qa.check_compass_settings(self)
 
     def change_h_offset(self, h_offset, transect_idx=None):
         """Coordinates changing the heading offset for external heading.
@@ -895,6 +917,9 @@ class Measurement(object):
         # Rcompute is specified
         if recompute:
             self.apply_settings(s)
+        else:
+            self.qa.compass_qa(self)
+            self.qa.check_compass_settings(self)
 
     def change_h_source(self, h_source, transect_idx=None):
         """Coordinates changing the heading source.
@@ -1175,14 +1200,8 @@ class Measurement(object):
         """
 
         settings = {}
-        checked = np.array([x.checked for x in self.transects])
-        first_idx = np.where(checked == 1)
-        if len(first_idx[0]) == 0:
-            first_idx = 0
-        else:
-            first_idx = first_idx[0][0]
 
-        transect = self.transects[first_idx]
+        transect = self.transects[self.checked_transect_idx[0]]
         
         # Navigation reference
         settings['NavRef'] = transect.boat_vel.selected
@@ -1204,21 +1223,26 @@ class Measurement(object):
         settings['WTExcludedDistance'] = transect.w_vel.excluded_dist_m
         
         # Bottom track settings
-        settings['BTbeamFilter'] = self.transects[first_idx].boat_vel.bt_vel.beam_filter
-        settings['BTdFilter'] = self.transects[first_idx].boat_vel.bt_vel.d_filter
-        settings['BTdFilterThreshold'] = \
-            self.transects[first_idx].boat_vel.bt_vel.d_filter_threshold
-        settings['BTwFilter'] = self.transects[first_idx].boat_vel.bt_vel.w_filter
-        settings['BTwFilterThreshold'] = \
-            self.transects[first_idx].boat_vel.bt_vel.w_filter_threshold
-        settings['BTsmoothFilter'] = self.transects[first_idx].boat_vel.bt_vel.smooth_filter
-        settings['BTInterpolation'] = self.transects[first_idx].boat_vel.bt_vel.interpolate
+        settings['BTbeamFilter'] = transect.boat_vel.bt_vel.beam_filter
+        settings['BTdFilter'] = transect.boat_vel.bt_vel.d_filter
+        settings['BTdFilterThreshold'] = transect.boat_vel.bt_vel.d_filter_threshold
+        settings['BTwFilter'] = transect.boat_vel.bt_vel.w_filter
+        settings['BTwFilterThreshold'] =transect.boat_vel.bt_vel.w_filter_threshold
+        settings['BTsmoothFilter'] = transect.boat_vel.bt_vel.smooth_filter
+        settings['BTInterpolation'] = transect.boat_vel.bt_vel.interpolate
         
         # Gps Settings
         # if transect.gps is not None:
 
+        gga_present = False
+        for idx in self.checked_transect_idx:
+            if self.transects[idx].boat_vel.gga_vel is not None:
+                gga_present = True
+                transect = self.transects[idx]
+                break
+
         # GGA settings
-        if transect.boat_vel.gga_vel is not None:
+        if gga_present:
             settings['ggaDiffQualFilter'] = transect.boat_vel.gga_vel.gps_diff_qual_filter
             settings['ggaAltitudeFilter'] = transect.boat_vel.gga_vel.gps_altitude_filter
             settings['ggaAltitudeFilterChange'] = \
@@ -1244,22 +1268,20 @@ class Measurement(object):
                 settings['GPSSmoothFilter'] = 'Off'
 
         # VTG settings
-        if transect.boat_vel.vtg_vel is not None:
+        vtg_present = False
+        for idx in self.checked_transect_idx:
+            if self.transects[idx].boat_vel.vtg_vel is not None:
+                vtg_present = True
+                transect = self.transects[idx]
+                break
+
+        if vtg_present:
             settings['GPSHDOPFilter'] = transect.boat_vel.vtg_vel.gps_HDOP_filter
             settings['GPSHDOPFilterMax'] = transect.boat_vel.vtg_vel.gps_HDOP_filter_max
             settings['GPSHDOPFilterChange'] = transect.boat_vel.vtg_vel.gps_HDOP_filter_change
             settings['GPSSmoothFilter'] = transect.boat_vel.vtg_vel.smooth_filter
             settings['GPSInterpolation'] = transect.boat_vel.vtg_vel.interpolate
-        else:
-            settings['vtgSmoothFilter'] = 'Off'
-            if 'GPSInterpolation' not in settings.keys():
-                settings['GPSInterpolation'] = 'None'
-            if 'GPSHDOPFilter' not in settings.keys():
-                settings['GPSHDOPFilter'] = 'Off'
-                settings['GPSHDOPFilterMax'] = []
-                settings['GPSHDOPFilterChange'] = []
-            if 'GPSSmoothFilter' not in settings.keys():
-                settings['GPSSmoothFilter'] = 'Off'
+
                     
         # Depth Settings
         settings['depthAvgMethod'] = transect.depths.bt_depths.avg_method
@@ -1289,7 +1311,7 @@ class Measurement(object):
         
         return settings
 
-    def qrev_default_settings(self):
+    def qrev_default_settings(self, check_user_excluded_dist=False):
         """QRev default and filter settings for a measurement.
         """
 
@@ -1314,8 +1336,11 @@ class Measurement(object):
         else:
             settings['WTsnrFilter'] = 'Auto'
 
-        temp = [x.w_vel for x in self.transects]
-        excluded_dist = np.nanmin([x.excluded_dist_m for x in temp])
+        if check_user_excluded_dist:
+            temp = [x.w_vel for x in self.transects]
+            excluded_dist = np.nanmin([x.excluded_dist_m for x in temp])
+        else:
+            excluded_dist = 0
         if excluded_dist < 0.158 and self.transects[self.checked_transect_idx[0]].adcp.model == 'M9':
             settings['WTExcludedDistance'] = 0.16
         elif excluded_dist < 0.248 and self.transects[self.checked_transect_idx[0]].adcp.model == 'RioPro':
@@ -1378,6 +1403,9 @@ class Measurement(object):
         settings['extrapExp'] = 0.1667
 
         return settings
+
+    def update_qa(self):
+        self.qa = QAData(self)
 
     @staticmethod
     def no_filter_interp_settings(self):

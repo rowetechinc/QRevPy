@@ -2877,7 +2877,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Magnetic variation
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.2f}'.format(
                     self.meas.transects[transect_id].sensors.heading_deg.internal.mag_var_deg)))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
                 # Inconsistent magvar
@@ -2894,7 +2894,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Heading offset
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.2f}'.format(
                     self.meas.transects[transect_id].sensors.heading_deg.internal.align_correction_deg)))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -3022,13 +3022,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 col = 0
                 # Magnetic variation
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.2f}'.format(
                     self.meas.transects[transect_id].sensors.heading_deg.internal.mag_var_deg)))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Heading offset
                 col += 1
-                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.1f}'.format(
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem('{:3.2f}'.format(
                     self.meas.transects[transect_id].sensors.heading_deg.internal.align_correction_deg)))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -3123,6 +3123,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.compass_plot()
             self.pr_plot()
             self.figs = [self.heading_fig, self.pr_fig]
+            self.change = True
 
         # Magnetic variation
         if column == 1:
@@ -3747,6 +3748,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Apply qa checks
         self.meas.qa.temperature_qa(self.meas)
+        self.meas.qa.check_tempsal_settings(self.meas)
 
         # Update GUI
         self.tempsal_comments_messages()
@@ -3774,6 +3776,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Apply qa checks
         self.meas.qa.temperature_qa(self.meas)
+        self.meas.qa.check_tempsal_settings(self.meas)
 
         # Update GUI
         self.tempsal_comments_messages()
@@ -4855,6 +4858,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if column == 0:
             self.transect_row = row
             self.bt_plots()
+            self.change = True
         self.tab_bt_2_data.setFocus()
 
     @QtCore.pyqtSlot()
@@ -5662,6 +5666,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if column == 0:
             self.transect_row = row
             self.gps_plots()
+            self.change = True
         self.tab_gps_2_data.setFocus()
 
     @QtCore.pyqtSlot()
@@ -6329,6 +6334,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if column == 0:
             self.transect_row = row
             self.depth_plots()
+            self.change = True
 
         # Change draft
         if column == 1:
@@ -7090,6 +7096,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if column == 0:
             self.transect_row = row
             self.wt_plots()
+            self.change = True
         self.tab_wt_2_data.setFocus()
 
     @QtCore.pyqtSlot()
@@ -7445,11 +7452,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.q_sensitivity_table()
             self.extrap_comments_messages()
             self.change = True
+        else:
+            # Run qa to update messages for user data setting changes if other than Measurement selected
+            self.meas.update_qa()
 
         # Update tab
         self.n_points_table()
         self.set_fit_options()
         self.extrap_plot()
+        self.extrap_comments_messages()
 
     def extrap_index(self, row):
         """Converts the row value to a transect index.
@@ -8365,6 +8376,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.item(self.transect_row, 0).setFont(self.font_bold)
 
                 self.edges_graphics()
+                self.change = True
 
         # Start edge
         if col == 1:
