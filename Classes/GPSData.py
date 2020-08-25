@@ -715,3 +715,4 @@ class GPSData(object):
                 v[idx_values[n]] = np.nan
             
         return u, v
+

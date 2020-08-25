@@ -2,6 +2,7 @@ import os
 import numpy as np
 from datetime import datetime
 from datetime import timezone
+from scipy import signal
 from Classes.Pd0TRDI import Pd0TRDI
 from Classes.DepthStructure import DepthStructure
 from Classes.WaterData import WaterData
@@ -1784,6 +1785,32 @@ class TransectData(object):
         valid_ens = np.all(np.vstack((valid_nav, valid_wt_ens, valid_depth)), 0)
 
         return valid_ens, valid_wt.T
+
+    @staticmethod
+    def compute_gps_lag(transect):
+
+        lag_gga = None
+        lag_vtg = None
+
+        bt_speed = np.sqrt(transect.boat_vel.bt_vel.u_processed_mps ** 2
+                           + transect.boat_vel.bt_vel.v_processed_mps ** 2)
+
+        avg_ens_dur = np.nanmean(transect.date_time.ens_duration_sec)
+        if transect.boat_vel.gga_vel is not None:
+            gga_speed = np.sqrt(transect.boat_vel.gga_vel.u_processed_mps**2
+                             + transect.boat_vel.gga_vel.v_processed_mps**2)
+            valid_data = np.all(np.logical_not(np.isnan(np.vstack((bt_speed, gga_speed)))), axis=0)
+            lag_gga = (np.count_nonzero(valid_data)
+                      - np.argmax(signal.correlate(bt_speed[valid_data], gga_speed[valid_data])) - 1) * avg_ens_dur
+
+        if transect.boat_vel.vtg_vel is not None:
+            vtg_speed = np.sqrt(transect.boat_vel.vtg_vel.u_processed_mps**2
+                             + transect.boat_vel.vtg_vel.v_processed_mps**2)
+            valid_data = np.all(np.logical_not(np.isnan(np.vstack((bt_speed, vtg_speed)))), axis=0)
+            lag_vtg = (np.count_nonzero(valid_data)
+                       - np.argmax(signal.correlate(bt_speed[valid_data], vtg_speed[valid_data])) - 1) * avg_ens_dur
+
+        return lag_gga, lag_vtg
 
 # ========================================================================
 # Begin multithread function included in module but not TransectData class
