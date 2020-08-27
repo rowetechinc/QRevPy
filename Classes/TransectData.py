@@ -2,7 +2,7 @@ import os
 import numpy as np
 from datetime import datetime
 from datetime import timezone
-from scipy import signal
+from scipy import signal, fftpack
 from Classes.Pd0TRDI import Pd0TRDI
 from Classes.DepthStructure import DepthStructure
 from Classes.WaterData import WaterData
@@ -17,7 +17,7 @@ from Classes.DateTime import DateTime
 from Classes.InstrumentData import InstrumentData
 from Classes.MultiThread import MultiThread
 from Classes.CoordError import CoordError
-from MiscLibs.common_functions import nandiff, cosd, arctand, tand, nans
+from MiscLibs.common_functions import nandiff, cosd, arctand, tand, nans, cart2pol, rad2azdeg
 
 
 class TransectData(object):
@@ -1811,6 +1811,59 @@ class TransectData(object):
                        - np.argmax(signal.correlate(bt_speed[valid_data], vtg_speed[valid_data])) - 1) * avg_ens_dur
 
         return lag_gga, lag_vtg
+
+    @staticmethod
+    def compute_gps_lag_fft(transect):
+
+        lag_gga = None
+        lag_vtg = None
+
+        bt_speed = np.sqrt(transect.boat_vel.bt_vel.u_processed_mps ** 2
+                           + transect.boat_vel.bt_vel.v_processed_mps ** 2)
+
+        avg_ens_dur = np.nanmean(transect.date_time.ens_duration_sec)
+        if transect.boat_vel.gga_vel is not None:
+            gga_speed = np.sqrt(transect.boat_vel.gga_vel.u_processed_mps**2
+                             + transect.boat_vel.gga_vel.v_processed_mps**2)
+            valid_data = np.all(np.logical_not(np.isnan(np.vstack((bt_speed, gga_speed)))), axis=0)
+            b = fftpack.fft(bt_speed[valid_data])
+            g = fftpack.fft(gga_speed[valid_data])
+            br = -b.conjugat()
+            lag_gga = np.argmax(np.abs(fftpack.ifft(br*g)))
+
+        if transect.boat_vel.vtg_vel is not None:
+            vtg_speed = np.sqrt(transect.boat_vel.vtg_vel.u_processed_mps**2
+                             + transect.boat_vel.vtg_vel.v_processed_mps**2)
+            valid_data = np.all(np.logical_not(np.isnan(np.vstack((bt_speed, vtg_speed)))), axis=0)
+            b = fftpack.fft(bt_speed[valid_data])
+            g = fftpack.fft(vtg_speed[valid_data])
+            br = -b.conjugat()
+            lag_vtg = np.argmax(np.abs(fftpack.ifft(br * g)))
+
+        return lag_gga, lag_vtg
+
+    @staticmethod
+    def compute_gps_bt(transect, gps_ref='gga_vel'):
+
+        gps_bt = dict()
+        gps_vel = getattr(transect.boat_vel, gps_ref)
+        if gps_vel is not None:
+            bt_track = BoatStructure.compute_boat_track(transect, ref='bt_vel')
+            bt_course, _ = cart2pol(bt_track['track_x_m'][-1], bt_track['track_y_m'][-1])
+            bt_course = rad2azdeg(bt_course)
+            gps_track = BoatStructure.compute_boat_track(transect, ref=gps_ref)
+            gps_course, _ = cart2pol(gps_track['track_x_m'][-1], gps_track['track_y_m'][-1])
+            gps_course = rad2azdeg(gps_course)
+            gps_bt['course'] = gps_course - bt_course
+            if gps_bt['course'] < 0:
+                gps_bt['course'] = gps_bt['course'] + 360
+            gps_bt['ratio'] = bt_track['dmg_m'][-1] / gps_track['dmg_m'][-1]
+            x_diff = gps_track['track_x_m'][-1] - bt_track['track_x_m'][-1]
+            y_diff = gps_track['track_y_m'][-1] - bt_track['track_y_m'][-1]
+            gps_bt['dir'], gps_bt['mag'] = cart2pol(x_diff, y_diff)
+            gps_bt['dir'] = rad2azdeg(gps_bt['dir'])
+
+        return gps_bt
 
 # ========================================================================
 # Begin multithread function included in module but not TransectData class

@@ -650,7 +650,7 @@ class Pd0TRDI(object):
                                 self.Gps.gsa_p_dop[i_ens] = dummy
                             dummy = np.fromfile(f, np.uint8, count=1)[0]
                             if dummy != 0:
-                                self.Gps.gga_n_stats[i_ens, 0] = dummy
+                                self.Gps.gga_n_stats[i_ens] = dummy
 
                             f.seek(1, 1)
                             self.Gps.gsa_sat[i_ens, 4] = np.fromfile(f, np.uint8, count=1)[0]
@@ -1055,7 +1055,7 @@ class Pd0TRDI(object):
                                 num_2_read = bytes_per_ens - self.Hdr.data_offsets[i_ens, i_data_types-1] - 6
 
                             # Read GSA sentence
-                            self.Nmea.gsa[i_ens] = ''.join([chr(x) for x in f.read(num_2_read)])
+                            self.Nmea.gsa[i_ens] = ''.join([chr(x) for x in f.read(int(num_2_read))])
 
                             # Check if more data types need to be read and position the pointer
                             self.end_reading(f, file_loc, i_data_types, i_ens, bytes_per_ens)

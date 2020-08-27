@@ -707,6 +707,7 @@ class QAData(object):
 
             # Check for consistent magvar and pitch and roll mean and variation
             magvar = []
+            align = []
             mag_error_exceeded = []
             pitch_mean = []
             pitch_std = []
@@ -723,7 +724,9 @@ class QAData(object):
                     pitch_source_selected = getattr(transect.sensors.pitch_deg, transect.sensors.pitch_deg.selected)
                     roll_source_selected = getattr(transect.sensors.roll_deg, transect.sensors.roll_deg.selected)
 
-                    magvar.append(heading_source_selected.mag_var_deg)
+                    magvar.append(transect.sensors.heading_deg.internal.mag_var_deg)
+                    if transect.sensors.heading_deg.external is not None:
+                        align.append(transect.sensors.heading_deg.external.align_correction_deg)
 
                     pitch_mean.append(np.nanmean(pitch_source_selected.data))
                     pitch_std.append(np.nanstd(pitch_source_selected.data, ddof=1))
@@ -767,6 +770,13 @@ class QAData(object):
                 self.compass['messages'].append(
                     ['Compass: Magnetic variation is not consistent among transects;', 2, 4])
                 self.compass['magvar'] = 1
+
+            # Check magvar consistency
+            if len(np.unique(align)) > 1:
+                self.compass['status2'] = 'caution'
+                self.compass['messages'].append(
+                    ['Compass: Heading offset is not consistent among transects;', 2, 4])
+                self.compass['align'] = 1
 
             # Check that magvar was set if GPS data are available
             if gps:

@@ -42,6 +42,8 @@ class MovingBedTests(object):
         Quality of test, 'Valid' 'Warnings' 'Errors'
     use_2_correct: bool
         Use this test to correct discharge (True or False)
+    use_gps_4_test: bool
+        Use GPS to determine distance upstream for moving-bed test
     selected: bool
         Selected as valid moving-bed test to use for correction or determine moving-bed condition
     messages: list
