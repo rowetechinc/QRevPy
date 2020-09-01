@@ -253,6 +253,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         GPS - BT shiptrack toolbar
     gps_bt_shiptrack_fig: ShipTrack
         GPS - BT shiptrack figure
+    gps_bt_speed_canvas: MplCanvas
+        GPS - BT time series speed canvas
+    gps_bt_speed_toolbar: NavigationToolbar
+        GPS - BT time series speed toolbar
+    gps_bt_speed_fig: ShipTrack
+        GPS - BT time series speed figure
     depth_top_canvas: MplCanvas
         Depth beam depths canvas
     depth_top_toolbar: NavigationToolbar
@@ -524,6 +530,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.gps_bt_shiptrack_canvas = None
         self.gps_bt_shiptrack_toolbar = None
         self.gps_bt_shiptrack_fig = None
+        self.gps_bt_speed_canvas = None
+        self.gps_bt_speed_toolbar = None
+        self.gps_bt_speed_fig = None
         self.depth_top_canvas = None
         self.depth_top_toolbar = None
         self.depth_top_fig = None
@@ -3813,24 +3822,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Setup data table
         tbl = self.table_moving_bed
-        # table_header = [self.tr('User \n Valid'),
-        #                 self.tr('Used for \n Correction'),
-        #                 self.tr('Use GPS \n for Test'),
-        #                 self.tr('Filename'),
-        #                 self.tr('Type'),
-        #                 self.tr('Duration \n (s)'),
-        #                 self.tr('Distance \n Upstream' + self.units['label_L']),
-        #                 self.tr('Moving-Bed \n Speed' + self.units['label_V']),
-        #                 self.tr('Moving-Bed \n Direction (deg)'),
-        #                 self.tr('Flow \n Speed' + self.units['label_V']),
-        #                 self.tr('Flow \n Direction (deg)'),
-        #                 self.tr('% Invalid \n BT'),
-        #                 self.tr('Compass \n Error (deg'),
-        #                 self.tr('% Moving \n Bed'),
-        #                 self.tr('Moving \n Bed'),
-        #                 self.tr('Quality')]
         table_header = [self.tr('User \n Valid'),
                         self.tr('Used for \n Correction'),
+                        self.tr('Use GPS \n for Test'),
                         self.tr('Filename'),
                         self.tr('Type'),
                         self.tr('Duration \n (s)'),
@@ -3844,6 +3838,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                         self.tr('% Moving \n Bed'),
                         self.tr('Moving \n Bed'),
                         self.tr('Quality')]
+
         ncols = len(table_header)
         nrows = len(self.meas.mb_tests)
         tbl.setRowCount(nrows)
@@ -3888,6 +3883,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             tbl = self.table_moving_bed
             tbl.blockSignals(True)
             self.mb_row_selected = 0
+            has_gps = []
+            # Hide GPS column unless GPS data are used
+            tbl.setColumnHidden(2, True)
             # Populate each row
             for row in range(tbl.rowCount()):
 
@@ -3913,16 +3911,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     if self.meas.mb_tests[row].selected:
                         tbl.item(row, col).setCheckState(QtCore.Qt.Checked)
 
-                # # Use GPS for test
-                # col += 1
-                # checked3 = QtWidgets.QTableWidgetItem('')
-                # checked3.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
-                # tbl.setItem(row, col, QtWidgets.QTableWidgetItem(checked3))
-                # tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
-                # tbl.item(row, col).setCheckState(QtCore.Qt.Unchecked)
-                # if self.meas.mb_tests[row].use_gps_4_test:
-                #     if self.meas.mb_tests[row].selected:
-                #         tbl.item(row, col).setCheckState(QtCore.Qt.Checked)
+                # Use GPS for test
+                col += 1
+                checked3 = QtWidgets.QTableWidgetItem('')
+                checked3.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(checked3))
+                tbl.item(row, col).setCheckState(QtCore.Qt.Unchecked)
+                if self.meas.mb_tests[row].ref == 'GPS':
+                    tbl.item(row, col).setCheckState(QtCore.Qt.Checked)
+                has_gps.append(np.logical_not(np.isnan(self.meas.mb_tests[row].gps_percent_mb)))
 
                 # Filename
                 col += 1
@@ -3964,11 +3961,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Moving-Bed Direction
                 col += 1
-
+                # Don't show direction for BT stationary
                 if type(self.meas.mb_tests[row].mb_dir) is not list:
                     item = '{:3.1f}'.format(self.meas.mb_tests[row].mb_dir)
                     if 'nan' in item:
                         item = ''
+                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                else:
+                    item = ''
                     tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                     tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
@@ -4034,6 +4035,9 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.resizeColumnsToContents()
                 tbl.resizeRowsToContents()
                 tbl.blockSignals(False)
+            # If GPS data are used in any test, show GPS column
+            if any(has_gps):
+                tbl.setColumnHidden(2, False)
 
     def mb_table_clicked(self, row, column):
         """Manages actions caused by the user clicking in selected columns of the table.
@@ -4062,8 +4066,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.meas.mb_tests = MovingBedTests.auto_use_2_correct(
                 moving_bed_tests=self.meas.mb_tests,
                 boat_ref=self.meas.transects[self.checked_transects_idx[0]].w_vel.nav_ref)
-            self.meas.qa.moving_bed_qa(self.meas)
-            self.change = True
 
         # Use to correct, manual override
         if column == 1:
@@ -4157,26 +4159,37 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 self.popup_message('Bottom track is not the selected reference. A moving-bed correction cannot' +
                                    ' be applied.')
 
-        # # Use GPS for Test
-        # elif column == 2:
-        #
-        # # Data to plot
-        # elif column == 3:
-        # Data to plot
+        # Use GPS for Test
         elif column == 2:
+            # Determine if selected test has been processed using GPS
+            if np.isnan(self.meas.mb_tests[row].gps_percent_mb):
+                tbl.item(row, column).setCheckState(QtCore.Qt.Unchecked)
+                reprocess_measurement = False
+                self.change = False
+            else:
+                if tbl.item(row, column).checkState() == QtCore.Qt.Checked:
+                    self.meas.mb_tests[row].change_ref(ref='GPS')
+                else:
+                    self.meas.mb_tests[row].change_ref(ref='BT')
+                self.meas.mb_tests = MovingBedTests.auto_use_2_correct(
+                    moving_bed_tests=self.meas.mb_tests,
+                    boat_ref=self.meas.transects[self.checked_transects_idx[0]].w_vel.nav_ref)
+
+        # Data to plot
+        elif column == 3:
             self.mb_plots(idx=row)
             self.mb_row = row
             reprocess_measurement = False
+            self.change = False
 
         # If changes were made reprocess the measurement
         if reprocess_measurement:
             self.meas.compute_discharge()
             self.meas.uncertainty.compute_uncertainty(self.meas)
             self.meas.qa.moving_bed_qa(self.meas)
-        self.change = True
+            self.change = True
 
         self.update_mb_table()
-        # self.mb_plots(idx=0)
         self.mb_comments_messages()
         tbl.blockSignals(False)
         self.tab_mbt_2_data.setFocus()
@@ -5263,10 +5276,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Setup lists for use by graphics controls
         self.canvases = [self.gps_shiptrack_canvas, self.gps_top_canvas, self.gps_bottom_canvas,
-                         self.gps_bt_shiptrack_canvas]
-        self.figs = [self.gps_shiptrack_fig, self.gps_top_fig, self.gps_bottom_fig, self.gps_bt_shiptrack_fig]
+                         self.gps_bt_shiptrack_canvas, self.gps_bt_speed_canvas]
+        self.figs = [self.gps_shiptrack_fig, self.gps_top_fig, self.gps_bottom_fig, self.gps_bt_shiptrack_fig,
+                     self.gps_bt_speed_fig]
         self.toolbars = [self.gps_shiptrack_toolbar, self.gps_top_toolbar, self.gps_bottom_toolbar,
-                         self.gps_bt_shiptrack_toolbar]
+                         self.gps_bt_shiptrack_toolbar, self.gps_bt_speed_toolbar]
 
         if not self.gps_initialized:
             tbl.cellClicked.connect(self.gps_table_clicked)
@@ -5545,8 +5559,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             # Determine transect selected
             transect_id = self.checked_transects_idx[self.transect_row]
             self.transect = self.meas.transects[transect_id]
-            # if self.transect.boat_vel.gga_vel is not None:
-                # self.invalid_gps = np.logical_not(self.transect.boat_vel.gga_vel.valid_data)
 
             # Identify transect to be plotted in table
             for row in range(nrows):
@@ -5558,15 +5570,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.gps_shiptrack()
             self.gps_boat_speed()
             self.gps_filter_plots()
-
-            # else:
-            #     if self.gps_shiptrack_fig is not None:
-            #         self.gps_shiptrack_fig.fig.clear()
-            #         self.gps_shiptrack_canvas.draw()
-            #         self.gps_top_fig.fig.clear()
-            #         self.gps_top_canvas.draw()
-            #         self.gps_bottom_fig.fig.clear()
-            #         self.gps_bottom_canvas.draw()
 
             # Update list of figs
             self.figs = [self.gps_shiptrack_fig, self.gps_top_fig, self.gps_bottom_fig]
@@ -5717,8 +5720,6 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         if caller == None:
             self.gps_bt_table_clicked(row + 2, column, caller='gps')
         self.tab_gps_2_data.setFocus()
-
-
 
     @QtCore.pyqtSlot()
     def gps_plot_change(self):
@@ -5974,31 +5975,31 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     # GGA lag
                     col += 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:5.3f}'.format(gga_lag)))
+                        '{:10.1f}'.format(gga_lag)))
                     tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                     # GGA BMG-GMG mag
                     col += 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:5.3f}'.format(gga_bt['mag'] * self.units['L'])))
+                        '{:10.3f}'.format(gga_bt['mag'] * self.units['L'])))
                     tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                     # GGA BMG-GMG dir
                     col += 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:5.2f}'.format(gga_bt['dir'])))
+                        '{:10.2f}'.format(gga_bt['dir'])))
                     tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                     # GGA GC-BC
                     col += 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:5.2f}'.format(gga_bt['course'])))
+                        '{:10.2f}'.format(gga_bt['course'])))
                     tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                     # GGA BC/GC
                     col += 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:5.4f}'.format(gga_bt['ratio'])))
+                        '{:10.4f}'.format(gga_bt['ratio'])))
                     tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 if vtg_lag is not None:
@@ -6007,31 +6008,31 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                     # GGA lag
                     col += 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:5.3f}'.format(vtg_lag)))
+                        '{:10.2f}'.format(vtg_lag)))
                     tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                     # GGA BMG-GMG mag
                     col += 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:5.3f}'.format(vtg_bt['mag'] * self.units['L'])))
+                        '{:10.3f}'.format(vtg_bt['mag'] * self.units['L'])))
                     tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                     # GGA BMG-GMG dir
                     col += 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:5.2f}'.format(vtg_bt['dir'])))
+                        '{:10.2f}'.format(vtg_bt['dir'])))
                     tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                     # GGA GC-BC
                     col += 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:5.2f}'.format(vtg_bt['course'])))
+                        '{:10.2f}'.format(vtg_bt['course'])))
                     tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                     # GGA BC/GC
                     col += 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:5.4f}'.format(vtg_bt['ratio'])))
+                        '{:10.4f}'.format(vtg_bt['ratio'])))
                     tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
         tbl.resizeColumnsToContents()
@@ -6061,7 +6062,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.cb_gps_vtg_2.blockSignals(False)
         self.cb_gps_vectors_2.blockSignals(False)
 
-        self.gps_bt_plot()
+        self.gps_bt_plots()
 
         if not self.gps_initialized:
             tbl.cellClicked.connect(self.gps_bt_table_clicked)
@@ -6086,13 +6087,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         if column == 0:
             self.transect_row = row - 2
-            self.gps_bt_plot()
+            self.gps_bt_plots()
             self.change = True
         if caller == None:
             self.gps_table_clicked(row - 2, column, caller='gps_bt')
         self.tab_gps_2_gpsbt.setFocus()
 
-    def gps_bt_plot(self):
+    def gps_bt_plots(self):
         """Creates graphic for GPS BT tab.
         """
 
@@ -6114,9 +6115,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
             # Update plots
             self.gps_bt_shiptrack()
+            self.gps_bt_boat_speed()
 
             # Update list of figs
-            self.figs = [self.gps_shiptrack_fig, self.gps_top_fig, self.gps_bottom_fig, self.gps_bt_shiptrack_fig]
+            self.figs = [self.gps_shiptrack_fig, self.gps_top_fig, self.gps_bottom_fig, self.gps_bt_shiptrack_fig,
+                         self.gps_bt_speed_fig]
 
             # Reset data cursor to work with new data plot
             if self.actionData_Cursor.isChecked():
@@ -6156,6 +6159,37 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         # Draw canvas
         self.gps_bt_shiptrack_canvas.draw()
 
+    def gps_bt_boat_speed(self):
+        """Creates boat speed plot for data in transect.
+        """
+
+        # If the canvas has not been previously created, create the canvas and add the widget.
+        if self.gps_bt_speed_canvas is None:
+            # Create the canvas
+            self.gps_bt_speed_canvas = MplCanvas(parent=self.graph_gps_bt_ts, width=8, height=2, dpi=80)
+            # Assign layout to widget to allow auto scaling
+            layout = QtWidgets.QVBoxLayout(self.graph_gps_bt_ts)
+            # Adjust margins of layout to maximize graphic area
+            layout.setContentsMargins(1, 1, 1, 1)
+            # Add the canvas
+            layout.addWidget(self.gps_bt_speed_canvas)
+            # Initialize hidden toolbar for use by graphics controls
+            self.gps_bt_speed_toolbar = NavigationToolbar(self.gps_bt_speed_canvas, self)
+            self.gps_bt_speed_toolbar.hide()
+
+        # Initialize the boat speed figure and assign to the canvas
+        self.gps_bt_speed_fig = BoatSpeed(canvas=self.gps_bt_speed_canvas)
+        # Create the figure with the specified data
+        self.gps_bt_speed_fig.create(transect=self.transect,
+                                     units=self.units,
+                                     cb=True,
+                                     cb_bt=self.cb_gps_bt_2,
+                                     cb_gga=self.cb_gps_gga_2,
+                                     cb_vtg=self.cb_gps_vtg_2)
+
+        # Draw canvas
+        self.gps_bt_speed_canvas.draw()
+
     @QtCore.pyqtSlot()
     def gps_bt_plot_change(self):
         """Coordinates changes in what references should be displayed in the boat speed and shiptrack plots.
@@ -6165,9 +6199,11 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.gps_bt_shiptrack_fig.change()
             self.gps_bt_shiptrack_canvas.draw()
 
+            # Boat speed
+            self.gps_bt_speed_fig.change()
+            self.gps_bt_speed_canvas.draw()
+
             self.tab_gps_2_gpsbt.setFocus()
-
-
 
     def gps_comments_messages(self):
         """Displays comments and messages associated with gps filters in Messages tab.

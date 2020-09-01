@@ -1858,8 +1858,8 @@ class TransectData(object):
             if gps_bt['course'] < 0:
                 gps_bt['course'] = gps_bt['course'] + 360
             gps_bt['ratio'] = bt_track['dmg_m'][-1] / gps_track['dmg_m'][-1]
-            x_diff = gps_track['track_x_m'][-1] - bt_track['track_x_m'][-1]
-            y_diff = gps_track['track_y_m'][-1] - bt_track['track_y_m'][-1]
+            x_diff = bt_track['track_x_m'][-1] - gps_track['track_x_m'][-1]
+            y_diff = bt_track['track_y_m'][-1] - gps_track['track_y_m'][-1]
             gps_bt['dir'], gps_bt['mag'] = cart2pol(x_diff, y_diff)
             gps_bt['dir'] = rad2azdeg(gps_bt['dir'])
 

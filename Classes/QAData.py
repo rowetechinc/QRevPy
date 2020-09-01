@@ -2,6 +2,7 @@ import numpy as np
 from Classes.Uncertainty import Uncertainty
 from Classes.QComp import QComp
 from Classes.MovingBedTests import MovingBedTests
+from Classes.TransectData import TransectData
 
 
 class QAData(object):
@@ -1388,6 +1389,34 @@ class QAData(object):
                 boat['status'] = 'caution'
 
             setattr(self, dt_value['class'], boat)
+
+        lag_gga = []
+        lag_vtg = []
+        for transect in meas.transects:
+            gga, vtg = TransectData.compute_gps_lag(transect)
+            if gga is not None:
+                lag_gga.append(gga)
+            if vtg is not None:
+                lag_vtg.append(vtg)
+        if len(lag_gga) > 0:
+            if np.mean(np.abs(lag_gga)) > 10:
+                self.gga_vel['messages'].append('GGA: BT and GGA do not appear to be sychronized')
+                if self.gga_vel['status'] != 'warning':
+                    self.gga_vel['status'] = 'warning'
+            elif np.mean(np.abs(lag_gga)) > 2:
+                self.gga_vel['messages'].append('gga: Lag between BT and GGA > 2 sec')
+                if self.gga_vel['status'] != 'warning':
+                    self.gga_vel['status'] = 'caution'
+        if len(lag_vtg) > 0:
+            if np.mean(np.abs(lag_vtg)) > 10:
+                self.vtg_vel['messages'].append('VTG: BT and VTG do not appear to be sychronized')
+                if self.vtg_vel['status'] != 'warning':
+                    self.vtg_vel['status'] = 'warning'
+            elif np.mean(np.abs(lag_vtg)) > 2:
+                self.vtg_vel['messages'].append('vtg: Lag between BT and VTG > 2 sec')
+                if self.vtg_vel['status'] != 'warning':
+                    self.vtg_vel['status'] = 'caution'
+
 
     def water_qa(self, meas):
         """Apply quality checks to water data.
