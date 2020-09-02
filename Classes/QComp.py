@@ -169,7 +169,7 @@ class QComp(object):
                 use_2_correct = []
                 for mb_idx, test in enumerate(moving_bed_data):
                     use_2_correct.append(test.use_2_correct)
-                    if use_2_correct:
+                    if test.use_2_correct:
                         mb_type = test.type
 
                 if any(use_2_correct):

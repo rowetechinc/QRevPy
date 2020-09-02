@@ -3962,16 +3962,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 # Moving-Bed Direction
                 col += 1
                 # Don't show direction for BT stationary
-                if type(self.meas.mb_tests[row].mb_dir) is not list:
-                    item = '{:3.1f}'.format(self.meas.mb_tests[row].mb_dir)
-                    if 'nan' in item:
-                        item = ''
-                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
-                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
-                else:
+                if np.isnan(self.meas.mb_tests[row].mb_dir):
                     item = ''
-                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
-                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                else:
+                    item = '{:3.1f}'.format(self.meas.mb_tests[row].mb_dir)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Flow Speed
                 col += 1
@@ -3983,12 +3979,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 # Flow Direction
                 col += 1
-                if type(self.meas.mb_tests[row].flow_dir) is not list:
+                if np.isnan(self.meas.mb_tests[row].flow_dir):
+                    item = ''
+                else:
                     item = '{:3.1f}'.format(self.meas.mb_tests[row].flow_dir)
-                    if 'nan' in item:
-                        item = ''
-                    tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
-                    tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
+                tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
                 # Percent Invalid BT
                 col += 1

@@ -4,7 +4,7 @@ from Classes.TransectData import adjusted_ensemble_duration
 from Classes.TransectData import TransectData
 from Classes.QComp import QComp
 from Classes.MatSonTek import MatSonTek
-from MiscLibs.common_functions import cart2pol, sind, pol2cart, rad2azdeg
+from MiscLibs.common_functions import cart2pol, sind, pol2cart, rad2azdeg, azdeg2rad
 
 
 class MovingBedTests(object):
@@ -220,6 +220,7 @@ class MovingBedTests(object):
         else:
             self.mb_dir = self.make_list(mat_data.mbDir_deg)
 
+
         self.dist_us_m = mat_data.distUS_m
         self.flow_spd_mps = mat_data.flowSpd_mps
         self.mb_spd_mps = mat_data.mbSpd_mps
@@ -287,7 +288,7 @@ class MovingBedTests(object):
                     internal_list.append(item)
                 list_out = [internal_list]
             else:
-                list_out = []
+                list_out = np.nan
         return list_out
 
     def mb_trdi(self, transect, test_type):
@@ -392,7 +393,7 @@ class MovingBedTests(object):
             self.bt_percent_mb = (self.bt_mb_spd_mps / (self.flow_spd_mps + self.bt_mb_spd_mps)) * 100
 
             # Compute test with GPS
-            self.compute_mb_gps(self)
+            self.compute_mb_gps()
 
             # Store selected test characteristics
             if ref == 'BT':
@@ -611,6 +612,12 @@ class MovingBedTests(object):
             bt_u[valid_bt == False] = np.nan
             bt_v[valid_bt == False] = np.nan
 
+            u_water = np.nanmean(wt_u)
+            v_water = np.nanmean(wt_v)
+            self.flow_dir = np.arctan2(u_water, v_water) * 180 / np.pi
+            if self.flow_dir < 0:
+                self.flow_dir = self.flow_dir + 360
+
             bin_depth = trans_data.depths.bt_depths.depth_cell_depth_m[:, in_transect_idx]
             trans_select = getattr(trans_data.depths, trans_data.depths.selected)
             depth_ens = trans_select.depth_processed_m[in_transect_idx]
@@ -624,6 +631,7 @@ class MovingBedTests(object):
             bt_up_strm_dist = bt_vel_up_strm * ens_duration
             bt_up_strm_dist_cum = np.nancumsum(bt_up_strm_dist)
             self.bt_dist_us_m = bt_up_strm_dist_cum[-1]
+
             # Compute bottom track perpendicular to water velocity
             nb_vel_ang, _ = cart2pol(unit_nbu, unit_nbv)
             nb_vel_unit_cs1, nb_vel_unit_cs2 = pol2cart(nb_vel_ang + np.pi / 2, np.ones(nb_vel_ang.shape))
@@ -657,9 +665,9 @@ class MovingBedTests(object):
             depth_cell_size = trans_data.depths.bt_depths.depth_cell_size_m[:, in_transect_idx]
             depth_cell_size[np.isnan(mag)] = np.nan
             mag_w = mag * depth_cell_size
-            avg_vel = np.nansum(mag_w) / np.nansum(depth_cell_size)
+            self.bt_flow_spd_mps = np.nansum(mag_w) / np.nansum(depth_cell_size)
             self.bt_mb_spd_mps = mb_vel[-1]
-            self.bt_percent_mb = (self.bt_mb_spd_mps / avg_vel) * 100
+            self.bt_percent_mb = (self.bt_mb_spd_mps / self.bt_flow_spd_mps) * 100
             if self.bt_percent_mb < 0:
                 self.bt_percent_mb = 0
 
@@ -668,7 +676,7 @@ class MovingBedTests(object):
             self.duration_sec = np.nansum(ens_duration)
 
             # Compute test using GPS
-            self.compute_mb_gps(self)
+            self.compute_mb_gps()
 
             # Store selected test characteristics
             if ref == 'BT':
@@ -683,10 +691,6 @@ class MovingBedTests(object):
                 self.percent_mb = self.gps_percent_mb
                 self.mb_dir = self.gps_mb_dir
                 self.flow_spd_mps = self.bt_flow_spd_mps
-
-            self.compass_diff_deg = []
-            self.flow_dir = []
-            self.mb_dir = []
 
             self.near_bed_speed_mps = np.sqrt(np.nanmean(nb_u)**2 + np.nanmean(nb_v)**2)
             self.stationary_us_track = bt_up_strm_dist_cum
@@ -746,11 +750,25 @@ class MovingBedTests(object):
     def compute_mb_gps(self):
         """Computes moving-bed data using GPS.
         """
+        if np.isnan(self.flow_dir):
+            u_water = np.nanmean(self.transect.w_vel.u_processed_mps[:, self.transect.in_transect_idx])
+            v_water = np.nanmean(self.transect.w_vel.v_processed_mps[:, self.transect.in_transect_idx])
+            self.flow_dir = np.arctan2(u_water, v_water) * 180 / np.pi
+            if self.flow_dir < 0:
+                self.flow_dir = self.flow_dir + 360
 
-        self.gps_dist_us_m, self.gps_mb_dir = self.mbt_gps(transect=self.transect, flow_dir=self.flow_dir)
-        self.gps_mb_spd_mps = self.gps_dist_us_m / self.duration_sec
-        self.gps_flow_spd_mps = self.bt_flow_spd_mps - self.bt_mb_spd_mps + self.gps_mb_spd_mps
-        self.gps_percent_mb = (self.gps_mb_spd_mps / self.gps_flow_spd_mps) * 100
+        gps_bt = None
+        # Use GGA data if available and VTG is GGA is not available
+        if self.transect.boat_vel.gga_vel is not None:
+            gps_bt = TransectData.compute_gps_bt(self.transect, gps_ref='gga_vel')
+        elif self.transect.boat_vel.vtg_vel is not None:
+            gps_bt = TransectData.compute_gps_bt(self.transect, gps_ref='vtg_vel')
+        if gps_bt is not None:
+            self.gps_dist_us_m = gps_bt['mag']
+            self.gps_mb_dir = gps_bt['dir']
+            self.gps_mb_spd_mps = self.gps_dist_us_m / self.duration_sec
+            self.gps_flow_spd_mps = self.bt_flow_spd_mps - self.bt_mb_spd_mps + self.gps_mb_spd_mps
+            self.gps_percent_mb = (self.gps_mb_spd_mps / self.gps_flow_spd_mps) * 100
 
     def change_ref(self, ref):
         """Change moving-bed test fixed reference.
@@ -768,6 +786,10 @@ class MovingBedTests(object):
             self.mb_dir = self.bt_mb_dir
             self.flow_spd_mps = self.bt_flow_spd_mps
             self.ref = 'BT'
+            if self.percent_mb > 1:
+                self.moving_bed = 'Yes'
+            else:
+                self.moving_bed = 'No'
         elif ref == 'GPS':
             self.mb_spd_mps = self.gps_mb_spd_mps
             self.dist_us_m = self.gps_dist_us_m
@@ -775,6 +797,16 @@ class MovingBedTests(object):
             self.mb_dir = self.gps_mb_dir
             self.flow_spd_mps = self.gps_flow_spd_mps
             self.ref = 'GPS'
+            if 135 < np.abs(self.flow_dir - self.mb_dir) < 225:
+                # Check if moving-bed is greater than 1% of the mean flow speed
+                if self.percent_mb > 1:
+                    self.moving_bed = 'Yes'
+                else:
+                    self.moving_bed = 'No'
+            else:
+                self.messages.append('ERROR: GPS Loop closure error not in upstream direction. '
+                                     + 'REPEAT LOOP or USE STATIONARY TEST')
+                self.moving_bed = 'Unknown'
 
     @staticmethod
     def near_bed_velocity(u, v, depth, bin_depth):
@@ -837,48 +869,43 @@ class MovingBedTests(object):
 
         return nb_u, nb_v, unit_nbu, unit_nbv
 
-    @staticmethod
-    def mbt_gps(transect, flow_dir=np.nan):
-        """Computes the distance upstream for a moving-bed test using GPS as the fixed reference (start / stop point.
-
-        Parameters
-        ----------
-        transect: TransectData
-            Object of TransectData
-        flow_dir: float
-            Flow direction (azimuth) in degrees
-
-        Returns
-        -------
-        dist_us: float
-            Distance upstream in m
-        md_dir: float
-            Direction of dist_us in degrees
-        """
-
-        gps_bt = None
-        dist_us = np.nan
-
-        # Use GGA data if available and VTG is GGA is not available
-        if transect.boat_vel.gga_vel is not None:
-            gps_bt = TransectData.compute_gps_bt(transect, gps_ref='gga_vel')
-        elif transect.boat_vel.vtg_vel is not None:
-            gps_bt = TransectData.compute_gps_bt(transect, gps_ref='vtg_vel')
-
-        if gps_bt is not None:
-            # Compute mean flow speed and direction if not provided
-            if not np.isnan(flow_dir):
-                u_water = np.nanmean(transect.w_vel.u_processed_mps[:, transect.in_transect_idx])
-                v_water = np.nanmean(transect.w_vel.v_processed_mps[:, transect.in_transect_idx])
-                flow_dir = np.arctan2(u_water, v_water) * 180 / np.pi
-                if flow_dir < 0:
-                    flow_dir = flow_dir + 360
-
-            # Check direction of closure to ensure in upstream direction
-            if 135 < np.abs(flow_dir - gps_bt['dir']) < 225:
-                dist_us = gps_bt['mag']
-
-        return dist_us, gps_bt['dir']
+    # @staticmethod
+    # def mbt_gps(transect, flow_dir=np.nan):
+    #     """Computes the distance upstream for a moving-bed test using GPS as the fixed reference (start / stop point.
+    #
+    #     Parameters
+    #     ----------
+    #     transect: TransectData
+    #         Object of TransectData
+    #     flow_dir: float
+    #         Flow direction (azimuth) in degrees
+    #
+    #     Returns
+    #     -------
+    #     dist_us: float
+    #         Distance upstream in m
+    #     md_dir: float
+    #         Direction of dist_us in degrees
+    #     """
+    #
+    #     gps_bt = None
+    #     dist_us = 0
+    #
+    #     # Use GGA data if available and VTG is GGA is not available
+    #     if transect.boat_vel.gga_vel is not None:
+    #         gps_bt = TransectData.compute_gps_bt(transect, gps_ref='gga_vel')
+    #     elif transect.boat_vel.vtg_vel is not None:
+    #         gps_bt = TransectData.compute_gps_bt(transect, gps_ref='vtg_vel')
+    #
+    #     if gps_bt is not None:
+    #
+    #         # Compute distance upstream
+    #         # unit_x, unit_y = pol2cart(azdeg2rad(flow_dir), 1)
+    #         # x, y = pol2cart(azdeg2rad(gps_bt['dir']), gps_bt['mag'])
+    #         # dist_us = np.sum([unit_x * x, unit_y * y])
+    #         # Check direction of closure to ensure in upstream direction
+    #
+    #     return gps_bt['mag'], gps_bt['dir']
 
     @staticmethod
     def auto_use_2_correct(moving_bed_tests, boat_ref=None):

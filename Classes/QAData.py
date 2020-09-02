@@ -996,6 +996,8 @@ class QAData(object):
             mb = []
             mb_test_type = []
             loop = []
+            gps_diff1 = False
+            gps_diff2 = False
 
             for n, test in enumerate(mb_data):
                 # Are tests valid according to the user
@@ -1004,6 +1006,11 @@ class QAData(object):
                     file_names.append(test.transect.file_name)
                     if test.type == 'Loop' and not test.test_quality == 'Errors':
                         loop.append(test.moving_bed)
+                    if not np.isnan(test.gps_percent_mb):
+                        if np.abs(test.bt_percent_mb - test.gps_percent_mb) > 2:
+                            gps_diff2 = True
+                        if np.logical_xor(test.bt_percent_mb >= 1, test.gps_percent_mb >= 1):
+                            gps_diff1 = True
                     # Selected test
                     if test.selected:
                         idx_selected.append(n)
@@ -1085,6 +1092,20 @@ class QAData(object):
                 if len(np.unique(loop)) > 1:
                     self.movingbed['messages'].append(['Moving-Bed Test: Results of valid loops are not consistent, '
                                                        + 'review moving-bed tests;', 2, 6])
+                    if self.movingbed['code'] < 3:
+                        self.movingbed['code'] = 2
+                        self.movingbed['status'] = 'caution'
+
+                # Notify of differences in results of test between BT and GPS
+                if gps_diff2:
+                    self.movingbed['messages'].append('Moving-Bed Test: Bottom track and '
+                                                      'GPS results differ by more than 2%.')
+                    if self.movingbed['code'] < 3:
+                        self.movingbed['code'] = 2
+                        self.movingbed['status'] = 'caution'
+
+                if gps_diff1:
+                    self.movingbed['messages'].append('Moving-Bed Test: Bottom track and GPS results do not agree.')
                     if self.movingbed['code'] < 3:
                         self.movingbed['code'] = 2
                         self.movingbed['status'] = 'caution'

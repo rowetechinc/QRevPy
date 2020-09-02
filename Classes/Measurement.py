@@ -669,11 +669,14 @@ class Measurement(object):
         else:
             self.compass_cal = []
 
-        if type(meas_struct.compassEval) is np.ndarray:
-            self.compass_eval = PreMeasurement.ce_qrev_mat_in(meas_struct)
-        elif len(meas_struct.compassEval.data) > 0:
-            self.compass_eval = PreMeasurement.ce_qrev_mat_in(meas_struct)
-        else:
+        try:
+            if type(meas_struct.compassEval) is np.ndarray:
+                self.compass_eval = PreMeasurement.ce_qrev_mat_in(meas_struct)
+            elif len(meas_struct.compassEval.data) > 0:
+                self.compass_eval = PreMeasurement.ce_qrev_mat_in(meas_struct)
+            else:
+                self.compass_eval = []
+        except AttributeError:
             self.compass_eval = []
 
         self.transects = TransectData.qrev_mat_in(meas_struct)
