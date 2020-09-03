@@ -354,7 +354,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.setupUi(self)
 
         # Set version of QRev
-        self.QRev_version = 'QRev 4.17'
+        self.QRev_version = 'QRev 4.18'
         self.setWindowTitle(self.QRev_version)
         self.setWindowIcon(QtGui.QIcon('QRev.ico'))
 
@@ -4203,6 +4203,12 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.cb_mb_vtg.blockSignals(True)
         self.cb_mb_vectors.blockSignals(True)
 
+        if self.mb_shiptrack_fig is not None:
+            self.mb_shiptrack_fig.fig.clear()
+            self.mb_ts_fig.fig.clear()
+            self.mb_shiptrack_canvas.draw()
+            self.mb_ts_canvas.draw()
+
         if len(self.meas.mb_tests) > 0:
             # Show name of test plotted
             try:
@@ -6001,31 +6007,31 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 if vtg_lag is not None:
                     vtg_bt = TransectData.compute_gps_bt(self.meas.transects[transect_id], gps_ref='vtg_vel')
 
-                    # GGA lag
+                    # VTG lag
                     col += 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:10.2f}'.format(vtg_lag)))
+                        '{:10.1f}'.format(vtg_lag)))
                     tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-                    # GGA BMG-GMG mag
+                    # VTG BMG-GMG mag
                     col += 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
                         '{:10.3f}'.format(vtg_bt['mag'] * self.units['L'])))
                     tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-                    # GGA BMG-GMG dir
+                    # VTG BMG-GMG dir
                     col += 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
                         '{:10.2f}'.format(vtg_bt['dir'])))
                     tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-                    # GGA GC-BC
+                    # VTG GC-BC
                     col += 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
                         '{:10.2f}'.format(vtg_bt['course'])))
                     tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-                    # GGA BC/GC
+                    # VTG BC/GC
                     col += 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
                         '{:10.4f}'.format(vtg_bt['ratio'])))

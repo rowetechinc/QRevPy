@@ -2223,38 +2223,27 @@ class QAData(object):
             self.settings_dict['tab_edges'] = 'Custom'
 
             if start_edge_change:
-                self.edges['messages'].append(['Edges: User modified '
-                                               'start edge.', 3, 10])
+                self.edges['messages'].append(['Edges: User modified start edge.', 3, 10])
             if left_edge_type_change:
-                self.edges['messages'].append(['Edges: User modified '
-                                               'left edge type.', 3, 10])
+                self.edges['messages'].append(['Edges: User modified left edge type.', 3, 10])
             if left_edge_dist_change:
-                self.edges['messages'].append(['Edges: User modified '
-                                               'left edge distance.', 3, 10])
+                self.edges['messages'].append(['Edges: User modified left edge distance.', 3, 10])
             if left_edge_ens_change:
-                self.edges['messages'].append(['Edges: User modified '
-                                               'left number of ensembles.', 3, 10])
+                self.edges['messages'].append(['Edges: User modified left number of ensembles.', 3, 10])
             if left_edge_q_change:
-                self.edges['messages'].append(['Edges: User modified '
-                                               'left user discharge.', 3, 10])
+                self.edges['messages'].append(['Edges: User modified left user discharge.', 3, 10])
             if left_edge_coef_change:
-                self.edges['messages'].append(['Edges: User modified '
-                                               'left custom coefficient.', 3, 10])
+                self.edges['messages'].append(['Edges: User modified left custom coefficient.', 3, 10])
             if right_edge_type_change:
-                self.edges['messages'].append(['Edges: User modified '
-                                               'right edge type.', 3, 10])
+                self.edges['messages'].append(['Edges: User modified right edge type.', 3, 10])
             if right_edge_dist_change:
-                self.edges['messages'].append(['Edges: User modified '
-                                               'right edge distance.', 3, 10])
+                self.edges['messages'].append(['Edges: User modified right edge distance.', 3, 10])
             if right_edge_ens_change:
-                self.edges['messages'].append(['Edges: User modified '
-                                               'right number of ensembles.', 3, 10])
+                self.edges['messages'].append(['Edges: User modified right number of ensembles.', 3, 10])
             if right_edge_q_change:
-                self.edges['messages'].append(['Edges: User modified '
-                                               'right user discharge.', 3, 10])
+                self.edges['messages'].append(['Edges: User modified right user discharge.', 3, 10])
             if right_edge_coef_change:
-                self.edges['messages'].append(['Edges: User modified '
-                                               'right custom coefficient.', 3, 10])
+                self.edges['messages'].append(['Edges: User modified right custom coefficient.', 3, 10])
         else:
             self.settings_dict['tab_edges'] = 'Default'
 
