@@ -15,8 +15,9 @@ from Classes.Uncertainty import Uncertainty
 from Classes.QAData import QAData
 from Classes.BoatStructure import BoatStructure
 from Classes.Oursin import Oursin
-from Classes.Oursin_orig import Oursin_orig
+# from Classes.Oursin_orig import Oursin_orig
 from MiscLibs.common_functions import cart2pol, pol2cart, rad2azdeg, nans, azdeg2rad
+# from profilehooks import profile
 
 
 class Measurement(object):
@@ -58,6 +59,7 @@ class Measurement(object):
         Dictionary of external temperature readings
     """
 
+    # @profile
     def __init__(self, in_file, source, proc_type='QRev', checked=False, run_oursin=False):
         """Initialize instance variables and initiate processing of measurement
         data.
@@ -95,6 +97,8 @@ class Measurement(object):
         self.user_rating = None
         self.comments = []
         self.ext_temp_chk = {'user': np.nan, 'units': 'C', 'adcp': np.nan, 'user_orig': np.nan, 'adcp_orig': np.nan}
+        self.checked_transect_idx = []
+        self.oursin = None
 
         # Load data from selected source
         if source == 'QRev':
@@ -690,20 +694,10 @@ class Measurement(object):
             if len(self.discharge[n].left_idx) == 0:
                 self.discharge[n].left_idx = self.discharge[n].edge_ensembles(edge_loc='left',
                                                                               transect=self.transects[n])
-                # edge_q, self.discharge[n].left_idx = self.discharge[n].discharge_edge('left',
-                #                                                                       self.transects[n],
-                #                                                                       top_method=None,
-                #                                                                       bot_method=None,
-                #                                                                       exponent=None)
 
             if len(self.discharge[n].right_idx) == 0:
                 self.discharge[n].right_idx = self.discharge[n].edge_ensembles(edge_loc='right',
                                                                                transect=self.transects[n])
-                # edge_q, self.discharge[n].right_idx = self.discharge[n].discharge_edge('right',
-                #                                                                        self.transects[n],
-                #                                                                        top_method=None,
-                #                                                                        bot_method=None,
-                #                                                                        exponent=None)
 
             if type(self.discharge[n].correction_factor) is list:
                 self.discharge[n].correction_factor = self.discharge[n].total / self.discharge[n].total_uncorrected
@@ -875,6 +869,13 @@ class Measurement(object):
             # Apply change to all transects
             for transect in self.transects:
                 transect.change_mag_var(magvar)
+
+            # Apply change to moving-bed tests
+            if len(self.mb_tests) > 0:
+                for test in self.mb_tests:
+                    old_magvar = test.transect.sensors.heading_deg.internal.mag_var_deg
+                    test.transect.change_mag_var(magvar)
+                    test.magvar_change(magvar, old_magvar)
         else:
             self.transects[transect_idx].change_mag_var(magvar)
 
@@ -914,6 +915,13 @@ class Measurement(object):
         if transect_idx is None:
             for transect in self.transects:
                 transect.change_offset(h_offset)
+
+            # Apply change to moving-bed tests
+            if len(self.mb_tests) > 0:
+                for test in self.mb_tests:
+                    old_h_offset = test.transect.sensors.heading_deg.external.align_correction_deg
+                    test.transect.change_offset(h_offset)
+                    test.h_offset_change(h_offset, old_h_offset)
         else:
             self.transects[transect_idx].change_offset(h_offset)
 
@@ -942,6 +950,24 @@ class Measurement(object):
         if transect_idx is None:
             for transect in self.transects:
                 transect.change_heading_source(h_source)
+
+            # Apply change to moving-bed tests
+            if len(self.mb_tests) > 0:
+                for test in self.mb_tests:
+                    test.transect.change_heading_source(h_source)
+                    test.process_mb_test(source=test.transect.adcp.manufacturer)
+                settings = self.current_settings()
+                select = settings['NavRef']
+                ref = None
+                if select == 'bt_vel':
+                    ref = 'BT'
+                elif select == 'gga_vel':
+                    ref = 'GGA'
+                elif select == 'vtg_vel':
+                    ref = 'VTG'
+                self.mb_tests = MovingBedTests.auto_use_2_correct(
+                    moving_bed_tests=self.mb_tests, boat_ref=ref)
+
         else:
             self.transects[transect_idx].change_heading_source(h_source)
 
@@ -1230,7 +1256,7 @@ class Measurement(object):
         settings['BTdFilter'] = transect.boat_vel.bt_vel.d_filter
         settings['BTdFilterThreshold'] = transect.boat_vel.bt_vel.d_filter_threshold
         settings['BTwFilter'] = transect.boat_vel.bt_vel.w_filter
-        settings['BTwFilterThreshold'] =transect.boat_vel.bt_vel.w_filter_threshold
+        settings['BTwFilterThreshold'] = transect.boat_vel.bt_vel.w_filter_threshold
         settings['BTsmoothFilter'] = transect.boat_vel.bt_vel.smooth_filter
         settings['BTInterpolation'] = transect.boat_vel.bt_vel.interpolate
         
@@ -1285,7 +1311,6 @@ class Measurement(object):
             settings['GPSSmoothFilter'] = transect.boat_vel.vtg_vel.smooth_filter
             settings['GPSInterpolation'] = transect.boat_vel.vtg_vel.interpolate
 
-                    
         # Depth Settings
         settings['depthAvgMethod'] = transect.depths.bt_depths.avg_method
         settings['depthValidMethod'] = transect.depths.bt_depths.valid_data_method
@@ -1611,7 +1636,7 @@ class Measurement(object):
             try:
                 lat.append(transect.gps.gga_lat_ens_deg[ensemble])
                 lon.append(transect.gps.gga_lon_ens_deg[ensemble])
-            except (ValueError, AttributeError):
+            except (ValueError, AttributeError, TypeError):
                 lat.append('')
                 lon.append('')
             depth.append(depth_selected.depth_processed_m[ensemble])
@@ -1972,7 +1997,7 @@ class Measurement(object):
 
         return data, serial_time
 
-    def xml_output(self, version, file_name, checked_transect_idx):
+    def xml_output(self, version, file_name):
         channel = ETree.Element('Channel', QRevFilename=os.path.basename(file_name[:-4]), QRevVersion=version)
 
         # (2) SiteInformation Node
@@ -2241,10 +2266,12 @@ class Measurement(object):
         instrument = ETree.SubElement(channel, 'Instrument')
 
         # (3) Manufacturer Node
-        ETree.SubElement(instrument, 'Manufacturer', type='char').text = self.transects[self.checked_transect_idx[0]].adcp.manufacturer
+        ETree.SubElement(instrument, 'Manufacturer', type='char').text = \
+            self.transects[self.checked_transect_idx[0]].adcp.manufacturer
 
         # (3) Model Node
-        ETree.SubElement(instrument, 'Model', type='char').text = self.transects[self.checked_transect_idx[0]].adcp.model
+        ETree.SubElement(instrument, 'Model', type='char').text = \
+            self.transects[self.checked_transect_idx[0]].adcp.model
 
         # (3) SerialNumber Node
         sn = self.transects[self.checked_transect_idx[0]].adcp.serial_num

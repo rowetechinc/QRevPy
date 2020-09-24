@@ -354,7 +354,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.setupUi(self)
 
         # Set version of QRev
-        self.QRev_version = 'QRev 4.18'
+        self.QRev_version = 'QRev 4.19'
         self.setWindowTitle(self.QRev_version)
         self.setWindowIcon(QtGui.QIcon('QRev.ico'))
 
@@ -758,7 +758,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                                checked=self.checked_transects_idx)
 
             # Save xml file
-            self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml', self.checked_transects_idx)
+            self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml')
 
             # Save stylesheet in measurement folder
             if self.save_stylesheet:
@@ -10339,7 +10339,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                                                    checked=self.groupings[self.group_idx])
 
                 # Save xml file
-                self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml', self.checked_transects_idx)
+                self.meas.xml_output(self.QRev_version, save_file.full_Name[:-4] + '.xml')
 
                 # Notify user when save complete
                 QtWidgets.QMessageBox.about(self, "Save", "Group " +

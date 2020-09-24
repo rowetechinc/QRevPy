@@ -4,7 +4,7 @@ from Classes.TransectData import adjusted_ensemble_duration
 from Classes.TransectData import TransectData
 from Classes.QComp import QComp
 from Classes.MatSonTek import MatSonTek
-from MiscLibs.common_functions import cart2pol, sind, pol2cart, rad2azdeg, azdeg2rad
+from MiscLibs.common_functions import cart2pol, sind, pol2cart, rad2azdeg
 
 
 class MovingBedTests(object):
@@ -42,8 +42,6 @@ class MovingBedTests(object):
         Quality of test, 'Valid' 'Warnings' 'Errors'
     use_2_correct: bool
         Use this test to correct discharge (True or False)
-    use_gps_4_test: bool
-        Use GPS to determine distance upstream for moving-bed test
     selected: bool
         Selected as valid moving-bed test to use for correction or determine moving-bed condition
     messages: list
@@ -133,6 +131,10 @@ class MovingBedTests(object):
             self.mb_trdi(file, test_type)
         else:
             self.mb_sontek(file, test_type)
+
+        self.process_mb_test(source)
+
+    def process_mb_test(self, source):
         
         # Convert to earth coordinates and set the navigation reference to BT
         # for both boat and water data
@@ -219,7 +221,6 @@ class MovingBedTests(object):
             self.mb_dir = mat_data.mbDir_deg
         else:
             self.mb_dir = self.make_list(mat_data.mbDir_deg)
-
 
         self.dist_us_m = mat_data.distUS_m
         self.flow_spd_mps = mat_data.flowSpd_mps
@@ -330,6 +331,8 @@ class MovingBedTests(object):
         ----------
         ens_duration: np.array(float)
             Duration of each ensemble, in sec
+        ref: str
+            Reference used to compare distance moved
         """
 
         # Assign data from transect to local variables
@@ -390,7 +393,7 @@ class MovingBedTests(object):
             self.bt_flow_spd_mps = self.bt_flow_spd_mps + self.bt_mb_spd_mps
 
             # Compute potential error in BT referenced discharge
-            self.bt_percent_mb = (self.bt_mb_spd_mps / (self.flow_spd_mps + self.bt_mb_spd_mps)) * 100
+            self.bt_percent_mb = (self.bt_mb_spd_mps / self.bt_flow_spd_mps) * 100
 
             # Compute test with GPS
             self.compute_mb_gps()
@@ -634,7 +637,7 @@ class MovingBedTests(object):
 
             # Compute bottom track perpendicular to water velocity
             nb_vel_ang, _ = cart2pol(unit_nbu, unit_nbv)
-            nb_vel_unit_cs1, nb_vel_unit_cs2 = pol2cart(nb_vel_ang + np.pi / 2, np.ones(nb_vel_ang.shape))
+            nb_vel_unit_cs1, nb_vel_unit_cs2 = pol2cart(nb_vel_ang + np.pi / 2, 1)
             nb_vel_unit_cs = np.vstack([nb_vel_unit_cs1, nb_vel_unit_cs2])
             bt_vel_cs = np.sum(bt_vel * nb_vel_unit_cs, 0)
             bt_cs_strm_dist = bt_vel_cs * ens_duration
@@ -770,6 +773,46 @@ class MovingBedTests(object):
             self.gps_flow_spd_mps = self.bt_flow_spd_mps - self.bt_mb_spd_mps + self.gps_mb_spd_mps
             self.gps_percent_mb = (self.gps_mb_spd_mps / self.gps_flow_spd_mps) * 100
 
+    def magvar_change(self, magvar, old_magvar):
+        """Adjust moving-bed test for change in magvar.
+
+        Parameters
+        ----------
+        magvar: float
+            New magvar
+        old_magvar: float
+            Existing magvar
+        """
+
+        if self.transect.sensors.heading_deg.selected == 'internal':
+            magvar_change = magvar - old_magvar
+            self.bt_mb_dir = self.bt_mb_dir + magvar_change
+            self.flow_dir = self.flow_dir + magvar_change
+
+            # Recompute moving-bed tests with GPS and set results using existing reference
+            self.compute_mb_gps()
+            self.change_ref(self.ref)
+
+    def h_offset_change(self, h_offset, old_h_offset):
+        """Adjust moving-bed test for change in h_offset for external compass.
+
+        Parameters
+        ----------
+        h_offset: float
+            New h_offset
+        old_h_offset: float
+            Existing h_offset
+        """
+
+        if self.transect.sensors.heading_deg.selected == 'external':
+            h_offset_change = h_offset - old_h_offset
+            self.bt_mb_dir = self.bt_mb_dir + h_offset_change
+            self.flow_dir = self.flow_dir + h_offset_change
+
+            # Recompute moving-bed tests with GPS and set results using existing reference
+            self.compute_mb_gps()
+            self.change_ref(self.ref)
+
     def change_ref(self, ref):
         """Change moving-bed test fixed reference.
 
@@ -868,44 +911,6 @@ class MovingBedTests(object):
                 unit_nbv[n] = nb_v[n] / speed_near_bed[n]
 
         return nb_u, nb_v, unit_nbu, unit_nbv
-
-    # @staticmethod
-    # def mbt_gps(transect, flow_dir=np.nan):
-    #     """Computes the distance upstream for a moving-bed test using GPS as the fixed reference (start / stop point.
-    #
-    #     Parameters
-    #     ----------
-    #     transect: TransectData
-    #         Object of TransectData
-    #     flow_dir: float
-    #         Flow direction (azimuth) in degrees
-    #
-    #     Returns
-    #     -------
-    #     dist_us: float
-    #         Distance upstream in m
-    #     md_dir: float
-    #         Direction of dist_us in degrees
-    #     """
-    #
-    #     gps_bt = None
-    #     dist_us = 0
-    #
-    #     # Use GGA data if available and VTG is GGA is not available
-    #     if transect.boat_vel.gga_vel is not None:
-    #         gps_bt = TransectData.compute_gps_bt(transect, gps_ref='gga_vel')
-    #     elif transect.boat_vel.vtg_vel is not None:
-    #         gps_bt = TransectData.compute_gps_bt(transect, gps_ref='vtg_vel')
-    #
-    #     if gps_bt is not None:
-    #
-    #         # Compute distance upstream
-    #         # unit_x, unit_y = pol2cart(azdeg2rad(flow_dir), 1)
-    #         # x, y = pol2cart(azdeg2rad(gps_bt['dir']), gps_bt['mag'])
-    #         # dist_us = np.sum([unit_x * x, unit_y * y])
-    #         # Check direction of closure to ensure in upstream direction
-    #
-    #     return gps_bt['mag'], gps_bt['dir']
 
     @staticmethod
     def auto_use_2_correct(moving_bed_tests, boat_ref=None):

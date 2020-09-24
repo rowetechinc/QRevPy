@@ -172,7 +172,8 @@ class Shiptrack(object):
                                             'k', linestyle='', marker='$B$')[0])
 
         ship_data = ship_data_bt
-        if len(ship_data_bt['track_x_m']) > 0:
+        # if len(ship_data_bt['track_x_m']) > 0:
+        if not np.alltrue(np.isnan(ship_data_bt['track_x_m'])):
             max_x_bt = np.nanmax(ship_data_bt['track_x_m'])
             max_y_bt = np.nanmax(ship_data_bt['track_y_m'])
             min_x_bt = np.nanmin(ship_data_bt['track_x_m'])
@@ -200,7 +201,8 @@ class Shiptrack(object):
                                             ship_data_vtg['track_y_m'] * units['L'],
                                             color='g', label='VTG')
 
-                if len(ship_data_vtg['track_x_m']) > 0:
+                # if len(ship_data_vtg['track_x_m']) > 0:
+                if not np.alltrue(np.isnan(ship_data_vtg['track_x_m'])):
                     if edge_start is not None:
                         if edge_start:
                             self.vtg.append(self.fig.ax.plot(ship_data_vtg['track_x_m'][0] * units['L'],
@@ -250,7 +252,8 @@ class Shiptrack(object):
                                             ship_data_gga['track_y_m'] * units['L'],
                                             color='b', label='GGA')
 
-                if len(ship_data_gga['track_x_m']) > 0:
+                # if len(ship_data_gga['track_x_m']) > 0:
+                if not np.alltrue(np.isnan(ship_data_gga['track_x_m'])):
                     if edge_start is not None:
                         try:
                             if edge_start:
@@ -361,8 +364,8 @@ class Shiptrack(object):
             u_mean = self.subsection(u_mean, n_ensembles, edge_start)
             v_mean = self.subsection(v_mean, n_ensembles, edge_start)
         else:
-            u_mean = np.nanmean(u, axis=0)
-            v_mean = np.nanmean(v, axis=0)
+            u_mean = np.nanmean(u, axis=0)[transect.in_transect_idx]
+            v_mean = np.nanmean(v, axis=0)[transect.in_transect_idx]
 
         speed = np.sqrt(u_mean**2 + v_mean**2) * units['V']
         if len(speed) > 0:
@@ -370,10 +373,12 @@ class Shiptrack(object):
         else:
             max_speed = 0
         # Plot water vectors
-        if len(ship_data['track_x_m']) > 0:
+        # if len(ship_data['track_x_m']) > 0:
+        if not np.alltrue(np.isnan(ship_data['track_x_m'])):
             self.vectors = self.fig.ax.quiver(ship_data['track_x_m'] * units['L'], ship_data['track_y_m'] * units['L'],
-                                              u_mean * units['V'], v_mean * units['V'], units='dots', width=1,
-                                              scale_units='width', scale=4*max_speed)
+                                              u_mean * units['V'],
+                                              v_mean * units['V'],
+                                              units='dots', width=1, scale_units='width', scale=4*max_speed)
             if control['vectors']:
                 self.vectors.set_visible(True)
             else:

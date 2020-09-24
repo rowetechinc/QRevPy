@@ -3,6 +3,7 @@ import numpy as np
 from numpy.matlib import repmat
 from MiscLibs.common_functions import iqr
 from MiscLibs.robust_loess import rloess
+# from scipy.signal import savgol_filter
 
 
 class DepthData(object):
@@ -450,6 +451,7 @@ class DepthData(object):
 
             # Arrays initialized
             depth_smooth = repmat([np.nan], n_beams, n_ensembles)
+            # self.depth_smooth_sg = repmat([np.nan], n_beams, n_ensembles)
             depth_res = repmat([np.nan], n_beams, n_ensembles)
             upper_limit = repmat([np.nan], n_beams, n_ensembles)
             lower_limit = repmat([np.nan], n_beams, n_ensembles)
@@ -480,7 +482,9 @@ class DepthData(object):
                         # Fit smooth
                         try:
                             smooth_fit = rloess(x, depth_filtered[j, :], 20)
+                            # savgol_fit = savgol_filter(depth_filtered[j, :], window_length=19, polyorder=3, mode='mirror')
                             depth_smooth[j, :] = smooth_fit
+                            # self.depth_smooth_sg[j, :] = savgol_fit
                         except ValueError:
                             depth_smooth[j, :] = depth_filtered[j, :]
                     else:
@@ -519,6 +523,7 @@ class DepthData(object):
             self.smooth_depth = depth_smooth
             self.smooth_upper_limit = upper_limit
             self.smooth_lower_limit = lower_limit
+
         
         # Reset valid data
         self.filter_none()

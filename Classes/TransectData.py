@@ -408,47 +408,85 @@ class TransectData(object):
             if mmt_config['Edge_Begin_Left_Bank']:
                 dist_left = float(mmt_config['Edge_Begin_Shore_Distance'])
                 dist_right = float(mmt_config['Edge_End_Shore_Distance'])
+                if 'Edge_End_Manual_Discharge' in mmt_config:
+                    user_discharge_left = float(mmt_config['Edge_Begin_Manual_Discharge'])
+                    user_discharge_right = float(mmt_config['Edge_End_Manual_Discharge'])
+                    edge_method_left = mmt_config['Edge_Begin_Method_Distance']
+                    edge_method_right = mmt_config['Edge_End_Method_Distance']
+                else:
+                    user_discharge_left = None
+                    user_discharge_right = None
+                    edge_method_left = 'Yes'
+                    edge_method_right = 'Yes'
                 self.start_edge = 'Left'
                 self.orig_start_edge = 'Left'
             else:
                 dist_left = float(mmt_config['Edge_End_Shore_Distance'])
                 dist_right = float(mmt_config['Edge_Begin_Shore_Distance'])
+                if 'Edge_End_Manual_Discharge' in mmt_config:
+                    user_discharge_left = float(mmt_config['Edge_End_Manual_Discharge'])
+                    user_discharge_right = float(mmt_config['Edge_Begin_Manual_Discharge'])
+                    edge_method_left = mmt_config['Edge_End_Method_Distance']
+                    edge_method_right = mmt_config['Edge_Begin_Method_Distance']
+                else:
+                    user_discharge_left = None
+                    user_discharge_right = None
+                    edge_method_left = 'Yes'
+                    edge_method_right = 'Yes'
                 self.start_edge = 'Right'
                 self.orig_start_edge = 'Right'
                 
             # Create left edge
-            if mmt_config['Q_Left_Edge_Type'] == 0:
+            if edge_method_left == 'NO':
+                self.edges.left.populate_data(edge_type='User Q',
+                                              distance=dist_left,
+                                              number_ensembles=n_ens_left,
+                                              user_discharge=user_discharge_left)
+
+            elif mmt_config['Q_Left_Edge_Type'] == 0:
                 self.edges.left.populate_data(edge_type='Triangular',
                                               distance=dist_left,
-                                              number_ensembles=n_ens_left)
+                                              number_ensembles=n_ens_left,
+                                              user_discharge=user_discharge_left)
 
             elif mmt_config['Q_Left_Edge_Type'] == 1:
                 self.edges.left.populate_data(edge_type='Rectangular',
                                               distance=dist_left,
-                                              number_ensembles=n_ens_left)
+                                              number_ensembles=n_ens_left,
+                                              user_discharge=user_discharge_left)
 
             elif mmt_config['Q_Left_Edge_Type'] == 2:
                 self.edges.left.populate_data(edge_type='Custom',
                                               distance=dist_left,
                                               number_ensembles=n_ens_left,
-                                              coefficient=mmt_config['Q_Left_Edge_Coeff'])
+                                              coefficient=mmt_config['Q_Left_Edge_Coeff'],
+                                              user_discharge=user_discharge_left)
+
                 
             # Create right edge
-            if mmt_config['Q_Right_Edge_Type'] == 0:
+            if edge_method_right == 'NO':
+                self.edges.right.populate_data(edge_type='User Q',
+                                               distance=dist_right,
+                                               number_ensembles=n_ens_right,
+                                               user_discharge=user_discharge_right)
+            elif mmt_config['Q_Right_Edge_Type'] == 0:
                 self.edges.right.populate_data(edge_type='Triangular',
                                                distance=dist_right,
-                                               number_ensembles=n_ens_right)
+                                               number_ensembles=n_ens_right,
+                                               user_discharge=user_discharge_right)
 
             elif mmt_config['Q_Right_Edge_Type'] == 1:
                 self.edges.right.populate_data(edge_type='Rectangular',
                                                distance=dist_right,
-                                               number_ensembles=n_ens_right)
+                                               number_ensembles=n_ens_right,
+                                               user_discharge=user_discharge_right)
 
             elif mmt_config['Q_Right_Edge_Type'] == 2:
                 self.edges.right.populate_data(edge_type='Custom',
                                                distance=dist_right,
                                                number_ensembles=n_ens_right,
-                                               coefficient=mmt_config['Q_Right_Edge_Coeff'])
+                                               coefficient=mmt_config['Q_Right_Edge_Coeff'],
+                                               user_discharge=user_discharge_right)
                 
             # Create extrap object
             # --------------------
@@ -1788,7 +1826,22 @@ class TransectData(object):
 
     @staticmethod
     def compute_gps_lag(transect):
+        """Computes the lag between bottom track and GGA and/or VTG using an autocorrelation method.
 
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+
+        Returns
+        -------
+        lag_gga: float
+            Lag in seconds betweeen bottom track and gga
+        lag_vtg: float
+            Lag in seconds between bottom track and vtg
+        """
+
+        # Intialize returns
         lag_gga = None
         lag_vtg = None
 
@@ -1796,25 +1849,53 @@ class TransectData(object):
                            + transect.boat_vel.bt_vel.v_processed_mps ** 2)
 
         avg_ens_dur = np.nanmean(transect.date_time.ens_duration_sec)
+
+        # Compute lag for gga, if available
         if transect.boat_vel.gga_vel is not None:
             gga_speed = np.sqrt(transect.boat_vel.gga_vel.u_processed_mps**2
                              + transect.boat_vel.gga_vel.v_processed_mps**2)
-            valid_data = np.all(np.logical_not(np.isnan(np.vstack((bt_speed, gga_speed)))), axis=0)
-            lag_gga = (np.count_nonzero(valid_data)
-                      - np.argmax(signal.correlate(bt_speed[valid_data], gga_speed[valid_data])) - 1) * avg_ens_dur
 
+            # Compute lag if both bottom track and gga have valid data
+            valid_data = np.all(np.logical_not(np.isnan(np.vstack((bt_speed, gga_speed)))), axis=0)
+            if np.sometrue(valid_data):
+                # Compute lag
+                lag_gga = (np.count_nonzero(valid_data)
+                          - np.argmax(signal.correlate(bt_speed[valid_data], gga_speed[valid_data])) - 1) * avg_ens_dur
+            else:
+                lag_gga = None
+
+        # Compute lag for vtg, if available
         if transect.boat_vel.vtg_vel is not None:
             vtg_speed = np.sqrt(transect.boat_vel.vtg_vel.u_processed_mps**2
                              + transect.boat_vel.vtg_vel.v_processed_mps**2)
+
+            # Compute lag if both bottom track and gga have valid data
             valid_data = np.all(np.logical_not(np.isnan(np.vstack((bt_speed, vtg_speed)))), axis=0)
-            lag_vtg = (np.count_nonzero(valid_data)
-                       - np.argmax(signal.correlate(bt_speed[valid_data], vtg_speed[valid_data])) - 1) * avg_ens_dur
+            if np.sometrue(valid_data):
+                # Compute lag
+                lag_vtg = (np.count_nonzero(valid_data)
+                           - np.argmax(signal.correlate(bt_speed[valid_data], vtg_speed[valid_data])) - 1) * avg_ens_dur
+            else:
+                lag_vtg = None
 
         return lag_gga, lag_vtg
 
     @staticmethod
     def compute_gps_lag_fft(transect):
+        """Computes the lag between bottom track and GGA and/or VTG using fft method.
 
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+
+        Returns
+        -------
+        lag_gga: float
+            Lag in seconds betweeen bottom track and gga
+        lag_vtg: float
+            Lag in seconds between bottom track and vtg
+        """
         lag_gga = None
         lag_vtg = None
 
@@ -1844,20 +1925,48 @@ class TransectData(object):
 
     @staticmethod
     def compute_gps_bt(transect, gps_ref='gga_vel'):
+        """Computes properties describing the difference between bottom track and the specified GPS reference.
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+        gps_ref: str
+            GPS referenced to be used in computation (gga_vel or vtg_vel)
+
+        Returns
+        -------
+        gps_bt: dict
+            course: float
+                Difference in course computed from gps and bt, in degrees
+            ratio: float
+                Ratio of final distance made good for bt and gps (bt dmg / gps dmg)
+            dir: float
+                Direction of vector from end of GPS track to end of bottom track
+            mag: float
+                Length of vector from end of GPS track to end of bottom track
+        """
 
         gps_bt = dict()
         gps_vel = getattr(transect.boat_vel, gps_ref)
         if gps_vel is not None:
+            # Data prep
             bt_track = BoatStructure.compute_boat_track(transect, ref='bt_vel')
             bt_course, _ = cart2pol(bt_track['track_x_m'][-1], bt_track['track_y_m'][-1])
             bt_course = rad2azdeg(bt_course)
             gps_track = BoatStructure.compute_boat_track(transect, ref=gps_ref)
             gps_course, _ = cart2pol(gps_track['track_x_m'][-1], gps_track['track_y_m'][-1])
             gps_course = rad2azdeg(gps_course)
+
+            # Compute course
             gps_bt['course'] = gps_course - bt_course
             if gps_bt['course'] < 0:
                 gps_bt['course'] = gps_bt['course'] + 360
+
+            # Compute ratio
             gps_bt['ratio'] = bt_track['dmg_m'][-1] / gps_track['dmg_m'][-1]
+
+            # Compute closure vector
             x_diff = bt_track['track_x_m'][-1] - gps_track['track_x_m'][-1]
             y_diff = bt_track['track_y_m'][-1] - gps_track['track_y_m'][-1]
             gps_bt['dir'], gps_bt['mag'] = cart2pol(x_diff, y_diff)

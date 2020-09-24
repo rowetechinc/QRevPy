@@ -369,12 +369,20 @@ class MMTtransect(object):
 
         # Edge estimate settings
         config_dict['Edge_Begin_Shore_Distance'] = config['Edge_Estimates']['Begin_Shore_Distance']['#text']
+        config_dict['Edge_End_Shore_Distance'] = float(config['Edge_Estimates']['End_Shore_Distance']['#text'])
         if config['Edge_Estimates']['Begin_Left_Bank']['#text'] == 'YES':
             config_dict['Edge_Begin_Left_Bank'] = 1
         else:
             config_dict['Edge_Begin_Left_Bank'] = 0
 
-        config_dict['Edge_End_Shore_Distance'] = float(config['Edge_Estimates']['End_Shore_Distance']['#text'])
+        # Check for user discharge feature in mmt file
+        if 'Begin_Manual_Discharge' in config['Edge_Estimates']:
+            config_dict['Edge_Begin_Manual_Discharge'] = float(config['Edge_Estimates']['Begin_Manual_Discharge']['#text'])
+            config_dict['Edge_Begin_Method_Distance'] = \
+                config['Edge_Estimates']['Begin_Edge_Discharge_Method_Distance']['#text']
+            config_dict['Edge_End_Manual_Discharge'] = float(config['Edge_Estimates']['End_Manual_Discharge']['#text'])
+            config_dict['Edge_End_Method_Distance'] = \
+                config['Edge_Estimates']['End_Edge_Discharge_Method_Distance']['#text']
 
         # Offsets
         for key in config['Offsets'].keys():

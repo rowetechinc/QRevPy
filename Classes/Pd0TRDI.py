@@ -224,7 +224,8 @@ class Pd0TRDI(object):
                                     # Read data offsets
                                     test = np.fromfile(f, np.uint16, count=int(self.Hdr.n_data_types[i_ens]))
                                     if test.shape[0] > self.Hdr.data_offsets.shape[1]:
-                                        self.Hdr.data_offsets.resize(n_ensembles, test.shape[0])
+                                        self.Hdr.data_offsets = np.resize(self.Hdr.data_offsets,
+                                                                          (n_ensembles, test.shape[0]))
                                     self.Hdr.data_offsets[i_ens, 0:int(self.Hdr.n_data_types[i_ens])] = \
                                         test[0:int(self.Hdr.n_data_types[i_ens])]
 

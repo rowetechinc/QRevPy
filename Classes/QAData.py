@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 from Classes.Uncertainty import Uncertainty
 from Classes.QComp import QComp
@@ -77,6 +78,15 @@ class QAData(object):
         self.extrapolation = dict()
         self.edges = dict()
         self.settings_dict = dict()
+        self.settings_dict['tab_compass'] = 'Default'
+        self.settings_dict['tab_tempsal'] = 'Default'
+        self.settings_dict['tab_mbt'] = 'Default'
+        self.settings_dict['tab_bt'] = 'Default'
+        self.settings_dict['tab_gps'] = 'Default'
+        self.settings_dict['tab_depth'] = 'Default'
+        self.settings_dict['tab_wt'] = 'Default'
+        self.settings_dict['tab_extrap'] = 'Default'
+        self.settings_dict['tab_edges'] = 'Default'
 
         if compute:
             # Apply QA checks
@@ -467,8 +477,8 @@ class QAData(object):
                     idx_missing = np.where(transect.date_time.ens_duration_sec > 1.5)[0]
                     if len(idx_missing) > 0:
                         average_ensemble_duration = (np.nansum(transect.date_time.ens_duration_sec)
-                                                     - np.nansum(transect.date_time.ens_duration_sec[idx_missing])
-                                                     / (len(transect.date_time.ens_duration_sec) - len(idx_missing)))
+                                                     - np.nansum(transect.date_time.ens_duration_sec[idx_missing])) \
+                                                     / (len(transect.date_time.ens_duration_sec) - len(idx_missing))
                         num_missing = np.round(np.nansum(transect.date_time.ens_duration_sec[idx_missing])
                                                / average_ensemble_duration) - len(idx_missing)
                     else:
@@ -1098,14 +1108,15 @@ class QAData(object):
 
                 # Notify of differences in results of test between BT and GPS
                 if gps_diff2:
-                    self.movingbed['messages'].append('Moving-Bed Test: Bottom track and '
-                                                      'GPS results differ by more than 2%.')
+                    self.movingbed['messages'].append(['Moving-Bed Test: Bottom track and '
+                                                      'GPS results differ by more than 2%.', 2, 6])
                     if self.movingbed['code'] < 3:
                         self.movingbed['code'] = 2
                         self.movingbed['status'] = 'caution'
 
                 if gps_diff1:
-                    self.movingbed['messages'].append('Moving-Bed Test: Bottom track and GPS results do not agree.')
+                    self.movingbed['messages'].append(['Moving-Bed Test: Bottom track and GPS results do not agree.',
+                                                      2, 6])
                     if self.movingbed['code'] < 3:
                         self.movingbed['code'] = 2
                         self.movingbed['status'] = 'caution'
@@ -1333,7 +1344,7 @@ class QAData(object):
                                 boat['q_max_run_caution'][n, dt_filter[1]] = True
 
                             # Check boat velocity for vtg data
-                            if dt_key is 'VTG' and transect.boat_vel.selected is 'vtg_vel' and avg_speed_check == 0:
+                            if dt_key == 'VTG' and transect.boat_vel.selected == 'vtg_vel' and avg_speed_check == 0:
                                 if transect.boat_vel.vtg_vel.u_mps is not None:
                                     avg_speed = np.nanmean((transect.boat_vel.vtg_vel.u_mps ** 2
                                                             + transect.boat_vel.vtg_vel.v_mps ** 2) ** 0.5)
@@ -1348,7 +1359,7 @@ class QAData(object):
 
                 # Create message for consecutive invalid discharge
                 if boat['q_max_run_warning'][:, dt_filter[1]].any():
-                    if dt_key is 'BT':
+                    if dt_key == 'BT':
                         module_code = 7
                     else:
                         module_code = 8
@@ -1358,7 +1369,7 @@ class QAData(object):
                          '%3.1f' % self.q_run_threshold_warning + '%;', 1, module_code])
                     status_switch = 2
                 elif boat['q_max_run_caution'][:, dt_filter[1]].any():
-                    if dt_key is 'BT':
+                    if dt_key == 'BT':
                         module_code = 7
                     else:
                         module_code = 8
@@ -1371,7 +1382,7 @@ class QAData(object):
 
                 # Create message for total invalid discharge
                 if boat['q_total_warning'][:, dt_filter[1]].any():
-                    if dt_key is 'BT':
+                    if dt_key == 'BT':
                         module_code = 7
                     else:
                         module_code = 8
@@ -1381,7 +1392,7 @@ class QAData(object):
                          '%3.1f' % self.q_total_threshold_warning + '%;', 1, module_code])
                     status_switch = 2
                 elif boat['q_total_caution'][:, dt_filter[1]].any():
-                    if dt_key is 'BT':
+                    if dt_key == 'BT':
                         module_code = 7
                     else:
                         module_code = 8
@@ -1395,7 +1406,7 @@ class QAData(object):
             # Create message for all data invalid
             if boat['all_invalid'].any():
                 boat['status'] = 'warning'
-                if dt_key is 'BT':
+                if dt_key == 'BT':
                     module_code = 7
                 else:
                     module_code = 8
@@ -1438,7 +1449,6 @@ class QAData(object):
                 if self.vtg_vel['status'] != 'warning':
                     self.vtg_vel['status'] = 'caution'
 
-
     def water_qa(self, meas):
         """Apply quality checks to water data.
 
@@ -1450,7 +1460,7 @@ class QAData(object):
 
         # Initialize filter labels and indices
         prefix = ['All: ', 'Original: ', 'ErrorVel: ', 'VertVel: ', 'Other: ', '3Beams: ', 'SNR:']
-        if meas.transects[0].adcp.manufacturer is 'TRDI':
+        if meas.transects[0].adcp.manufacturer == 'TRDI':
             filter_index = [0, 1, 2, 3, 4, 5]
         else:
             filter_index = [0, 1, 2, 3, 4, 5, 7]
@@ -2266,7 +2276,8 @@ class QAData(object):
             # mb_test_quality = []
             mb_used = []
 
-            auto = MovingBedTests.auto_use_2_correct(mbt)
+            auto = copy.deepcopy(mbt)
+            auto = MovingBedTests.auto_use_2_correct(auto)
 
             for n in range(len(mbt)):
 

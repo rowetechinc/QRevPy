@@ -66,6 +66,7 @@ class Python2Matlab(object):
             mb_tests = np.array([])
 
         self.matlab_dict['mbTests'] = mb_tests
+
         self.matlab_dict['uncertainty'] = self.listobj2struct([meas_mat.uncertainty], py_2_mat_dict)
         self.matlab_dict['qa'] = self.listobj2struct([meas_mat.qa], py_2_mat_dict)
 
@@ -608,44 +609,12 @@ class Python2Matlab(object):
 
         # Process changes for each transect
         for transect in meas_mat.transects:
+            transect = Python2Matlab.reconfigure_transect(transect)
 
-            # Change selected boat velocity identification
-            if transect.boat_vel.selected == 'bt_vel':
-                transect.boat_vel.selected = 'btVel'
-            elif transect.boat_vel.selected == 'gga_vel':
-                transect.boat_vel.selected = 'ggaVel'
-            elif transect.boat_vel.selected == 'vtg_vel':
-                transect.boat_vel.selected = 'vtgVel'
-
-            # Change selected depth identification
-            if transect.depths.selected == 'bt_depths':
-                transect.depths.selected = 'btDepths'
-            elif transect.depths.selected == 'vb_depths':
-                transect.depths.selected = 'vbDepths'
-            elif transect.depths.selected == 'ds_depths':
-                transect.depths.selected = 'dsDepths'
-
-            # Adjust in transect number for 1 base rather than 0 base
-            transect.in_transect_idx = transect.in_transect_idx + 1
-
-            # Adjust arrangement of 3-D arrays for consistency with Matlab
-            transect.w_vel.raw_vel_mps = np.moveaxis(transect.w_vel.raw_vel_mps, 0, 2)
-            transect.w_vel.corr = np.moveaxis(transect.w_vel.corr, 0, 2)
-            transect.w_vel.rssi = np.moveaxis(transect.w_vel.rssi, 0, 2)
-            transect.w_vel.valid_data = np.moveaxis(transect.w_vel.valid_data, 0, 2)
-            if len(transect.adcp.t_matrix.matrix.shape) == 3:
-                transect.adcp.t_matrix.matrix = np.moveaxis(transect.adcp.t_matrix.matrix, 2, 0)
-
-            # Adjust 2-D array to be row based
-            if transect.adcp.configuration_commands is not None:
-                transect.adcp.configuration_commands = transect.adcp.configuration_commands.reshape(-1, 1)
-
-            # Adjust serial time to Matlab convention
-            seconds_day = 86400
-            time_correction = 719529.0000000003
-            transect.date_time.start_serial_time = (transect.date_time.start_serial_time / seconds_day) \
-                + time_correction
-            transect.date_time.end_serial_time = (transect.date_time.end_serial_time / seconds_day) + time_correction
+        # Process changes for each moving-bed test transect
+        if len(meas.mb_tests) > 0:
+            for test in meas_mat.mb_tests:
+                test.transect = Python2Matlab.reconfigure_transect(test.transect)
 
         # Adjust 1-D array to be row based
         for fit in meas_mat.extrap_fit.sel_fit:
@@ -670,11 +639,6 @@ class Python2Matlab(object):
         if len(meas_mat.compass_cal) == 0:
             meas_mat.compass_cal = [PreMeasurement()]
 
-        # Adjust ensemble indexing for 1 base indexing
-        if len(meas_mat.mb_tests) > 0:
-            for test in meas_mat.mb_tests:
-                test.transect.in_transect_idx = test.transect.in_transect_idx + 1
-
         # If only one moving-bed test change from list to MovingBedTest object
         if len(meas_mat.mb_tests) == 1:
             meas_mat.mb_tests = meas_mat.mb_tests[0]
@@ -689,3 +653,57 @@ class Python2Matlab(object):
             meas_mat.ext_temp_chk['adcp'] = ''
 
         return meas_mat
+
+    @staticmethod
+    def reconfigure_transect(transect):
+        """Changes variable names, rearranges arrays, and adjusts time for consistency with original QRev Matlab output.
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+
+        Returns
+        -------
+        transect: TransectData
+            Revised object of TransectData
+        """
+
+        # Change selected boat velocity identification
+        if transect.boat_vel.selected == 'bt_vel':
+            transect.boat_vel.selected = 'btVel'
+        elif transect.boat_vel.selected == 'gga_vel':
+            transect.boat_vel.selected = 'ggaVel'
+        elif transect.boat_vel.selected == 'vtg_vel':
+            transect.boat_vel.selected = 'vtgVel'
+
+        # Change selected depth identification
+        if transect.depths.selected == 'bt_depths':
+            transect.depths.selected = 'btDepths'
+        elif transect.depths.selected == 'vb_depths':
+            transect.depths.selected = 'vbDepths'
+        elif transect.depths.selected == 'ds_depths':
+            transect.depths.selected = 'dsDepths'
+
+        # Adjust in transect number for 1 base rather than 0 base
+        transect.in_transect_idx = transect.in_transect_idx + 1
+
+        # Adjust arrangement of 3-D arrays for consistency with Matlab
+        transect.w_vel.raw_vel_mps = np.moveaxis(transect.w_vel.raw_vel_mps, 0, 2)
+        transect.w_vel.corr = np.moveaxis(transect.w_vel.corr, 0, 2)
+        transect.w_vel.rssi = np.moveaxis(transect.w_vel.rssi, 0, 2)
+        transect.w_vel.valid_data = np.moveaxis(transect.w_vel.valid_data, 0, 2)
+        if len(transect.adcp.t_matrix.matrix.shape) == 3:
+            transect.adcp.t_matrix.matrix = np.moveaxis(transect.adcp.t_matrix.matrix, 2, 0)
+
+        # Adjust 2-D array to be row based
+        if transect.adcp.configuration_commands is not None:
+            transect.adcp.configuration_commands = transect.adcp.configuration_commands.reshape(-1, 1)
+
+        # Adjust serial time to Matlab convention
+        seconds_day = 86400
+        time_correction = 719529.0000000003
+        transect.date_time.start_serial_time = (transect.date_time.start_serial_time / seconds_day) \
+                                               + time_correction
+        transect.date_time.end_serial_time = (transect.date_time.end_serial_time / seconds_day) + time_correction
+        return transect
