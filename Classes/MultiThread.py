@@ -1,9 +1,10 @@
-'''
+"""
 Created on Sep 28, 2017
 
 @author: gpetrochenkov
-'''
+"""
 import threading
+
 
 class MultiThread(threading.Thread):
     
@@ -19,5 +20,3 @@ class MultiThread(threading.Thread):
             self.function(**self.args)
         else:
             self.function()
-        
-        

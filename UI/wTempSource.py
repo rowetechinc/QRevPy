@@ -1,0 +1,122 @@
+# -*- coding: utf-8 -*-
+
+# Form implementation generated from reading ui file 'wTempSource.ui'
+#
+# Created by: PyQt5 UI code generator 5.12.2
+#
+# WARNING! All changes made in this file will be lost!
+
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+
+class Ui_temp_source(object):
+    def setupUi(self, temp_source):
+        temp_source.setObjectName("temp_source")
+        temp_source.resize(355, 162)
+        self.gridLayout_2 = QtWidgets.QGridLayout(temp_source)
+        self.gridLayout_2.setObjectName("gridLayout_2")
+        self.verticalLayout_3 = QtWidgets.QVBoxLayout()
+        self.verticalLayout_3.setObjectName("verticalLayout_3")
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.gb_source = QtWidgets.QGroupBox(temp_source)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        font.setBold(True)
+        font.setWeight(75)
+        self.gb_source.setFont(font)
+        self.gb_source.setObjectName("gb_source")
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.gb_source)
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.rb_internal = QtWidgets.QRadioButton(self.gb_source)
+        font = QtGui.QFont()
+        font.setBold(False)
+        font.setWeight(50)
+        self.rb_internal.setFont(font)
+        self.rb_internal.setObjectName("rb_internal")
+        self.verticalLayout_2.addWidget(self.rb_internal)
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.rb_user = QtWidgets.QRadioButton(self.gb_source)
+        font = QtGui.QFont()
+        font.setBold(False)
+        font.setWeight(50)
+        self.rb_user.setFont(font)
+        self.rb_user.setObjectName("rb_user")
+        self.horizontalLayout_2.addWidget(self.rb_user)
+        self.ed_user_temp = QtWidgets.QLineEdit(self.gb_source)
+        self.ed_user_temp.setObjectName("ed_user_temp")
+        self.horizontalLayout_2.addWidget(self.ed_user_temp)
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem)
+        self.horizontalLayout_2.setStretch(0, 1)
+        self.horizontalLayout_2.setStretch(1, 1)
+        self.horizontalLayout_2.setStretch(2, 3)
+        self.verticalLayout_2.addLayout(self.horizontalLayout_2)
+        self.horizontalLayout.addWidget(self.gb_source)
+        self.gb_h_source = QtWidgets.QGroupBox(temp_source)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        font.setBold(True)
+        font.setWeight(75)
+        self.gb_h_source.setFont(font)
+        self.gb_h_source.setObjectName("gb_h_source")
+        self.gridLayout = QtWidgets.QGridLayout(self.gb_h_source)
+        self.gridLayout.setObjectName("gridLayout")
+        self.verticalLayout = QtWidgets.QVBoxLayout()
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.rb_all = QtWidgets.QRadioButton(self.gb_h_source)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        font.setBold(False)
+        font.setWeight(50)
+        self.rb_all.setFont(font)
+        self.rb_all.setChecked(True)
+        self.rb_all.setObjectName("rb_all")
+        self.verticalLayout.addWidget(self.rb_all)
+        self.rb_transect = QtWidgets.QRadioButton(self.gb_h_source)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        font.setBold(False)
+        font.setWeight(50)
+        self.rb_transect.setFont(font)
+        self.rb_transect.setObjectName("rb_transect")
+        self.verticalLayout.addWidget(self.rb_transect)
+        self.gridLayout.addLayout(self.verticalLayout, 0, 0, 1, 1)
+        self.horizontalLayout.addWidget(self.gb_h_source)
+        self.horizontalLayout.setStretch(0, 1)
+        self.horizontalLayout.setStretch(1, 1)
+        self.verticalLayout_3.addLayout(self.horizontalLayout)
+        self.buttonBox = QtWidgets.QDialogButtonBox(temp_source)
+        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        self.buttonBox.setObjectName("buttonBox")
+        self.verticalLayout_3.addWidget(self.buttonBox)
+        self.gridLayout_2.addLayout(self.verticalLayout_3, 0, 0, 1, 1)
+
+        self.retranslateUi(temp_source)
+        self.buttonBox.accepted.connect(temp_source.accept)
+        self.buttonBox.rejected.connect(temp_source.reject)
+        QtCore.QMetaObject.connectSlotsByName(temp_source)
+
+    def retranslateUi(self, temp_source):
+        _translate = QtCore.QCoreApplication.translate
+        temp_source.setWindowTitle(_translate("temp_source", "Temperature Source"))
+        self.gb_source.setTitle(_translate("temp_source", "Temperature Source"))
+        self.rb_internal.setText(_translate("temp_source", "Internal"))
+        self.rb_user.setText(_translate("temp_source", "User (C)"))
+        self.gb_h_source.setTitle(_translate("temp_source", "Apply To:"))
+        self.rb_all.setText(_translate("temp_source", "All Transects"))
+        self.rb_transect.setText(_translate("temp_source", "Transect Only"))
+
+
+
+
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    temp_source = QtWidgets.QDialog()
+    ui = Ui_temp_source()
+    ui.setupUi(temp_source)
+    temp_source.show()
+    sys.exit(app.exec_())

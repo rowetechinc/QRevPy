@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Loading_Message</class>
+ <widget class="QDialog" name="Loading_Message">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>541</width>
+    <height>174</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Loading Measurement</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="dsm.qrc">
+    <normaloff>:/images/24x24/Info.png</normaloff>:/images/24x24/Info.png</iconset>
+  </property>
+  <widget class="QLabel" name="message">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>0</y>
+     <width>461</width>
+     <height>171</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>12</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;QRev is loading and processing the measurement files.&lt;br/&gt;&lt;/p&gt;&lt;p align=&quot;center&quot;&gt;This window will close automatically &lt;/p&gt;&lt;p align=&quot;center&quot;&gt;when the processing is complete&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </widget>
+ </widget>
+ <resources>
+  <include location="dsm.qrc"/>
+ </resources>
+ <connections/>
+</ui>
