@@ -829,11 +829,25 @@ class MovingBedTests(object):
             self.mb_dir = self.bt_mb_dir
             self.flow_spd_mps = self.bt_flow_spd_mps
             self.ref = 'BT'
+            check_mb = True
             if self.test_quality != 'Errors':
-                if self.percent_mb > 1:
-                    self.moving_bed = 'Yes'
-                else:
-                    self.moving_bed = 'No'
+                if self.type == 'Loop':
+                    if self.mb_spd_mps <= 0.012:
+                        check_mb = False
+                        self.moving_bed = 'No'
+                    else:
+                        if 135 < np.abs(self.flow_dir - self.mb_dir) < 225:
+                            check_mb = True
+                        else:
+                            check_mb = False
+                            self.moving_bed = 'Unknown'
+                if check_mb:
+                    if self.percent_mb > 1:
+                        self.moving_bed = 'Yes'
+                    else:
+                        self.moving_bed = 'No'
+            else:
+                self.moving_bed = 'Unknown'
         elif ref == 'GPS':
             self.mb_spd_mps = self.gps_mb_spd_mps
             self.dist_us_m = self.gps_dist_us_m
@@ -841,17 +855,27 @@ class MovingBedTests(object):
             self.mb_dir = self.gps_mb_dir
             self.flow_spd_mps = self.gps_flow_spd_mps
             self.ref = 'GPS'
+            check_mb = True
             if self.test_quality != 'Errors':
-                if 135 < np.abs(self.flow_dir - self.mb_dir) < 225:
-                    # Check if moving-bed is greater than 1% of the mean flow speed
+                if self.type == 'Loop':
+                    if self.mb_spd_mps <= 0.012:
+                        check_mb = False
+                        self.moving_bed = 'No'
+                    else:
+                        if 135 < np.abs(self.flow_dir - self.mb_dir) < 225:
+                            check_mb = True
+                        else:
+                            check_mb = False
+                            self.messages.append('ERROR: GPS Loop closure error not in upstream direction. '
+                                                 + 'REPEAT LOOP or USE STATIONARY TEST')
+                            self.moving_bed = 'Unknown'
+                if check_mb:
                     if self.percent_mb > 1:
                         self.moving_bed = 'Yes'
                     else:
                         self.moving_bed = 'No'
-                else:
-                    self.messages.append('ERROR: GPS Loop closure error not in upstream direction. '
-                                         + 'REPEAT LOOP or USE STATIONARY TEST')
-                    self.moving_bed = 'Unknown'
+            else:
+                self.moving_bed = 'Unknown'
 
     @staticmethod
     def near_bed_velocity(u, v, depth, bin_depth):
