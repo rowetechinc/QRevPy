@@ -213,7 +213,10 @@ class TransectData(object):
                 elif mmt_config['Proc_River_Depth_Source'] == 4:
                     if self.depths.bt_depths is not None:
                         self.depths.selected = 'bt_depths'
-                        self.depths.composite_depths(transect=self, setting='On')
+                        if self.depths.vb_depths is not None or self.depths.ds_depths is not None:
+                            self.depths.composite_depths(transect=self, setting='On')
+                        else:
+                            self.depths.composite_depths(transect=self, setting='Off')
                     elif self.depths.vb_depths is not None:
                         self.depths.selected = 'vb_depths'
                         self.depths.composite_depths(transect=self, setting='On')
@@ -947,11 +950,15 @@ class TransectData(object):
             edge_type = 'Rectangular'
         elif rsdata.Setup.Edges_0__Method == 0:
             edge_type = 'User Q'
+        if np.isnan(rsdata.Setup.Edges_0__EstimatedQ):
+            user_discharge = None
+        else:
+            user_discharge = rsdata.Setup.Edges_0__EstimatedQ
         self.edges.left.populate_data(edge_type=edge_type,
                                       distance=rsdata.Setup.Edges_0__DistanceToBank,
                                       number_ensembles=ensembles_left,
                                       coefficient=None,
-                                      user_discharge=rsdata.Setup.Edges_0__EstimatedQ)
+                                      user_discharge=user_discharge)
 
         # Create right edge object
         if rsdata.Setup.Edges_1__Method == 2:
@@ -960,11 +967,15 @@ class TransectData(object):
             edge_type = 'Rectangular'
         elif rsdata.Setup.Edges_1__Method == 0:
             edge_type = 'User Q'
+        if np.isnan(rsdata.Setup.Edges_1__EstimatedQ):
+            user_discharge = None
+        else:
+            user_discharge = rsdata.Setup.Edges_1__EstimatedQ
         self.edges.right.populate_data(edge_type=edge_type,
                                        distance=rsdata.Setup.Edges_1__DistanceToBank,
                                        number_ensembles=ensembles_right,
                                        coefficient=None,
-                                       user_discharge=rsdata.Setup.Edges_1__EstimatedQ)
+                                       user_discharge=user_discharge)
 
         # Extrapolation
         # -------------
@@ -1949,7 +1960,7 @@ class TransectData(object):
 
         gps_bt = dict()
         gps_vel = getattr(transect.boat_vel, gps_ref)
-        if gps_vel is not None:
+        if gps_vel is not None and np.any(np.logical_not(np.isnan(gps_vel.u_processed_mps))):
             # Data prep
             bt_track = BoatStructure.compute_boat_track(transect, ref='bt_vel')
             bt_course, _ = cart2pol(bt_track['track_x_m'][-1], bt_track['track_y_m'][-1])

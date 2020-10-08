@@ -354,7 +354,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.setupUi(self)
 
         # Set version of QRev
-        self.QRev_version = 'QRev 4.19'
+        self.QRev_version = 'QRev 4.21'
         self.setWindowTitle(self.QRev_version)
         self.setWindowIcon(QtGui.QIcon('QRev.ico'))
 
@@ -5755,6 +5755,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
         # Update table
         self.update_gps_table(old_discharge=old_discharge, new_discharge=self.meas.discharge)
+        self.gps_bt()
 
         # Update plots
         self.gps_plots()
@@ -5971,71 +5972,74 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
 
                 gga_lag, vtg_lag = TransectData.compute_gps_lag(self.meas.transects[transect_id])
 
+                # GGA lag
                 if gga_lag is not None:
-                    gga_bt = TransectData.compute_gps_bt(self.meas.transects[transect_id], gps_ref='gga_vel')
-
-                    # GGA lag
-                    col += 1
+                    col = 1
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
                         '{:10.1f}'.format(gga_lag)))
-                    tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-                    # GGA BMG-GMG mag
-                    col += 1
-                    tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:10.3f}'.format(gga_bt['mag'] * self.units['L'])))
-                    tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                if self.meas.transects[transect_id].boat_vel.gga_vel is not None:
+                    gga_bt = TransectData.compute_gps_bt(self.meas.transects[transect_id], gps_ref='gga_vel')
 
-                    # GGA BMG-GMG dir
-                    col += 1
-                    tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:10.2f}'.format(gga_bt['dir'])))
-                    tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                    if len(gga_bt) > 0:
+                        # GGA BMG-GMG mag
+                        col = 2
+                        tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
+                            '{:10.3f}'.format(gga_bt['mag'] * self.units['L'])))
+                        tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-                    # GGA GC-BC
-                    col += 1
-                    tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:10.2f}'.format(gga_bt['course'])))
-                    tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                        # GGA BMG-GMG dir
+                        col = 3
+                        tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
+                            '{:10.2f}'.format(gga_bt['dir'])))
+                        tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-                    # GGA BC/GC
-                    col += 1
-                    tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:10.4f}'.format(gga_bt['ratio'])))
-                    tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                        # GGA GC-BC
+                        col = 4
+                        tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
+                            '{:10.2f}'.format(gga_bt['course'])))
+                        tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
+                        # GGA BC/GC
+                        col = 5
+                        tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
+                            '{:10.4f}'.format(gga_bt['ratio'])))
+                        tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                # VTG lag
                 if vtg_lag is not None:
-                    vtg_bt = TransectData.compute_gps_bt(self.meas.transects[transect_id], gps_ref='vtg_vel')
-
-                    # VTG lag
-                    col += 1
+                    col = 6
                     tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
                         '{:10.1f}'.format(vtg_lag)))
                     tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-                    # VTG BMG-GMG mag
-                    col += 1
-                    tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:10.3f}'.format(vtg_bt['mag'] * self.units['L'])))
-                    tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                if self.meas.transects[transect_id].boat_vel.vtg_vel is not None:
+                    vtg_bt = TransectData.compute_gps_bt(self.meas.transects[transect_id], gps_ref='vtg_vel')
 
-                    # VTG BMG-GMG dir
-                    col += 1
-                    tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:10.2f}'.format(vtg_bt['dir'])))
-                    tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                    if len(vtg_bt) > 0:
+                        # VTG BMG-GMG mag
+                        col = 7
+                        tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
+                            '{:10.3f}'.format(vtg_bt['mag'] * self.units['L'])))
+                        tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-                    # VTG GC-BC
-                    col += 1
-                    tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:10.2f}'.format(vtg_bt['course'])))
-                    tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                        # VTG BMG-GMG dir
+                        col = 8
+                        tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
+                            '{:10.2f}'.format(vtg_bt['dir'])))
+                        tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
-                    # VTG BC/GC
-                    col += 1
-                    tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
-                        '{:10.4f}'.format(vtg_bt['ratio'])))
-                    tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
+                        # VTG GC-BC
+                        col = 9
+                        tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
+                            '{:10.2f}'.format(vtg_bt['course'])))
+                        tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
+
+                        # VTG BC/GC
+                        col = 10
+                        tbl.setItem(row + 2, col, QtWidgets.QTableWidgetItem(
+                            '{:10.4f}'.format(vtg_bt['ratio'])))
+                        tbl.item(row + 2, col).setFlags(QtCore.Qt.ItemIsEnabled)
 
         tbl.resizeColumnsToContents()
         tbl.resizeRowsToContents()
@@ -10438,7 +10442,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         elif self.current_tab == 'MovBedTst':
             # Select transect above in table or wrap to bottom
             if e.key() == QtCore.Qt.Key_Up:
-                if self.mb_row < 0:
+                if self.mb_row - 1 < 0:
                     self.mb_row = len(self.meas.mb_tests) - 1
                 else:
                     self.mb_row -= 1
@@ -10450,7 +10454,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 else:
                     self.mb_row += 1
 
-            self.mb_table_clicked(self.mb_row, 2)
+            self.mb_table_clicked(self.mb_row, 3)
 
     def change_selected_transect(self):
         """Coordinates changing the displayed transect when changing transects with the up/down arrow keys.

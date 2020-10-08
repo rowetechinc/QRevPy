@@ -547,10 +547,10 @@ class MovingBedTests(object):
             self.messages.append('ERROR: Loop has no valid bottom track data. '
                                  + 'REPEAT OR USE A STATIONARY MOVING-BED TEST.')
             self.test_quality = 'Errors'
-            
+
         # If loop is valid then evaluate moving-bed condition
         if self.test_quality != 'Errors':
-            
+
             # Check minimum moving-bed velocity criteria
             if self.mb_spd_mps > vel_criteria:
                 # Check that closure error is in upstream direction
@@ -829,10 +829,11 @@ class MovingBedTests(object):
             self.mb_dir = self.bt_mb_dir
             self.flow_spd_mps = self.bt_flow_spd_mps
             self.ref = 'BT'
-            if self.percent_mb > 1:
-                self.moving_bed = 'Yes'
-            else:
-                self.moving_bed = 'No'
+            if self.test_quality != 'Errors':
+                if self.percent_mb > 1:
+                    self.moving_bed = 'Yes'
+                else:
+                    self.moving_bed = 'No'
         elif ref == 'GPS':
             self.mb_spd_mps = self.gps_mb_spd_mps
             self.dist_us_m = self.gps_dist_us_m
@@ -840,16 +841,17 @@ class MovingBedTests(object):
             self.mb_dir = self.gps_mb_dir
             self.flow_spd_mps = self.gps_flow_spd_mps
             self.ref = 'GPS'
-            if 135 < np.abs(self.flow_dir - self.mb_dir) < 225:
-                # Check if moving-bed is greater than 1% of the mean flow speed
-                if self.percent_mb > 1:
-                    self.moving_bed = 'Yes'
+            if self.test_quality != 'Errors':
+                if 135 < np.abs(self.flow_dir - self.mb_dir) < 225:
+                    # Check if moving-bed is greater than 1% of the mean flow speed
+                    if self.percent_mb > 1:
+                        self.moving_bed = 'Yes'
+                    else:
+                        self.moving_bed = 'No'
                 else:
-                    self.moving_bed = 'No'
-            else:
-                self.messages.append('ERROR: GPS Loop closure error not in upstream direction. '
-                                     + 'REPEAT LOOP or USE STATIONARY TEST')
-                self.moving_bed = 'Unknown'
+                    self.messages.append('ERROR: GPS Loop closure error not in upstream direction. '
+                                         + 'REPEAT LOOP or USE STATIONARY TEST')
+                    self.moving_bed = 'Unknown'
 
     @staticmethod
     def near_bed_velocity(u, v, depth, bin_depth):
@@ -984,8 +986,9 @@ class MovingBedTests(object):
                             moving_bed.append(False)
                 # If any stationary test shows a moving-bed use all valid stationary test to correct BT discharge
                 if any(moving_bed) > 0:
-                    for n, lidx in enumerate(lidx_valid_stationary):
-                        moving_bed_tests[n].use_2_correct = True
+                    for n, test in enumerate(moving_bed_tests):
+                        if lidx_valid_stationary[n]:
+                            test.use_2_correct = True
 
             # If the flow speed is too low but there are not valid stationary tests use the last loop test.
             elif np.any(lidx_valid_loop):

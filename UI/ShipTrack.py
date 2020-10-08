@@ -340,10 +340,15 @@ class Shiptrack(object):
             min_y = min_y - (max_y - min_y) * 0.1
 
             if np.logical_not(np.any(np.isnan(np.array([max_x, min_x, max_y, min_y])))):
-                self.fig.ax.set_ylim(top=np.ceil(np.abs(max_y) * units['L']) * np.sign(max_y),
-                                     bottom=np.ceil(np.abs(min_y) * units['L']) * np.sign(min_y))
-                self.fig.ax.set_xlim(left=np.ceil(np.abs(min_x) * units['L']) * np.sign(min_x),
-                                     right=np.ceil(np.abs(max_x) * units['L']) * np.sign(max_x))
+                # self.fig.ax.set_ylim(top=np.ceil(np.abs(max_y) * units['L']) * np.sign(max_y),
+                #                      bottom=np.ceil(np.abs(min_y) * units['L']) * np.sign(min_y))
+                # self.fig.ax.set_xlim(left=np.ceil(np.abs(min_x) * units['L']) * np.sign(min_x),
+                #                      right=np.ceil(np.abs(max_x) * units['L']) * np.sign(max_x))
+
+                self.fig.ax.set_ylim(top=max_y * units['L'],
+                                     bottom=min_y * units['L'])
+                self.fig.ax.set_xlim(left=min_x * units['L'],
+                                     right=max_x * units['L'])
         else:
             if np.logical_not(np.any(np.isnan(np.array([max_x, min_x, max_y, min_y])))):
                 self.fig.ax.set_ylim(top=np.ceil(np.abs(max_y) * units['L']) * np.sign(max_y),

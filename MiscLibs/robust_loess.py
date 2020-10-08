@@ -12,7 +12,6 @@ from MiscLibs.matlab_rloess import rloess
 smooth_fit = rloess(x, y, span)
 """
 import numpy as np
-# from profilehooks import profile
 
 # Set constants used in multiple functions
 eps = np.finfo('float').eps
@@ -172,7 +171,7 @@ def compute_loess(x, y, neighbors_idx, idx, r_weights=None):
 
     return smoothed_values[0]
 
-# @profile
+
 def rloess(x, y, span):
     """This function computes a robust loess smooth using a quadratic model as defined by
     W.S.Cleveland, (1979) "Robust Locally Weighted Regression and Smoothing Scatterplots",

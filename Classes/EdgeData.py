@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class EdgeData(object):
     """Class used to store edge settings.
 
@@ -86,7 +89,8 @@ class EdgeData(object):
         self.distance_m = mat_data.dist_m
         self.number_ensembles = mat_data.numEns2Avg
         if type(mat_data.userQ_cms) is float:
-            self.user_discharge_cms = mat_data.userQ_cms
+            if not np.isnan(mat_data.userQ_cms):
+                self.user_discharge_cms = mat_data.userQ_cms
         if type(mat_data.custCoef) is float:
             self.cust_coef = mat_data.custCoef
         if hasattr(mat_data, 'orig_type'):
@@ -94,7 +98,8 @@ class EdgeData(object):
             self.orig_distance_m = mat_data.orig_distance_m
             self.orig_number_ensembles = mat_data.orig_number_ensembles
             if type(mat_data.orig_user_discharge_cms) is float:
-                self.orig_user_discharge_cms = mat_data.orig_user_discharge_cms
+                if not np.isnan(mat_data.orig_user_discharge_cms):
+                    self.orig_user_discharge_cms = mat_data.orig_user_discharge_cms
             if type(mat_data.custCoef) is float:
                 self.orig_cust_coef = mat_data.orig_cust_coef
         else:
@@ -102,7 +107,8 @@ class EdgeData(object):
             self.orig_distance_m = mat_data.dist_m
             self.orig_number_ensembles = mat_data.numEns2Avg
             if type(mat_data.userQ_cms) is float:
-                self.orig_user_discharge_cms = mat_data.userQ_cms
+                if not np.isnan(mat_data.userQ_cms):
+                    self.orig_user_discharge_cms = mat_data.userQ_cms
             if type(mat_data.custCoef) is float:
                 self.orig_cust_coef = mat_data.custCoef
 

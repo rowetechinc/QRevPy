@@ -1432,20 +1432,20 @@ class QAData(object):
                 lag_vtg.append(vtg)
         if len(lag_gga) > 0:
             if np.mean(np.abs(lag_gga)) > 10:
-                self.gga_vel['messages'].append('GGA: BT and GGA do not appear to be sychronized')
+                self.gga_vel['messages'].append(['GGA: BT and GGA do not appear to be sychronized', 1, 8])
                 if self.gga_vel['status'] != 'warning':
                     self.gga_vel['status'] = 'warning'
             elif np.mean(np.abs(lag_gga)) > 2:
-                self.gga_vel['messages'].append('gga: Lag between BT and GGA > 2 sec')
+                self.gga_vel['messages'].append(['gga: Lag between BT and GGA > 2 sec', 2, 8])
                 if self.gga_vel['status'] != 'warning':
                     self.gga_vel['status'] = 'caution'
         if len(lag_vtg) > 0:
             if np.mean(np.abs(lag_vtg)) > 10:
-                self.vtg_vel['messages'].append('VTG: BT and VTG do not appear to be sychronized')
+                self.vtg_vel['messages'].append(['VTG: BT and VTG do not appear to be sychronized', 1, 8])
                 if self.vtg_vel['status'] != 'warning':
                     self.vtg_vel['status'] = 'warning'
             elif np.mean(np.abs(lag_vtg)) > 2:
-                self.vtg_vel['messages'].append('vtg: Lag between BT and VTG > 2 sec')
+                self.vtg_vel['messages'].append(['vtg: Lag between BT and VTG > 2 sec', 2, 8])
                 if self.vtg_vel['status'] != 'warning':
                     self.vtg_vel['status'] = 'caution'
 
@@ -2220,6 +2220,7 @@ class QAData(object):
 
             if transect.edges.right.number_ensembles != transect.edges.right.orig_number_ensembles:
                 right_edge_ens_change = True
+
 
             if transect.edges.right.user_discharge_cms != transect.edges.right.orig_user_discharge_cms:
                 right_edge_q_change = True
