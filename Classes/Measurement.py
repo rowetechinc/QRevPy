@@ -15,6 +15,7 @@ from Classes.Uncertainty import Uncertainty
 from Classes.QAData import QAData
 from Classes.BoatStructure import BoatStructure
 from MiscLibs.common_functions import cart2pol, pol2cart, rad2azdeg, nans, azdeg2rad
+from rti_python.River.QRevProject import QRevRtiProject
 
 
 class Measurement(object):
@@ -112,6 +113,9 @@ class Measurement(object):
 
             elif source == 'Nortek':
                 self.load_sontek(in_file)
+
+            elif source == 'Rowe':
+                self.load_rowe(in_file, checked=checked)
 
             # Process TRDI and SonTek data
             if len(self.transects) > 0:
@@ -396,6 +400,152 @@ class Measurement(object):
         # Apply composite depths as per setting stored in transect
         # from TransectData
         transect.depths.composite_depths(transect)
+
+    def load_rowe(self, rmmt_file, transect_type='Q', checked=False):
+        """Method to load Rowe data.
+
+        Parameters
+        ----------
+        rmmt_file: str
+            Full pathname to rmmt file.
+        transect_type: str
+            Type of data (Q: discharge, MB: moving-bed test
+        checked: bool
+            Determines if all files are loaded (False) or only checked (True)
+        """
+
+        # Read mmt file
+        #mmt = MMTtrdi(rmmt_file)
+        mmt = QRevRtiProject("")
+        mmt.read_json_file(rmmt_file)
+
+        # Get properties if they exist, otherwise set them as blank strings
+        self.station_name = str(mmt.site_info['Name'])
+        self.station_number = str(mmt.site_info['Number'])
+
+        # Initialize processing variable
+        self.processing = 'WR2'
+
+        # Create transect objects for  TRDI data
+        # TODO refactor allocate_transects
+        self.transects = allocate_transects(mmt=mmt,
+                                            transect_type=transect_type,
+                                            checked=checked)
+
+        # Create object for pre-measurement tests
+        if isinstance(mmt.qaqc, dict) or isinstance(mmt.mbt_transects, list):
+            self.qaqc_trdi(mmt)
+
+        # Save comments from mmt file in comments
+        self.comments.append('MMT Remarks: ' + mmt.site_info['Remarks'])
+
+        for t in range(len(self.transects)):
+            notes = getattr(mmt.transects[t], 'Notes')
+            for note in notes:
+                note_text = ' File: ' + note['NoteFileNo'] + ' ' \
+                            + note['NoteDate'] + ': ' + note['NoteText']
+                self.comments.append(note_text)
+
+        # Get external temperature
+        if type(mmt.site_info['Water_Temperature']) is float:
+            self.ext_temp_chk['user'] = mmt.site_info['Water_Temperature']
+            self.ext_temp_chk['units'] = 'C'
+
+        # Initialize thresholds settings dictionary
+        threshold_settings = dict()
+        threshold_settings['wt_settings'] = {}
+        threshold_settings['bt_settings'] = {}
+        threshold_settings['depth_settings'] = {}
+
+        # Water track filter threshold settings
+        threshold_settings['wt_settings']['beam'] = \
+            self.set_num_beam_wt_threshold_trdi(mmt.transects[0])
+        threshold_settings['wt_settings']['difference'] = 'Manual'
+        threshold_settings['wt_settings']['difference_threshold'] = \
+            mmt.transects[0].active_config['Proc_WT_Error_Velocity_Threshold']
+        threshold_settings['wt_settings']['vertical'] = 'Manual'
+        threshold_settings['wt_settings']['vertical_threshold'] = \
+            mmt.transects[0].active_config['Proc_WT_Up_Vel_Threshold']
+
+        # Bottom track filter threshold settings
+        threshold_settings['bt_settings']['beam'] = \
+            self.set_num_beam_bt_threshold_trdi(mmt.transects[0])
+        threshold_settings['bt_settings']['difference'] = 'Manual'
+        threshold_settings['bt_settings']['difference_threshold'] = \
+            mmt.transects[0].active_config['Proc_BT_Error_Vel_Threshold']
+        threshold_settings['bt_settings']['vertical'] = 'Manual'
+        threshold_settings['bt_settings']['vertical_threshold'] = \
+            mmt.transects[0].active_config['Proc_BT_Up_Vel_Threshold']
+
+        # Depth filter and averaging settings
+        threshold_settings['depth_settings']['depth_weighting'] = \
+            self.set_depth_weighting_trdi(mmt.transects[0])
+        threshold_settings['depth_settings']['depth_valid_method'] = 'TRDI'
+        threshold_settings['depth_settings']['depth_screening'] = \
+            self.set_depth_screening_trdi(mmt.transects[0])
+
+        # Determine reference used in WR2 if available
+        reference = 'BT'
+        if 'Reference' in mmt.site_info.keys():
+            reference = mmt.site_info['Reference']
+            if reference == 'BT':
+                target = 'bt_vel'
+            elif reference == 'GGA':
+                target = 'gga_vel'
+            elif reference == 'VTG':
+                target = 'vtg_vel'
+            else:
+                target = 'bt_vel'
+
+            for transect in self.transects:
+                if getattr(transect.boat_vel, target) is None:
+                    reference = 'BT'
+
+        # Convert to earth coordinates
+        for transect_idx, transect in enumerate(self.transects):
+            # Convert to earth coordinates
+            transect.change_coord_sys(new_coord_sys='Earth')
+
+            # Set navigation reference
+            transect.change_nav_reference(update=False, new_nav_ref=reference)
+
+            # Apply WR2 thresholds
+            self.thresholds_trdi(transect, threshold_settings)
+
+            # Apply boat interpolations
+            transect.boat_interpolations(update=False,
+                                         target='BT',
+                                         method='None')
+            if transect.gps is not None:
+                transect.boat_interpolations(update=False,
+                                             target='GPS',
+                                             method='HoldLast')
+
+            # Update water data for changes in boat velocity
+            transect.update_water()
+
+            # Filter water data
+            transect.w_vel.apply_filter(transect=transect, wt_depth=True)
+
+            # Interpolate water data
+            transect.w_vel.apply_interpolation(transect=transect,
+                                               ens_interp='None',
+                                               cells_interp='None')
+
+            # Apply speed of sound computations as required
+            mmt_sos_method = mmt.transects[transect_idx].active_config[
+                'Proc_Speed_of_Sound_Correction']
+
+            # Speed of sound computed based on user supplied values
+            if mmt_sos_method == 1:
+                transect.change_sos(parameter='salinity')
+            elif mmt_sos_method == 2:
+                # Speed of sound set by user
+                speed = mmt.transects[transect_idx].active_config[
+                    'Proc_Fixed_Speed_Of_Sound']
+                transect.change_sos(parameter='sosSrc',
+                                    selected='user',
+                                    speed=speed)
 
     def load_sontek(self, fullnames):
         """Coordinates reading of all SonTek data files.

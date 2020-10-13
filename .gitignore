@@ -53,3 +53,4 @@ lib64
 .Trashes
 ehthumbs.db
 Thumbs.db
+venv/*

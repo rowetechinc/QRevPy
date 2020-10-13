@@ -52,7 +52,7 @@ class OpenMeasurementDialog(QtWidgets.QDialog):
         # Get the full names (path + file) of the selected files
         self.fullName = QtWidgets.QFileDialog.getOpenFileNames(
                     self, self.tr('Open File'), folder,
-                    self.tr('All (*.mat *.mmt);;SonTek Matlab File (*.mat);;TRDI mmt File (*.mmt);;'
+                    self.tr('All (*.mat *.mmt *.rmmt);;SonTek Matlab File (*.mat);;TRDI mmt File (*.mmt);;Rowe rmmt File (*.rmmt);;'
                             'QRev File (*_QRev.mat)'))[0]
 
         # Initialize parameters
@@ -87,6 +87,19 @@ class OpenMeasurementDialog(QtWidgets.QDialog):
             # TRDI file
             if file_extension == '.mmt':
                 self.type = 'TRDI'
+                checked_transect_dialog = QtWidgets.QMessageBox()
+                checked_transect_dialog.setIcon(QtWidgets.QMessageBox.Question)
+                checked_transect_dialog.setWindowTitle("Checked Transects?")
+                checked_transect_dialog.setText(
+                    "Do you want to load ONLY checked transects?")
+                checked_transect_dialog.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+                checked_transect_dialog.setDefaultButton(QtWidgets.QMessageBox.No)
+                checked_transect_dialog = checked_transect_dialog.exec()
+
+                if checked_transect_dialog == QtWidgets.QMessageBox.Yes:
+                    self.checked == True
+            elif file_extension == '.rmmt':
+                self.type = 'Rowe'
                 checked_transect_dialog = QtWidgets.QMessageBox()
                 checked_transect_dialog.setIcon(QtWidgets.QMessageBox.Question)
                 checked_transect_dialog.setWindowTitle("Checked Transects?")
