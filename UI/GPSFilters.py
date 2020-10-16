@@ -82,9 +82,14 @@ class GPSFilters (object):
         self.fig.ax.yaxis.label.set_fontsize(12)
         self.fig.ax.tick_params(axis='both', direction='in', bottom=True, top=True, left=True, right=True)
 
-        ensembles = np.arange(1, len(transect.boat_vel.gga_vel.u_mps) + 1)
+        if transect.boat_vel.gga_vel is not None:
+            ensembles = np.arange(1, len(transect.boat_vel.gga_vel.u_mps) + 1)
+        elif transect.boat_vel.vtg_vel is not None:
+            ensembles = np.arange(1, len(transect.boat_vel.vtg_vel.u_mps) + 1)
+        else:
+            ensembles = np.arange(1, len(transect.boat_vel.bt_vel.u_mps) + 1)
 
-        if selected == 'quality':
+        if selected == 'quality' and transect.boat_vel.gga_vel is not None:
             # GPS Quality
             self.qual = self.fig.ax.plot(ensembles, transect.gps.diff_qual_ens, 'b.')
 
@@ -99,7 +104,7 @@ class GPSFilters (object):
             self.fig.ax.set_ylim(top=np.nanmax(yint) + 0.5, bottom=np.nanmin(yint) - 0.5)
             self.fig.ax.set_yticks(yint)
 
-        elif selected == 'altitude':
+        elif selected == 'altitude' and transect.boat_vel.gga_vel is not None:
             # Plot altitude
             invalid_altitude = np.logical_not(transect.boat_vel.gga_vel.valid_data[3, :])
             self.alt = self.fig.ax.plot(ensembles, transect.gps.altitude_ens_m * units['L'], 'b.')
@@ -108,7 +113,7 @@ class GPSFilters (object):
                                              'ro', markerfacecolor='none')[0])
             self.fig.ax.set_ylabel(self.canvas.tr('Altitude' + self.units['label_L']))
 
-        elif selected == 'hdop':
+        elif selected == 'hdop' and transect.boat_vel.gga_vel is not None:
             # Plot HDOP
             max_y = np.nanmax(transect.gps.hdop_ens) + 0.5
             min_y = np.nanmin(transect.gps.hdop_ens) - 0.5
@@ -120,7 +125,7 @@ class GPSFilters (object):
             self.fig.ax.set_ylim(top=max_y, bottom=min_y)
             self.fig.ax.set_ylabel(self.canvas.tr('HDOP'))
 
-        elif selected == 'sats':
+        elif selected == 'sats' and transect.boat_vel.gga_vel is not None:
             # Plot number of satellites
             max_y = np.nanmax(transect.gps.num_sats_ens) + 0.5
             min_y = np.nanmin(transect.gps.num_sats_ens) - 0.5
@@ -149,34 +154,35 @@ class GPSFilters (object):
                 boat_gps = transect.boat_vel.gga_vel
                 data_color = ['b-', 'b.']
 
-            # Plot smooth
-            speed = np.sqrt(boat_gps.u_mps ** 2
-                            + boat_gps.v_mps ** 2)
+            if boat_gps is not None:
+                # Plot smooth
+                speed = np.sqrt(boat_gps.u_mps ** 2
+                                + boat_gps.v_mps ** 2)
 
-            if boat_gps.smooth_filter == 'On':
-                invalid_other_vel = np.logical_not(boat_gps.valid_data[4, :])
-                self.other = self.fig.ax.plot(ensembles,
-                                              boat_gps.smooth_lower_limit * self.units['V'],
-                                              color='#d5dce6')
-                self.other.append(self.fig.ax.plot(ensembles,
-                                                   boat_gps.smooth_upper_limit * self.units['V'],
-                                                   color='#d5dce6')[0])
-                self.other.append(self.fig.ax.fill_between(ensembles,
-                                                           boat_gps.smooth_lower_limit
-                                                           * self.units['V'],
-                                                           boat_gps.smooth_upper_limit
-                                                           * self.units['V'],
-                                                           facecolor='#d5dce6'))
+                if boat_gps.smooth_filter == 'On':
+                    invalid_other_vel = np.logical_not(boat_gps.valid_data[4, :])
+                    self.other = self.fig.ax.plot(ensembles,
+                                                  boat_gps.smooth_lower_limit * self.units['V'],
+                                                  color='#d5dce6')
+                    self.other.append(self.fig.ax.plot(ensembles,
+                                                       boat_gps.smooth_upper_limit * self.units['V'],
+                                                       color='#d5dce6')[0])
+                    self.other.append(self.fig.ax.fill_between(ensembles,
+                                                               boat_gps.smooth_lower_limit
+                                                               * self.units['V'],
+                                                               boat_gps.smooth_upper_limit
+                                                               * self.units['V'],
+                                                               facecolor='#d5dce6'))
 
-                self.other.append(self.fig.ax.plot(ensembles, speed * units['V'], data_color[0])[0])
-                self.other.append(self.fig.ax.plot(ensembles,
-                                                   boat_gps.smooth_speed * self.units['V'])[0])
-                self.other.append(self.fig.ax.plot(ensembles[invalid_other_vel],
-                                                   speed[invalid_other_vel] * units['V'],
-                                                   'ko', linestyle='')[0])
-            else:
-                self.other = self.fig.ax.plot(ensembles, speed * units['V'], data_color[1])
-            self.fig.ax.set_ylabel(self.canvas.tr('Speed' + units['label_V']))
+                    self.other.append(self.fig.ax.plot(ensembles, speed * units['V'], data_color[0])[0])
+                    self.other.append(self.fig.ax.plot(ensembles,
+                                                       boat_gps.smooth_speed * self.units['V'])[0])
+                    self.other.append(self.fig.ax.plot(ensembles[invalid_other_vel],
+                                                       speed[invalid_other_vel] * units['V'],
+                                                       'ko', linestyle='')[0])
+                else:
+                    self.other = self.fig.ax.plot(ensembles, speed * units['V'], data_color[1])
+                self.fig.ax.set_ylabel(self.canvas.tr('Speed' + units['label_V']))
 
         elif selected == 'source':
             # Plot boat velocity source
@@ -187,7 +193,11 @@ class GPSFilters (object):
             else:
                 boat_selected = transect.boat_vel.bt_vel
 
-            source = boat_selected.processed_source
+            # Handle situation where transect does not contain the selected source
+            if boat_selected is None:
+                source = np.tile('INV', len(ensembles))
+            else:
+                source = boat_selected.processed_source
 
             # Plot dummy data to establish consistent order of y axis
             self.source = self.fig.ax.plot([-10, -10, -10, -10, -10], ['INV', 'INT', 'BT', 'GGA', 'VTG'], 'w-')
@@ -331,3 +341,5 @@ class GPSFilters (object):
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)
             self.hover_connection = None
+            self.annot.set_visible(False)
+            self.canvas.draw_idle()

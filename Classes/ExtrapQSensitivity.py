@@ -45,6 +45,42 @@ class ExtrapQSensitivity(object):
         Mean discharge for manually specified extrapolations
     q_man_per_diff: float
         Manually specified extrapolations percent difference from reference
+    q_pp_list: list
+        List of single transect discharges base on default 1/6 power-power law
+    q_pp_opt_list: list
+        List of single transect discharges base on optimized power-power law
+    q_cns_list: list
+        List of single transect discharges base on default 1/6 constant no slip law
+    q_cns_opt_list: list
+        List of single transect discharges base on optimized constant no slip law
+    q_3p_ns_list: list
+        List of single transect discharges base on default 3pt no slip
+    q_3p_ns_opt_list: list
+        List of single transect discharges base on optimized 3pt no slip
+    q_top_pp_list: list
+        List of single transect top discharges base on default 1/6 power-power law
+    q_top_pp_opt_list: list
+        List of single transect top discharges base on optimized power-power law
+    q_top_cns_list: list
+        List of single transect top discharges base on default 1/6 constant no slip law
+    q_top_cns_opt_list: list
+        List of single transect top discharges base on optimized constant no slip law
+    q_top_3p_ns_list: list
+        List of single transect top discharges base on default 3pt no slip
+    q_top_3p_ns_opt_list: list
+        List of single transect top discharges base on optimized 3pt no slip
+    q_bot_pp_list: list
+        List of single transect bottom discharges base on default 1/6 power-power law
+    q_bot_pp_opt_list: list
+        List of single transect bottom discharges base on optimized power-power law
+    q_bot_cns_list: list
+        List of single transect bottom discharges base on default 1/6 constant no slip law
+    q_bot_cns_opt_list: list
+        List of single transect bottom discharges base on optimized constant no slip law
+    q_bot_3p_ns_list: list
+        List of single transect bottom discharges base on default 3pt no slip
+    q_bot_3p_ns_opt_list: list
+        List of single transect bottom discharges base on optimized 3pt no slip
     """
     
     def __init__(self):
@@ -69,6 +105,24 @@ class ExtrapQSensitivity(object):
         self.man_exp = None  # Manually specified exponent
         self.q_man_mean = None  # Mean discharge for manually specified extrapolations
         self.q_man_per_diff = None  # Manually specified extrapolations percent difference from reference
+        self.q_pp_list = []  # List of single transect discharges base on default 1/6 power-power law
+        self.q_pp_opt_list = []  # List of single transect discharges base on optimized power-power law
+        self.q_cns_list = []  # List of single transect discharges base on default 1/6 constant no slip law
+        self.q_cns_opt_list = []  # List of single transect discharges base on optimized constant no slip law
+        self.q_3p_ns_list = []  # List of single transect discharges base on default 3pt no slip
+        self.q_3p_ns_opt_list = []  # List of single transect discharges base on optimized 3pt no slip
+        self.q_top_pp_list = []  # List of single transect top discharges base on default 1/6 power-power law
+        self.q_top_pp_opt_list = []  # List of single transect top discharges base on optimized power-power law
+        self.q_top_cns_list = []  # List of single transect top discharges base on default 1/6 constant no slip law
+        self.q_top_cns_opt_list = []  # List of single transect top discharges base on optimized constant no slip law
+        self.q_top_3p_ns_list = []  # List of single transect top discharges base on default 3pt no slip
+        self.q_top_3p_ns_opt_list = []  # List of single transect top discharges base on optimized 3pt no slip
+        self.q_bot_pp_list = []  # List of single transect bottom discharges base on default 1/6 power-power law
+        self.q_bot_pp_opt_list = []  # List of single transect bottom discharges base on optimized power-power law
+        self.q_bot_cns_list = []  # List of single transect bottom discharges base on default 1/6 constant no slip law
+        self.q_bot_cns_opt_list = []  # List of single transect bottom discharges base on optimized constant no slip law
+        self.q_bot_3p_ns_list = []  # List of single transect bottom discharges base on default 3pt no slip
+        self.q_bot_3p_ns_opt_list = []  # List of single transect bottom discharges base on optimized 3pt no slip
         
     def populate_data(self, transects, extrap_fits):
         """Compute means and percent differences.
@@ -89,6 +143,22 @@ class ExtrapQSensitivity(object):
         self.pp_exp = extrap_fits[-1].pp_exponent
         self.ns_exp = extrap_fits[-1].ns_exponent
 
+        # Store top discharges
+        q_pp_top = []
+        q_pp_opt_top = []
+        q_cns_top = []
+        q_cns_opt_top = []
+        q_3p_ns_top = []
+        q_3p_ns_opt_top = []
+
+        # Store bottom discharges
+        q_pp_bot = []
+        q_pp_opt_bot = []
+        q_cns_bot = []
+        q_cns_opt_bot = []
+        q_3p_ns_bot = []
+        q_3p_ns_opt_bot = []
+
         # Compute discharges for each transect for possible extrapolation combinations
         for transect in transects:
             if transect.checked:
@@ -96,21 +166,33 @@ class ExtrapQSensitivity(object):
 
                 q.populate_data(data_in=transect, top_method='Power', bot_method='Power', exponent=0.1667)
                 q_pp.append(q.total)
+                q_pp_top.append(q.top)
+                q_pp_bot.append(q.bottom)
 
                 q.populate_data(data_in=transect, top_method='Power', bot_method='Power', exponent=self.pp_exp)
                 q_pp_opt.append(q.total)
+                q_pp_opt_top.append(q.top)
+                q_pp_opt_bot.append(q.bottom)
 
                 q.populate_data(data_in=transect, top_method='Constant', bot_method='No Slip', exponent=0.1667)
                 q_cns.append(q.total)
+                q_cns_top.append(q.top)
+                q_cns_bot.append(q.bottom)
 
                 q.populate_data(data_in=transect, top_method='Constant', bot_method='No Slip', exponent=self.ns_exp)
                 q_cns_opt.append(q.total)
+                q_cns_opt_top.append(q.top)
+                q_cns_opt_bot.append(q.bottom)
 
                 q.populate_data(data_in=transect, top_method='3-Point', bot_method='No Slip', exponent=0.1667)
                 q_3p_ns.append(q.total)
+                q_3p_ns_top.append(q.top)
+                q_3p_ns_bot.append(q.bottom)
 
                 q.populate_data(data_in=transect, top_method='3-Point', bot_method='No Slip', exponent=self.ns_exp)
                 q_3p_ns_opt.append(q.total)
+                q_3p_ns_opt_top.append(q.top)
+                q_3p_ns_opt_bot.append(q.bottom)
 
         # Compute mean discharge for each combination
         self.q_pp_mean = np.nanmean(q_pp)
@@ -119,6 +201,30 @@ class ExtrapQSensitivity(object):
         self.q_cns_opt_mean = np.nanmean(q_cns_opt)
         self.q_3p_ns_mean = np.nanmean(q_3p_ns)
         self.q_3p_ns_opt_mean = np.nanmean(q_3p_ns_opt)
+
+        # Save all single-transect discharges
+        self.q_pp_list = q_pp
+        self.q_pp_opt_list = q_pp_opt
+        self.q_cns_list = q_cns
+        self.q_cns_opt_list = q_cns_opt
+        self.q_3p_ns_list = q_3p_ns
+        self.q_3p_ns_opt_list = q_3p_ns_opt
+
+        # Save all single-transect top discharges
+        self.q_top_pp_list = q_pp_top
+        self.q_top_pp_opt_list = q_pp_opt_top
+        self.q_top_cns_list = q_cns_top
+        self.q_top_cns_opt_list = q_cns_opt_top
+        self.q_top_3p_ns_list = q_3p_ns_top
+        self.q_top_3p_ns_opt_list = q_3p_ns_opt_top
+
+        # Save all single-transect bottom discharges
+        self.q_bot_pp_list = q_pp_bot
+        self.q_bot_pp_opt_list = q_pp_opt_bot
+        self.q_bot_cns_list = q_cns_bot
+        self.q_bot_cns_opt_list = q_cns_opt_bot
+        self.q_bot_3p_ns_list = q_3p_ns_bot
+        self.q_bot_3p_ns_opt_list = q_3p_ns_opt_bot
 
         self.compute_percent_diff(extrap_fits=extrap_fits, transects=transects)
 
@@ -160,6 +266,46 @@ class ExtrapQSensitivity(object):
                 self.man_exp = mat_data.qSensitivity.manExp
                 self.q_man_mean = mat_data.qSensitivity.qManmean
                 self.q_man_per_diff = mat_data.qSensitivity.qManperdiff
+
+            # Add compatibility for Oursin uncertainty model
+            if hasattr(mat_data.qSensitivity, 'q_pp_list'):
+                self.q_pp_list = mat_data.qSensitivity.q_pp_list
+                self.q_pp_opt_list = mat_data.qSensitivity.q_pp_opt_list
+                self.q_cns_list = mat_data.qSensitivity.q_cns_list
+                self.q_cns_opt_list = mat_data.qSensitivity.q_cns_opt_list
+                self.q_3p_ns_list = mat_data.qSensitivity.q_3p_ns_list
+                self.q_3p_ns_opt_list = mat_data.qSensitivity.q_3p_ns_opt_list
+                self.q_top_pp_list = mat_data.qSensitivity.q_top_pp_list
+                self.q_top_pp_opt_list = mat_data.qSensitivity.q_top_pp_opt_list
+                self.q_top_cns_list = mat_data.qSensitivity.q_top_cns_list
+                self.q_top_cns_opt_list = mat_data.qSensitivity.q_top_cns_opt_list
+                self.q_top_3p_ns_list = mat_data.qSensitivity.q_top_3p_ns_list
+                self.q_top_3p_ns_opt_list = mat_data.qSensitivity.q_top_3p_ns_opt_list
+                self.q_bot_pp_list = mat_data.qSensitivity.q_bot_pp_list
+                self.q_bot_pp_opt_list = mat_data.qSensitivity.q_bot_pp_opt_list
+                self.q_bot_cns_list = mat_data.qSensitivity.q_bot_cns_list
+                self.q_bot_cns_opt_list = mat_data.qSensitivity.q_bot_cns_opt_list
+                self.q_bot_3p_ns_list = mat_data.qSensitivity.q_bot_3p_ns_list
+                self.q_bot_3p_ns_opt_list = mat_data.qSensitivity.q_bot_3p_ns_opt_list
+            else:
+                self.q_pp_list = []
+                self.q_pp_opt_list = []
+                self.q_cns_list = []
+                self.q_cns_opt_list = []
+                self.q_3p_ns_list = []
+                self.q_3p_ns_opt_list = []
+                self.q_top_pp_list = []
+                self.q_top_pp_opt_list = []
+                self.q_top_cns_list = []
+                self.q_top_cns_opt_list = []
+                self.q_top_3p_ns_list = []
+                self.q_top_3p_ns_opt_list = []
+                self.q_bot_pp_list = []
+                self.q_bot_pp_opt_list = []
+                self.q_bot_cns_list = []
+                self.q_bot_cns_opt_list = []
+                self.q_bot_3p_ns_list = []
+                self.q_bot_3p_ns_opt_list =[]
 
     def compute_percent_diff(self, extrap_fits, transects=None):
         """Computes the percent difference for each of the extrapolation options as compared to selected method.

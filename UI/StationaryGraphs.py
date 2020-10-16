@@ -65,7 +65,7 @@ class StationaryGraphs(object):
         # Configure moving-bed time series graph
         self.fig.axmb = self.fig.add_subplot(gs[0, 0])
         self.fig.axmb.set_xlabel(self.canvas.tr('Ensembles'))
-        self.fig.axmb.set_ylabel(self.canvas.tr('Moving-bed speed' + units['label_V']))
+        self.fig.axmb.set_ylabel(self.canvas.tr('BT Moving-bed speed' + units['label_V']))
         self.fig.axmb.grid()
         self.fig.axmb.xaxis.label.set_fontsize(12)
         self.fig.axmb.yaxis.label.set_fontsize(12)
@@ -220,3 +220,6 @@ class StationaryGraphs(object):
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)
             self.hover_connection = None
+            self.annot_stud.set_visible(False)
+            self.annot_mb.set_visible(False)
+            self.canvas.draw_idle()

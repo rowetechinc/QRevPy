@@ -403,7 +403,7 @@ class BoatStructure(object):
             boat_track['distance_m'] = np.nancumsum(np.sqrt(track_x ** 2 + track_y ** 2))
             boat_track['track_x_m'] = np.nancumsum(track_x)
             boat_track['track_y_m'] = np.nancumsum(track_y)
-            boat_track['dmg_m'] = np.sqrt(track_x ** 2 + track_y ** 2)
+            boat_track['dmg_m'] = np.sqrt(boat_track['track_x_m'] ** 2 + boat_track['track_y_m'] ** 2)
 
         return boat_track
 

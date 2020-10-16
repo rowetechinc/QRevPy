@@ -138,7 +138,7 @@ class WTFilters(object):
                                              transect.w_vel.snr_rng[invalid_snr],
                                              'ro', markerfacecolor='none')[0])
             self.fig.ax.set_ylim(top=max_y , bottom=min_y)
-            self.fig.ax.set_ylabel(self.canvas.tr('SNR (dB)'))
+            self.fig.ax.set_ylabel(self.canvas.tr('SNR Range (dB)'))
 
         elif selected == 'speed':
             # Plot speed
@@ -169,7 +169,10 @@ class WTFilters(object):
                                                'k', linestyle='', marker='$R$')[0])
 
             self.fig.ax.set_ylabel(self.canvas.tr('Speed' + self.units['label_V']))
-            self.fig.ax.set_ylim(top=max_y * units['V'], bottom=min_y * units['V'])
+            try:
+                self.fig.ax.set_ylim(top=max_y * units['V'], bottom=min_y * units['V'])
+            except ValueError:
+                pass
 
         self.fig.ax.set_xlim(left=-1 * ensembles[0, -1] * 0.02, right=ensembles[0, -1] * 1.02)
 
@@ -272,3 +275,5 @@ class WTFilters(object):
         elif not setting:
             self.canvas.mpl_disconnect(self.hover_connection)
             self.hover_connection = None
+            self.annot.set_visible(False)
+            self.canvas.draw_idle()

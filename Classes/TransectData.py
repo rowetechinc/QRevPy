@@ -2,6 +2,7 @@ import os
 import numpy as np
 from datetime import datetime
 from datetime import timezone
+from scipy import signal, fftpack
 from Classes.Pd0TRDI import Pd0TRDI
 from Classes.DepthStructure import DepthStructure
 from Classes.WaterData import WaterData
@@ -15,7 +16,8 @@ from Classes.HeadingData import HeadingData
 from Classes.DateTime import DateTime
 from Classes.InstrumentData import InstrumentData
 from Classes.MultiThread import MultiThread
-from MiscLibs.common_functions import nandiff, cosd, arctand, tand, nans
+from Classes.CoordError import CoordError
+from MiscLibs.common_functions import nandiff, cosd, arctand, tand, nans, cart2pol, rad2azdeg
 
 
 class TransectData(object):
@@ -43,6 +45,8 @@ class TransectData(object):
         Object of ExtrapData
     start_edge: str
         Starting edge of transect looking downstream (Left or Right)
+    orig_start_edge: str
+        Original starting edge of transect looking downstream (Left or Right)
     date_time: DateTime
         Object of DateTime
     checked: bool
@@ -62,6 +66,7 @@ class TransectData(object):
         self.edges = None  # object of clsEdges(left and right object of clsEdgeData)
         self.extrap = None  # object of clsExtrapData
         self.start_edge = None  # starting edge of transect looking downstream (Left or Right)
+        self.orig_start_edge = None
         self.date_time = None  # object of DateTime
         self.checked = None  # transect was checked for use in mmt file assumed checked for SonTek
         self.in_transect_idx = None  # index of ensemble data associated with the moving-boat portion of the transect
@@ -208,7 +213,10 @@ class TransectData(object):
                 elif mmt_config['Proc_River_Depth_Source'] == 4:
                     if self.depths.bt_depths is not None:
                         self.depths.selected = 'bt_depths'
-                        self.depths.composite_depths(transect=self, setting='On')
+                        if self.depths.vb_depths is not None or self.depths.ds_depths is not None:
+                            self.depths.composite_depths(transect=self, setting='On')
+                        else:
+                            self.depths.composite_depths(transect=self, setting='Off')
                     elif self.depths.vb_depths is not None:
                         self.depths.selected = 'vb_depths'
                         self.depths.composite_depths(transect=self, setting='On')
@@ -403,45 +411,85 @@ class TransectData(object):
             if mmt_config['Edge_Begin_Left_Bank']:
                 dist_left = float(mmt_config['Edge_Begin_Shore_Distance'])
                 dist_right = float(mmt_config['Edge_End_Shore_Distance'])
+                if 'Edge_End_Manual_Discharge' in mmt_config:
+                    user_discharge_left = float(mmt_config['Edge_Begin_Manual_Discharge'])
+                    user_discharge_right = float(mmt_config['Edge_End_Manual_Discharge'])
+                    edge_method_left = mmt_config['Edge_Begin_Method_Distance']
+                    edge_method_right = mmt_config['Edge_End_Method_Distance']
+                else:
+                    user_discharge_left = None
+                    user_discharge_right = None
+                    edge_method_left = 'Yes'
+                    edge_method_right = 'Yes'
                 self.start_edge = 'Left'
+                self.orig_start_edge = 'Left'
             else:
                 dist_left = float(mmt_config['Edge_End_Shore_Distance'])
                 dist_right = float(mmt_config['Edge_Begin_Shore_Distance'])
+                if 'Edge_End_Manual_Discharge' in mmt_config:
+                    user_discharge_left = float(mmt_config['Edge_End_Manual_Discharge'])
+                    user_discharge_right = float(mmt_config['Edge_Begin_Manual_Discharge'])
+                    edge_method_left = mmt_config['Edge_End_Method_Distance']
+                    edge_method_right = mmt_config['Edge_Begin_Method_Distance']
+                else:
+                    user_discharge_left = None
+                    user_discharge_right = None
+                    edge_method_left = 'Yes'
+                    edge_method_right = 'Yes'
                 self.start_edge = 'Right'
+                self.orig_start_edge = 'Right'
                 
             # Create left edge
-            if mmt_config['Q_Left_Edge_Type'] == 0:
+            if edge_method_left == 'NO':
+                self.edges.left.populate_data(edge_type='User Q',
+                                              distance=dist_left,
+                                              number_ensembles=n_ens_left,
+                                              user_discharge=user_discharge_left)
+
+            elif mmt_config['Q_Left_Edge_Type'] == 0:
                 self.edges.left.populate_data(edge_type='Triangular',
                                               distance=dist_left,
-                                              number_ensembles=n_ens_left)
+                                              number_ensembles=n_ens_left,
+                                              user_discharge=user_discharge_left)
 
             elif mmt_config['Q_Left_Edge_Type'] == 1:
                 self.edges.left.populate_data(edge_type='Rectangular',
                                               distance=dist_left,
-                                              number_ensembles=n_ens_left)
+                                              number_ensembles=n_ens_left,
+                                              user_discharge=user_discharge_left)
 
             elif mmt_config['Q_Left_Edge_Type'] == 2:
                 self.edges.left.populate_data(edge_type='Custom',
                                               distance=dist_left,
                                               number_ensembles=n_ens_left,
-                                              coefficient=mmt_config['Q_Left_Edge_Coeff'])
+                                              coefficient=mmt_config['Q_Left_Edge_Coeff'],
+                                              user_discharge=user_discharge_left)
+
                 
             # Create right edge
-            if mmt_config['Q_Right_Edge_Type'] == 0:
+            if edge_method_right == 'NO':
+                self.edges.right.populate_data(edge_type='User Q',
+                                               distance=dist_right,
+                                               number_ensembles=n_ens_right,
+                                               user_discharge=user_discharge_right)
+            elif mmt_config['Q_Right_Edge_Type'] == 0:
                 self.edges.right.populate_data(edge_type='Triangular',
                                                distance=dist_right,
-                                               number_ensembles=n_ens_right)
+                                               number_ensembles=n_ens_right,
+                                               user_discharge=user_discharge_right)
 
             elif mmt_config['Q_Right_Edge_Type'] == 1:
                 self.edges.right.populate_data(edge_type='Rectangular',
                                                distance=dist_right,
-                                               number_ensembles=n_ens_right)
+                                               number_ensembles=n_ens_right,
+                                               user_discharge=user_discharge_right)
 
             elif mmt_config['Q_Right_Edge_Type'] == 2:
                 self.edges.right.populate_data(edge_type='Custom',
                                                distance=dist_right,
                                                number_ensembles=n_ens_right,
-                                               coefficient=mmt_config['Q_Right_Edge_Coeff'])
+                                               coefficient=mmt_config['Q_Right_Edge_Coeff'],
+                                               user_discharge=user_discharge_right)
                 
             # Create extrap object
             # --------------------
@@ -723,11 +771,11 @@ class TransectData(object):
         # This implementation forces all versions to use the earth coordinate system.
         if rsdata.Setup.coordinateSystem == 0:
             # ref_coord = 'Beam'
-            raise ValueError('Beam Coordinates are not supported for all RiverSuveyor firmware releases, ' +
+            raise CoordError('Beam Coordinates are not supported for all RiverSuveyor firmware releases, ' +
                              'use Earth coordinates.')
         elif rsdata.Setup.coordinateSystem == 1:
             # ref_coord = 'Inst'
-            raise ValueError('Instrument Coordinates are not supported for all RiverSuveyor firmware releases, ' +
+            raise CoordError('Instrument Coordinates are not supported for all RiverSuveyor firmware releases, ' +
                              'use Earth coordinates.')
         elif rsdata.Setup.coordinateSystem == 2:
             ref_coord = 'Earth'
@@ -886,10 +934,12 @@ class TransectData(object):
             ensembles_right = np.nansum(rsdata.System.Step == 2)
             ensembles_left = np.nansum(rsdata.System.Step == 4)
             self.start_edge = 'Right'
+            self.orig_start_edge = 'Right'
         else:
             ensembles_right = np.nansum(rsdata.System.Step == 4)
             ensembles_left = np.nansum(rsdata.System.Step == 2)
             self.start_edge = 'Left'
+            self.orig_start_edge = 'Left'
         self.in_transect_idx = np.where(rsdata.System.Step == 3)[0]
 
         # Create left edge object
@@ -900,11 +950,15 @@ class TransectData(object):
             edge_type = 'Rectangular'
         elif rsdata.Setup.Edges_0__Method == 0:
             edge_type = 'User Q'
+        if np.isnan(rsdata.Setup.Edges_0__EstimatedQ):
+            user_discharge = None
+        else:
+            user_discharge = rsdata.Setup.Edges_0__EstimatedQ
         self.edges.left.populate_data(edge_type=edge_type,
                                       distance=rsdata.Setup.Edges_0__DistanceToBank,
                                       number_ensembles=ensembles_left,
                                       coefficient=None,
-                                      user_discharge=rsdata.Setup.Edges_0__EstimatedQ)
+                                      user_discharge=user_discharge)
 
         # Create right edge object
         if rsdata.Setup.Edges_1__Method == 2:
@@ -913,11 +967,15 @@ class TransectData(object):
             edge_type = 'Rectangular'
         elif rsdata.Setup.Edges_1__Method == 0:
             edge_type = 'User Q'
+        if np.isnan(rsdata.Setup.Edges_1__EstimatedQ):
+            user_discharge = None
+        else:
+            user_discharge = rsdata.Setup.Edges_1__EstimatedQ
         self.edges.right.populate_data(edge_type=edge_type,
                                        distance=rsdata.Setup.Edges_1__DistanceToBank,
                                        number_ensembles=ensembles_right,
                                        coefficient=None,
-                                       user_discharge=rsdata.Setup.Edges_1__EstimatedQ)
+                                       user_discharge=user_discharge)
 
         # Extrapolation
         # -------------
@@ -1114,6 +1172,10 @@ class TransectData(object):
         self.extrap = ExtrapData()
         self.extrap.populate_from_qrev_mat(transect)
         self.start_edge = transect.startEdge
+        if hasattr(transect, 'orig_start_edge'):
+            self.orig_start_edge = transect.orig_start_edge
+        else:
+            self.orig_start_edge = transect.startEdge
         self.date_time = DateTime()
         self.date_time.populate_from_qrev_mat(transect)
         self.checked = bool(transect.checked)
@@ -1772,6 +1834,156 @@ class TransectData(object):
         valid_ens = np.all(np.vstack((valid_nav, valid_wt_ens, valid_depth)), 0)
 
         return valid_ens, valid_wt.T
+
+    @staticmethod
+    def compute_gps_lag(transect):
+        """Computes the lag between bottom track and GGA and/or VTG using an autocorrelation method.
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+
+        Returns
+        -------
+        lag_gga: float
+            Lag in seconds betweeen bottom track and gga
+        lag_vtg: float
+            Lag in seconds between bottom track and vtg
+        """
+
+        # Intialize returns
+        lag_gga = None
+        lag_vtg = None
+
+        bt_speed = np.sqrt(transect.boat_vel.bt_vel.u_processed_mps ** 2
+                           + transect.boat_vel.bt_vel.v_processed_mps ** 2)
+
+        avg_ens_dur = np.nanmean(transect.date_time.ens_duration_sec)
+
+        # Compute lag for gga, if available
+        if transect.boat_vel.gga_vel is not None:
+            gga_speed = np.sqrt(transect.boat_vel.gga_vel.u_processed_mps**2
+                             + transect.boat_vel.gga_vel.v_processed_mps**2)
+
+            # Compute lag if both bottom track and gga have valid data
+            valid_data = np.all(np.logical_not(np.isnan(np.vstack((bt_speed, gga_speed)))), axis=0)
+            if np.sometrue(valid_data):
+                # Compute lag
+                lag_gga = (np.count_nonzero(valid_data)
+                          - np.argmax(signal.correlate(bt_speed[valid_data], gga_speed[valid_data])) - 1) * avg_ens_dur
+            else:
+                lag_gga = None
+
+        # Compute lag for vtg, if available
+        if transect.boat_vel.vtg_vel is not None:
+            vtg_speed = np.sqrt(transect.boat_vel.vtg_vel.u_processed_mps**2
+                             + transect.boat_vel.vtg_vel.v_processed_mps**2)
+
+            # Compute lag if both bottom track and gga have valid data
+            valid_data = np.all(np.logical_not(np.isnan(np.vstack((bt_speed, vtg_speed)))), axis=0)
+            if np.sometrue(valid_data):
+                # Compute lag
+                lag_vtg = (np.count_nonzero(valid_data)
+                           - np.argmax(signal.correlate(bt_speed[valid_data], vtg_speed[valid_data])) - 1) * avg_ens_dur
+            else:
+                lag_vtg = None
+
+        return lag_gga, lag_vtg
+
+    @staticmethod
+    def compute_gps_lag_fft(transect):
+        """Computes the lag between bottom track and GGA and/or VTG using fft method.
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+
+        Returns
+        -------
+        lag_gga: float
+            Lag in seconds betweeen bottom track and gga
+        lag_vtg: float
+            Lag in seconds between bottom track and vtg
+        """
+        lag_gga = None
+        lag_vtg = None
+
+        bt_speed = np.sqrt(transect.boat_vel.bt_vel.u_processed_mps ** 2
+                           + transect.boat_vel.bt_vel.v_processed_mps ** 2)
+
+        avg_ens_dur = np.nanmean(transect.date_time.ens_duration_sec)
+        if transect.boat_vel.gga_vel is not None:
+            gga_speed = np.sqrt(transect.boat_vel.gga_vel.u_processed_mps**2
+                             + transect.boat_vel.gga_vel.v_processed_mps**2)
+            valid_data = np.all(np.logical_not(np.isnan(np.vstack((bt_speed, gga_speed)))), axis=0)
+            b = fftpack.fft(bt_speed[valid_data])
+            g = fftpack.fft(gga_speed[valid_data])
+            br = -b.conjugat()
+            lag_gga = np.argmax(np.abs(fftpack.ifft(br*g)))
+
+        if transect.boat_vel.vtg_vel is not None:
+            vtg_speed = np.sqrt(transect.boat_vel.vtg_vel.u_processed_mps**2
+                             + transect.boat_vel.vtg_vel.v_processed_mps**2)
+            valid_data = np.all(np.logical_not(np.isnan(np.vstack((bt_speed, vtg_speed)))), axis=0)
+            b = fftpack.fft(bt_speed[valid_data])
+            g = fftpack.fft(vtg_speed[valid_data])
+            br = -b.conjugat()
+            lag_vtg = np.argmax(np.abs(fftpack.ifft(br * g)))
+
+        return lag_gga, lag_vtg
+
+    @staticmethod
+    def compute_gps_bt(transect, gps_ref='gga_vel'):
+        """Computes properties describing the difference between bottom track and the specified GPS reference.
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+        gps_ref: str
+            GPS referenced to be used in computation (gga_vel or vtg_vel)
+
+        Returns
+        -------
+        gps_bt: dict
+            course: float
+                Difference in course computed from gps and bt, in degrees
+            ratio: float
+                Ratio of final distance made good for bt and gps (bt dmg / gps dmg)
+            dir: float
+                Direction of vector from end of GPS track to end of bottom track
+            mag: float
+                Length of vector from end of GPS track to end of bottom track
+        """
+
+        gps_bt = dict()
+        gps_vel = getattr(transect.boat_vel, gps_ref)
+        if gps_vel is not None and np.any(np.logical_not(np.isnan(gps_vel.u_processed_mps))):
+            # Data prep
+            bt_track = BoatStructure.compute_boat_track(transect, ref='bt_vel')
+            bt_course, _ = cart2pol(bt_track['track_x_m'][-1], bt_track['track_y_m'][-1])
+            bt_course = rad2azdeg(bt_course)
+            gps_track = BoatStructure.compute_boat_track(transect, ref=gps_ref)
+            gps_course, _ = cart2pol(gps_track['track_x_m'][-1], gps_track['track_y_m'][-1])
+            gps_course = rad2azdeg(gps_course)
+
+            # Compute course
+            gps_bt['course'] = gps_course - bt_course
+            if gps_bt['course'] < 0:
+                gps_bt['course'] = gps_bt['course'] + 360
+
+            # Compute ratio
+            gps_bt['ratio'] = bt_track['dmg_m'][-1] / gps_track['dmg_m'][-1]
+
+            # Compute closure vector
+            x_diff = bt_track['track_x_m'][-1] - gps_track['track_x_m'][-1]
+            y_diff = bt_track['track_y_m'][-1] - gps_track['track_y_m'][-1]
+            gps_bt['dir'], gps_bt['mag'] = cart2pol(x_diff, y_diff)
+            gps_bt['dir'] = rad2azdeg(gps_bt['dir'])
+
+        return gps_bt
 
 # ========================================================================
 # Begin multithread function included in module but not TransectData class

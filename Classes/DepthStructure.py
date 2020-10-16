@@ -94,6 +94,8 @@ class DepthStructure(object):
             elif transect.depths.selected == 'dsDepths':
                 self.selected = 'ds_depths'
             self.composite = transect.depths.composite
+            if self.vb_depths is None and self.ds_depths is None:
+                self.composite = 'Off'
 
     def composite_depths(self, transect, setting="Off"):
         """Depth composite is based on the following assumptions

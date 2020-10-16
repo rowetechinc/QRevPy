@@ -388,7 +388,7 @@ class Uncertainty(object):
                     # Check to see if the valid tests indicate a moving bed
                     moving_bed_bool = []
                     for result in moving_bed:
-                        if result is 'Yes':
+                        if result == 'Yes':
                             moving_bed_bool.append(True)
                         else:
                             moving_bed_bool.append(False)

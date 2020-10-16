@@ -86,6 +86,8 @@ class WaterData(object):
             Threshold for vertical velocity filter.
         excluded_dist_m: float
             Distance below transucer for which data are excluded or marked invalid, in m.
+        orig_excluded_dist_m: float
+            Original distance below transucer for which data are excluded or marked invalid, in m.
         smooth_filter: str
             Set filter based on smoothing function "On", "Off".
         smooth_speed: np.array(float)
@@ -154,6 +156,7 @@ class WaterData(object):
         self.w_filter = None
         self.w_filter_threshold = None
         self.excluded_dist_m = None
+        self.orig_excluded_dist_m = None
         self.smooth_filter = None
         self.smooth_speed = None
         self.smooth_upper_limit = None
@@ -278,6 +281,7 @@ class WaterData(object):
 
         self.water_mode = wm_in
         self.excluded_dist_m = excluded_dist_in
+        self.orig_excluded_dist_m = excluded_dist_in
 
         # In some rare situations the blank is empty so it is set to the excluded_dist_in
         try:
@@ -438,6 +442,10 @@ class WaterData(object):
         self.w_filter = transect.wVel.wFilter
         self.w_filter_threshold = transect.wVel.wFilterThreshold
         self.excluded_dist_m = transect.wVel.excludedDist
+        if hasattr(transect.wVel, 'orig_excludedDist'):
+            self.orig_excluded_dist_m = transect.wVel.orig_excludedDist
+        else:
+            self.orig_excluded_dist_m = transect.wVel.excludedDist
         self.smooth_filter = transect.wVel.smoothFilter
         self.smooth_speed = transect.wVel.smoothSpeed
         self.smooth_upper_limit = transect.wVel.smoothUpperLimit
@@ -712,6 +720,7 @@ class WaterData(object):
         u_nr_rotated, v_nr_rotated = pol2cart(direction - np.deg2rad(heading_chng), mag)
         self.u_earth_no_ref_mps = u_nr_rotated
         self.v_earth_no_ref_mps = v_nr_rotated
+
         # Reprocess water data to get navigation reference corrected velocities
         self.set_nav_reference(boat_vel)
         
@@ -1403,7 +1412,7 @@ class WaterData(object):
         
         self.all_valid_data()
 
-    def interpolate_abba(self, transect):
+    def interpolate_abba(self, transect, search_loc=['above', 'below', 'before', 'after']):
         """" Interpolates all data marked invalid using the abba interpolation algorithm.
 
         Parameters
@@ -1427,7 +1436,10 @@ class WaterData(object):
         self.u_processed_mps[np.logical_not(valid)] = np.nan
         self.v_processed_mps[np.logical_not(valid)] = np.nan
 
-        interpolated_data = self.compute_abba_interpolation(wt_data=self, valid=valid, transect=transect)
+        interpolated_data = self.compute_abba_interpolation(wt_data=self,
+                                                            valid=valid,
+                                                            transect=transect,
+                                                            search_loc=search_loc)
 
         if interpolated_data is not None:
             # Incorporate interpolated values in processed data
@@ -1438,7 +1450,7 @@ class WaterData(object):
                     interpolated_data[1][n][1]
 
     @staticmethod
-    def compute_abba_interpolation(wt_data, valid, transect):
+    def compute_abba_interpolation(wt_data, valid, transect, search_loc=['above', 'below', 'before', 'after']):
         """Computes the interpolated values for invalid cells using the abba method.
 
         Parameters
@@ -1485,6 +1497,7 @@ class WaterData(object):
                                                            y_cell_size=depth_selected.depth_cell_size_m,
                                                            y_depth=depth_selected.depth_processed_m,
                                                            x_shiptrack=distance_along_shiptrack,
+                                                           search_loc=search_loc,
                                                            normalize=True)
                 return interpolated_data
             else:
@@ -1931,3 +1944,156 @@ class WaterData(object):
         # Combine all filter data and update processed properties
 
         self.all_valid_data()
+
+# Code from Aurelien
+    def interpolate_cells_above(self, transect):
+        """Interpolates values for invalid cells using below valid cell
+        Written by Aurelien Despax
+        Modified by dsm
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+        """
+
+        # Set property
+        self.interpolate_cells = 'Above'
+
+        # Construct variables
+
+        valid = self.valid_data[0]
+        n_cells, n_ens = self.u_processed_mps.shape
+
+        for n in range(n_ens):
+
+            # Identify first and last valid depth cell
+            idx = np.where(valid[:, n] == True)[0]
+            if len(idx) > 0:
+                idx_first = idx[0]
+                idx_last = idx[-1]
+                idx_middle = np.where(valid[idx_first:idx_last + 1, n] == False)[0]
+
+                # For invalid middle depth cells assign value of shallower valid depth cell
+                # TODO this assigns the value of the shallowest depth cell not the next valid depth cell
+                if len(idx_middle) > 0:
+                    idx_middle = idx_middle + idx_first
+                    self.u_processed_mps[idx_middle, n] = self.u_processed_mps[idx_first, n]
+                    self.v_processed_mps[idx_middle, n] = self.v_processed_mps[idx_first, n]
+
+    def interpolate_cells_below(self, transect):
+        """Interpolates values for invalid cells using above valid cell
+        Written by Aurelien Despax
+        Modified by dsm
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+        """
+
+        # Set property
+        self.interpolate_cells = 'Below'
+
+        # Construct variables
+        valid = self.valid_data[0]
+        n_cells, n_ens = self.u_processed_mps.shape
+
+        for n in range(n_ens):
+
+            # Identify first and last valid depth cell
+            idx = np.where(valid[:, n] == True)[0]
+            if len(idx) > 0:
+                idx_first = idx[0]
+                idx_last = idx[-1]
+                idx_middle = np.where(valid[idx_first:idx_last + 1, n] == False)[0]
+
+                # For invalid middle depth cells assign the value of the next deeper valid depth cells
+                # TODO this assigns the value of the shallowest depth cell not the next valid depth cell
+                if len(idx_middle) > 0:
+                    idx_middle = idx_middle + idx_first
+                    self.u_processed_mps[idx_middle, n] = self.u_processed_mps[idx_last, n]
+                    self.v_processed_mps[idx_middle, n] = self.v_processed_mps[idx_last, n]
+
+    def interpolate_cells_before(self, transect):
+        """Interpolates values for invalid cells using above valid cell
+        Written by Aurelien Despax
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+        """
+
+        # Set property
+        self.interpolate_cells = 'Before'
+
+        # Construct variables
+        depths = getattr(transect.depths, transect.depths.selected)
+        valid = self.valid_data[0]
+        cell_depth = depths.depth_cell_depth_m
+        z_all = np.subtract(depths.depth_processed_m, cell_depth)
+        z = np.copy(z_all)
+        z[np.isnan(self.u_processed_mps)] = np.nan
+        z_adj = np.tile(np.nan, z.shape)
+        n_cells, n_ens = self.u_processed_mps.shape
+
+        for n in range(n_ens):
+
+            # Identify first and last valid depth cell
+            idx = np.where(valid[:, n] == True)[0]
+            if len(idx) > 0:
+                idx_first = idx[0]
+                idx_last = idx[-1]
+                idx_middle = np.where(valid[idx_first:idx_last + 1, n] == False)[0]
+
+                # For invalid middle depth cells perform interpolation based on bottom method
+                if len(idx_middle) > 0:
+                    idx_middle = idx_middle + idx_first
+                    z_adj[idx_middle, n] = z_all[idx_middle, n]
+
+                    # Interpolate velocities using linear interpolation
+                    self.u_processed_mps[idx_middle, n] = self.u_processed_mps[idx_middle, n - 1]
+                    self.v_processed_mps[idx_middle, n] = self.v_processed_mps[idx_middle, n - 1]
+
+    def interpolate_cells_after(self, transect):
+        """Interpolates values for invalid cells using above valid cell
+        Written by Aurelien Despax
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+        """
+
+        # Set property
+        self.interpolate_cells = 'After'
+
+        # Construct variables
+        depths = getattr(transect.depths, transect.depths.selected)
+        valid = self.valid_data[0]
+        cell_depth = depths.depth_cell_depth_m
+        z_all = np.subtract(depths.depth_processed_m, cell_depth)
+        z = np.copy(z_all)
+        z[np.isnan(self.u_processed_mps)] = np.nan
+        z_adj = np.tile(np.nan, z.shape)
+        n_cells, n_ens = self.u_processed_mps.shape
+
+        for n in list(reversed(list(range(n_ens)))):
+
+            # Identify first and last valid depth cell
+            idx = np.where(valid[:, n] == True)[0]
+            if len(idx) > 0:
+                idx_first = idx[0]
+                idx_last = idx[-1]
+                idx_middle = np.where(valid[idx_first:idx_last + 1, n] == False)[0]
+
+                # For invalid middle depth cells perform interpolation based on bottom method
+                if len(idx_middle) > 0:
+                    idx_middle = idx_middle + idx_first
+                    z_adj[idx_middle, n] = z_all[idx_middle, n]
+
+                    # Interpolate velocities using linear interpolation
+                    if (n_ens > (n + 1)):
+                        self.u_processed_mps[idx_middle, n] = self.u_processed_mps[idx_middle, n + 1]
+                        self.v_processed_mps[idx_middle, n] = self.v_processed_mps[idx_middle, n + 1]

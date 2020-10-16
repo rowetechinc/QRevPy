@@ -3,6 +3,7 @@ import numpy as np
 from numpy.matlib import repmat
 from MiscLibs.common_functions import iqr
 from MiscLibs.robust_loess import rloess
+from MiscLibs.non_uniform_savgol import non_uniform_savgol
 
 
 class DepthData(object):
@@ -193,7 +194,8 @@ class DepthData(object):
         if len(self.depth_beams_m.shape) == 1:
             self.depth_beams_m = self.depth_beams_m.reshape(self.depth_beams_m.shape[0], 1)
             self.depth_cell_depth_m = self.depth_cell_depth_m.reshape(self.depth_cell_depth_m.shape[0], 1)
-            self.depth_cell_depth_orig_m = self.depth_cell_depth_orig_m.reshape(self.depth_cell_depth_orig_m.shape[0], 1)
+            self.depth_cell_depth_orig_m = self.depth_cell_depth_orig_m.reshape(
+                self.depth_cell_depth_orig_m.shape[0], 1)
             self.depth_cell_size_m = self.depth_cell_size_m.reshape(self.depth_cell_size_m.shape[0], 1)
             self.depth_cell_size_orig_m = self.depth_cell_size_orig_m.reshape(self.depth_cell_size_orig_m.shape[0], 1)
             self.depth_orig_m = self.depth_orig_m.reshape(self.depth_orig_m.shape[0], 1)
@@ -274,6 +276,9 @@ class DepthData(object):
         if filter_type == 'Off' or filter_type is None:
             # No filter
             self.filter_none()
+            # Savitzky-Golay
+        elif filter_type == 'SavGol':
+            self.filter_savgol(transect)
         elif filter_type == 'Smooth':
             # Smooth filter
             self.filter_smooth(transect)
@@ -409,7 +414,7 @@ class DepthData(object):
         
     def filter_smooth(self, transect):
         """This filter uses a moving InterQuartile Range filter on residuals from a
-        Lsmooth of the depths in each beam to identify unnatural spikes in the depth
+        robust Loess smooth of the depths in each beam to identify unnatural spikes in the depth
         measurements from each beam.  Each beam is filtered independently.  The filter
         criteria are set to be the maximum of the IQR filter, 5% of the measured depth, or 0.1 meter
 
@@ -519,7 +524,7 @@ class DepthData(object):
             self.smooth_depth = depth_smooth
             self.smooth_upper_limit = upper_limit
             self.smooth_lower_limit = lower_limit
-        
+
         # Reset valid data
         self.filter_none()
         
@@ -556,6 +561,136 @@ class DepthData(object):
             # Update valid data matrix
             self.valid_beams[j, bad_idx] = False
 
+    def filter_savgol(self, transect):
+        """This filter uses a moving InterQuartile Range filter on residuals from a
+        a Savitzky-Golay filter on y with non-uniform spaced x
+        of the depths in each beam to identify unnatural spikes in the depth
+        measurements from each beam.  Each beam is filtered independently.  The filter
+        criteria are set to be the maximum of the IQR filter, 5% of the measured depth, or 0.1 meter
+
+        Parameters
+        ----------
+        transect: TransectData
+            Object of TransectData
+
+        Notes
+        -----
+        half_width - number of points to each side of target point used in computing IQR.
+            This is the raw number of points actual points used may be less if some are bad.
+
+        multiplier - number multiplied times the IQR to determine the filter criteria
+
+        """
+
+        # Determine number of beams
+        if len(self.depth_orig_m.shape) > 1:
+            # For slant beams
+            n_beams, n_ensembles = self.depth_orig_m.shape[0], self.depth_orig_m.shape[1]
+            depth_raw = np.copy(self.depth_orig_m)
+        else:
+            # For vertical beam or depth sounder
+            n_beams = 1
+            n_ensembles = self.depth_orig_m.shape[0]
+            depth_raw = np.copy(np.reshape(self.depth_orig_m, (1, n_ensembles)))
+
+        # Set bad depths to nan
+        depth = repmat([np.nan], n_beams, n_ensembles)
+        depth[depth_raw > 0] = depth_raw[depth_raw > 0]
+
+        # If the smoothed depth has not been computed
+        if self.smooth_depth is None:
+
+            # Set filter characteristics
+            self.filter_type = 'SavGol'
+            cycles = 3
+            half_width = 10
+            multiplier = 15
+
+            # Arrays initialized
+            depth_smooth = repmat([np.nan], n_beams, n_ensembles)
+            depth_res = repmat([np.nan], n_beams, n_ensembles)
+            upper_limit = repmat([np.nan], n_beams, n_ensembles)
+            lower_limit = repmat([np.nan], n_beams, n_ensembles)
+
+            # Create position array. If there are insufficient track data use elapsed time
+            boat_vel_selected = getattr(transect.boat_vel, transect.boat_vel.selected)
+            if boat_vel_selected is not None and \
+                    np.nansum(np.isnan(boat_vel_selected.u_processed_mps)) < 2:
+                track_x = boat_vel_selected.u_processed_mps * transect.date_time.ens_duration_sec
+                track_y = boat_vel_selected.v_processed_mps * transect.date_time.ens_duration_sec
+                x = np.nancumsum(np.sqrt(track_x ** 2 + track_y ** 2))
+            else:
+                x = np.nancumsum(transect.date_time.ens_duration_sec)
+
+            # Loop for each beam, smooth is applied to each beam
+            for j in range(n_beams):
+                # At least 50% of the data in a beam must be valid to apply the smooth
+                if np.nansum((np.isnan(depth[j, :]) == False) / depth.shape[0]) > .5:
+
+                    # Compute residuals based on non-uniform Savitzky-Golay
+                    try:
+                        valid_depth_idx = np.logical_not(np.isnan(depth[j, :]))
+                        x_fit = x[valid_depth_idx]
+                        y_fit = depth[j, valid_depth_idx]
+                        smooth_fit = non_uniform_savgol(x_fit, y_fit, 15, 3)
+                        depth_smooth[j, valid_depth_idx] = smooth_fit
+                    except ValueError:
+                        depth_smooth[j, :] = depth[j, :]
+
+                    depth_res[j, :] = depth[j, :] - depth_smooth[j, :]
+
+                    # Run the filter multiple times
+                    for n in range(cycles - 1):
+
+                        # Compute inner quartile range
+                        fill_array = DepthData.run_iqr(half_width, depth_res[j, :])
+
+                        # Compute filter criteria
+                        criteria = multiplier * fill_array
+
+                        # Adjust criteria so that it is never less than 5% of depth or 0.1 m which ever is greater
+                        idx = np.where(criteria < np.max(np.vstack((depth[j, :] * .05,
+                                                                    np.ones(depth.shape) / 10)), 0))[0]
+                        if len(idx) > 0:
+                            criteria[idx] = np.max(np.vstack((depth[j, idx] * .05, np.ones(idx.shape) / 10)), 0)
+
+                        # Compute limits
+                        upper_limit[j] = depth_smooth[j, :] + criteria
+                        lower_limit[j] = depth_smooth[j, :] - criteria
+
+                        bad_idx = np.where(np.logical_or(np.greater(depth[j], upper_limit[j]),
+                                                         np.less(depth[j], lower_limit[j])))[0]
+                        # Update residual matrix
+                        depth_res[j, bad_idx] = np.nan
+
+                else:
+                    depth_smooth[j] = np.nan
+                    upper_limit[j] = np.nan
+                    lower_limit[j] = np.nan
+
+            # Save smooth results to avoid recomputing them if needed later
+            self.smooth_depth = depth_smooth
+            self.smooth_upper_limit = upper_limit
+            self.smooth_lower_limit = lower_limit
+
+        # Reset valid data
+        self.filter_none()
+
+        # Set filter type
+        self.filter_type = 'SavGol'
+
+        # Apply filter
+        for j in range(n_beams):
+            if np.nansum(self.smooth_upper_limit[j]) > 0:
+                bad_idx = np.where(
+                    np.logical_or(np.greater(depth[j], self.smooth_upper_limit[j]),
+                                  np.less(depth[j], self.smooth_lower_limit[j])))[0]
+            else:
+                bad_idx = np.isnan(depth[j])
+
+            # Update valid data matrix
+            self.valid_beams[j, bad_idx] = False
+
     def interpolate_none(self):
         """Applies no interpolation.
         """
@@ -584,8 +719,22 @@ class DepthData(object):
         for n in range(1, n_ensembles):
             
             # If current ensemble's depth is invalid assign depth from previous example
-            if np.isnan(self.depth_processed_m[n]):
+            if not self.valid_data[n]:
                 self.depth_processed_m[n] = self.depth_processed_m[n-1]
+
+    def interpolate_next(self):
+        """This function back fills with the next valid value.
+        """
+
+        # Get number of ensembles
+        n_ens = len(self.depth_processed_m)
+
+        # Process data by ensemble
+        for n in np.arange(0, n_ens-1)[::-1]:
+
+            # If current ensemble's depth is invalid assign depth from previous example
+            if not self.valid_data[n]:
+                self.depth_processed_m[n] = self.depth_processed_m[n + 1]
 
     def interpolate_smooth(self):
         """Apply interpolation based on the robust loess smooth
@@ -727,7 +876,7 @@ class DepthData(object):
             avg_depth[avg_depth == draft] = np.nan
 
         return avg_depth
-           
+
     @staticmethod
     def run_iqr(half_width, data):
         """Computes a running Innerquartile Range
@@ -750,33 +899,33 @@ class DepthData(object):
         half_width = int(half_width)
 
         if npts < 20:
-            half_width = int(np.floor(npts/2))
-        
+            half_width = int(np.floor(npts / 2))
+
         iqr_array = []
-         
+
         # Compute IQR for each point
         for n in range(npts):
-            
+
             # Sample selection for 1st point
             if n == 0:
                 sample = data[1:1 + half_width]
-                
+
             # Sample selection a end of data set
             elif n + half_width > npts:
                 sample = np.hstack([data[n - half_width - 1:n - 1], data[n:npts]])
-                
+
             # Sample selection at beginning of data set
             elif half_width >= n + 1:
                 sample = np.hstack([data[0:n], data[n + 1:n + half_width + 1]])
-                
+
             # Sample selection in body of data set
             else:
                 sample = np.hstack([data[n - half_width:n], data[n + 1:n + half_width + 1]])
-                
+
             iqr_array.append(iqr(sample))
-            
+
         return np.array(iqr_array)
-        
+
     def filter_trdi(self):
         """Filter used by TRDI to filter out multiple reflections that get digitized as depth.
         """

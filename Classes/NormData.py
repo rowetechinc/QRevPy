@@ -287,9 +287,9 @@ class NormData(object):
                     = norm_data[n].unit_normalized
                 self.cell_depth_normalized[:n_cells[n], np.arange(sum_ens[n], sum_ens[n + 1])] \
                     = norm_data[n].cell_depth_normalized
-                if self.data_extent is None:
-                    self.data_extent = norm_data[n].data_extent
-                    self.data_type = norm_data[n].data_type
+                # if self.data_extent is None:
+                self.data_extent = norm_data[n].data_extent
+                self.data_type = norm_data[n].data_type
 
         # Store data
         self.file_name = 'Measurement'

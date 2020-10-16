@@ -54,6 +54,28 @@ class MovingBedTests(object):
         Cross=stream component of the bottom track referenced ship track
     stationary_mb_vel: np.array(float)
         Moving-bed velocity by ensemble, m/s
+    ref: str
+        Identifies reference used to compute moving bed
+    bt_percent_mb: float
+        Percent moving-bed using only BT
+    bt_dist_us_m: float
+        Distance upstream using only BT
+    bt_mb_dir: float
+        Moving-bed direction using only BT
+    bt_mb_spd_mps: float
+        Moving-bed speed using only BT
+    bt_flow_spd_mps: float
+        Corrected flow speed using only BT
+    gps_percent_mb: float
+        Percent moving-bed using BT and GPS
+    gps_dist_us_m: float
+        Distance upstream using BT and GPS
+    gps_mb_dir: float
+        Moving-bed direction using BT and GPS
+    gps_mb_spd_mps: float
+        Moving-bed speed using BT and GPS
+    gps_flow_spd_mps: float
+        Corrected flow speed using BT and GPS
     """
     
     def __init__(self):
@@ -80,6 +102,17 @@ class MovingBedTests(object):
         self.stationary_us_track = np.array([])  # Upstream component of the bottom track referenced ship track
         self.stationary_cs_track = np.array([])  # Cross=stream component of the bottom track referenced ship track
         self.stationary_mb_vel = np.array([])  # Moving-bed velocity by ensemble
+        self.ref = 'BT'
+        self.bt_percent_mb = np.nan
+        self.bt_dist_us_m = np.nan
+        self.bt_mb_dir = np.nan
+        self.bt_mb_spd_mps = np.nan
+        self.bt_flow_spd_mps = np.nan
+        self.gps_percent_mb = np.nan
+        self.gps_dist_us_m = np.nan
+        self.gps_mb_dir = np.nan
+        self.gps_mb_spd_mps = np.nan
+        self.gps_flow_spd_mps = np.nan
         
     def populate_data(self, source, file=None, test_type=None):
         """Process and store moving-bed test data.
@@ -98,6 +131,10 @@ class MovingBedTests(object):
             self.mb_trdi(file, test_type)
         else:
             self.mb_sontek(file, test_type)
+
+        self.process_mb_test(source)
+
+    def process_mb_test(self, source):
         
         # Convert to earth coordinates and set the navigation reference to BT
         # for both boat and water data
@@ -211,6 +248,25 @@ class MovingBedTests(object):
         self.stationary_cs_track = mat_data.stationaryCSTrack
         self.stationary_mb_vel = mat_data.stationaryMBVel
 
+        # Feature that can use GPS for moving-bed tests
+        if hasattr(mat_data, 'bt_percent_mb'):
+            self.bt_percent_mb = mat_data.bt_percent_mb
+            self.bt_dist_us_m = mat_data.bt_dist_us_m
+            self.bt_mb_dir = mat_data.bt_mb_dir
+            self.bt_mb_spd_mps = mat_data.bt_mb_spd_mps
+            self.bt_flow_spd_mps = mat_data.bt_flow_spd_mps
+            self.gps_percent_mb = mat_data.gps_percent_mb
+            self.gps_dist_us_m = mat_data.gps_dist_us_m
+            self.gps_mb_dir = mat_data.gps_mb_dir
+            self.gps_mb_spd_mps = mat_data.gps_mb_spd_mps
+        else:
+            self.bt_percent_mb = self.percent_mb
+            self.bt_dist_us_m = self.dist_us_m
+            self.bt_mb_dir = self.mb_dir
+            self.bt_mb_spd_mps = self.mb_spd_mps
+            self.bt_flow_spd_mps = self.flow_spd_mps
+            self.compute_mb_gps()
+
     @staticmethod
     def make_list(array_in):
         """Method to make list from several special cases that can occur in the Matlab data.
@@ -233,7 +289,7 @@ class MovingBedTests(object):
                     internal_list.append(item)
                 list_out = [internal_list]
             else:
-                list_out = []
+                list_out = np.nan
         return list_out
 
     def mb_trdi(self, transect, test_type):
@@ -268,13 +324,15 @@ class MovingBedTests(object):
         self.transect = TransectData()
         self.transect.sontek(rsdata, file_name)
         
-    def loop_test(self, ens_duration=None):
+    def loop_test(self, ens_duration=None, ref='BT'):
         """Process loop moving bed test.
 
         Parameters
         ----------
         ens_duration: np.array(float)
             Duration of each ensemble, in sec
+        ref: str
+            Reference used to compare distance moved
         """
 
         # Assign data from transect to local variables
@@ -300,6 +358,18 @@ class MovingBedTests(object):
             bt_v = trans_data.boat_vel.bt_vel.v_processed_mps[in_transect_idx]
             bin_size = trans_data.depths.bt_depths.depth_cell_size_m[:, in_transect_idx]
 
+            # Compute closure distance and direction
+            bt_x = np.nancumsum(bt_u * ens_duration)
+            bt_y = np.nancumsum(bt_v * ens_duration)
+            direct, self.bt_dist_us_m = cart2pol(bt_x[-1], bt_y[-1])
+            self.bt_mb_dir = rad2azdeg(direct)
+
+            # Compute duration of test
+            self.duration_sec = np.nansum(ens_duration)
+
+            # Compute the moving-bed velocity
+            self.bt_mb_spd_mps = self.bt_dist_us_m / self.duration_sec
+
             # Compute discharge weighted mean velocity components for the
             # purposed of computing the mean flow direction
             xprod = QComp.cross_product(transect=trans_data)
@@ -319,27 +389,33 @@ class MovingBedTests(object):
             idx = np.where(np.isnan(wt_u) == False)
             se = np.nansum(np.nansum(wt_u[idx] * wght_area[idx])) / np.nansum(np.nansum(wght_area[idx]))
             sn = np.nansum(np.nansum(wt_v[idx] * wght_area[idx])) / np.nansum(np.nansum(wght_area[idx]))
-            dir_a, self.flow_spd_mps = cart2pol(se, sn)
+            dir_a, self.bt_flow_spd_mps = cart2pol(se, sn)
+            self.bt_flow_spd_mps = self.bt_flow_spd_mps + self.bt_mb_spd_mps
 
-            # Compute closure distance and direction
-            bt_x = np.nancumsum(bt_u * ens_duration)
-            bt_y = np.nancumsum(bt_v * ens_duration)
-            direct, self.dist_us_m = cart2pol(bt_x[-1], bt_y[-1])
-            self.mb_dir = rad2azdeg(direct)
-            
-            # Compute duration of test
-            self.duration_sec = np.nansum(ens_duration)
-            
-            # Compute the moving-bed velocity
-            self.mb_spd_mps = self.dist_us_m / self.duration_sec
-            
             # Compute potential error in BT referenced discharge
-            self.percent_mb = (self.mb_spd_mps / (self.flow_spd_mps + self.mb_spd_mps)) * 100
-            
+            self.bt_percent_mb = (self.bt_mb_spd_mps / self.bt_flow_spd_mps) * 100
+
+            # Compute test with GPS
+            self.compute_mb_gps()
+
+            # Store selected test characteristics
+            if ref == 'BT':
+                self.mb_spd_mps = self.bt_mb_spd_mps
+                self.dist_us_m = self.bt_dist_us_m
+                self.percent_mb = self.bt_percent_mb
+                self.mb_dir = self.bt_mb_dir
+                self.flow_spd_mps = self.bt_flow_spd_mps
+            elif not np.isnan(self.gps_percent_mb):
+                self.mb_spd_mps = self.gps_mb_spd_mps
+                self.dist_us_m = self.gps_dist_us_m
+                self.percent_mb = self.gps_percent_mb
+                self.mb_dir = self.gps_mb_dir
+                self.flow_spd_mps = self.bt_flow_spd_mps
+
             # Assess invalid bottom track
             # Compute percent invalid bottom track
             self.percent_invalid_bt = (np.nansum(bt_valid == False) / len(bt_valid)) * 100
-            
+
             # Determine if more than 9 consecutive seconds of invalid BT occurred
             consect_bt_time = np.zeros(n_ensembles)
             for n in range(1, n_ensembles):
@@ -349,50 +425,50 @@ class MovingBedTests(object):
                     consect_bt_time[n] = consect_bt_time[n - 1] + ens_duration[n]
 
             max_consect_bt_time = np.nanmax(consect_bt_time)
-            
+
             # Evaluate compass calibration based on flow direction
-            
+
             # Find apex of loop adapted from
             # http://www.mathworks.de/matlabcentral/newsreader/view_thread/164048
             loop_out = np.array([bt_x[0], bt_y[0], 0])
             loop_return = np.array([bt_x[-1], bt_y[-1], 0])
-            
+
             distance = np.zeros(n_ensembles)
             for n in range(n_ensembles):
                 p = np.array([bt_x[n], bt_y[n], 0])
                 distance[n] = np.linalg.norm(np.cross(loop_return - loop_out, p - loop_out))  \
                     / np.linalg.norm(loop_return - loop_out)
-                
+
             dmg_idx = np.where(distance == np.nanmax(distance))[0][0]
-            
+
             # Compute flow direction on outgoing part of loop
             u_out = wt_u[:, :dmg_idx + 1]
             v_out = wt_v[:, :dmg_idx + 1]
             wght = np.abs(q[:, :dmg_idx+1])
             se = np.nansum(u_out * wght) / np.nansum(wght)
-            sn = np.nansum(v_out * wght) / np.nansum(wght)  
+            sn = np.nansum(v_out * wght) / np.nansum(wght)
             direct, _ = cart2pol(se, sn)
             flow_dir1 = rad2azdeg(direct)
-            
+
             # Compute unweighted flow direction in each cell
             direct, _ = cart2pol(u_out, v_out)
             flow_dir_cell = rad2azdeg(direct)
-            
+
             # Compute difference from mean and correct to +/- 180
             v_dir_corr = flow_dir_cell - flow_dir1
             v_dir_idx = v_dir_corr > 180
             v_dir_corr[v_dir_idx] = 360-v_dir_corr[v_dir_idx]
             v_dir_idx = v_dir_corr < -180
             v_dir_corr[v_dir_idx] = 360 + v_dir_corr[v_dir_idx]
-            
+
             # Number of invalid weights
-            idx2 = np.where(np.isnan(wght) == False)     
-            nwght = len(idx2[0])             
-            
+            idx2 = np.where(np.isnan(wght) == False)
+            nwght = len(idx2[0])
+
             # Compute 95% uncertainty using weighted standard deviation
             uncert1 = 2. * np.sqrt(np.nansum(np.nansum(wght * v_dir_corr**2))
                                    / (((nwght - 1) * np.nansum(np.nansum(wght))) / nwght)) / np.sqrt(nwght)
-            
+
             # Compute flow direction on returning part of loop
             u_ret = wt_u[:, dmg_idx + 1:]
             v_ret = wt_v[:, dmg_idx + 1:]
@@ -401,40 +477,40 @@ class MovingBedTests(object):
             sn = np.nansum(v_ret * wght) / np.nansum(wght)
             direct, _ = cart2pol(se, sn)
             flow_dir2 = rad2azdeg(direct)
-            
+
             # Compute unweighted flow direction in each cell
             direct, _ = cart2pol(u_ret, v_ret)
             flow_dir_cell = rad2azdeg(direct)
-            
+
             # Compute difference from mean and correct to +/- 180
             v_dir_corr = flow_dir_cell - flow_dir2
             v_dir_idx = v_dir_corr > 180
             v_dir_corr[v_dir_idx] = 360 - v_dir_corr[v_dir_idx]
             v_dir_idx = v_dir_corr < -180
             v_dir_corr[v_dir_idx] = 360 + v_dir_corr[v_dir_idx]
-            
+
             # Number of valid weights
             idx2 = np.where(np.isnan(wght) == False)
             nwght = len(idx2[0])
-            
+
             # Compute 95% uncertainty using weighted standard deviation
             uncert2 = 2.*np.sqrt(np.nansum(np.nansum(wght * v_dir_corr**2))
                                  / (((nwght-1)*np.nansum(np.nansum(wght))) / nwght)) / np.sqrt(nwght)
-            
+
             # Compute and report difference in flow direction
             diff_dir = np.abs(flow_dir1 - flow_dir2)
             if diff_dir > 180:
                 diff_dir = diff_dir - 360
             self.compass_diff_deg = diff_dir
             uncert = uncert1 + uncert2
-            
+
             # Compute potential compass error
             idx = np.where(np.isnan(bt_x) == False)
             if len(idx[0]) > 0:
                 idx = idx[0][-1]
             width = np.sqrt((bt_x[dmg_idx] - bt_x[idx] / 2) ** 2 + (bt_y[dmg_idx] - bt_y[idx] / 2) ** 2)
             compass_error = (2 * width * sind(diff_dir / 2) * 100) / (self.duration_sec * self.flow_spd_mps)
-            
+
             # Initialize message counter
             self.test_quality = 'Good'
 
@@ -454,27 +530,27 @@ class MovingBedTests(object):
                 self.messages.append('WARNING: Percent invalid bottom track exceeds 5 percent. '
                                      + 'Loop may not be accurate. PLEASE REVIEW DATA.')
                 self.test_quality = 'Warnings'
-                
+
             # More than 9 consecutive seconds of invalid BT
             if max_consect_bt_time > 9:
                 self.messages.append('ERROR: Bottom track is invalid for more than 9 consecutive seconds.'
                                      + 'THE LOOP IS NOT ACCURATE. TRY A STATIONARY MOVING-BED TEST.')
                 self.test_quality = 'Errors'
-                
+
             if np.abs(compass_error) > 5 and np.abs(diff_dir) > 3 and np.abs(diff_dir) > uncert:
                 self.messages.append('ERROR: Difference in flow direction between out and back sections of '
                                      + 'loop could result in a 5 percent or greater error in final discharge. '
                                      + 'REPEAT LOOP AFTER COMPASS CAL. OR USE A STATIONARY MOVING-BED TEST.')
                 self.test_quality = 'Errors'
-        
+
         else:
             self.messages.append('ERROR: Loop has no valid bottom track data. '
                                  + 'REPEAT OR USE A STATIONARY MOVING-BED TEST.')
             self.test_quality = 'Errors'
-            
+
         # If loop is valid then evaluate moving-bed condition
         if self.test_quality != 'Errors':
-            
+
             # Check minimum moving-bed velocity criteria
             if self.mb_spd_mps > vel_criteria:
                 # Check that closure error is in upstream direction
@@ -497,12 +573,23 @@ class MovingBedTests(object):
                 self.messages.append('Moving-bed velocity < Minimum moving-bed velocity criteria '
                                      + '-- No correction recommended')
                 self.moving_bed = 'No'
+
+            # Notify of differences in results of test between BT and GPS
+            if not np.isnan(self.gps_percent_mb):
+                if np.abs(self.bt_percent_mb - self.gps_percent_mb) > 2:
+                    self.messages.append('WARNING - Bottom track and GPS results differ by more than 2%.')
+                    self.test_quality = 'Warnings'
+
+                if np.logical_xor(self.bt_percent_mb >= 1,  self.gps_percent_mb >= 1):
+                    self.messages.append('WARNING - Bottom track and GPS results do not agree.')
+                    self.test_quality = 'Warnings'
+
         else:
             self.messages.append('ERROR: Due to ERRORS noted above this loop is NOT VALID. '
                                  + 'Please consider suggestions.')
             self.moving_bed = 'Unknown'
 
-    def stationary_test(self):
+    def stationary_test(self, ref='BT'):
         """Processed the stationary moving-bed tests.
         """
 
@@ -528,6 +615,12 @@ class MovingBedTests(object):
             bt_u[valid_bt == False] = np.nan
             bt_v[valid_bt == False] = np.nan
 
+            u_water = np.nanmean(wt_u)
+            v_water = np.nanmean(wt_v)
+            self.flow_dir = np.arctan2(u_water, v_water) * 180 / np.pi
+            if self.flow_dir < 0:
+                self.flow_dir = self.flow_dir + 360
+
             bin_depth = trans_data.depths.bt_depths.depth_cell_depth_m[:, in_transect_idx]
             trans_select = getattr(trans_data.depths, trans_data.depths.selected)
             depth_ens = trans_select.depth_processed_m[in_transect_idx]
@@ -540,10 +633,11 @@ class MovingBedTests(object):
             bt_vel_up_strm = -1 * np.sum(bt_vel * unit_nb_vel, 0)
             bt_up_strm_dist = bt_vel_up_strm * ens_duration
             bt_up_strm_dist_cum = np.nancumsum(bt_up_strm_dist)
-            
+            self.bt_dist_us_m = bt_up_strm_dist_cum[-1]
+
             # Compute bottom track perpendicular to water velocity
             nb_vel_ang, _ = cart2pol(unit_nbu, unit_nbv)
-            nb_vel_unit_cs1, nb_vel_unit_cs2 = pol2cart(nb_vel_ang + np.pi / 2, np.ones(nb_vel_ang.shape))
+            nb_vel_unit_cs1, nb_vel_unit_cs2 = pol2cart(nb_vel_ang + np.pi / 2, 1)
             nb_vel_unit_cs = np.vstack([nb_vel_unit_cs1, nb_vel_unit_cs2])
             bt_vel_cs = np.sum(bt_vel * nb_vel_unit_cs, 0)
             bt_cs_strm_dist = bt_vel_cs * ens_duration
@@ -551,8 +645,9 @@ class MovingBedTests(object):
             
             # Compute cumulative mean moving bed velocity
             valid_bt_vel_up_strm = np.isnan(bt_vel_up_strm) == False
+
             mb_vel = np.nancumsum(bt_vel_up_strm) / np.nancumsum(valid_bt_vel_up_strm)
-            
+
             # Compute the average ensemble velocities corrected for moving bed
             if mb_vel[-1] > 0:
                 u_corrected = np.add(wt_u, (unit_nb_vel[0, :]) * bt_vel_up_strm)
@@ -573,27 +668,38 @@ class MovingBedTests(object):
             depth_cell_size = trans_data.depths.bt_depths.depth_cell_size_m[:, in_transect_idx]
             depth_cell_size[np.isnan(mag)] = np.nan
             mag_w = mag * depth_cell_size
-            avg_vel = np.nansum(mag_w) / np.nansum(depth_cell_size)
-            pot_error_per = (mb_vel[-1] / avg_vel) * 100
-            if pot_error_per < 0:
-                pot_error_per = 0   
-                
+            self.bt_flow_spd_mps = np.nansum(mag_w) / np.nansum(depth_cell_size)
+            self.bt_mb_spd_mps = mb_vel[-1]
+            self.bt_percent_mb = (self.bt_mb_spd_mps / self.bt_flow_spd_mps) * 100
+            if self.bt_percent_mb < 0:
+                self.bt_percent_mb = 0
+
             # Compute percent invalid bottom track
             self.percent_invalid_bt = (np.nansum(bt_valid == False) / len(bt_valid)) * 100
-            # Store computed test characteristics
-            self.dist_us_m = bt_up_strm_dist_cum[-1]
             self.duration_sec = np.nansum(ens_duration)
-            self.compass_diff_deg = []
-            self.flow_dir = []
-            self.mb_dir = []
-            self.flow_spd_mps = avg_vel
-            self.mb_spd_mps = mb_vel[-1]
-            self.percent_mb = pot_error_per
+
+            # Compute test using GPS
+            self.compute_mb_gps()
+
+            # Store selected test characteristics
+            if ref == 'BT':
+                self.mb_spd_mps = self.bt_mb_spd_mps
+                self.dist_us_m = self.bt_dist_us_m
+                self.percent_mb = self.bt_percent_mb
+                self.mb_dir = self.bt_mb_dir
+                self.flow_spd_mps = self.bt_flow_spd_mps
+            elif not np.isnan(self.gps_percent_mb):
+                self.mb_spd_mps = self.gps_mb_spd_mps
+                self.dist_us_m = self.gps_dist_us_m
+                self.percent_mb = self.gps_percent_mb
+                self.mb_dir = self.gps_mb_dir
+                self.flow_spd_mps = self.bt_flow_spd_mps
+
             self.near_bed_speed_mps = np.sqrt(np.nanmean(nb_u)**2 + np.nanmean(nb_v)**2)
             self.stationary_us_track = bt_up_strm_dist_cum
             self.stationary_cs_track = bt_cs_strm_dist_cum
             self.stationary_mb_vel = mb_vel
-            
+
             # Quality check
             self.test_quality = 'Good'
             # Check duration
@@ -627,12 +733,149 @@ class MovingBedTests(object):
                 else:
                     self.moving_bed = 'No'
 
+            # Notify of differences in results of test between BT and GPS
+            if not np.isnan(self.gps_percent_mb):
+                if np.abs(self.bt_percent_mb - self.gps_percent_mb) > 2:
+                    self.messages.append('WARNING - Bottom track and GPS results differ by more than 2%.')
+                    self.test_quality = 'Warnings'
+
+                if np.logical_xor(self.bt_percent_mb >= 1,  self.gps_percent_mb >= 1):
+                    self.messages.append('WARNING - Bottom track and GPS results do not agree.')
+                    self.test_quality = 'Warnings'
+
         else:
             self.messages.append('ERROR - Stationary moving-bed test has no valid bottom track data.')
             self.test_quality = 'Errors'
             self.moving_bed = 'Unknown'
             self.duration_sec = np.nansum(trans_data.date_time.ens_duration_sec[in_transect_idx])
             self.percent_invalid_bt = 100
+
+    def compute_mb_gps(self):
+        """Computes moving-bed data using GPS.
+        """
+        if np.isnan(self.flow_dir):
+            u_water = np.nanmean(self.transect.w_vel.u_processed_mps[:, self.transect.in_transect_idx])
+            v_water = np.nanmean(self.transect.w_vel.v_processed_mps[:, self.transect.in_transect_idx])
+            self.flow_dir = np.arctan2(u_water, v_water) * 180 / np.pi
+            if self.flow_dir < 0:
+                self.flow_dir = self.flow_dir + 360
+
+        gps_bt = None
+        # Use GGA data if available and VTG is GGA is not available
+        if self.transect.boat_vel.gga_vel is not None:
+            gps_bt = TransectData.compute_gps_bt(self.transect, gps_ref='gga_vel')
+        elif self.transect.boat_vel.vtg_vel is not None:
+            gps_bt = TransectData.compute_gps_bt(self.transect, gps_ref='vtg_vel')
+        if gps_bt is not None:
+            self.gps_dist_us_m = gps_bt['mag']
+            self.gps_mb_dir = gps_bt['dir']
+            self.gps_mb_spd_mps = self.gps_dist_us_m / self.duration_sec
+            self.gps_flow_spd_mps = self.bt_flow_spd_mps - self.bt_mb_spd_mps + self.gps_mb_spd_mps
+            self.gps_percent_mb = (self.gps_mb_spd_mps / self.gps_flow_spd_mps) * 100
+
+    def magvar_change(self, magvar, old_magvar):
+        """Adjust moving-bed test for change in magvar.
+
+        Parameters
+        ----------
+        magvar: float
+            New magvar
+        old_magvar: float
+            Existing magvar
+        """
+
+        if self.transect.sensors.heading_deg.selected == 'internal':
+            magvar_change = magvar - old_magvar
+            self.bt_mb_dir = self.bt_mb_dir + magvar_change
+            self.flow_dir = self.flow_dir + magvar_change
+
+            # Recompute moving-bed tests with GPS and set results using existing reference
+            self.compute_mb_gps()
+            self.change_ref(self.ref)
+
+    def h_offset_change(self, h_offset, old_h_offset):
+        """Adjust moving-bed test for change in h_offset for external compass.
+
+        Parameters
+        ----------
+        h_offset: float
+            New h_offset
+        old_h_offset: float
+            Existing h_offset
+        """
+
+        if self.transect.sensors.heading_deg.selected == 'external':
+            h_offset_change = h_offset - old_h_offset
+            self.bt_mb_dir = self.bt_mb_dir + h_offset_change
+            self.flow_dir = self.flow_dir + h_offset_change
+
+            # Recompute moving-bed tests with GPS and set results using existing reference
+            self.compute_mb_gps()
+            self.change_ref(self.ref)
+
+    def change_ref(self, ref):
+        """Change moving-bed test fixed reference.
+
+        Parameters
+        ----------
+        ref: str
+            Defines specified reference (BT or GPS)
+        """
+
+        if ref == 'BT':
+            self.mb_spd_mps = self.bt_mb_spd_mps
+            self.dist_us_m = self.bt_dist_us_m
+            self.percent_mb = self.bt_percent_mb
+            self.mb_dir = self.bt_mb_dir
+            self.flow_spd_mps = self.bt_flow_spd_mps
+            self.ref = 'BT'
+            check_mb = True
+            if self.test_quality != 'Errors':
+                if self.type == 'Loop':
+                    if self.mb_spd_mps <= 0.012:
+                        check_mb = False
+                        self.moving_bed = 'No'
+                    else:
+                        if 135 < np.abs(self.flow_dir - self.mb_dir) < 225:
+                            check_mb = True
+                        else:
+                            check_mb = False
+                            self.moving_bed = 'Unknown'
+                if check_mb:
+                    if self.percent_mb > 1:
+                        self.moving_bed = 'Yes'
+                    else:
+                        self.moving_bed = 'No'
+            else:
+                self.moving_bed = 'Unknown'
+        elif ref == 'GPS':
+            self.mb_spd_mps = self.gps_mb_spd_mps
+            self.dist_us_m = self.gps_dist_us_m
+            self.percent_mb = self.gps_percent_mb
+            self.mb_dir = self.gps_mb_dir
+            self.flow_spd_mps = self.gps_flow_spd_mps
+            self.ref = 'GPS'
+            check_mb = True
+            if self.test_quality != 'Errors':
+                if self.type == 'Loop':
+                    if self.mb_spd_mps <= 0.012:
+                        check_mb = False
+                        self.moving_bed = 'No'
+                    else:
+                        if 135 < np.abs(self.flow_dir - self.mb_dir) < 225:
+                            check_mb = True
+                        else:
+                            check_mb = False
+                            self.messages.append('ERROR: GPS Loop closure error not in upstream direction. '
+                                                 + 'REPEAT LOOP or USE STATIONARY TEST')
+                            self.moving_bed = 'Unknown'
+                if check_mb:
+                    if self.percent_mb > 1:
+                        self.moving_bed = 'Yes'
+                    else:
+                        self.moving_bed = 'No'
+            else:
+                self.moving_bed = 'Unknown'
 
     @staticmethod
     def near_bed_velocity(u, v, depth, bin_depth):
@@ -767,8 +1010,9 @@ class MovingBedTests(object):
                             moving_bed.append(False)
                 # If any stationary test shows a moving-bed use all valid stationary test to correct BT discharge
                 if any(moving_bed) > 0:
-                    for n, lidx in enumerate(lidx_valid_stationary):
-                        moving_bed_tests[n].use_2_correct = True
+                    for n, test in enumerate(moving_bed_tests):
+                        if lidx_valid_stationary[n]:
+                            test.use_2_correct = True
 
             # If the flow speed is too low but there are not valid stationary tests use the last loop test.
             elif np.any(lidx_valid_loop):
