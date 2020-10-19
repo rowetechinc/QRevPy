@@ -1960,7 +1960,10 @@ class TransectData(object):
 
         gps_bt = dict()
         gps_vel = getattr(transect.boat_vel, gps_ref)
-        if gps_vel is not None and np.any(np.logical_not(np.isnan(gps_vel.u_processed_mps))):
+        if gps_vel is not None and \
+                1 < np.sum(np.logical_not(np.isnan(gps_vel.u_processed_mps))) < len(gps_vel.u_processed_mps) and \
+                1 < np.sum(np.logical_not(np.isnan(transect.boat_vel.bt_vel.u_processed_mps))) \
+                < len(transect.boat_vel.bt_vel.u_processed_mps):
             # Data prep
             bt_track = BoatStructure.compute_boat_track(transect, ref='bt_vel')
             bt_course, _ = cart2pol(bt_track['track_x_m'][-1], bt_track['track_y_m'][-1])
