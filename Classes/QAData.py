@@ -226,22 +226,22 @@ class QAData(object):
                 self.depths['all_invalid'] = new_qa.depths['all_invalid']
 
             # If QA check not available, get check from new QA
-            self.bt_vel = self.create_qa_dict(self, meas_struct.qa.btVel)
+            self.bt_vel = self.create_qa_dict(self, meas_struct.qa.btVel, ndim=2)
             if 'all_invalid' not in self.bt_vel:
                 self.bt_vel['all_invalid'] = new_qa.bt_vel['all_invalid']
 
             # If QA check not available, get check from new QA
-            self.gga_vel = self.create_qa_dict(self, meas_struct.qa.ggaVel)
+            self.gga_vel = self.create_qa_dict(self, meas_struct.qa.ggaVel, ndim=2)
             if 'all_invalid' not in self.gga_vel:
                 self.gga_vel['all_invalid'] = new_qa.gga_vel['all_invalid']
 
             # If QA check not available, get check from new QA
-            self.vtg_vel = self.create_qa_dict(self, meas_struct.qa.vtgVel)
+            self.vtg_vel = self.create_qa_dict(self, meas_struct.qa.vtgVel, ndim=2)
             if 'all_invalid' not in self.vtg_vel:
                 self.vtg_vel['all_invalid'] = new_qa.vtg_vel['all_invalid']
 
             # If QA check not available, get check from new QA
-            self.w_vel = self.create_qa_dict(self, meas_struct.qa.wVel)
+            self.w_vel = self.create_qa_dict(self, meas_struct.qa.wVel, ndim=2)
             if 'all_invalid' not in self.w_vel:
                 self.w_vel['all_invalid'] = new_qa.w_vel['all_invalid']
 
@@ -329,7 +329,7 @@ class QAData(object):
                 self.settings_dict['tab_edges'] = meas_struct.qa.settings_dict.tab_edges
 
     @staticmethod
-    def create_qa_dict(self, mat_data):
+    def create_qa_dict(self, mat_data, ndim=1):
         """Creates the dictionary used to store QA checks associated with the percent of discharge estimated
         by interpolation. This dictionary is used by BT, GPS, Depth, and WT.
 
@@ -349,25 +349,42 @@ class QAData(object):
 
         # allInvalid not available in older QRev data
         if hasattr(mat_data, 'allInvalid'):
-            qa_dict['all_invalid'] = self.make_array(mat_data.allInvalid).astype(bool)
+            qa_dict['all_invalid'] = self.make_array(mat_data.allInvalid, 1).astype(bool)
 
-        qa_dict['q_max_run_caution'] = self.make_array(mat_data.qRunCaution).astype(bool)
-        qa_dict['q_max_run_warning'] = self.make_array(mat_data.qRunWarning).astype(bool)
-        qa_dict['q_total_caution'] = self.make_array(mat_data.qTotalCaution).astype(bool)
-        qa_dict['q_total_warning'] = self.make_array(mat_data.qTotalWarning).astype(bool)
+        qa_dict['q_max_run_caution'] = self.make_array(mat_data.qRunCaution, ndim).astype(bool)
+        qa_dict['q_max_run_warning'] = self.make_array(mat_data.qRunWarning, ndim).astype(bool)
+        qa_dict['q_total_caution'] = self.make_array(mat_data.qTotalCaution, ndim).astype(bool)
+        qa_dict['q_total_warning'] = self.make_array(mat_data.qTotalWarning, ndim).astype(bool)
         qa_dict['status'] = mat_data.status
 
         # q_max_run and q_total not available in older QRev data
         try:
-            qa_dict['q_max_run'] = self.make_array(mat_data.qMaxRun)
-            qa_dict['q_total'] = self.make_array(mat_data.qTotal)
+            qa_dict['q_max_run'] = self.make_array(mat_data.qMaxRun, ndim)
+            qa_dict['q_total'] = self.make_array(mat_data.qTotal, ndim)
         except AttributeError:
             qa_dict['q_max_run'] = np.tile(np.nan, (len(mat_data.qRunCaution), 6))
             qa_dict['q_total'] = np.tile(np.nan, (len(mat_data.qRunCaution), 6))
         return qa_dict
 
     @staticmethod
-    def make_array(num_in):
+    def make_array(num_in, ndim=1):
+        """Ensures that num_in is an array and if not makes it an array.
+
+        num_in: any
+            Any value or array
+        """
+
+        if type(num_in) is np.ndarray:
+            if len(num_in.shape) < 2 and ndim > 1:
+                num_in = np.reshape(num_in, (1, num_in.shape[0]))
+                return num_in
+            else:
+                return num_in
+        else:
+            return np.array([num_in])
+
+    @staticmethod
+    def make_all_invalid_array(num_in):
         """Ensures that num_in is an array and if not makes it an array.
 
         num_in: any
