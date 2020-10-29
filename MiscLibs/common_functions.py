@@ -127,6 +127,32 @@ def iqr(data):
     # Compute statistics
     q25, q50, q75 = sp.mstats.mquantiles(data_1d, alphap=0.5, betap=0.5)
     sp_iqr = q75 - q25
+
+    return sp_iqr
+
+def iqr_2d(data):
+    """This function computes the iqr consistent with Matlab
+
+    Parameters
+    ----------
+    data: np.ndarray
+        Data for which the statistic is required
+
+    Returns
+    -------
+    sp_iqr: float
+        Inner quartile range
+
+    """
+
+    # Remove nan elements
+    data = np.array(data)
+    idx = np.where(np.isnan(data) == False)[0]
+    data = data[idx]
+
+    # Compute statistics
+    q25, q50, q75 = sp.mstats.mquantiles(data, alphap=0.5, betap=0.5)
+    sp_iqr = q75 - q25
     return sp_iqr
 
 

@@ -97,7 +97,7 @@ class OpenMeasurementDialog(QtWidgets.QDialog):
                 checked_transect_dialog = checked_transect_dialog.exec()
 
                 if checked_transect_dialog == QtWidgets.QMessageBox.Yes:
-                    self.checked == True
+                    self.checked = True
             elif file_extension == '.rmmt':
                 self.type = 'Rowe'
                 checked_transect_dialog = QtWidgets.QMessageBox()
@@ -110,7 +110,7 @@ class OpenMeasurementDialog(QtWidgets.QDialog):
                 checked_transect_dialog = checked_transect_dialog.exec()
 
                 if checked_transect_dialog == QtWidgets.QMessageBox.Yes:
-                    self.checked == True
+                    self.checked = True
 
             # SonTek, Nortek, or QRev file
             else:

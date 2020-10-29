@@ -357,7 +357,6 @@ class BoatData(object):
         self.interpolate = mat_data.interpolate
         self.beam_filter = mat_data.beamFilter
 
-
     def change_coord_sys(self, new_coord_sys, sensors, adcp):
         """This function allows the coordinate system to be changed.
 
