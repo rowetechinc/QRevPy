@@ -3,12 +3,15 @@ import re
 import logging
 import numpy as np
 import struct
-from MiscLibs.common_functions import pol2cart, valid_number, nans
-import crc16
+import binascii
 
 
 class RtbRowe(object):
-    """Class to read data from RTB files
+    """
+    Class to read data from RTB files
+
+    Single file to read in RTB data, then create an ensemble object list.  The list will contain all the
+    data from the file.
 
     """
 
@@ -103,7 +106,7 @@ class RtbRowe(object):
                     #self.file_progress(BLOCK_SIZE, file_size, fullname)
 
             # Process whatever is remaining in the buffer
-            self.process_playback_ens(DELIMITER + buff)
+            self.decode_ens(DELIMITER + buff)
 
     def decode_ens(self, ens_bytes: list, use_pd0_format: bool = False):
         """
@@ -122,8 +125,8 @@ class RtbRowe(object):
             logging.debug("Decoding binary data to ensemble: " + str(len(ens_bytes)))
             ens = self.decode_data_sets(ens_bytes, use_pd0_format=use_pd0_format)
 
-            # Increment the ensemble index
-            self.ens_index += 1
+            # Add the ensemble to the list
+            self.ens.append(ens)
 
     def verify_ens_data(self, ens_bytes: list, ens_start: int = 0):
         """
@@ -158,7 +161,7 @@ class RtbRowe(object):
                 # Calculate Checksum
                 # Use only the payload for the checksum
                 ens = ens_bytes[ens_start + self.HEADER_SIZE:ens_start + self.HEADER_SIZE + payload_size[0]]
-                calc_checksum = crc16.crc16xmodem(ens)
+                calc_checksum = binascii.crc_hqx(ens, 0)
 
                 # Verify checksum
                 if checksum[0] == calc_checksum:
@@ -259,8 +262,8 @@ class RtbRowe(object):
 
                 # Get code repeats for accurate conversion for PD0
                 num_repeats = None
-                if ensemble.Sys:
-                    num_repeats = ensemble.Sys.code_repeats
+                if ensemble.Cfg:
+                    num_repeats = ensemble.Cfg.wp_repeat_n
 
                 ensemble.Corr = Correlation(pd0_format=True)
                 ensemble.Corr.decode(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
@@ -275,8 +278,8 @@ class RtbRowe(object):
 
                 # Get the number of pings used in the ensemble
                 pings_per_ens = 1
-                if ensemble.Ens:
-                    pings_per_ens = ensemble.Ens.actual_ping_count
+                if ensemble.Cfg:
+                    pings_per_ens = ensemble.Cfg.actual_ping_count
 
                 ensemble.GdB = GoodBeam(pd0_format=use_pd0_format)
                 ensemble.GdB.decode(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
@@ -346,9 +349,9 @@ class RtbRowe(object):
             # NMEA data
             if "E000011" in name:
                 logging.debug(name)
-                nd = NmeaData(num_elements, element_multiplier)
-                nd.decode(ens_bytes[packetPointer:packetPointer + data_set_size])
-                ensemble.AddNmeaData(nd)
+                #nd = NmeaData(num_elements, element_multiplier)
+                #nd.decode(ens_bytes[packetPointer:packetPointer + data_set_size])
+                #ensemble.AddNmeaData(nd)
 
             # System Setup
             if "E000014" in name:
@@ -463,6 +466,27 @@ class RtbRowe(object):
         except Exception as e:
             logging.debug("Error creating a float from bytes. " + str(e))
             return 0.0
+
+    @staticmethod
+    def crc16(data: bytes):
+        '''
+        CRC-16-ModBus Algorithm
+        '''
+        poly = ~0x1021
+        data = bytearray(data)
+        crc = 0
+        for b in data:
+            cur_byte = 0xFF & b
+        for _ in range(0, 8):
+            if (crc & 0x0001) ^ (cur_byte & 0x0001):
+                crc = (crc >> 1) ^ poly
+        else:
+            crc >>= 1
+        cur_byte >>= 1
+        crc = (~crc & 0xFFFF)
+        crc = (crc << 8) | ((crc >> 8) & 0xFF)
+
+        return crc & 0xFFFF
 
 
 class Ensemble:
@@ -609,8 +633,10 @@ class InstrVelocity:
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
         # Initialize the array
-        for beam in range(element_multiplier):
-            self.vel[beam].append([None] * num_elements)
+        if not self.pd0_format:
+            self.vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
+        else:
+            self.vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
 
         # Create a 2D list of velocities
         # [beam][bin]
@@ -679,8 +705,10 @@ class EarthVelocity:
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
         # Initialize the array
-        for beam in range(element_multiplier):
-            self.vel[beam].append([None] * num_elements)
+        if not self.pd0_format:
+            self.vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
+        else:
+            self.vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
 
         # Create a 2D list of velocities
         # [beam][bin]
@@ -743,8 +771,10 @@ class Amplitude:
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
         # Initialize the array
-        for beam in range(element_multiplier):
-            self.amp[beam].append([None] * num_elements)
+        if not self.pd0_format:
+            self.amp = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
+        else:
+            self.amp = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
 
         # Create a 2D list of velocities
         # [beam][bin]
@@ -815,8 +845,10 @@ class Correlation:
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
         # Initialize the array
-        for beam in range(element_multiplier):
-            self.corr[beam].append([None] * num_elements)
+        if not self.pd0_format:
+            self.corr = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
+        else:
+            self.corr = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
 
         # Create a 2D list of velocities
         # [beam][bin]
@@ -900,8 +932,10 @@ class GoodBeam:
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
         # Initialize the array
-        for beam in range(element_multiplier):
-            self.pings[beam].append([None] * num_elements)
+        if not self.pd0_format:
+            self.pings = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+        else:
+            self.pings = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
 
         # Create a 2D list
         # [beam][bin]
@@ -974,8 +1008,10 @@ class GoodEarth:
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
         # Initialize the array
-        for beam in range(element_multiplier):
-            self.pings[beam].append([None] * num_elements)
+        if not self.pd0_format:
+            self.pings = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+        else:
+            self.pings = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
 
         # Create a 2D list
         # [beam][bin]
@@ -1273,7 +1309,7 @@ class Sensor:
         self.bt_system_temp = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
         self.bt_salinity = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
         self.bt_pressure = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_transducer_depth = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, Ensemble().BytesInFloat, ens_bytes)
+        self.bt_transducer_depth = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
 
 
 class BT:
@@ -1309,18 +1345,18 @@ class BT:
 
     def decode(self, ens_bytes: list, name_len: int = 8):
         """
-        Decode the ensemble data for the Correlation data.
+        Decode the ensemble data for the Bottom Traack data.
 
-        Initialize the list of correlation data.  [beam][bin]
+        Initialize the list of Bottom Track data.  [beam]
 
-        :param ens_bytes: Byte array containing the ensemble data.
+        :param ens_bytes: Byte array containing the Bottom Track data.
         :param name_len: Length of the name of the dataset.
         """
         # Determine where to start in the ensemble data
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
         # Get the number of beams
-        self.num_beams = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+        self.num_beams = int(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
         # Initialize the array
         self.snr = np.empty(shape=[self.num_beams], dtype=np.float)
@@ -1340,65 +1376,64 @@ class BT:
         self.pulse_coh_corr = np.empty(shape=[self.num_beams], dtype=np.float)
 
         index = 14
-        num_beams_i = int(self.num_beams)
 
-        for beam in range(num_beams_i):
+        for beam in range(self.num_beams):
             self.range[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
 
-        for beams in range(num_beams_i):
+        for beams in range(self.num_beams):
             self.snr[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
 
-        for beams in range(num_beams_i):
+        for beams in range(self.num_beams):
             self.amp[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
 
-        for beams in range(num_beams_i):
+        for beams in range(self.num_beams):
             self.corr[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
 
-        for beams in range(num_beams_i):
+        for beams in range(self.num_beams):
             self.beam_vel[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
 
-        for beams in range(num_beams_i):
+        for beams in range(self.num_beams):
             self.beam_good[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
 
-        for beams in range(num_beams_i):
+        for beams in range(self.num_beams):
             self.instr_vel[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
 
-        for beams in range(num_beams_i):
+        for beams in range(self.num_beams):
             self.instr_good[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
 
-        for beams in range(num_beams_i):
+        for beams in range(self.num_beams):
             self.earth_vel[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
 
-        for beams in range(num_beams_i):
+        for beams in range(self.num_beams):
             self.earth_good[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
 
-        for beams in range(num_beams_i):
+        for beams in range(self.num_beams):
             self.pulse_coh_snr[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
 
-        for beams in range(num_beams_i):
+        for beams in range(self.num_beams):
             self.pulse_coh_amp[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
 
-        for beams in range(num_beams_i):
+        for beams in range(self.num_beams):
             self.pulse_coh_vel[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
 
-        for beams in range(num_beams_i):
+        for beams in range(self.num_beams):
             self.pulse_coh_noise[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
 
-        for beams in range(num_beams_i):
+        for beams in range(self.num_beams):
             self.pulse_coh_corr[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
 
