@@ -10,9 +10,10 @@ class RtbRowe(object):
     """
     Class to read data from RTB files
 
-    Single file to read in RTB data, then create an ensemble object list.  The list will contain all the
+    Single file to read in RTB data, then create an list of objects.  The lists will contain all the
     data from the file.
 
+    This file was specifically created to work in QRevPy to decode RTI data and follow QRevPy's data format.
     """
 
     # Prevent Magic Numbers
@@ -40,11 +41,190 @@ class RtbRowe(object):
         self.file_name = file_path
         self.use_pd0_format = use_pd0_format
 
-        # List of all the ensembles decoded
-        self.ens = []
+        # Count the number of ensembles in the file to initialize the np.array
+        self.num_ens, self.num_beams, self.num_bins = self.get_file_info(file_path=file_path)
+
+        # List of all the ensemble data decoded
+        self.Inst = Inst()
+        self.Cfg = Cfg(pd0_format=use_pd0_format)
+        self.Sensor = Sensor(pd0_format=use_pd0_format)
+        self.Amp = Amplitude(pd0_format=use_pd0_format)
+        self.Corr = Correlation(pd0_format=use_pd0_format)
+        self.Wt = Wt(pd0_format=use_pd0_format,
+                     num_ens=self.num_ens,
+                     num_beams=self.num_beams,
+                     num_bins=self.num_bins)
+        self.InstrVel = InstrVelocity(pd0_format=use_pd0_format)
+        self.EarthVel = EarthVelocity(pd0_format=use_pd0_format)
+        self.GdB = GoodBeam(pd0_format=use_pd0_format)
+        self.GdE = GoodEarth(pd0_format=use_pd0_format)
+        self.Rt = RT(pd0_format=use_pd0_format)
+        self.Bt = BT(pd0_format=use_pd0_format)
+        self.Nmea = Nmea(pd0_format=use_pd0_format)
+        self.Gage = Gage(pd0_format=use_pd0_format)
+        self.Gps = []
+        self.Gps2 = []
+        self.Surface = Surface()
+        self.AutoMode = []
+        self.River_BT = RiverBT(pd0_format=use_pd0_format)
+
+        # Keep track of ensemble index
+        # This is used only for 3 or 4 beam ensembles
+        # Vertical beams are merged with 3 or 4 beam ensemble
+        self.ens_index = 0
 
         # Read in the given file path
         self.rtb_read(file_path=file_path, use_pd0_format=self.use_pd0_format)
+
+    @staticmethod
+    def count_ensembles(file_path: str):
+        """
+        Get the file information like the number of ensembles in the file.
+        """
+        # RTB ensemble delimiter
+        DELIMITER = b'\x80' * 16
+
+        # Block size to read in data
+        BLOCK_SIZE = 4096
+
+        # Keep count of the number of ensembles found
+        ens_count = 0
+
+        # Search for the number of ensembles by looking for the delimiter
+        # Check to ensure file exists
+        if os.path.exists(file_path):
+            with open(file_path, "rb") as f:
+                data = f.read(BLOCK_SIZE)  # Read in data
+
+                # Verify data was found
+                while data:
+                    # Check for the delimiter
+                    if DELIMITER in data:
+                        ens_count += 1
+
+                    # Read the next batch of data
+                    data = f.read(BLOCK_SIZE)
+
+        return ens_count
+
+    def get_file_info(self, file_path: str):
+        """
+        Get the file information like the number of ensembles,
+        number of beams and number of bins.
+        This only counts 3 or 4 beam ensembles.  Vertical beams
+        will be merged with 4 beam ensembles.
+
+        :param file_path File path to inspect.
+        :return NumEnsembles, NumBeams, NumBins
+        """
+        # RTB ensemble delimiter
+        DELIMITER = b'\x80' * 16
+
+        # Block size to read in data
+        BLOCK_SIZE = 4096
+
+        # Create a buffer
+        buff = bytes()
+
+        # Keep count of the number of ensembles found
+        ens_count = 0
+        num_beams = 0
+        num_bins = 0
+
+        # Search for the number of ensembles by looking for the delimiter
+        # Check to ensure file exists
+        if os.path.exists(file_path):
+            with open(file_path, "rb") as f:
+                data = f.read(BLOCK_SIZE)  # Read in data
+
+                # Verify data was found
+                while data:
+                    # Accumulate the buffer
+                    buff += data
+
+                    # Check for the delimiter
+                    if DELIMITER in buff:
+                        # If delimiter found, split at the delimiter to get the remaining buffer data
+                        chunks = buff.split(DELIMITER)
+
+                        # Put the remaining data back in the buffer
+                        buff = chunks.pop()
+
+                        # Take out the ens data
+                        for chunk in chunks:
+                            # Process the binary ensemble data
+                            # Verify the ENS data is good
+                            # This will check that all the data is there and the checksum is good
+                            if self.verify_ens_data(DELIMITER + chunk):
+                                # Get the ensemble info
+                                bin_count, beams_count = self.get_ens_info(DELIMITER + chunk)
+
+                                # Verify we have 3 or 4 beam data ensemble
+                                # Vertical beam is not counted and is merged with 4 beam ensembles
+                                if beams_count > 2:
+                                    ens_count += 1
+
+                                    # Set the largest beam and bin number
+                                    num_beams = max(beams_count, num_beams)
+                                    num_bins = max(bin_count, num_bins)
+
+                    # Read the next batch of data
+                    data = f.read(BLOCK_SIZE)
+
+            # Process whatever is remaining in the buffer
+            # Verify the ENS data is good
+            # This will check that all the data is there and the checksum is good
+            if self.verify_ens_data(DELIMITER + buff):
+                # Get the ensemble info
+                bin_count, beams_count = self.get_ens_info(DELIMITER + buff)
+
+                # Verify we have 3 or 4 beam data ensemble
+                # Vertical beam is not counted and is merged with 4 beam ensembles
+                if beams_count > 2:
+                    ens_count += 1
+
+                    # Set the largest beam and bin number
+                    num_beams = max(beams_count, num_beams)
+                    num_bins = max(bin_count, num_bins)
+
+        return ens_count, num_beams, num_bins
+
+    def get_ens_info(self, ens_bytes: list):
+        """
+        Decode the datasets to an ensemble to get the general information about the ensemble.
+        This includes the number of beams and bins.
+        Use verify_ens_data if you are using this
+        as a static method to verify the data is correct.
+        :param ens_bytes: Ensemble binary data.  Decode the dataset.
+        :return: Return number of beam and number of bins.
+        """
+        packetPointer = self.HEADER_SIZE
+        ens_len = len(ens_bytes)
+
+        num_elements = 0
+        element_multiplier = 0
+
+        # Decode the ensemble datasets
+        # Limit the number of attempts to look for new datasets
+        for x in range(self.MAX_DATASETS):
+            # Check if we are at the end of the payload
+            if packetPointer >= ens_len - RtbRowe.CHECKSUM_SIZE - RtbRowe.HEADER_SIZE:
+                break
+
+            # Get the dataset info
+            ds_type = RtbRowe.get_int32(packetPointer + (RtbRowe.BYTES_IN_INT32 * 0), RtbRowe.BYTES_IN_INT32, ens_bytes)
+            num_elements = RtbRowe.get_int32(packetPointer + (RtbRowe.BYTES_IN_INT32 * 1), RtbRowe.BYTES_IN_INT32, ens_bytes)
+            element_multiplier = RtbRowe.get_int32(packetPointer + (RtbRowe.BYTES_IN_INT32 * 2), RtbRowe.BYTES_IN_INT32, ens_bytes)
+            image = RtbRowe.get_int32(packetPointer + (RtbRowe.BYTES_IN_INT32 * 3), RtbRowe.BYTES_IN_INT32, ens_bytes)
+            name_len = RtbRowe.get_int32(packetPointer + (RtbRowe.BYTES_IN_INT32 * 4), RtbRowe.BYTES_IN_INT32, ens_bytes)
+            name = str(ens_bytes[packetPointer + (RtbRowe.BYTES_IN_INT32 * 5):packetPointer + (RtbRowe.BYTES_IN_INT32 * 5) + 8], 'UTF-8')
+
+            # Beam velocity will contain all the information we need
+            if "E000001" in name:
+                # Return the number bins and number of beams
+                return num_elements, element_multiplier
+
+        return num_elements, element_multiplier
 
     def rtb_read(self, file_path: str, wr2: bool = False, use_pd0_format: bool = False):
         """
@@ -111,6 +291,12 @@ class RtbRowe(object):
             # Process whatever is remaining in the buffer
             self.decode_ens(DELIMITER + buff, use_pd0_format=use_pd0_format)
 
+            # Convert all the list to numpy array after all data added
+            # More efficient to append to list then numpy array
+            self.Cfg.convert_np_array()
+            self.Surface.convert_np_array()
+            self.Inst.convert_np_array()
+
     def decode_ens(self, ens_bytes: list, use_pd0_format: bool = False):
         """
         Attempt to decode the ensemble.  This will verify the checksum passes.
@@ -126,10 +312,12 @@ class RtbRowe(object):
         if self.verify_ens_data(ens_bytes):
             # Decode the ens binary data
             logging.debug("Decoding binary data to ensemble: " + str(len(ens_bytes)))
-            ens = self.decode_data_sets(ens_bytes, use_pd0_format=use_pd0_format)
+
+            # Decode the data
+            self.decode_data_sets(ens_bytes, use_pd0_format=use_pd0_format)
 
             # Add the ensemble to the list
-            self.ens.append(ens)
+            #self.ens.append(ens)
 
     def verify_ens_data(self, ens_bytes: list, ens_start: int = 0):
         """
@@ -193,17 +381,20 @@ class RtbRowe(object):
         :return: Return the decoded ensemble.
         """
         packetPointer = self.HEADER_SIZE
-        #type = 0
-        #numElements = 0
-        #elementMultiplier = 0
-        #imag = 0
-        #nameLen = 0
-        #name = ""
-        #dataSetSize = 0
         ens_len = len(ens_bytes)
 
-        # Create Ensemble
-        ensemble = Ensemble()
+        # Flag if BT data found
+        bt_data_found = False
+        bt_adcp3_data_found = False
+        ancillary_adcp3_found = False
+
+        # Flag if this ensemble is vertical beam ensemble
+        is_vert_ens = False
+
+        # Create a new config and sensor object
+        # Multiple datasets are needed to populate these objects
+        cfg = Cfg(pd0_format=use_pd0_format)
+        sensor = Sensor(pd0_format=use_pd0_format)
 
         # Decode the ensemble datasets
         # Limit the number of attempts to look for new datasets
@@ -226,38 +417,48 @@ class RtbRowe(object):
             # Beam Velocity
             if "E000001" in name:
                 logging.debug(name)
-                ensemble.BeamVel = BeamVelocity(pd0_format=use_pd0_format)
-                ensemble.BeamVel.decode(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
-                                        num_elements=num_elements,
-                                        element_multiplier=element_multiplier,
-                                        name_len=name_len)
+
+                # Test if this ensemble is a vertical beam
+                if element_multiplier < 2:
+                    is_vert_ens = True
+                    # Add vertical beam ensemble
+                else:
+                    self.Wt.decode_vel(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
+                                       ens_index=self.ens_index,
+                                       num_elements=num_elements,
+                                       element_multiplier=element_multiplier,
+                                       name_len=name_len)
 
             # Instrument Velocity
             if "E000002" in name:
                 logging.debug(name)
-                ensemble.InstrVel = InstrVelocity(pd0_format=use_pd0_format)
-                ensemble.InstrVel.decode(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
-                                         num_elements=num_elements,
-                                         element_multiplier=element_multiplier,
-                                         name_len=name_len)
+                self.InstrVel.decode(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
+                                     num_elements=num_elements,
+                                     element_multiplier=element_multiplier,
+                                     name_len=name_len)
 
             # Earth Velocity
             if "E000003" in name:
                 logging.debug(name)
-                ensemble.EarthVel = EarthVelocity(pd0_format=use_pd0_format)
-                ensemble.EarthVel.decode(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
-                                         num_elements=num_elements,
-                                         element_multiplier=element_multiplier,
-                                         name_len=name_len)
+                self.EarthVel.decode(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
+                                     num_elements=num_elements,
+                                     element_multiplier=element_multiplier,
+                                      name_len=name_len)
 
             # Amplitude
             if "E000004" in name:
                 logging.debug(name)
-                ensemble.Amp = Amplitude(pd0_format=use_pd0_format)
-                ensemble.Amp.decode(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
-                                    num_elements=num_elements,
-                                    element_multiplier=element_multiplier,
-                                    name_len=name_len)
+
+                # Check for vertical beam data
+                if element_multiplier < 2:
+                    is_vert_ens = True
+                    # Add vertical beam ensemble
+                else:
+                    self.Wt.decode_rssi(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
+                                        ens_index=self.ens_index,
+                                        num_elements=num_elements,
+                                        element_multiplier=element_multiplier,
+                                        name_len=name_len)
 
             # Correlation
             if "E000005" in name:
@@ -265,15 +466,20 @@ class RtbRowe(object):
 
                 # Get code repeats for accurate conversion for PD0
                 num_repeats = None
-                if ensemble.Cfg:
-                    num_repeats = ensemble.Cfg.wp_repeat_n
+                if self.Cfg.wp_repeat_n and len(self.Cfg.wp_repeat_n):
+                    num_repeats = self.Cfg.wp_repeat_n[-1]
 
-                ensemble.Corr = Correlation(pd0_format=True)
-                ensemble.Corr.decode(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
-                                     num_elements=num_elements,
-                                     element_multiplier=element_multiplier,
-                                     num_repeats=num_repeats,
-                                     name_len=name_len)
+                # Check for vertical beam data
+                if element_multiplier < 2:
+                    is_vert_ens = True
+                    # Add vertical beam ensemble
+                else:
+                    self.Wt.decode_corr(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
+                                        ens_index=self.ens_index,
+                                        num_elements=num_elements,
+                                        element_multiplier=element_multiplier,
+                                        num_repeats=num_repeats,
+                                        name_len=name_len)
 
             # Good Beam
             if "E000006" in name:
@@ -281,34 +487,46 @@ class RtbRowe(object):
 
                 # Get the number of pings used in the ensemble
                 pings_per_ens = 1
-                if ensemble.Cfg:
-                    pings_per_ens = ensemble.Cfg.actual_ping_count
+                if self.Cfg.actual_ping_count and len(self.Cfg.actual_ping_count):
+                    pings_per_ens = self.Cfg.actual_ping_count[-1]
 
-                ensemble.GdB = GoodBeam(pd0_format=use_pd0_format)
-                ensemble.GdB.decode(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
-                                    num_elements=num_elements,
-                                    element_multiplier=element_multiplier,
-                                    pings_per_ens=pings_per_ens,
-                                    name_len=name_len)
+                # Check if vertical beam data
+                if element_multiplier < 2:
+                    is_vert_ens = True
+                    # Add vertical beam ensemble
+                else:
+                    self.Wt.decode_pgb(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
+                                       ens_index=self.ens_index,
+                                       num_elements=num_elements,
+                                       element_multiplier=element_multiplier,
+                                       pings_per_ens=pings_per_ens,
+                                       name_len=name_len)
 
             # Good Earth
             if "E000007" in name:
                 logging.debug(name)
-                ensemble.GdE = GoodEarth(pd0_format=use_pd0_format)
-                ensemble.GdE.decode(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
-                                    num_elements=num_elements,
-                                    element_multiplier=element_multiplier,
-                                    pings_per_ens=pings_per_ens,
-                                    name_len=name_len)
+
+                # Get the number of pings used in the ensemble
+                pings_per_ens = 1
+                if self.Cfg.actual_ping_count and len(self.Cfg.actual_ping_count):
+                    pings_per_ens = self.Cfg.actual_ping_count[-1]
+
+                self.GdE.decode(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
+                                num_elements=num_elements,
+                                element_multiplier=element_multiplier,
+                                pings_per_ens=pings_per_ens,
+                                name_len=name_len)
 
             # Ensemble Data
             if "E000008" in name:
                 logging.debug(name)
                 # Check if the Cfg is already created from other dataset
-                if not ensemble.Cfg:
-                    ensemble.Cfg = Cfg(pd0_format=use_pd0_format)
-                ensemble.Cfg.decode_ensemble_data(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
-                                                  name_len=name_len)
+                # This will be added to the list at the end of all decoding
+                self.Cfg.decode_ensemble_data(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
+                                              name_len=name_len)
+
+                self.Inst.decode_ensemble_data(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
+                                               name_len=name_len)
 
             # Ancillary Data
             if "E000009" in name:
@@ -316,73 +534,124 @@ class RtbRowe(object):
 
                 # Configuration data
                 # Check if the Cfg is already created from other dataset
-                if not ensemble.Cfg:
-                    ensemble.Cfg = Cfg(pd0_format=use_pd0_format)
-                ensemble.Cfg.decode_ancillary_data(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
-                                                   name_len=name_len)
+                # This will be added to the list at the end of all decoding
+                self.Cfg.decode_ancillary_data(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
+                                               name_len=name_len)
 
                 # Sensor data
                 # Check if the Sensor is already created from other dataset
-                if not ensemble.Sensor:
-                    ensemble.Sensor = Sensor(pd0_format=use_pd0_format)
-                ensemble.Sensor.decode_ancillary_data(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
-                                                      name_len=name_len)
+                # This will be added to the list at the end of all decoding
+                self.Sensor.decode_ancillary_data(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
+                                                  name_len=name_len)
+
+                if num_elements > 19:
+                    self.Sensor.decode_ancillary_adcp3_data(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
+                                                            name_len=name_len)
+                    self.Cfg.decode_ancillary_adcp3_data(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
+                                                         name_len=name_len)
+                    ancillary_adcp3_found = True
 
             # Bottom Track
             if "E000010" in name:
                 logging.debug(name)
                 # Populate Bottom Track data
-                if not ensemble.Bt:
-                    ensemble.Bt = BT(pd0_format=use_pd0_format)
-                ensemble.Bt.decode(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
-                                   name_len=name_len)
+                self.Bt.decode(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
+                               name_len=name_len)
+                bt_data_found = True
 
                 # Populate Config data
-                if not ensemble.Cfg:
-                    ensemble.Cfg = Cfg(pd0_format=use_pd0_format)
-                ensemble.Cfg.decode_bottom_track_data(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
-                                                      name_len=name_len)
+                self.Cfg.decode_bottom_track_data(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
+                                                  name_len=name_len)
 
                 # Populate Sensor data
-                if not ensemble.Sensor:
-                    ensemble.Sensor = Cfg(pd0_format=use_pd0_format)
-                ensemble.Sensor.decode_bottom_track_data(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
-                                                         name_len=name_len)
+                self.Sensor.decode_bottom_track_data(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
+                                                     name_len=name_len)
+
+                # Check if ADCP 3 data is available
+                # Number of elements.  74 for 4 Beam system, 59 for 3 beam, 29 for 1 beam
+                if num_elements > 74:
+                    self.Sensor.decode_bottom_track_adcp3_data(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
+                                                               name_len=name_len)
+                    # Set flag that data found
+                    bt_adcp3_data_found = True
 
             # NMEA data
             if "E000011" in name:
                 logging.debug(name)
-                if not ensemble.Nmea:
-                    ensemble.Nmea = Nmea(pd0_format=use_pd0_format)
-                ensemble.Nmea.decode(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
-                                     name_len=name_len)
+                self.Nmea.decode(ens_bytes=ens_bytes[packetPointer:packetPointer+data_set_size],
+                                 name_len=name_len)
 
             # System Setup
             if "E000014" in name:
                 logging.debug(name)
                 # Configuration data
                 # Check if the Cfg is already created from other dataset
-                if not ensemble.Cfg:
-                    ensemble.Cfg = Cfg(pd0_format=use_pd0_format)
-                ensemble.Cfg.decode_systemsetup_data(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
-                                                     name_len=name_len)
+                self.Cfg.decode_systemsetup_data(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
+                                                 name_len=name_len)
 
-                if not ensemble.Sensor:
-                    ensemble.Sensor = Sensor(pd0_format=use_pd0_format)
-                ensemble.Sensor.decode_systemsetup_data(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
-                                                        name_len=name_len)
+                self.Sensor.decode_systemsetup_data(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
+                                                    name_len=name_len)
 
             # Range Tracking
             if "E000015" in name:
                 logging.debug(name)
-                ensemble.Rt = RT(pd0_format=use_pd0_format)
-                ensemble.Rt.decode(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
-                                   name_len=name_len)
+                self.Rt.decode(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
+                               name_len=name_len)
+
+            if "E000016" in name:
+                logging.debug(name)
+                self.Gage.decode_data(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
+                                      name_len=name_len)
+
+            if "R000001" in name:
+                logging.debug(name)
+                self.River_BT.decode_data(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
+                                          name_len=name_len)
+
+            if "R000002" in name:
+                logging.debug(name)
+                #RiverTimeStamp
+
+            if "R000003" in name:
+                logging.debug(name)
+                #RiverNmea
+
+            if "R000004" in name:
+                logging.debug(name)
+                #RiverBThump
+
+            if "R000005" in name:
+                logging.debug(name)
+                #RiverStationID
+
+            if "R000006" in name:
+                logging.debug(name)
+                #RiverTransectID
 
             # Move to the next dataset
             packetPointer += data_set_size
 
-        return ensemble
+        # Check if Bottom Track data was never found
+        # If not fill values with NAN
+        if not bt_data_found and self.Cfg:
+            self.Bt.empty_init(num_ens=len(self.Cfg.num_beams),
+                               num_beams=self.Cfg.num_beams)
+            self.Cfg.empty_bt_init(num_beams=len(self.Cfg.num_beams))
+            self.Sensor.empty_bt_init(num_beams=len(self.Cfg.num_beams))
+
+        if not bt_adcp3_data_found and self.Cfg:
+            self.Sensor.empty_bt_adcp3_init(num_beams=len(self.Cfg.num_beams))
+
+        if not ancillary_adcp3_found:
+            self.Sensor.empty_ancillary_adcp3_init()
+            self.Cfg.empty_ancillary_adcp3_init()
+
+        # Create empty Surface values
+        self.Surface.empty_init()
+
+        # Increment the ensemble index if not a vertical beam
+        if is_vert_ens:
+            self.ens_index += 1
 
     @staticmethod
     def get_data_set_size(ds_type: int, name_len: int, num_elements: int, element_multiplier: int):
@@ -475,53 +744,44 @@ class RtbRowe(object):
             logging.debug("Error creating a float from bytes. " + str(e))
             return 0.0
 
-
-class Ensemble:
-    """
-    Object to hold all the ensemble data.
-    Eliminate the need to create array for every element.
-    Also you do not need to know how many ensembles are in a file.
-    Because an RTB can have up to 12 different configurations per deployment,
-    the ensemble sizes will vary widely.
-    """
-    def __init__(self):
-        self.Cfg = None
-        self.Sensor = None
-        self.Amp = None
-        self.Corr = None
-        self.BeamVel = None
-        self.InstrVel = None
-        self.EarthVel = None
-        self.GdB = None
-        self.GdE = None
-        self.Rt = None
-        self.Wt = None
-        self.Bt = None
-        self.Gps = None
-        self.Gps2 = None
-        self.Surface = None
-        self.AutoMode = None
-        self.Nmea = None
+    @staticmethod
+    def nans(num_ens: int):
+        """
+        Create a numpy array filled with NaN based on the number of
+        ensembles given.
+        @param num_ens: Number of ensembles
+        """
+        empty_arr = np.empty(num_ens, dtype=float)
+        empty_arr.fill(np.nan)
+        return empty_arr
 
 
-class BeamVelocity:
+class Wt:
     """
+    Water Profile data.
     Beam Velocity.
     Velocity data in the Beam Coordinate Transform. (Raw Velocity Data)
+    Correlation, Amplitude and Good Beam data for data quality.
     """
-    def __init__(self, pd0_format: bool = False):
+    def __init__(self, num_beams: int, num_bins: int, num_ens: int, pd0_format: bool = False):
         """
         Set the flag if using PD0 format data.
         If using PD0 format, then the beams will be rearranged to match PD0 beam order
         and the velocity scale will be mm/s instead of m/s.
         RTB BEAM 0,1,2,3 = PD0 BEAM 3,2,0,1
 
+        :param num_bins Number of bins/cells.
+        :param num_beams Number of beams on the system.  Not including vertical beam
+        :param num_ens Number of ensembles in file.
         :param pd0_format: Set flag if the data should be decoded in PD0 format.
         """
-        self.vel = None
+        self.corr = RtbRowe.nans([num_beams, num_bins, num_ens])            # Correlation in counts
+        self.pergd = RtbRowe.nans([num_beams, num_bins, num_ens])           # Percent Good in percentage
+        self.rssi = RtbRowe.nans([num_beams, num_bins, num_ens])            # RSSI/Amplitude in dB
+        self.vel_mps = RtbRowe.nans([num_beams, num_bins, num_ens])         # Beam Velocity in m/s.
         self.pd0_format = pd0_format
 
-    def decode(self, ens_bytes: list, num_elements: int, element_multiplier: int, name_len: int = 8):
+    def decode_vel(self, ens_bytes: list, ens_index: int, num_elements: int, element_multiplier: int, name_len: int = 8):
         """
         Decode the ensemble data for the Beam velocity.
 
@@ -536,6 +796,7 @@ class BeamVelocity:
         PD0 Bad Value is -32768
 
         :param ens_bytes: Byte array containing the ensemble data.
+        :param ens_index: Ensemble Index.
         :param element_multiplier: Number of beams.
         :param num_elements; Number of bins.
         :param name_len: Length of the name of the dataset.
@@ -544,12 +805,10 @@ class BeamVelocity:
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
         # Initialize the array
-        #for beam in range(element_multiplier):
-        #    self.vel[beam].append([None] * num_elements)
         if not self.pd0_format:
-            self.vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
+            vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
         else:
-            self.vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+            vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
 
         # Create a 2D list of velocities
         # [beam][bin]
@@ -558,7 +817,7 @@ class BeamVelocity:
                 # Determine if RTB or PD0 data format
                 if not self.pd0_format:
                     # Use the original value
-                    self.vel[beam][bin_num] = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+                    vel[beam][bin_num] = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
                 else:
                     # Get the velocity data
                     pd0_vel = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
@@ -572,18 +831,222 @@ class BeamVelocity:
 
                     # Set the velocity based on the beam reassignment
                     if element_multiplier == 1:             # Vertical Beam
-                        self.vel[0][bin_num] = pd0_vel
+                        vel[0][bin_num] = pd0_vel
                     elif beam == 0:                         # RTB 0 - PD0 3
-                        self.vel[3][bin_num] = pd0_vel
+                        vel[3][bin_num] = pd0_vel
                     elif beam == 1:                         # RTB 1 - PD0 2
-                        self.vel[2][bin_num] = pd0_vel
+                        vel[2][bin_num] = pd0_vel
                     elif beam == 2:                         # RTB 2 - PD0 0
-                        self.vel[0][bin_num] = pd0_vel
+                        vel[0][bin_num] = pd0_vel
                     elif beam == 3:                         # RTB 3 - PD0 1
-                        self.vel[1][bin_num] = pd0_vel
+                        vel[1][bin_num] = pd0_vel
 
                 # Move the pointer
                 packet_pointer += RtbRowe.BYTES_IN_FLOAT
+
+        # Reshape the data from [beam, bin] to [bin, beam]
+        vel = np.reshape(vel, [num_elements, element_multiplier])
+        # Add the data the numpy array [:num_beams, :num_bins, ens_index]
+        self.vel_mps[:element_multiplier, :num_elements, ens_index] = vel.T
+
+    def decode_rssi(self, ens_bytes: list, ens_index: int, num_elements: int, element_multiplier: int, name_len: int = 8):
+        """
+        Decode the ensemble data for the Amplitude data.
+
+        Amplitude data which reports signal strength.
+        Amplitude values range from 0 dB - 140 dB.
+        Values below 25dB is considered noise.  The noise floor
+        with systems with high EMI can be as a 40dB.
+
+        Initialize the list of amplitude data.  [beam][bin]
+
+        :param ens_bytes: Byte array containing the ensemble data.
+        :param ens_index: Ensemble index to store the data.
+        :param element_multiplier: Number of beams.
+        :param num_elements; Number of bins.
+        :param name_len: Length of the name of the dataset.
+        """
+        # Determine where to start in the ensemble data
+        packet_pointer = RtbRowe.get_base_data_size(name_len)
+
+        # Initialize the array
+        if not self.pd0_format:
+            amp = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
+        else:
+            amp = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+
+        # Create a 2D list of velocities
+        # [beam][bin]
+        for beam in range(element_multiplier):
+            for bin_num in range(num_elements):
+                # Determine if RTB or PD0 data format
+                if not self.pd0_format:
+                    amp[beam][bin_num] = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+                else:
+                    # Get the dB and convert to counts
+                    pd0_amp = round(RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes) * 2.0)
+
+                    # Beam Reassignment
+                    if element_multiplier == 1:                 # Vertical Beam
+                        amp[beam][bin_num] = pd0_amp
+                    elif beam == 0:                               # RTB 0 - PD0 3
+                        amp[3][bin_num] = pd0_amp
+                    elif beam == 1:                             # RTB 1 - PD0 2
+                        amp[2][bin_num] = pd0_amp
+                    elif beam == 2:                             # RTB 2 - PD0 0
+                        amp[0][bin_num] = pd0_amp
+                    elif beam == 3:                             # RTB 3 - PD0 1
+                        amp[1][bin_num] = pd0_amp
+
+                # Move the pointer
+                packet_pointer += RtbRowe.BYTES_IN_FLOAT
+
+        # Reshape the data from [beam, bin] to [bin, beam]
+        amp = np.reshape(amp, [num_elements, element_multiplier])
+        # Add the data the numpy array [:num_beams, :num_bins, ens_index]
+        self.rssi[:element_multiplier, :num_elements, ens_index] = amp.T
+
+    def decode_corr(self, ens_bytes: list, ens_index: int, num_elements: int, element_multiplier: int, name_len: int = 8, num_repeats: int = None):
+        """
+        Decode the ensemble data for the Correlation data.
+
+        Set the flag if using PD0 format data.
+        If using PD0 format, then the beams will be rearranged to match PD0 beam order
+        and the scale will change from percentage to counts.
+        The value has to be converted from percentage to 0-255
+        Scale 0%-100% to 0-255
+        255 = 100%
+        0   =   0%
+        50% = 0.50 * 255 = 127.5 = 255/2
+
+        RTB BEAM 0,1,2,3 = PD0 Corr 3,2,0,1
+
+        Initialize the list of correlation data.  [beam][bin]
+
+        :param ens_bytes: Byte array containing the ensemble data.
+        :param ens_index: Ensemble index to store the data.
+        :param element_multiplier: Number of beams.
+        :param num_elements; Number of bins.
+        :param name_len: Length of the name of the dataset.
+        :param num_repeats: Only used when converting to PD0 format.  Accurately converts to counts.
+        """
+        # Determine where to start in the ensemble data
+        packet_pointer = RtbRowe.get_base_data_size(name_len)
+
+        # Initialize the array
+        if not self.pd0_format:
+            corr = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
+        else:
+            corr = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+
+        # Create a 2D list of velocities
+        # [beam][bin]
+        for beam in range(element_multiplier):
+            for bin_num in range(num_elements):
+                # Determine if RTB or PD0 data format
+                if not self.pd0_format:
+                    corr[beam][bin_num] = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+                else:
+                    # Verify a number of code repeats is given
+                    if num_repeats:
+                        # Verify a good value for num_repeats
+                        if num_repeats == 0:
+                            num_repeats = 1
+
+                        # Calculate code repeats used
+                        repeats = (num_repeats - 1.0) / num_repeats
+                        if repeats == 0.0:
+                            repeats = 1.0
+
+                        # Get the correlation percentage and convert to counts
+                        pd0_corr = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes) * 128.0
+                        pd0_corr = round(pd0_corr / repeats)
+                    else:
+                        # If no repeats given, use this calculation
+                        pd0_corr = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes) * 255.0
+
+                    # Beam Reassignment
+                    if element_multiplier == 1:                 # Vertical Beam
+                        corr[beam][bin_num] = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes) * 255.0
+                    elif beam == 0:                               # RTB 0 - PD0 3
+                        corr[3][bin_num] = pd0_corr
+                    elif beam == 1:                             # RTB 1 - PD0 2
+                        corr[2][bin_num] = pd0_corr
+                    elif beam == 2:                             # RTB 2 - PD0 0
+                        corr[0][bin_num] = pd0_corr
+                    elif beam == 3:                             # RTB 3 - PD0 1
+                        corr[1][bin_num] = pd0_corr
+
+                # Move the pointer
+                packet_pointer += RtbRowe.BYTES_IN_FLOAT
+
+        # Reshape the data from [beam, bin] to [bin, beam]
+        corr = np.reshape(corr, [num_elements, element_multiplier])
+        # Add the data the numpy array [:num_beams, :num_bins, ens_index]
+        self.corr[:element_multiplier, :num_elements, ens_index] = corr.T
+
+    def decode_pgb(self, ens_bytes: list, ens_index: int, num_elements: int, element_multiplier: int, name_len: int = 8, pings_per_ens: int = 1):
+        """
+        Decode the ensemble data for the Good Beam Ping data.
+
+        Good Beam Pings.  This give a number of pings
+        that were used when averaging pings together.
+        This will give a number of pings, so you will
+        need to look at the settings to know the actual number
+        of pings attempted.
+
+        Initialize the list of Good Beam data.  [beam][bin]
+
+        :param ens_bytes: Byte array containing the ensemble data.
+        :param ens_index: Ensemble Index to store the data.
+        :param element_multiplier: Number of beams.
+        :param num_elements; Number of bins.
+        :param name_len: Length of the name of the dataset.
+        :param pings_per_ens: Only used when converting to PD0 format.  Number of pings in the ensemble
+        """
+        # Determine where to start in the ensemble data
+        packet_pointer = RtbRowe.get_base_data_size(name_len)
+
+        # Initialize the array
+        if not self.pd0_format:
+            pings = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+        else:
+            pings = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+
+        # Create a 2D list
+        # [beam][bin]
+        for beam in range(element_multiplier):
+            for bin_num in range(num_elements):
+                # Determine if RTB or PD0 data format
+                if not self.pd0_format:
+                    pings[beam][bin_num] = RtbRowe.get_int32(packet_pointer, RtbRowe.BYTES_IN_INT32, ens_bytes)
+                else:
+                    # Verify a good value for pings_per_ens
+                    if pings_per_ens == 0:
+                        pings_per_ens = 1
+
+                    # Get the Good Beam number of good pings and convert to percentage
+                    pd0_gb = round((RtbRowe.get_int32(packet_pointer, RtbRowe.BYTES_IN_INT32, ens_bytes) * 100) / pings_per_ens)
+
+                    # Beam Reassignment
+                    if element_multiplier == 1:                 # Vertical Beam
+                        pings[beam][bin_num] = pd0_gb
+                    elif beam == 0:                               # RTB 0 - PD0 3
+                        pings[3][bin_num] = pd0_gb
+                    elif beam == 1:                             # RTB 1 - PD0 2
+                        pings[2][bin_num] = pd0_gb
+                    elif beam == 2:                             # RTB 2 - PD0 0
+                        pings[0][bin_num] = pd0_gb
+                    elif beam == 3:                             # RTB 3 - PD0 1
+                        pings[1][bin_num] = pd0_gb
+
+                # Move the pointer
+                packet_pointer += RtbRowe.BYTES_IN_INT32
+
+        # Reshape the data from [beam, bin] to [bin, beam]
+        pings = np.reshape(pings, [num_elements, element_multiplier])
+        # Add the data the numpy array [:num_beams, :num_bins, ens_index]
+        self.pergd[:element_multiplier, :num_elements, ens_index] = pings.T
 
 
 class InstrVelocity:
@@ -628,9 +1091,9 @@ class InstrVelocity:
 
         # Initialize the array
         if not self.pd0_format:
-            self.vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
+            vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
         else:
-            self.vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+            vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
 
         # Create a 2D list of velocities
         # [beam][bin]
@@ -638,7 +1101,7 @@ class InstrVelocity:
             for bin_num in range(num_elements):
                 # Determine if RTB or PD0 data format
                 if not self.pd0_format:
-                    self.vel[beam][bin_num] = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+                    vel[beam][bin_num] = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
                 else:
                     # Get the velocity data
                     pd0_vel = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
@@ -652,21 +1115,24 @@ class InstrVelocity:
 
                     # Set the velocity based on the beam reassignment
                     if element_multiplier == 1:                     # Vertical Beam
-                        self.vel[0][bin_num] = pd0_vel
+                        vel[0][bin_num] = pd0_vel
                     elif beam == 0:                                 # RTB 0 - PD0 1
-                        self.vel[1][bin_num] = pd0_vel
+                        vel[1][bin_num] = pd0_vel
                     elif beam == 1:                                 # RTB 1 - PD0 0
-                        self.vel[0][bin_num] = pd0_vel
+                        vel[0][bin_num] = pd0_vel
                     elif beam == 2:                                 # RTB 2 - PD0 -2
                         if pd0_vel != RtbRowe.PD0_BAD_VEL:
-                            self.vel[2][bin_num] = pd0_vel * -1.0
+                            vel[2][bin_num] = pd0_vel * -1.0
                         else:
-                            self.vel[2][bin_num] = pd0_vel
+                            vel[2][bin_num] = pd0_vel
                     elif beam == 3:                                 # RTB 3 - PD0 3
-                        self.vel[3][bin_num] = pd0_vel
+                        vel[3][bin_num] = pd0_vel
 
                 # Move the pointer
                 packet_pointer += RtbRowe.BYTES_IN_FLOAT
+
+        # Add the data to the lsit
+        self.vel.append(vel)
 
 
 class EarthVelocity:
@@ -703,9 +1169,9 @@ class EarthVelocity:
 
         # Initialize the array
         if not self.pd0_format:
-            self.vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
+            vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
         else:
-            self.vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+            vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
 
         # Create a 2D list of velocities
         # [beam][bin]
@@ -713,7 +1179,7 @@ class EarthVelocity:
             for bin_num in range(num_elements):
                 # Determine if RTB or PD0 data format
                 if not self.pd0_format:
-                    self.vel[beam][bin_num] = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+                    vel[beam][bin_num] = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
                 else:
                     # Get the velocity data
                     pd0_vel = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
@@ -727,10 +1193,13 @@ class EarthVelocity:
 
                     # Set the values
                     # No reassignment needed
-                    self.vel[beam][bin_num] = pd0_vel
+                    vel[beam][bin_num] = pd0_vel
 
                 # Move the pointer
                 packet_pointer += RtbRowe.BYTES_IN_FLOAT
+
+        # Add the data to the list
+        self.vel.append(vel)
 
 
 class Amplitude:
@@ -750,7 +1219,7 @@ class Amplitude:
 
         :param pd0_format: Set flag if the data should be decoded in PD0 format.
         """
-        self.amp = None
+        self.amp = []
         self.pd0_format = pd0_format
 
     def decode(self, ens_bytes: list, num_elements: int, element_multiplier: int, name_len: int = 8):
@@ -769,9 +1238,9 @@ class Amplitude:
 
         # Initialize the array
         if not self.pd0_format:
-            self.amp = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
+            amp = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
         else:
-            self.amp = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+            amp = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
 
         # Create a 2D list of velocities
         # [beam][bin]
@@ -779,25 +1248,28 @@ class Amplitude:
             for bin_num in range(num_elements):
                 # Determine if RTB or PD0 data format
                 if not self.pd0_format:
-                    self.amp[beam][bin_num] = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+                    amp[beam][bin_num] = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
                 else:
                     # Get the dB and convert to counts
                     pd0_amp = round(RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes) * 2.0)
 
                     # Beam Reassignment
                     if element_multiplier == 1:                 # Vertical Beam
-                        self.amp[beam][bin_num] = pd0_amp
+                        amp[beam][bin_num] = pd0_amp
                     elif beam == 0:                               # RTB 0 - PD0 3
-                        self.amp[3][bin_num] = pd0_amp
+                        amp[3][bin_num] = pd0_amp
                     elif beam == 1:                             # RTB 1 - PD0 2
-                        self.amp[2][bin_num] = pd0_amp
+                        amp[2][bin_num] = pd0_amp
                     elif beam == 2:                             # RTB 2 - PD0 0
-                        self.amp[0][bin_num] = pd0_amp
+                        amp[0][bin_num] = pd0_amp
                     elif beam == 3:                             # RTB 3 - PD0 1
-                        self.amp[1][bin_num] = pd0_amp
+                        amp[1][bin_num] = pd0_amp
 
                 # Move the pointer
                 packet_pointer += RtbRowe.BYTES_IN_FLOAT
+
+        # Add data to the list
+        self.amp.append(amp)
 
 
 class Correlation:
@@ -823,7 +1295,7 @@ class Correlation:
 
         :param pd0_format: Set flag if the data should be decoded in PD0 format.
         """
-        self.corr = None
+        self.corr = []
         self.pd0_format = pd0_format
 
     def decode(self, ens_bytes: list, num_elements: int, element_multiplier: int, name_len: int = 8, num_repeats: int = None):
@@ -843,9 +1315,9 @@ class Correlation:
 
         # Initialize the array
         if not self.pd0_format:
-            self.corr = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
+            corr = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
         else:
-            self.corr = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+            corr = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
 
         # Create a 2D list of velocities
         # [beam][bin]
@@ -853,7 +1325,7 @@ class Correlation:
             for bin_num in range(num_elements):
                 # Determine if RTB or PD0 data format
                 if not self.pd0_format:
-                    self.corr[beam][bin_num] = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+                    corr[beam][bin_num] = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
                 else:
                     # Verify a number of code repeats is given
                     if num_repeats:
@@ -875,18 +1347,21 @@ class Correlation:
 
                     # Beam Reassignment
                     if element_multiplier == 1:                 # Vertical Beam
-                        self.corr[beam][bin_num] = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes) * 255.0
+                        corr[beam][bin_num] = RtbRowe.get_float(packet_pointer, RtbRowe.BYTES_IN_FLOAT, ens_bytes) * 255.0
                     elif beam == 0:                               # RTB 0 - PD0 3
-                        self.corr[3][bin_num] = pd0_corr
+                        corr[3][bin_num] = pd0_corr
                     elif beam == 1:                             # RTB 1 - PD0 2
-                        self.corr[2][bin_num] = pd0_corr
+                        corr[2][bin_num] = pd0_corr
                     elif beam == 2:                             # RTB 2 - PD0 0
-                        self.corr[0][bin_num] = pd0_corr
+                        corr[0][bin_num] = pd0_corr
                     elif beam == 3:                             # RTB 3 - PD0 1
-                        self.corr[1][bin_num] = pd0_corr
+                        corr[1][bin_num] = pd0_corr
 
                 # Move the pointer
                 packet_pointer += RtbRowe.BYTES_IN_FLOAT
+
+        # Add data to the list
+        self.corr.append(corr)
 
 
 class GoodBeam:
@@ -910,7 +1385,7 @@ class GoodBeam:
 
         :param pd0_format: Set flag if the data should be decoded in PD0 format.
         """
-        self.pings = None
+        self.pings = []
         self.pd0_format = pd0_format
 
     def decode(self, ens_bytes: list, num_elements: int, element_multiplier: int, name_len: int = 8, pings_per_ens: int = 1):
@@ -930,9 +1405,9 @@ class GoodBeam:
 
         # Initialize the array
         if not self.pd0_format:
-            self.pings = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+            pings = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
         else:
-            self.pings = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+            pings = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
 
         # Create a 2D list
         # [beam][bin]
@@ -940,7 +1415,7 @@ class GoodBeam:
             for bin_num in range(num_elements):
                 # Determine if RTB or PD0 data format
                 if not self.pd0_format:
-                    self.pings[beam][bin_num] = RtbRowe.get_int32(packet_pointer, RtbRowe.BYTES_IN_INT32, ens_bytes)
+                    pings[beam][bin_num] = RtbRowe.get_int32(packet_pointer, RtbRowe.BYTES_IN_INT32, ens_bytes)
                 else:
                     # Verify a good value for pings_per_ens
                     if pings_per_ens == 0:
@@ -951,18 +1426,21 @@ class GoodBeam:
 
                     # Beam Reassignment
                     if element_multiplier == 1:                 # Vertical Beam
-                        self.pings[beam][bin_num] = pd0_gb
+                        pings[beam][bin_num] = pd0_gb
                     elif beam == 0:                               # RTB 0 - PD0 3
-                        self.pings[3][bin_num] = pd0_gb
+                        pings[3][bin_num] = pd0_gb
                     elif beam == 1:                             # RTB 1 - PD0 2
-                        self.pings[2][bin_num] = pd0_gb
+                        pings[2][bin_num] = pd0_gb
                     elif beam == 2:                             # RTB 2 - PD0 0
-                        self.pings[0][bin_num] = pd0_gb
+                        pings[0][bin_num] = pd0_gb
                     elif beam == 3:                             # RTB 3 - PD0 1
-                        self.pings[1][bin_num] = pd0_gb
+                        pings[1][bin_num] = pd0_gb
 
                 # Move the pointer
                 packet_pointer += RtbRowe.BYTES_IN_INT32
+
+        # Add data to the list
+        self.pings.append(pings)
 
 
 class GoodEarth:
@@ -986,7 +1464,7 @@ class GoodEarth:
 
         :param pd0_format: Set flag if the data should be decoded in PD0 format.
         """
-        self.pings = None
+        self.pings = []
         self.pd0_format = pd0_format
 
     def decode(self, ens_bytes: list, num_elements: int, element_multiplier: int, name_len: int = 8, pings_per_ens: int = 1):
@@ -1006,9 +1484,9 @@ class GoodEarth:
 
         # Initialize the array
         if not self.pd0_format:
-            self.pings = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+            pings = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
         else:
-            self.pings = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+            pings = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
 
         # Create a 2D list
         # [beam][bin]
@@ -1016,7 +1494,7 @@ class GoodEarth:
             for bin_num in range(num_elements):
                 # Determine if RTB or PD0 data format
                 if not self.pd0_format:
-                    self.pings[beam][bin_num] = RtbRowe.get_int32(packet_pointer, RtbRowe.BYTES_IN_INT32, ens_bytes)
+                    pings[beam][bin_num] = RtbRowe.get_int32(packet_pointer, RtbRowe.BYTES_IN_INT32, ens_bytes)
                 else:
                     # Verify a good value for pings_per_ens
                     if pings_per_ens == 0:
@@ -1024,10 +1502,61 @@ class GoodEarth:
 
                     # Get the Good Earth number of good pings and convert to percentage
                     # No reassignment needed
-                    self.pings[beam][bin_num] = round((RtbRowe.get_int32(packet_pointer, RtbRowe.BYTES_IN_INT32, ens_bytes) * 100) / pings_per_ens)
+                    pings[beam][bin_num] = round((RtbRowe.get_int32(packet_pointer, RtbRowe.BYTES_IN_INT32, ens_bytes) * 100) / pings_per_ens)
 
                 # Move the pointer
                 packet_pointer += RtbRowe.BYTES_IN_INT32
+
+        # Add data to the list
+        self.pings.append(pings)
+
+
+class Inst:
+    """
+    Instrument specific values.
+    """
+    def __init__(self):
+        self.firm_major = []                 # Firmware Major Number
+        self.firm_minor = []                 # Firmware Minor Number
+        self.firm_rev = []                   # Firmware Revision
+        self.firm_ver = []                   # Firmware version as a string
+        self.beam_ang = []                   # Beam Angle
+
+    def convert_np_array(self):
+        """
+        Convert the list to numpy array.
+        QRev uses np.Array instead of lists.
+        But appending to list is more efficient
+        compared to np.array.
+        """
+        self.firm_ver = np.array(self.firm_ver)
+        self.beam_ang = np.array(self.beam_ang)
+
+    def decode_ensemble_data(self, ens_bytes: list, name_len: int = 8):
+        """
+        Decode the ensemble data for the Instrument data.
+
+        :param ens_bytes: Byte array containing the ensemble data.
+        :param name_len: Length of the name of the dataset.
+        """
+        # Determine where to start in the ensemble data
+        packet_pointer = RtbRowe.get_base_data_size(name_len)
+
+        firm_rev = struct.unpack("B", ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 0:packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 1])[0]
+        firm_minor = struct.unpack("B", ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 1:packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 2])[0]
+        firm_major = struct.unpack("B", ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 2:packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 3])[0]
+
+        self.firm_rev.append(firm_rev)
+        self.firm_minor.append(firm_minor)
+        self.firm_major.append(firm_major)
+        self.firm_ver.append(str(firm_major) + "." + str(firm_minor) + "." + str(firm_rev))
+
+        # Determine the beam angle based on the subsystem type
+        ss_code = str(ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 3:packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 4], "UTF-8")
+        if ss_code == "A" or ss_code == "B" or ss_code == "C":
+            self.beam_ang.append(0)
+        else:
+            self.beam_ang.append(20)
 
 
 class Cfg:
@@ -1046,60 +1575,79 @@ class Cfg:
         """
         self.pd0_format = pd0_format
 
-        self.ens_num = 0                    # Ensemble number
-        self.num_bins = 0                   # Number of bins
-        self.num_beams = 0                  # Number of beams
-        self.desired_ping_count = 0         # Avg Ping Count configured in seconds
-        self.actual_ping_count = 0          # Avg Ping Count actually output in seconds
-        self.serial_num = ""                # Serial Number
-        self.firm_major = 0                 # Firmware Major Number
-        self.firm_minor = 0                 # Firmware Minor Number
-        self.firm_rev = 0                   # Firmware Revision
-        self.subsystem_code = ""            # Subsystem Code (Indentifier of frequency and orientation)
-        self.subsystem_config = 0           # Subsystem Config.  System allows multiple configures of the same frequency.  This identifies each configuration
-        self.status = 0                     # Status code
-        self.year = 0                       # Year
-        self.month = 0                      # Month
-        self.day = 0                        # Day
-        self.hour = 0                       # Hour
-        self.minute = 0                     # Minute
-        self.second = 0                     # Second
-        self.hsec = 0                       # Hundredth Second
+        self.ens_num = []                    # Ensemble number
+        self.num_bins = []                   # Number of bins
+        self.num_beams = []                  # Number of beams
+        self.desired_ping_count = []         # Avg Ping Count configured in seconds
+        self.actual_ping_count = []          # Avg Ping Count actually output in seconds
+        self.serial_num = []                 # Serial Number
 
-        self.blank = 0.0                    # Blank.  Depth to the first bin in meters.
-        self.bin_size = 0.0                 # Size of a bin in meters.
-        self.first_ping_time = 0.0          # First Ping Time in seconds.
-        self.last_ping_time = 0.0           # Last Ping Time in seconds. (If averaging pings, this will be the last ping)
-        self.salinity = 0.0                 # Water Salinity set by the user in PPT
-        self.speed_of_sound = 0.0           # Speed of Sound in m/s.
+        self.subsystem_code = []             # Subsystem Code (Identifier of frequency and orientation)
+        self.subsystem_config = []           # Subsystem Config.  System allows multiple configures of the same frequency.  This identifies each configuration
+        self.status = []                     # Status code
+        self.year = []                       # Year
+        self.month = []                      # Month
+        self.day = []                        # Day
+        self.hour = []                       # Hour
+        self.minute = []                     # Minute
+        self.second = []                     # Second
+        self.hsec = []                       # Hundredth Second
 
-        self.bt_first_ping_time = 0.0
-        self.bt_last_ping_time = 0.0
-        self.bt_speed_of_sound = 0.0
-        self.bt_status = 0.0
-        self.bt_num_beams = 0.0
-        self.bt_actual_ping_count = 0.0
+        # ADCP 3 values
+        self.current_system = []
+        self.status_2 = []
+        self.burst_index = []
 
-        self.bt_samples_per_second = 0.0    # Bottom Track Samples Per Second
-        self.bt_system_freq_hz = 0.0        # Bottom Track System Frequency (Hz)
-        self.bt_cpce = 0.0                  # Bottom Track Cycles per Code Elements
-        self.bt_nce = 0.0                   # Bottom Track Number of Code Elements
-        self.bt_repeat_n = 0.0              # Bottom Track Number of Code Repeats
-        self.wp_samples_per_second = 0.0    # Water Profile Samples per Second
-        self.wp_system_freq_hz = 0.0        # Water Profile System Frequency (Hz)
-        self.wp_cpce = 0.0                  # Water Profile Cycles per Code Element
-        self.wp_nce = 0.0                   # Water Profile Number of Code Element
-        self.wp_repeat_n = 0.0              # Water Profile Number of Code Repeats
-        self.wp_lag_samples = 0.0           # Water Profile Lag Samples
-        self.bt_broadband = 0.0             # Bottom Track Broadband
-        self.bt_lag_length = 0.0            # Bottom Track Pulse to Pulse Lag (m)
-        self.bt_narrowband = 0.0            # Bottom Track Long Range Switch Depth (m)
-        self.bt_beam_mux = 0.0              # Bottom Track Beam Multiplex
-        self.wp_broadband = 0.0             # Water Profile Mode
-        self.wp_lag_length = 0.0            # Water Profile Lag Length
-        self.wp_transmit_bandwidth = 0.0    # Water Profile Transmit Bandwidth
-        self.wp_receive_bandwidth = 0.0     # Water Profile Receive Bandwidth
-        self.wp_beam_mux = 0.0              # WP Beam Mux
+        self.dist_bin1_cm = []             # Blank.  Depth to the first bin in meters.
+        self.ws_cm = []                    # Size of a bin in centimeters.
+        self.first_ping_time = []          # First Ping Time in seconds.
+        self.last_ping_time = []           # Last Ping Time in seconds. (If averaging pings, this will be the last ping)
+        self.salinity = []                 # Water Salinity set by the user in PPT
+        self.speed_of_sound = []           # Speed of Sound in m/s.
+
+        self.bt_first_ping_time = []
+        self.bt_last_ping_time = []
+        self.bt_speed_of_sound = []
+        self.bt_status = []
+        self.bt_num_beams = []
+        self.bt_actual_ping_count = []
+
+        self.bt_samples_per_second = []    # Bottom Track Samples Per Second
+        self.bt_system_freq_hz = []        # Bottom Track System Frequency (Hz)
+        self.bt_cpce = []                  # Bottom Track Cycles per Code Elements
+        self.bt_nce = []                   # Bottom Track Number of Code Elements
+        self.bt_repeat_n = []              # Bottom Track Number of Code Repeats
+        self.wp_samples_per_second = []    # Water Profile Samples per Second
+        self.wp_system_freq_hz = []        # Water Profile System Frequency (Hz)
+        self.wp_cpce = []                  # Water Profile Cycles per Code Element
+        self.wp_nce = []                   # Water Profile Number of Code Element
+        self.wp_repeat_n = []              # Water Profile Number of Code Repeats
+        self.wp_lag_samples = []           # Water Profile Lag Samples
+        self.bt_broadband = []             # Bottom Track Broadband
+        self.bt_lag_length = []            # Bottom Track Pulse to Pulse Lag (m)
+        self.bt_narrowband = []            # Bottom Track Long Range Switch Depth (m)
+        self.bt_beam_mux = []              # Bottom Track Beam Multiplex
+        self.wp_broadband = []             # Water Profile Mode
+        self.lag_cm = []                   # Water Profile Lag Length
+        self.lag_near_bottom = []          # Water Profile Lag Near Bottom
+        self.wp_transmit_bandwidth = []    # Water Profile Transmit Bandwidth
+        self.wp_receive_bandwidth = []     # Water Profile Receive Bandwidth
+        self.wp_beam_mux = []              # WP Beam Mux
+
+        self.xmit_pulse_cm = []
+
+    def convert_np_array(self):
+        """
+        Convert the list to numpy array.
+        QRev uses np.Array instead of lists.
+        But appending to list is more efficient
+        compared to np.array.
+        """
+        self.ws_cm = np.array(self.ws_cm)
+        self.dist_bin1_cm = np.array(self.dist_bin1_cm)
+        self.lag_cm = np.array(self.lag_cm)
+        self.lag_near_bottom = np.array(self.lag_near_bottom)
+        self.xmit_pulse_cm = np.array(self.xmit_pulse_cm)
 
     def decode_ensemble_data(self, ens_bytes: list, name_len: int = 8):
         """
@@ -1111,32 +1659,33 @@ class Cfg:
         # Determine where to start in the ensemble data
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
-        self.ens_num = RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 0, RtbRowe.BYTES_IN_INT32, ens_bytes)
-        self.num_bins = RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 1, RtbRowe.BYTES_IN_INT32, ens_bytes)
-        self.num_beams = RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 2, RtbRowe.BYTES_IN_INT32, ens_bytes)
-        self.desired_ping_count = RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 3, RtbRowe.BYTES_IN_INT32, ens_bytes)
-        self.actual_ping_count = RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 4, RtbRowe.BYTES_IN_INT32, ens_bytes)
-        self.status = RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 5, RtbRowe.BYTES_IN_INT32, ens_bytes)
-        self.year = RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 6, RtbRowe.BYTES_IN_INT32, ens_bytes)
-        self.month = RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 7, RtbRowe.BYTES_IN_INT32, ens_bytes)
-        self.day = RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 8, RtbRowe.BYTES_IN_INT32, ens_bytes)
-        self.hour = RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 9, RtbRowe.BYTES_IN_INT32, ens_bytes)
-        self.minute = RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 10, RtbRowe.BYTES_IN_INT32, ens_bytes)
-        self.second = RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 11, RtbRowe.BYTES_IN_INT32, ens_bytes)
-        self.hsec = RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 12, RtbRowe.BYTES_IN_INT32, ens_bytes)
+        self.ens_num.append(RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 0, RtbRowe.BYTES_IN_INT32, ens_bytes))
+        self.num_bins.append(RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 1, RtbRowe.BYTES_IN_INT32, ens_bytes))
+        self.num_beams.append(RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 2, RtbRowe.BYTES_IN_INT32, ens_bytes))
+        self.desired_ping_count.append(RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 3, RtbRowe.BYTES_IN_INT32, ens_bytes))
+        self.actual_ping_count.append(RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 4, RtbRowe.BYTES_IN_INT32, ens_bytes))
+        self.status.append(RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 5, RtbRowe.BYTES_IN_INT32, ens_bytes))
+        #self.year.append(RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 6, RtbRowe.BYTES_IN_INT32, ens_bytes))
+        self.month.append(RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 7, RtbRowe.BYTES_IN_INT32, ens_bytes))
+        self.day.append(RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 8, RtbRowe.BYTES_IN_INT32, ens_bytes))
+        self.hour.append(RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 9, RtbRowe.BYTES_IN_INT32, ens_bytes))
+        self.minute.append(RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 10, RtbRowe.BYTES_IN_INT32, ens_bytes))
+        self.second.append(RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 11, RtbRowe.BYTES_IN_INT32, ens_bytes))
+        self.hsec.append(RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 12, RtbRowe.BYTES_IN_INT32, ens_bytes))
 
-        self.serial_num = str(ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 13:packet_pointer + RtbRowe.BYTES_IN_INT32 * 21], "UTF-8")
-        self.firm_rev = struct.unpack("B", ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 0:packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 1])[0]
-        self.firm_minor = struct.unpack("B", ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 1:packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 2])[0]
-        self.firm_major = struct.unpack("B", ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 2:packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 3])[0]
-        self.subsystem_code = str(ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 3:packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 4], "UTF-8")
+        self.serial_num.append(str(ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 13:packet_pointer + RtbRowe.BYTES_IN_INT32 * 21], "UTF-8"))
+        #self.firm_rev.append(struct.unpack("B", ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 0:packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 1])[0])
+        #self.firm_minor.append(struct.unpack("B", ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 1:packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 2])[0])
+        #self.firm_major.append(struct.unpack("B", ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 2:packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 3])[0])
+        self.subsystem_code.append(str(ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 3:packet_pointer + RtbRowe.BYTES_IN_INT32 * 21 + 4], "UTF-8"))
 
-        self.subsystem_config = struct.unpack("B", ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 22 + 3:packet_pointer + RtbRowe.BYTES_IN_INT32 * 22 + 4])[0]
+        self.subsystem_config.append(struct.unpack("B", ens_bytes[packet_pointer + RtbRowe.BYTES_IN_INT32 * 22 + 3:packet_pointer + RtbRowe.BYTES_IN_INT32 * 22 + 4])[0])
 
         if self.pd0_format:
-            self.year = self.year - 2000
-            self.salinity = round(self.salinity)
-            self.speed_of_sound = round(self.speed_of_sound)
+            year = RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 6, RtbRowe.BYTES_IN_INT32, ens_bytes)
+            self.year.append(year - 2000)
+        else:
+            self.year.append(RtbRowe.get_int32(packet_pointer + RtbRowe.BYTES_IN_INT32 * 6, RtbRowe.BYTES_IN_INT32, ens_bytes))
 
     def decode_ancillary_data(self, ens_bytes: list, name_len: int = 8):
         """
@@ -1148,13 +1697,33 @@ class Cfg:
         # Determine where to start in the ensemble data
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
-        self.blank = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 0, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bin_size = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.first_ping_time = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.last_ping_time = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+        self.dist_bin1_cm.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 0, RtbRowe.BYTES_IN_FLOAT, ens_bytes) * 100.0)
+        self.ws_cm.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes) * 100.0)
+        self.first_ping_time.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.last_ping_time.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-        self.salinity = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.speed_of_sound = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+        if self.pd0_format:
+            salinity = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+            sos = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+            self.salinity.append(round(salinity))
+            self.speed_of_sound.append(round(sos))
+        else:
+            self.salinity.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            self.speed_of_sound.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+
+    def decode_ancillary_adcp3_data(self, ens_bytes: list, name_len: int = 8):
+        """
+        Decode the ancillary data for the Configuration data.
+
+        :param ens_bytes: Byte array containing the ensemble data.
+        :param name_len: Length of the name of the dataset.
+        """
+        # Determine where to start in the ensemble data
+        packet_pointer = RtbRowe.get_base_data_size(name_len)
+
+        self.current_system.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 0, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.status_2.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.burst_index.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
     def decode_systemsetup_data(self, ens_bytes: list, name_len: int = 8):
         """
@@ -1166,26 +1735,30 @@ class Cfg:
         # Determine where to start in the ensemble data
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
-        self.bt_samples_per_second = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 0, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_system_freq_hz = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_cpce = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_nce = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_repeat_n = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.wp_samples_per_second = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.wp_system_freq_hz = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.wp_cpce = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.wp_nce = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.wp_repeat_n = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.wp_lag_samples = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_broadband = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_lag_length = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 14, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_narrowband = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 15, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_beam_mux = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 16, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.wp_broadband = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 17, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.wp_lag_length = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 18, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.wp_transmit_bandwidth = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 19, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.wp_receive_bandwidth = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 20, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.wp_beam_mux = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 22, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+        self.bt_samples_per_second.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 0, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_system_freq_hz.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_cpce.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_nce.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_repeat_n.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.wp_samples_per_second.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.wp_system_freq_hz.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.wp_cpce.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.wp_nce.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.wp_repeat_n.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.wp_lag_samples.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_broadband.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_lag_length.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 14, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_narrowband.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 15, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_beam_mux.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 16, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.wp_broadband.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 17, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.lag_cm.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 18, RtbRowe.BYTES_IN_FLOAT, ens_bytes) * 100.0)
+        self.wp_transmit_bandwidth.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 19, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.wp_receive_bandwidth.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 20, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.wp_beam_mux.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 22, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+
+        # Use the same as lag
+        self.lag_near_bottom.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 18, RtbRowe.BYTES_IN_FLOAT, ens_bytes) * 100.0)
+        self.xmit_pulse_cm.append(np.NaN)
 
     def decode_bottom_track_data(self, ens_bytes: list, name_len: int = 8):
         """
@@ -1197,12 +1770,33 @@ class Cfg:
         # Determine where to start in the ensemble data
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
-        self.bt_first_ping_time = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 0, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_last_ping_time = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_speed_of_sound = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_status = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 11, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_num_beams = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_actual_ping_count = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+        self.bt_first_ping_time.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 0, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_last_ping_time.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_speed_of_sound.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_status.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 11, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_num_beams.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_actual_ping_count.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+
+    def empty_bt_init(self, num_beams: int):
+        """
+        Set the list with NAN for all missing Bottom Track data.
+        :param num_beams Number of beams.
+        """
+        self.bt_first_ping_time.append(RtbRowe.nans(num_beams))
+        self.bt_last_ping_time.append(RtbRowe.nans(num_beams))
+        self.bt_speed_of_sound.append(RtbRowe.nans(num_beams))
+        self.bt_status.append(RtbRowe.nans(num_beams))
+        self.bt_num_beams.append(RtbRowe.nans(num_beams))
+        self.bt_actual_ping_count.append(RtbRowe.nans(num_beams))
+
+    def empty_ancillary_adcp3_init(self):
+        """
+        If no Ancillary ADCP3 data is given,
+        fill in the arrays with NaN values.
+        """
+        self.current_system.append(np.NaN)
+        self.status_2.append(np.NaN)
+        self.burst_index.append(np.NaN)
 
 
 class Sensor:
@@ -1223,34 +1817,59 @@ class Sensor:
         """
         self.pd0_format = pd0_format
 
-        self.heading = 0.0                          # Heading in degrees.
-        self.pitch = 0.0                            # Pitch in degrees.
-        self.roll = 0.0                             # Roll in degrees.
-        self.water_temp = 0.0                       # Water Temperature in fahrenheit
-        self.system_temp = 0.0                      # System Temperature in fahrenheit
+        self.heading = []                          # Heading in degrees.
+        self.pitch = []                            # Pitch in degrees.
+        self.roll = []                             # Roll in degrees.
+        self.water_temp = []                       # Water Temperature in fahrenheit
+        self.system_temp = []                      # System Temperature in fahrenheit
 
-        self.pressure = 0.0                         # Pressure from pressure sensor in Pascals
-        self.transducer_depth = 0.0                 # Transducer Depth, used by Pressure sensor in meters
+        self.pressure = []                         # Pressure from pressure sensor in Pascals
+        self.transducer_depth = []                 # Transducer Depth, used by Pressure sensor in meters
 
-        self.voltage = 0.0                          # Voltage input to ADCP
-        self.xmt_voltage = 0.0                      # Transmit Voltage
-        self.transmit_boost_neg_volt = 0.0          # Transmitter Boost Negative Voltage
+        self.voltage = []                          # Voltage input to ADCP
+        self.xmt_voltage = []                      # Transmit Voltage
+        self.transmit_boost_neg_volt = []          # Transmitter Boost Negative Voltage
 
-        self.raw_mag_field_strength = 0.0           # Raw magnetic field strength (uT) (micro Tesla)
-        self.raw_mag_field_strength2 = 0.0          # Raw magnetic field strength (uT) (micro Tesla)
-        self.raw_mag_field_strength3 = 0.0          # Raw magnetic field strength (uT) (micro Tesla)
-        self.pitch_gravity_vec = 0.0                # Pitch Gravity Vector
-        self.roll_gravity_vec = 0.0                 # Roll Gravity Vector
-        self.vertical_gravity_vec = 0.0             # Vertical Gravity Vector
+        self.raw_mag_field_strength = []           # Raw magnetic field strength (uT) (micro Tesla)
+        self.raw_mag_field_strength2 = []          # Raw magnetic field strength (uT) (micro Tesla)
+        self.raw_mag_field_strength3 = []          # Raw magnetic field strength (uT) (micro Tesla)
+        self.pitch_gravity_vec = []                # Pitch Gravity Vector
+        self.roll_gravity_vec = []                 # Roll Gravity Vector
+        self.vertical_gravity_vec = []             # Vertical Gravity Vector
 
-        self.bt_heading = 0.0
-        self.bt_pitch = 0.0
-        self.bt_roll = 0.0
-        self.bt_water_temp = 0.0
-        self.bt_system_temp = 0.0
-        self.bt_salinity = 0.0
-        self.bt_pressure = 0.0
-        self.bt_transducer_depth = 0.0
+        self.bt_heading = []
+        self.bt_pitch = []
+        self.bt_roll = []
+        self.bt_water_temp = []
+        self.bt_system_temp = []
+        self.bt_salinity = []
+        self.bt_pressure = []
+        self.bt_transducer_depth = []
+
+        # ADCP 3 Values
+        self.hs1_temp = []
+        self.hs2_temp = []
+        self.rcv1_temp = []
+        self.rcv2_temp = []
+        self.vinf = []
+        self.vg = []
+        self.vt = []
+        self.vtl = []
+        self.d3v3 = []
+        self.bt_hs1_temp = []
+        self.bt_hs2_temp = []
+        self.bt_rcv1_temp = []
+        self.bt_rcv2_temp = []
+        self.bt_vinf = []
+        self.bt_vg = []
+        self.bt_vt = []
+        self.bt_vtl = []
+        self.bt_d3v3 = []
+        self.bt_sounder_range = []
+        self.bt_sounder_snr = []
+        self.bt_sounder_amp = []
+
+        self.echo_sounder_depth = []
 
     def decode_systemsetup_data(self, ens_bytes: list, name_len: int = 8):
         """
@@ -1262,9 +1881,9 @@ class Sensor:
         # Determine where to start in the ensemble data
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
-        self.voltage = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 11, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.xmt_voltage = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.transmit_boost_neg_volt = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 21, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+        self.voltage.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 11, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.xmt_voltage.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.transmit_boost_neg_volt.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 21, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
     def decode_ancillary_data(self, ens_bytes: list, name_len: int = 8):
         """
@@ -1276,35 +1895,39 @@ class Sensor:
         # Determine where to start in the ensemble data
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
-        self.heading = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.pitch = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.roll = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.water_temp = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.system_temp = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+        self.heading.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.pitch.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-        self.pressure = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.transducer_depth = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 11, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+        self.water_temp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.system_temp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-        self.raw_mag_field_strength = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.raw_mag_field_strength2 = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 14, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.raw_mag_field_strength3 = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 15, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.pitch_gravity_vec = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 16, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.roll_gravity_vec = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 17, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.vertical_gravity_vec = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 18, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+        self.raw_mag_field_strength.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.raw_mag_field_strength2.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 14, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.raw_mag_field_strength3.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 15, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.pitch_gravity_vec.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 16, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.roll_gravity_vec.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 17, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.vertical_gravity_vec.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 18, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
         # Convert values to PD0 format if selected
         if self.pd0_format:
-            if self.roll > 90.0:
-                self.roll = -1 * (180.0 - self.roll)
-            elif self.roll < -90.0:
-                self.roll = 180.0 + self.roll
+            roll = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+            if roll > 90.0:
+                self.roll.append(-1 * (180.0 - roll))
+            elif roll < -90.0:
+                self.roll.append(180.0 + roll)
 
-            self.pressure = round(self.pressure * 0.0001)
-            self.transducer_depth = round(self.transducer_depth * 10.0)
+            pressure = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+            transducer_depth = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 11, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+            self.pressure.append(round(pressure * 0.0001))
+            self.transducer_depth.append(round(transducer_depth * 10.0))
+        else:
+            self.roll.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            self.pressure.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            self.transducer_depth.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 11, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-    def decode_bottom_track_data(self, ens_bytes: list, name_len: int = 8):
+    def decode_ancillary_adcp3_data(self, ens_bytes: list, name_len: int = 8):
         """
-        Decode the ancillary data for the Configuration data.
+        Decode the ancillary ADCP3 data for the Sensor data.
 
         :param ens_bytes: Byte array containing the ensemble data.
         :param name_len: Length of the name of the dataset.
@@ -1312,24 +1935,124 @@ class Sensor:
         # Determine where to start in the ensemble data
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
-        self.bt_heading = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_pitch = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_roll = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_water_temp = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_system_temp = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_salinity = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_pressure = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_transducer_depth = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+        self.hs1_temp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.hs2_temp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 14, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.rcv1_temp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 15, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.rcv2_temp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 16, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.vinf.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 17, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.vg.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 18, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.vt.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 16, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.vtl.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 17, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.d3v3.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 18, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+
+    def empty_ancillary_adcp3_init(self):
+        """
+        Initialize the array with NaN if no value is given.
+        """
+        self.hs1_temp.append(np.NaN)
+        self.hs2_temp.append(np.NaN)
+        self.rcv1_temp.append(np.NaN)
+        self.rcv2_temp.append(np.NaN)
+        self.vinf.append(np.NaN)
+        self.vg.append(np.NaN)
+        self.vt.append(np.NaN)
+        self.vtl.append(np.NaN)
+        self.d3v3.append(np.NaN)
+
+    def decode_bottom_track_data(self, ens_bytes: list, name_len: int = 8):
+        """
+        Decode the bottom track data for the Sensor data.
+
+        :param ens_bytes: Byte array containing the ensemble data.
+        :param name_len: Length of the name of the dataset.
+        """
+        # Determine where to start in the ensemble data
+        packet_pointer = RtbRowe.get_base_data_size(name_len)
+
+        self.bt_heading.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_pitch.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_water_temp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_system_temp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_salinity.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
         # Convert values to PD0 format if selected
         if self.pd0_format:
-            if self.bt_roll > 90.0:
-                self.bt_roll = -1 * (180.0 - self.bt_roll)
-            elif self.bt_roll < -90.0:
-                self.bt_roll = 180.0 + self.bt_roll
+            bt_roll = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+            if bt_roll > 90.0:
+                self.bt_roll.append(-1 * (180.0 - bt_roll))
+            elif bt_roll < -90.0:
+                self.bt_roll.append(180.0 + bt_roll)
 
-            self.bt_pressure = round(self.pressure * 0.0001)
-            self.bt_transducer_depth = round(self.transducer_depth * 10.0)
+            bt_pressure = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+            bt_transducer_depth = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+            self.bt_pressure = round(bt_pressure * 0.0001)
+            self.bt_transducer_depth = round(bt_transducer_depth * 10.0)
+        else:
+            self.bt_roll.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            self.bt_pressure.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            self.bt_transducer_depth.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+
+    def decode_bottom_track_adcp3_data(self, ens_bytes: list, name_len: int = 8):
+        """
+        Decode the bottom track ADCP3 data for the Sensor data.
+
+        :param ens_bytes: Byte array containing the ensemble data.
+        :param name_len: Length of the name of the dataset.
+        """
+        # Determine where to start in the ensemble data
+        packet_pointer = RtbRowe.get_base_data_size(name_len)
+
+        # Get the number of beams
+        num_beams = int(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+
+        # 14 raw values plus 15 values for each beam
+        data_index = 14 + (15 * num_beams)
+
+        self.bt_hs1_temp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * (data_index + 1), RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_hs2_temp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * (data_index + 2), RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_rcv1_temp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * (data_index + 3), RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_rcv2_temp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * (data_index + 4), RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_vinf.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * (data_index + 5), RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_vg.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * (data_index + 6), RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_vt.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * (data_index + 7), RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_vtl.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * (data_index + 8), RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_d3v3.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * (data_index + 9), RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_sounder_range.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * (data_index + 11), RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_sounder_snr.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * (data_index + 12), RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.bt_sounder_amp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * (data_index + 13), RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+
+    def empty_bt_init(self, num_beams: int):
+        """
+        Set the list with NAN for all missing Bottom Track data.
+        :param num_beams Number of ensembles.
+        """
+        self.bt_heading.append(np.NaN)
+        self.bt_pitch.append(np.NaN)
+        self.bt_roll.append(np.NaN)
+        self.bt_water_temp.append(np.NaN)
+        self.bt_system_temp.append(np.NaN)
+        self.bt_salinity.append(np.NaN)
+        self.bt_pressure.append(np.NaN)
+        self.bt_transducer_depth.append(np.NaN)
+
+    def empty_bt_adcp3_init(self, num_beams: int):
+        """
+        If now Bottom Track ADCP3 data is given,
+        fill in the arrays with NaN values.
+        :param num_beams Number of beams.
+        """
+        self.bt_hs1_temp.append(np.NaN)
+        self.bt_hs2_temp.append(np.NaN)
+        self.bt_rcv1_temp.append(np.NaN)
+        self.bt_rcv2_temp.append(np.NaN)
+        self.bt_vinf.append(np.NaN)
+        self.bt_vg.append(np.NaN)
+        self.bt_vt.append(np.NaN)
+        self.bt_vtl.append(np.NaN)
+        self.bt_d3v3.append(np.NaN)
+        self.bt_sounder_range.append(np.NaN)
+        self.bt_sounder_snr.append(np.NaN)
+        self.bt_sounder_amp.append(np.NaN)
 
 
 class BT:
@@ -1345,7 +2068,7 @@ class BT:
         :param pd0_format: Set flag if the data should be decoded in PD0 format.
         """
         self.num_beams = 0
-        self.range = []
+        self.depth = []
         self.snr = []
         self.amp = []
         self.corr = []
@@ -1382,23 +2105,22 @@ class BT:
         # Value stored in Cfg but needed for conversion to PD0
         bt_actual_ping_count = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
 
-
         # Initialize the array
-        self.snr = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.range = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.amp = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.corr = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.beam_vel = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.beam_good = np.empty(shape=[self.num_beams], dtype=np.int)
-        self.instr_vel = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.instr_good = np.empty(shape=[self.num_beams], dtype=np.int)
-        self.earth_vel = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.earth_good = np.empty(shape=[self.num_beams], dtype=np.int)
-        self.pulse_coh_snr = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.pulse_coh_amp = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.pulse_coh_vel = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.pulse_coh_noise = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.pulse_coh_corr = np.empty(shape=[self.num_beams], dtype=np.float)
+        snr = np.empty(shape=[self.num_beams], dtype=np.float)
+        depth = np.empty(shape=[self.num_beams], dtype=np.float)
+        amp = np.empty(shape=[self.num_beams], dtype=np.float)
+        corr = np.empty(shape=[self.num_beams], dtype=np.float)
+        beam_vel = np.empty(shape=[self.num_beams], dtype=np.float)
+        beam_good = np.empty(shape=[self.num_beams], dtype=np.int)
+        instr_vel = np.empty(shape=[self.num_beams], dtype=np.float)
+        instr_good = np.empty(shape=[self.num_beams], dtype=np.int)
+        earth_vel = np.empty(shape=[self.num_beams], dtype=np.float)
+        earth_good = np.empty(shape=[self.num_beams], dtype=np.int)
+        pulse_coh_snr = np.empty(shape=[self.num_beams], dtype=np.float)
+        pulse_coh_amp = np.empty(shape=[self.num_beams], dtype=np.float)
+        pulse_coh_vel = np.empty(shape=[self.num_beams], dtype=np.float)
+        pulse_coh_noise = np.empty(shape=[self.num_beams], dtype=np.float)
+        pulse_coh_corr = np.empty(shape=[self.num_beams], dtype=np.float)
 
         index = 14
         # Range Values
@@ -1408,7 +2130,7 @@ class BT:
 
             if not self.pd0_format:
                 # Store RTB data
-                self.range[beam] = value
+                depth[beam] = value
             else:
                 # PD0 data
                 # Check for bad velocity and convert
@@ -1421,18 +2143,21 @@ class BT:
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 BEAM 3,2,0,1
                 if self.num_beams == 1:
-                    self.range[0] = value
+                    depth[0] = value
                 if beam == 0:
-                    self.range[3] = value
+                    depth[3] = value
                 elif beam == 1:
-                    self.range[2] = value
+                    depth[2] = value
                 elif beam == 2:
-                    self.range[0] = value
+                    depth[0] = value
                 elif beam == 3:
-                    self.range[1] = value
+                    depth[1] = value
 
             # Increment for the next beam
             index += 1
+
+        # Add the data to the list
+        self.depth.append(depth)
 
         # SNR values
         for beam in range(self.num_beams):
@@ -1441,7 +2166,7 @@ class BT:
 
             if not self.pd0_format:
                 # Store RTB data
-                self.snr[beam] = value
+                snr[beam] = value
             else:
                 # PD0 data
                 # Convert from db to counts (0.5 counts per dB)
@@ -1454,18 +2179,21 @@ class BT:
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 BEAM 3,2,0,1
                 if self.num_beams == 1:
-                    self.snr[0] = value
+                    snr[0] = value
                 elif beam == 0:
-                    self.snr[3] = value
+                    snr[3] = value
                 elif beam == 1:
-                    self.snr[2] = value
+                    snr[2] = value
                 elif beam == 2:
-                    self.snr[0] = value
+                    snr[0] = value
                 elif beam == 3:
-                    self.snr[1] = value
+                    snr[1] = value
 
             # Increment for the next beam
             index += 1
+
+        # Add the data to the list
+        self.snr.append(snr)
 
         # Amplitude values
         for beam in range(self.num_beams):
@@ -1474,7 +2202,7 @@ class BT:
 
             if not self.pd0_format:
                 # Store RTB data
-                self.amp[beam] = value
+                amp[beam] = value
             else:
                 # PD0 data
                 # Convert from db to counts (0.5 counts per dB)
@@ -1487,18 +2215,21 @@ class BT:
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 BEAM 3,2,0,1
                 if self.num_beams == 1:
-                    self.amp[0] = value
+                    amp[0] = value
                 elif beam == 0:
-                    self.amp[3] = value
+                    amp[3] = value
                 elif beam == 1:
-                    self.amp[2] = value
+                    amp[2] = value
                 elif beam == 2:
-                    self.amp[0] = value
+                    amp[0] = value
                 elif beam == 3:
-                    self.amp[1] = value
+                    amp[1] = value
 
             # Increment for the next beam
             index += 1
+
+        # Add the data to the list
+        self.amp.append(amp)
 
         # Correlation values
         for beam in range(self.num_beams):
@@ -1507,7 +2238,7 @@ class BT:
 
             if not self.pd0_format:
                 # Store RTB data
-                self.corr[beam] = value
+                corr[beam] = value
             else:
                 # PD0 data
                 # Convert from percentage to 0-255 counts
@@ -1520,18 +2251,21 @@ class BT:
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 BEAM 3,2,0,1
                 if self.num_beams == 1:             # Vertical beam
-                    self.corr[0] = value
+                    corr[0] = value
                 elif beam == 0:                     # RTB Beam 0 - PD0 Beam 3
-                    self.corr[3] = value
+                    corr[3] = value
                 elif beam == 1:                     # RTB Beam 1 - PD0 Beam 2
-                    self.corr[2] = value
+                    corr[2] = value
                 elif beam == 2:                     # RTB Beam 2 - PD0 Beam 0
-                    self.corr[0] = value
+                    corr[0] = value
                 elif beam == 3:                     # RTB Beam 3 - PD0 Beam 1
-                    self.corr[1] = value
+                    corr[1] = value
 
             # Increment for the next beam
             index += 1
+
+        # Add the data to the list
+        self.corr.append(corr)
 
         # Beam Velocity values
         for beam in range(self.num_beams):
@@ -1544,7 +2278,7 @@ class BT:
 
             if not self.pd0_format:
                 # Store RTB data
-                self.beam_vel[beam] = value
+                beam_vel[beam] = value
             else:
                 # PD0 data
                 # Check for bad velocity and convert
@@ -1556,18 +2290,21 @@ class BT:
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 BEAM 3,2,0,1
                 if self.num_beams == 1:             # Vertical beam
-                    self.beam_vel[0] = value
+                    beam_vel[0] = value
                 elif beam == 0:                     # RTB Beam 0 - PD0 Beam 3
-                    self.beam_vel[3] = value
+                    beam_vel[3] = value
                 elif beam == 1:                     # RTB Beam 1 - PD0 Beam 2
-                    self.beam_vel[2] = value
+                    beam_vel[2] = value
                 elif beam == 2:                     # RTB Beam 2 - PD0 Beam 0
-                    self.beam_vel[0] = value
+                    beam_vel[0] = value
                 elif beam == 3:                     # RTB Beam 3 - PD0 Beam 1
-                    self.beam_vel[1] = value
+                    beam_vel[1] = value
 
             # Increment for the next beam
             index += 1
+
+        # Add the data to the list
+        self.beam_vel.append(beam_vel)
 
         # Beam Good Pings values
         for beam in range(self.num_beams):
@@ -1576,7 +2313,7 @@ class BT:
 
             if not self.pd0_format:
                 # Store RTB data
-                self.beam_good[beam] = int(value)
+                beam_good[beam] = int(value)
             else:
                 # PD0 data
                 # Check for bad velocity and convert
@@ -1589,18 +2326,21 @@ class BT:
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 BEAM 3,2,0,1
                 if self.num_beams == 1:             # Vertical beam
-                    self.beam_good[0] = value
+                    beam_good[0] = value
                 elif beam == 0:                     # RTB Beam 0 - PD0 Beam 3
-                    self.beam_good[3] = value
+                    beam_good[3] = value
                 elif beam == 1:                     # RTB Beam 1 - PD0 Beam 2
-                    self.beam_good[2] = value
+                    beam_good[2] = value
                 elif beam == 2:                     # RTB Beam 2 - PD0 Beam 0
-                    self.beam_good[0] = value
+                    beam_good[0] = value
                 elif beam == 3:                     # RTB Beam 3 - PD0 Beam 1
-                    self.beam_good[1] = value
+                    beam_good[1] = value
 
             # Increment for the next beam
             index += 1
+
+        # Add the data to the list
+        self.beam_good.append(beam_good)
 
         # Instrument Velocity values
         for beam in range(self.num_beams):
@@ -1613,7 +2353,7 @@ class BT:
 
             if not self.pd0_format:
                 # Store RTB data
-                self.instr_vel[beam] = value
+                instr_vel[beam] = value
             else:
                 # PD0 data
                 # Check for bad velocity and convert
@@ -1625,18 +2365,21 @@ class BT:
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 XYZ order 1,0,-2,3
                 if self.num_beams == 1:             # Vertical beam
-                    self.instr_vel[0] = value
+                    instr_vel[0] = value
                 elif beam == 0:                     # RTB Beam 0 - PD0 Beam 1
-                    self.instr_vel[1] = value
+                    instr_vel[1] = value
                 elif beam == 1:                     # RTB Beam 1 - PD0 Beam 0
-                    self.instr_vel[0] = value
+                    instr_vel[0] = value
                 elif beam == 2:                     # RTB Beam 2 - PD0 Beam -2
-                    self.instr_vel[2] = value * -1.0
+                    instr_vel[2] = value * -1.0
                 elif beam == 3:                     # RTB Beam 3 - PD0 Beam 3
-                    self.instr_vel[3] = value
+                    instr_vel[3] = value
 
             # Increment for the next beam
             index += 1
+
+        # Add the data to the list
+        self.instr_vel.append(instr_vel)
 
         # Instrument Good Pings values
         for beam in range(self.num_beams):
@@ -1645,7 +2388,7 @@ class BT:
 
             if not self.pd0_format:
                 # Store RTB data
-                self.instr_good[beam] = int(value)
+                instr_good[beam] = int(value)
             else:
                 # PD0 data
                 # Check for bad velocity and convert
@@ -1658,18 +2401,21 @@ class BT:
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 XYZ order 1,0,-2,3
                 if self.num_beams == 1:             # Vertical beam
-                    self.instr_good[0] = value
+                    instr_good[0] = value
                 elif beam == 0:                     # RTB Beam 0 - PD0 Beam 1
-                    self.instr_good[1] = value
+                    instr_good[1] = value
                 elif beam == 1:                     # RTB Beam 1 - PD0 Beam 0
-                    self.instr_good[0] = value
+                    instr_good[0] = value
                 elif beam == 2:                     # RTB Beam 2 - PD0 Beam -2
-                    self.instr_good[2] = value
+                    instr_good[2] = value
                 elif beam == 3:                     # RTB Beam 3 - PD0 Beam 3
-                    self.instr_good[3] = value
+                    instr_good[3] = value
 
             # Increment for the next beam
             index += 1
+
+        # Add the data to the list
+        self.instr_good.append(instr_good)
 
         # Earth Velocity values
         for beam in range(self.num_beams):
@@ -1682,7 +2428,7 @@ class BT:
 
             if not self.pd0_format:
                 # Store RTB data
-                self.earth_vel[beam] = value
+                earth_vel[beam] = value
             else:
                 # PD0 data
                 # Check for bad velocity and convert
@@ -1694,18 +2440,21 @@ class BT:
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 BEAM 3,2,0,1
                 if self.num_beams == 1:             # Vertical beam
-                    self.earth_vel[0] = value
+                    earth_vel[0] = value
                 elif beam == 0:                     # RTB Beam 0 - PD0 Beam 0
-                    self.earth_vel[0] = value
+                    earth_vel[0] = value
                 elif beam == 1:                     # RTB Beam 1 - PD0 Beam 1
-                    self.earth_vel[1] = value
+                    earth_vel[1] = value
                 elif beam == 2:                     # RTB Beam 2 - PD0 Beam 2
-                    self.earth_vel[2] = value
+                    earth_vel[2] = value
                 elif beam == 3:                     # RTB Beam 3 - PD0 Beam 3
-                    self.earth_vel[3] = value
+                    earth_vel[3] = value
 
             # Increment for the next beam
             index += 1
+
+        # Add the data to the list
+        self.earth_vel.append(earth_vel)
 
         # Earth Good Pings values
         for beam in range(self.num_beams):
@@ -1714,7 +2463,7 @@ class BT:
 
             if not self.pd0_format:
                 # Store RTB data
-                self.earth_good[beam] = int(value)
+                earth_good[beam] = int(value)
             else:
                 # PD0 data
                 # Check for bad velocity and convert
@@ -1727,43 +2476,120 @@ class BT:
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 XYZ order 0,1,2,3
                 if self.num_beams == 1:             # Vertical beam
-                    self.earth_good[0] = value
+                    earth_good[0] = value
                 elif beam == 0:                     # RTB Beam 0 - PD0 Beam 0
-                    self.earth_good[0] = value
+                    earth_good[0] = value
                 elif beam == 1:                     # RTB Beam 1 - PD0 Beam 1
-                    self.earth_good[1] = value
+                    earth_good[1] = value
                 elif beam == 2:                     # RTB Beam 2 - PD0 Beam 2
-                    self.earth_good[2] = value
+                    earth_good[2] = value
                 elif beam == 3:                     # RTB Beam 3 - PD0 Beam 3
-                    self.earth_good[3] = value
+                    earth_good[3] = value
 
             # Increment for the next beam
             index += 1
 
+        # Add the data to the list
+        self.earth_good.append(earth_good)
+
         # Pulse Coherent SNR values
         for beam in range(self.num_beams):
-            self.pulse_coh_snr[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+            pulse_coh_snr[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
+        self.pulse_coh_snr.append(pulse_coh_snr)
 
         # Pulse Coherent Amplitude values
         for beam in range(self.num_beams):
-            self.pulse_coh_amp[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+            pulse_coh_amp[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
+        self.pulse_coh_amp.append(pulse_coh_amp)
 
         # Pulse Coherent Velocity values
         for beam in range(self.num_beams):
-            self.pulse_coh_vel[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+            pulse_coh_vel[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
+        self.pulse_coh_vel.append(pulse_coh_vel)
 
         # Pulse Coherent Noise values
         for beam in range(self.num_beams):
-            self.pulse_coh_noise[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+            pulse_coh_noise[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
+        self.pulse_coh_noise.append(pulse_coh_noise)
 
         # Pulse Coherent Correlation values
         for beam in range(self.num_beams):
-            self.pulse_coh_corr[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+            pulse_coh_corr[beam] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
+        self.pulse_coh_corr.append(pulse_coh_corr)
+
+    def empty_init(self, num_ens: int, num_beams: int = 4):
+        """
+        If Bottom Track data is not available.  You can use this method
+        to fill all the list with NAN.
+        :param num_beams Number of beams.
+        :param num_ens Number of ensembles.
+        """
+        self.num_beams = num_beams
+
+        depth_empty = np.empty(num_ens, dtype=float)
+        depth_empty.fill(np.nan)
+        self.depth.append(depth_empty)
+
+        snr_empty = np.empty(num_ens, dtype=float)
+        snr_empty.fill(np.nan)
+        self.snr.append(snr_empty)
+
+        amp_empty = np.empty(num_ens, dtype=float)
+        amp_empty.fill(np.nan)
+        self.amp.append(amp_empty)
+
+        corr_empty = np.empty(num_ens, dtype=float)
+        corr_empty.fill(np.nan)
+        self.corr.append(corr_empty)
+
+        bv_empty = np.empty(num_ens, dtype=float)
+        bv_empty.fill(np.nan)
+        self.beam_vel.append(bv_empty)
+
+        bg_empty = np.empty(num_ens, dtype=float)
+        bg_empty.fill(np.nan)
+        self.beam_good.append(bg_empty)
+
+        iv_empty = np.empty(num_ens, dtype=float)
+        iv_empty.fill(np.nan)
+        self.instr_vel.append(iv_empty)
+
+        ig_empty = np.empty(num_ens, dtype=float)
+        ig_empty.fill(np.nan)
+        self.instr_good.append(ig_empty)
+
+        ev_empty = np.empty(num_ens, dtype=float)
+        ev_empty.fill(np.nan)
+        self.earth_vel.append(ev_empty)
+
+        eg_empty = np.empty(num_ens, dtype=float)
+        eg_empty.fill(np.nan)
+        self.earth_good.append(eg_empty)
+
+        pcs_empty = np.empty(num_ens, dtype=float)
+        pcs_empty.fill(np.nan)
+        self.pulse_coh_snr.append(pcs_empty)
+
+        pca_empty = np.empty(num_ens, dtype=float)
+        pca_empty.fill(np.nan)
+        self.pulse_coh_amp.append(pca_empty)
+
+        pcv_empty = np.empty(num_ens, dtype=float)
+        pcv_empty.fill(np.nan)
+        self.pulse_coh_vel.append(pcv_empty)
+
+        pcn_empty = np.empty(num_ens, dtype=float)
+        pcn_empty.fill(np.nan)
+        self.pulse_coh_noise.append(pcn_empty)
+
+        pcc_empty = np.empty(num_ens, dtype=float)
+        pcc_empty.fill(np.nan)
+        self.pulse_coh_corr.append(pcc_empty)
 
 
 class RT:
@@ -1781,14 +2607,14 @@ class RT:
         :param pd0_format: Set flag if the data should be decoded in PD0 format.
         """
         self.num_beams = 0
-        self.snr = None
-        self.range = None
-        self.pings = None
-        self.amp = None
-        self.corr = None
-        self.beam_vel = None
-        self.instr_vel = None
-        self.earth_vel = None
+        self.snr = []
+        self.depth = []
+        self.pings = []
+        self.amp = []
+        self.corr = []
+        self.beam_vel = []
+        self.instr_vel = []
+        self.earth_vel = []
 
         self.pd0_format = pd0_format
 
@@ -1808,120 +2634,130 @@ class RT:
         self.num_beams = int(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 0, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
         # Initialize the array
-        self.snr = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.range = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.pings = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.amp = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.corr = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.beam_vel = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.instr_vel = np.empty(shape=[self.num_beams], dtype=np.float)
-        self.earth_vel = np.empty(shape=[self.num_beams], dtype=np.float)
+        snr = np.empty(shape=[self.num_beams], dtype=np.float)
+        depth = np.empty(shape=[self.num_beams], dtype=np.float)
+        pings = np.empty(shape=[self.num_beams], dtype=np.float)
+        amp = np.empty(shape=[self.num_beams], dtype=np.float)
+        corr = np.empty(shape=[self.num_beams], dtype=np.float)
+        beam_vel = np.empty(shape=[self.num_beams], dtype=np.float)
+        instr_vel = np.empty(shape=[self.num_beams], dtype=np.float)
+        earth_vel = np.empty(shape=[self.num_beams], dtype=np.float)
 
         if self.num_beams == 4:
-            self.snr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.snr[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.snr[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.snr[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            snr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            snr[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            snr[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            snr[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.range[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.range[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.range[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.range[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            depth[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            depth[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            depth[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            depth[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.pings[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.pings[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.pings[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 11, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.pings[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            pings[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            pings[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            pings[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 11, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            pings[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.amp[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.amp[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 14, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.amp[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 15, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.amp[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 16, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            amp[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            amp[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 14, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            amp[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 15, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            amp[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 16, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.corr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 17, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.corr[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 18, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.corr[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 19, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.corr[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 20, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            corr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 17, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            corr[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 18, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            corr[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 19, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            corr[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 20, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.beam_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 21, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.beam_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 22, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.beam_vel[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 23, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.beam_vel[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 24, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            beam_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 21, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            beam_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 22, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            beam_vel[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 23, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            beam_vel[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 24, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.instr_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 25, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.instr_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 26, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.instr_vel[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 27, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.instr_vel[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 28, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            instr_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 25, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            instr_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 26, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            instr_vel[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 27, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            instr_vel[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 28, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.earth_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 29, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.earth_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 30, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.earth_vel[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 31, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.earth_vel[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 32, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            earth_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 29, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            earth_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 30, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            earth_vel[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 31, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            earth_vel[3] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 32, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
         elif self.num_beams == 3:
-            self.snr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.snr[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.snr[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            snr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            snr[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            snr[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.range[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.range[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.range[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            depth[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            depth[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            depth[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.pings[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.pings[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.pings[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            pings[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            pings[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            pings[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.amp[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.amp[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 11, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.amp[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            amp[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            amp[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 11, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            amp[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.corr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.corr[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 14, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.corr[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 15, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            corr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            corr[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 14, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            corr[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 15, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.beam_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 16, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.beam_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 17, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.beam_vel[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 18, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            beam_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 16, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            beam_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 17, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            beam_vel[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 18, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.instr_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 19, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.instr_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 20, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.instr_vel[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 21, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            instr_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 19, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            instr_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 20, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            instr_vel[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 21, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.earth_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 22, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.earth_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 23, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.earth_vel[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 24, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            earth_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 22, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            earth_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 23, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            earth_vel[2] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 24, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
         elif self.num_beams == 2:
-            self.snr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.snr[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            snr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            snr[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.range[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.range[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            depth[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            depth[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.pings[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.pings[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            pings[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            pings[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.amp[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.amp[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            amp[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            amp[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.corr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.corr[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            corr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            corr[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.beam_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 11, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.beam_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            beam_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 11, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            beam_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.instr_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.instr_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 14, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            instr_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            instr_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 14, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
 
-            self.earth_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 15, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.earth_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 16, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            earth_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 15, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            earth_vel[1] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 16, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
         elif self.num_beams == 1:
-            self.snr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.range[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.pings[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.amp[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.corr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.beam_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.instr_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
-            self.earth_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            snr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            depth[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            pings[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            amp[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            corr[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            beam_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            instr_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            earth_vel[0] = (RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+
+        # Add the data to the lis
+        self.snr.append(snr)
+        self.depth.append(depth)
+        self.pings.append(pings)
+        self.amp.append(amp)
+        self.corr.append(corr)
+        self.beam_vel.append(beam_vel)
+        self.instr_vel.append(instr_vel)
+        self.earth_vel.append(earth_vel)
 
 
 class Nmea:
@@ -1944,40 +2780,47 @@ class Nmea:
         self.hdt = []
 
         # GGA
-        self.gga_delta_time = 0.0
-        self.gga_header = ""
-        self.utc = 0.0
-        self.lat_deg = 0.0
-        self.lat_ref = ""
-        self.lon_deg = 0.0
-        self.lon_ref = ""
-        self.corr_qual = 0.0
-        self.num_sats = 0.0
-        self.hdop = 0.0
-        self.alt = 0.0
-        self.alt_unit = ""
-        self.geoid = ""
-        self.geoid_unit = ""
-        self.d_gps_age = 0.0
-        self.ref_stat_id = 0.0
+        self.gga_delta_time = []            # float
+        self.gga_header = []                # str
+        self.utc = []                       # float
+        self.lat_deg = []                   # float
+        self.lat_ref = []                   # str
+        self.lon_deg = []                   # float
+        self.lon_ref = []                   # str
+        self.corr_qual = []                 # float
+        self.num_sats = []                  # int
+        self.hdop = []                      # float
+        self.alt = []                       # float
+        self.alt_unit = []                  # str
+        self.geoid = []                     # str
+        self.geoid_unit = []                # str
+        self.d_gps_age = []                 # float
+        self.ref_stat_id = []               # float
 
         # VTG
-        self.vtg_delta_time = 0
-        self.vtg_header = ""
-        self.course_true = 0.0
-        self.true_indicator = ""
-        self.course_mag = 0.0
-        self.mag_indicator = ""
-        self.speed_knots = 0.0
-        self.knots_indicator = ""
-        self.speed_kph = 0.0
-        self.kph_indicator = ""
-        self.mode_indicator = ""
+        self.vtg_delta_time = []            # float
+        self.vtg_header = []                # str
+        self.course_true = []               # float
+        self.true_indicator = []            # str
+        self.course_mag = []                # float
+        self.mag_indicator = []             # str
+        self.speed_knots = []               # float
+        self.knots_indicator = []           # str
+        self.speed_kph = []                 # float
+        self.kph_indicator = []             # str
+        self.mode_indicator = []            # str
 
         # HDT
-        self.hdt_header = ""
-        self.heading = 0.0
-        self.rel_true_north = ""
+        self.hdt_header = []
+        self.heading = []
+        self.rel_true_north = []
+
+        # Temp variables to accumulate with each new ensemble
+        self.temp_gga = []
+        self.temp_gsa = []
+        self.temp_vtg = []
+        self.temp_dbt = []
+        self.temp_hdt = []
 
     def decode(self, ens_bytes: list, name_len: int = 8):
         """
@@ -1991,16 +2834,40 @@ class Nmea:
         # Convert all the messages to a string
         nmea_str = str(ens_bytes[packet_pointer:], "UTF-8")
 
+        # Clear the lists
+        self.temp_gga.clear()
+        self.temp_gsa.clear()
+        self.temp_vtg.clear()
+        self.temp_dbt.clear()
+        self.temp_hdt.clear()
+
         # Decode each NMEA message
         for msg in nmea_str.split():
             self.decode_nmea(msg)
 
         # Convert all the list to numpy array for better storage
-        self.gga = np.array(self.gga)
-        self.gsa = np.array(self.gsa)
-        self.vtg = np.array(self.vtg)
-        self.dbt = np.array(self.dbt)
-        self.hdt = np.array(self.hdt)
+        # Add the data to the list
+        self.gga.append(np.array(self.temp_gga))
+        self.gsa.append(np.array(self.temp_gsa))
+        self.vtg.append(np.array(self.temp_vtg))
+        self.dbt.append(np.array(self.temp_dbt))
+        self.hdt.append(np.array(self.temp_hdt))
+
+        # Decode the last messages
+        if len(self.temp_gga) > 0:
+            self.decode_gga(self.temp_gga[-1])
+        else:
+            self.decode_gga(None)
+
+        if len(self.temp_vtg) > 0:
+            self.decode_vtg(self.temp_vtg[-1])
+        else:
+            self.decode_vtg(None)
+
+        if len(self.temp_hdt) > 0:
+            self.decode_hdt(self.temp_hdt[-1])
+        else:
+            self.decode_hdt(None)
 
     def decode_nmea(self, nmea_str: str):
         """
@@ -2008,23 +2875,21 @@ class Nmea:
         Then add the message to the list and decode each message.
         :param nmea_str NMEA string to decode.
         """
+
         # Verify the NMEA string is good
         if Nmea.check_nmea_checksum(nmea_str):
             # Add each message to the list
             # Decode the data
             if 'gga' in  nmea_str or 'GGA' in nmea_str:
-                self.gga.append(nmea_str)
-                self.decode_gga(nmea_str)
+                self.temp_gga.append(nmea_str)
             if 'gsa' in nmea_str or 'GSA' in nmea_str:
-                self.gsa.append(nmea_str)
+                self.temp_gsa.append(nmea_str)
             if 'vtg' in nmea_str or 'VTG' in nmea_str:
-                self.vtg.append(nmea_str)
-                self.decode_vtg(nmea_str)
+                self.temp_vtg.append(nmea_str)
             if 'dbt' in nmea_str or 'DBT' in nmea_str:
-                self.dbt.append(nmea_str)
+                self.temp_dbt.append(nmea_str)
             if 'hdt' in nmea_str or 'HDT' in nmea_str:
-                self.hdt.append(nmea_str)
-                self.decode_hdt(nmea_str)
+                self.temp_hdt.append(nmea_str)
 
     def decode_gga(self, nmea_str: str):
         """
@@ -2032,72 +2897,51 @@ class Nmea:
 
         :param nmea_str NMEA string.
         """
-        temp_array = np.array(nmea_str.split(','))
-        temp_array[temp_array == '999.9'] = ''
-
         try:
-            #self.gga_delta_time = delta_time
-            self.gga_header = temp_array[0]
-            self.utc = float(temp_array[1])
-            lat_str = temp_array[2]
-            lat_deg = float(lat_str[0:2])
-            lat_deg = lat_deg + float(lat_str[2:]) / 60
-            self.lat_deg = lat_deg
-            self.lat_ref = temp_array[3]
-            lon_str = temp_array[4]
-            lon_num = float(lon_str)
-            lon_deg = np.floor(lon_num / 100)
-            lon_deg = lon_deg + (((lon_num / 100.) - lon_deg) * 100.) / 60.
-            self.lon_deg = lon_deg
-            self.lon_ref = temp_array[5]
-            self.corr_qual = float(temp_array[6])
-            self.num_sats = float(temp_array[7])
-            self.hdop = float(temp_array[8])
-            self.alt = float(temp_array[9])
-            self.alt_unit = temp_array[10]
-            self.geoid = temp_array[11]
-            self.geoid_unit = temp_array[12]
-            self.d_gps_age = float(temp_array[13])
-            idx_star = temp_array[14].find('*')
-            self.ref_stat_id= float(temp_array[15][:idx_star])
+            if nmea_str:
+                temp_array = np.array(nmea_str.split(','))
+                temp_array[temp_array == '999.9'] = ''
 
-        except (ValueError, EOFError, IndexError):
-            pass
-
-    def decode_gga(self, nmea_str: str):
-        """
-        Decode GGA message.  Update the variables.
-
-        :param nmea_str NMEA string.
-        """
-        temp_array = np.array(nmea_str.split(','))
-        temp_array[temp_array == '999.9'] = ''
-
-        try:
-            # self.gga_delta_time = delta_time
-            self.gga_header = temp_array[0]
-            self.utc = float(temp_array[1])
-            lat_str = temp_array[2]
-            lat_deg = float(lat_str[0:2])
-            lat_deg = lat_deg + float(lat_str[2:]) / 60
-            self.lat_deg = lat_deg
-            self.lat_ref = temp_array[3]
-            lon_str = temp_array[4]
-            lon_num = float(lon_str)
-            lon_deg = np.floor(lon_num / 100)
-            lon_deg = lon_deg + (((lon_num / 100.) - lon_deg) * 100.) / 60.
-            self.lon_deg = lon_deg
-            self.lon_ref = temp_array[5]
-            self.corr_qual = float(temp_array[6])
-            self.num_sats = float(temp_array[7])
-            self.hdop = float(temp_array[8])
-            self.alt = float(temp_array[9])
-            self.alt_unit = temp_array[10]
-            self.geoid = temp_array[11]
-            self.geoid_unit = temp_array[12]
-            self.d_gps_age = float(temp_array[13])
-            idx_star = temp_array[14].find('*')
-            self.ref_stat_id = float(temp_array[15][:idx_star])
+                #self.gga_delta_time = delta_time
+                self.gga_header.append(temp_array[0])
+                self.utc.append(float(temp_array[1]))
+                lat_str = temp_array[2]
+                lat_deg = float(lat_str[0:2])
+                lat_deg = lat_deg + float(lat_str[2:]) / 60
+                self.lat_deg.append(lat_deg)
+                self.lat_ref.append(temp_array[3])
+                lon_str = temp_array[4]
+                lon_num = float(lon_str)
+                lon_deg = np.floor(lon_num / 100)
+                lon_deg = lon_deg + (((lon_num / 100.) - lon_deg) * 100.) / 60.
+                self.lon_deg.append(lon_deg)
+                self.lon_ref.append(temp_array[5])
+                self.corr_qual.append(float(temp_array[6]))
+                self.num_sats.append(float(temp_array[7]))
+                self.hdop.append(float(temp_array[8]))
+                self.alt.append(float(temp_array[9]))
+                self.alt_unit.append(temp_array[10])
+                self.geoid.append(temp_array[11])
+                self.geoid_unit.append(temp_array[12])
+                self.d_gps_age.append(float(temp_array[13]))
+                idx_star = temp_array[14].find('*')
+                self.ref_stat_id.append(float(temp_array[15][:idx_star]))
+            else:
+                self.gga_header.append(np.NaN)
+                self.utc.append(np.NaN)
+                self.lat_deg.append(np.NaN)
+                self.lat_ref.append(np.NaN)
+                self.lon_deg.append(np.NaN)
+                self.lon_ref.append(np.NaN)
+                self.corr_qual.append(np.NaN)
+                self.num_sats.append(np.NaN)
+                self.hdop.append(np.NaN)
+                self.alt.append(np.NaN)
+                self.alt_unit.append(np.NaN)
+                self.geoid.append(np.NaN)
+                self.geoid_unit.append(np.NaN)
+                self.d_gps_age.append(np.NaN)
+                self.ref_stat_id.append(np.NaN)
 
         except (ValueError, EOFError, IndexError):
             pass
@@ -2108,23 +2952,34 @@ class Nmea:
 
         :param nmea_str: NMEA string.
         """
-
-        temp_array = np.array(nmea_str.split(','))
-        temp_array[temp_array == '999.9'] = ''
-
         try:
-            #self.vtg_delta_time = delta_time
-            self.vtg_header = temp_array[0]
-            self.course_true = Nmea.valid_number(temp_array[1])
-            self.true_indicator = temp_array[2]
-            self.course_mag = Nmea.valid_number(temp_array[3])
-            self.mag_indicator = temp_array[4]
-            self.speed_knots = Nmea.valid_number(temp_array[5])
-            self.knots_indicator = temp_array[6]
-            self.speed_kph = Nmea.valid_number(temp_array[7])
-            self.kph_indicator = temp_array[8]
-            idx_star = temp_array[9].find('*')
-            self.mode_indicator = temp_array[9][:idx_star]
+            if nmea_str:
+                temp_array = np.array(nmea_str.split(','))
+                temp_array[temp_array == '999.9'] = ''
+
+                #self.vtg_delta_time = delta_time
+                self.vtg_header.append(temp_array[0])
+                self.course_true.append(Nmea.valid_number(temp_array[1]))
+                self.true_indicator.append(temp_array[2])
+                self.course_mag.append(Nmea.valid_number(temp_array[3]))
+                self.mag_indicator.append(temp_array[4])
+                self.speed_knots.append(Nmea.valid_number(temp_array[5]))
+                self.knots_indicator.append(temp_array[6])
+                self.speed_kph.append(Nmea.valid_number(temp_array[7]))
+                self.kph_indicator.append(temp_array[8])
+                idx_star = temp_array[9].find('*')
+                self.mode_indicator.append(temp_array[9][:idx_star])
+            else:
+                self.vtg_header.append(np.NaN)
+                self.course_true.append(np.NaN)
+                self.true_indicator.append(np.NaN)
+                self.course_mag.append(np.NaN)
+                self.mag_indicator.append(np.NaN)
+                self.speed_knots.append(np.NaN)
+                self.knots_indicator.append(np.NaN)
+                self.speed_kph.append(np.NaN)
+                self.kph_indicator.append(np.NaN)
+                self.mode_indicator.append(np.NaN)
 
         except (ValueError, EOFError, IndexError):
             pass
@@ -2135,16 +2990,20 @@ class Nmea:
 
         :param nmea_str: NMEA string.
         """
-
-        temp_array = np.array(nmea_str.split(','))
-        temp_array[temp_array == '999.9'] = ''
-
         try:
-            # self.vtg_delta_time = delta_time
-            self.hdt_header = temp_array[0]
-            self.heading = Nmea.valid_number(temp_array[1])
-            idx_star = temp_array[2].find('*')
-            self.rel_true_north = temp_array[2][:idx_star]
+            if nmea_str:
+                temp_array = np.array(nmea_str.split(','))
+                temp_array[temp_array == '999.9'] = ''
+
+                # self.vtg_delta_time = delta_time
+                self.hdt_header.append(temp_array[0])
+                self.heading.append(Nmea.valid_number(temp_array[1]))
+                idx_star = temp_array[2].find('*')
+                self.rel_true_north.append(temp_array[2][:idx_star])
+            else:
+                self.hdt_header.append(np.NaN)
+                self.heading.append(np.NaN)
+                self.rel_true_north.append(np.NaN)
 
         except (ValueError, EOFError, IndexError):
             pass
@@ -2172,24 +3031,432 @@ class Nmea:
         :param nmea_str NMEA string.
         :return TRUE = Good checksum
         """
-        # Remove newline and spaces at the end
-        nmea_str = nmea_str.rstrip('\n')
-        # Get the checksum value
-        checksum = nmea_str[len(nmea_str) - 2:]
-        checksum = int(checksum, 16)
+        try:
+            # Remove newline and spaces at the end
+            nmea_str = nmea_str.rstrip('\n')
+            # Get the checksum value
+            checksum = nmea_str[len(nmea_str) - 2:]
+            checksum = int(checksum, 16)
 
-        # Get the data from the string
-        nmea_data = re.sub("(\n|\r\n)", "", nmea_str[nmea_str.find("$") + 1:nmea_str.find("*")])
+            # Get the data from the string
+            nmea_data = re.sub("(\n|\r\n)", "", nmea_str[nmea_str.find("$") + 1:nmea_str.find("*")])
 
-        # Calculate the checksum
-        calc_checksum = 0
-        for c in nmea_data:
-            calc_checksum ^= ord(c)
-        calc_checksum = calc_checksum & 0xFF
+            # Calculate the checksum
+            calc_checksum = 0
+            for c in nmea_data:
+                calc_checksum ^= ord(c)
+            calc_checksum = calc_checksum & 0xFF
 
-        # Verify the checksum matches
-        if calc_checksum == checksum:
-            return True
+            # Verify the checksum matches
+            if calc_checksum == checksum:
+                return True
 
-        return False
+            return False
+        except Exception as ex:
+            logging.error(ex)
+            return False
+
+
+class Gage:
+    """
+    Gage Height data from the ensemble dataset.
+    """
+    def __init__(self, pd0_format: bool = False):
+        """
+        Initialize all the values.
+
+        Initializing the lists as list and converting
+        to numpy array after data is decoded.
+        """
+        self.pd0_format = pd0_format
+
+        self.status = []
+        self.avg_range = []
+        self.sd = []
+        self.avg_sn = []
+        self.n = []
+        self.salinity = []
+        self.pressure = []
+        self.depth = []
+        self.water_temp = []
+        self.backplane_temp = []
+        self.speed_of_sound = []
+        self.heading = []
+        self.pitch = []
+        self.roll = []
+        self.avg_s = []
+        self.avg_n1 = []
+        self.avg_n2 = []
+        self.gain_frac = []
+
+        self.pings = []
+        self.snr_thresh = []
+        self.gain_thresh = []
+        self.stat_thresh = []
+        self.xmt_cycles = []
+        self.depth_offset = []
+
+    def decode_data(self, ens_bytes: list, name_len: int = 8):
+        """
+        Decode the ancillary data for the Configuration data.
+
+        :param ens_bytes: Byte array containing the ensemble data.
+        :param name_len: Length of the name of the dataset.
+        """
+        # Determine where to start in the ensemble data
+        packet_pointer = RtbRowe.get_base_data_size(name_len)
+
+        self.status.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 0, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.avg_range.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.sd.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.avg_sn.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.n.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 4, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.salinity.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.pressure.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.depth.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.water_temp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.backplane_temp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.speed_of_sound.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.heading.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 11, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.pitch.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.roll.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.avg_s.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 14, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.avg_n1.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 15, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.avg_n2.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 16, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.gain_frac.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 17, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.pings.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 18, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.snr_thresh.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 19, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.gain_thresh.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 20, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.stat_thresh.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 21, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.xmt_cycles.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 22, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.depth_offset.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 23, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+
+
+class RiverBT:
+    """
+    River Bottom Track data from the ensemble dataset.
+    """
+    def __init__(self, pd0_format: bool = False):
+        """
+        Initialize all the values.
+
+        Initializing the lists as list and converting
+        to numpy array after data is decoded.
+        """
+        self.pd0_format = pd0_format
+
+        self.num_subsystems = []                # Number of subsystems to decode
+        self.ping_count = []                    # Pings averaged
+        self.status = []                        # Data status
+        self.beams = []                         # Number of beams
+        self.nce = []                           # Number of code elements
+        self.repeats_n = []                     # Number of code repeats
+        self.cpce = []                          # Codes per code elements
+        self.bb = []                            # Broadband
+        self.ll = []
+        self.beam_mux = []                      # Beam Mux setup
+        self.nb = []                            # Narrowband
+        self.ping_sec = []                      # Ping time in seconds
+        self.heading = []                       # Heading 0 to 360
+        self.pitch = []                         # Pitch -90 to 90
+        self.roll = []                          # Roll -180 to 180
+        self.water_temp = []                    # Water Temperature in C
+        self.backplane_temp = []                # Internal System temperature in C
+        self.salinity = []                      # Salinity in PPT
+        self.pressure = []                      # Pressure in Pascal
+        self.depth = []                         # Pressure converted to m
+        self.speed_of_sound = []                # Speed of Sound in m/s
+        self.mx = []
+        self.my = []
+        self.mz = []
+        self.gp = []
+        self.gr = []
+        self.gz = []
+        self.samples_per_sec = []               # Samples per second
+        self.system_freq_hz = []                # System frequency in Hz
+        self.bt_range = []                      # Bottom Track Range in m
+        self.bt_snr = []                        # Bottom Track SNR in dB
+        self.bt_amp = []                        # Bottom Track Amplitude in dB
+        self.bt_noise_amp_bp = []               # Noise in Amplitude Back Porch
+        self.bt_noise_amp_fp = []               # Noise in Amplitude Front Porch
+        self.bt_corr = []                       # Bottom Track Correlation in percent
+        self.vel = []                           # Bottom Track Beam Velocity in m/s
+        self.beam_n = []
+
+    def decode_data(self, ens_bytes: list, name_len: int = 8):
+        """
+        Decode the River Bottom data data.
+
+        :param ens_bytes: Byte array containing the ensemble data.
+        :param name_len: Length of the name of the dataset.
+        """
+
+        # Determine where to start in the ensemble data
+        packet_pointer = RtbRowe.get_base_data_size(name_len)
+
+        num_subsystems = int(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 0, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+        self.num_subsystems.append(num_subsystems)
+
+        # Start of the data
+        index = 1
+
+        # Create a temp list to hold all the values for each subsystem
+        # Accumulate the list then add it to the data type
+        # Index will keep track of where we are located in the data
+        pint_count = []
+        for sb in range(num_subsystems):
+            pint_count.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.ping_count.append(pint_count)
+
+        status = []
+        for sb in range(num_subsystems):
+            status.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.status.append(status)
+
+        beams = []
+        for sb in range(num_subsystems):
+            beams.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.beams.append(beams)
+
+        nce = []
+        for sb in range(num_subsystems):
+            nce.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.nce.append(nce)
+
+        repeats_n = []
+        for sb in range(num_subsystems):
+            repeats_n.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.repeats_n.append(repeats_n)
+
+        cpce = []
+        for sb in range(num_subsystems):
+            cpce.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.cpce.append(cpce)
+
+        bb = []
+        for sb in range(num_subsystems):
+            bb.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.bb.append(bb)
+
+        ll = []
+        for sb in range(num_subsystems):
+            ll.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.ll.append(ll)
+
+        beam_mux = []
+        for sb in range(num_subsystems):
+            beam_mux.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.beam_mux.append(beam_mux)
+
+        nb = []
+        for sb in range(num_subsystems):
+            nb.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.nb.append(nb)
+
+        ps = []
+        for sb in range(num_subsystems):
+            ps.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.ping_sec.append(ps)
+
+        hdg = []
+        for sb in range(num_subsystems):
+            hdg.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.heading.append(hdg)
+
+        ptch = []
+        for sb in range(num_subsystems):
+            ptch.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.pitch.append(ptch)
+
+        roll = []
+        for sb in range(num_subsystems):
+            roll.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.roll.append(roll)
+
+        wt = []
+        for sb in range(num_subsystems):
+            wt.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.water_temp.append(wt)
+
+        sys_temp = []
+        for sb in range(num_subsystems):
+            sys_temp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.backplane_temp.append(sys_temp)
+
+        sal = []
+        for sb in range(num_subsystems):
+            sal.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.salinity.append(sal)
+
+        pres = []
+        for sb in range(num_subsystems):
+            pres.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.pressure.append(pres)
+
+        depth = []
+        for sb in range(num_subsystems):
+            depth.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.depth.append(depth)
+
+        sos = []
+        for sb in range(num_subsystems):
+            sos.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.speed_of_sound.append(sos)
+
+        mx = []
+        for sb in range(num_subsystems):
+            mx.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.mx.append(mx)
+
+        my = []
+        for sb in range(num_subsystems):
+            my.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.my.append(my)
+
+        mz = []
+        for sb in range(num_subsystems):
+            mz.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.mz.append(mz)
+
+        gp = []
+        for sb in range(num_subsystems):
+            gp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.gp.append(gp)
+
+        gr = []
+        for sb in range(num_subsystems):
+            gr.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.gr.append(gr)
+
+        gz = []
+        for sb in range(num_subsystems):
+            gz.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.gz.append(gz)
+
+        sps = []
+        for sb in range(num_subsystems):
+            sps.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.samples_per_sec.append(sps)
+
+        freq = []
+        for sb in range(num_subsystems):
+            freq.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.system_freq_hz.append(freq)
+
+        bt_range = []
+        for sb in range(num_subsystems):
+            bt_range.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.bt_range.append(bt_range)
+
+        snr = []
+        for sb in range(num_subsystems):
+            snr.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.bt_snr.append(snr)
+
+        amp = []
+        for sb in range(num_subsystems):
+            amp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.bt_amp.append(amp)
+
+        noise_bp = []
+        for sb in range(num_subsystems):
+            noise_bp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.bt_noise_amp_bp.append(noise_bp)
+
+        noise_fp = []
+        for sb in range(num_subsystems):
+            noise_fp.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.bt_noise_amp_fp.append(noise_fp)
+
+        corr = []
+        for sb in range(num_subsystems):
+            corr.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.bt_corr.append(corr)
+
+        vel = []
+        for sb in range(num_subsystems):
+            vel.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.vel.append(vel)
+
+        beam_n = []
+        for sb in range(num_subsystems):
+            beam_n.append(RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes))
+            index += 1
+        self.beam_n.append(beam_n)
+
+
+class Surface:
+    """
+    Surf data are to accommodate RiverRay and RiverPro.  pd0_read sets these
+    values to nan when reading Rio Grande or StreamPro data
+    """
+
+    def __init__(self):
+        """
+        Initialize all the values.
+        """
+        self.no_cells = []
+        self.cell_size_cm = []
+        self.dist_bin1_cm = []
+        self.vel_mps = []
+
+    def convert_np_array(self):
+        """
+        Convert the list to numpy array.
+        QRev uses np.Array instead of lists.
+        But appending to list is more efficient
+        compared to np.array.
+        """
+        self.no_cells = np.array(self.no_cells)
+        self.cell_size_cm = np.array(self.cell_size_cm)
+        self.dist_bin1_cm = np.array(self.dist_bin1_cm)
+        self.vel_mps = np.array(self.vel_mps)
+
+    def empty_init(self):
+        """
+        Initialize empty values for each ensemble.
+
+        """
+        self.no_cells.append(np.NaN)
+        self.cell_size_cm.append(np.NaN)
+        self.dist_bin1_cm.append(np.NaN)
+        self.vel_mps.append(np.NaN)
+
+
+
 

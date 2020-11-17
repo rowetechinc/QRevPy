@@ -4,6 +4,8 @@ from datetime import datetime
 from datetime import timezone
 from scipy import signal, fftpack
 from Classes.Pd0TRDI import Pd0TRDI
+from Classes.RtbRowe import RtbRowe
+from Classes.RTT_Rowe import RTTrowe
 from Classes.DepthStructure import DepthStructure
 from Classes.WaterData import WaterData
 from Classes.BoatStructure import BoatStructure
@@ -667,6 +669,610 @@ class TransectData(object):
                                          end_in=end_serial_time,
                                          ens_dur_in=ens_delta_time)
             
+            # Transect checked for use in discharge computation
+            self.checked = mmt_transect.Checked
+
+            # Create class for adcp information
+            self.adcp = InstrumentData()
+            self.adcp.populate_data(manufacturer='TRDI', raw_data=pd0_data, mmt_transect=mmt_transect, mmt=mmt)
+
+    def rowe(self, rtt_transect, rowe_data: RtbRowe, rtt: RTTrowe):
+        """Create object, lists, and instance variables for Rowe data.
+
+        Parameters
+        ----------
+        rtt_transect: RTTtransect
+            Object of Transect (from RTT_Rowe)
+        rowe_data: RtbRowe
+            Object of RtbRowe
+        rtt: RTTrowe
+            Object of RTT_Rowe
+        """
+
+        # Get file name of Rowe file which is first file in list of file associated with the transect
+        self.file_name = rtt_transect.Files[0]
+
+        # Get the active configuration data for the transect
+        rtt_config = getattr(rtt_transect, 'active_config')
+
+        # If the RTB file has water profile Beam data process all of the data
+        if len(rowe_data.Wt.vel_mps) > 0:
+
+            # Get and compute ensemble beam depths
+            temp_depth_bt = np.array(rowe_data.Bt.depth)
+
+            # Screen out invalid depths
+            temp_depth_bt[temp_depth_bt < 0.01] = np.nan
+
+            # Add draft
+            temp_depth_bt += rtt_config['Offsets_Transducer_Depth']
+
+            # Get instrument cell data
+            cell_size_all_m, cell_depth_m, sl_cutoff_per, sl_lag_effect_m = TransectData.compute_cell_data(rowe_data)
+
+            # Adjust cell depth of draft
+            cell_depth_m = np.add(rtt_config['Offsets_Transducer_Depth'], cell_depth_m)
+
+            # Create depth data object for BT
+            self.depths = DepthStructure()
+            self.depths.add_depth_object(depth_in=temp_depth_bt,
+                                         source_in='BT',
+                                         freq_in=rowe_data.Cfg.wp_system_freq_hz / 1000.0,
+                                         draft_in=rtt_config['Offsets_Transducer_Depth'],
+                                         cell_depth_in=cell_depth_m,
+                                         cell_size_in=cell_size_all_m)
+
+            # Compute cells above side lobe
+            cells_above_sl, sl_cutoff_m = \
+                TransectData.side_lobe_cutoff(depths=self.depths.bt_depths.depth_orig_m,
+                                              draft=self.depths.bt_depths.draft_orig_m,
+                                              cell_depth=self.depths.bt_depths.depth_cell_depth_m,
+                                              sl_lag_effect=sl_lag_effect_m,
+                                              slc_type='Percent',
+                                              value=1 - sl_cutoff_per / 100)
+
+            # Check for the presence of vertical beam data
+            """
+            if np.nanmax(np.nanmax(pd0_data.Sensor.vert_beam_status)) > 0:
+                temp_depth_vb = np.tile(np.nan, (1, cell_depth_m.shape[1]))
+                temp_depth_vb[0, :] = pd0_data.Sensor.vert_beam_range_m
+
+                # Screen out invalid depths
+                temp_depth_vb[temp_depth_vb < 0.01] = np.nan
+
+                # Add draft
+                temp_depth_vb = temp_depth_vb + rtt_config['Offsets_Transducer_Depth']
+
+                # Create depth data object for vertical beam
+                self.depths.add_depth_object(depth_in=temp_depth_vb,
+                                             source_in='VB',
+                                             freq_in=rowe_data.Cfg.wp_system_freq_hz/1000,
+                                             draft_in=rtt_config['Offsets_Transducer_Depth'],
+                                             cell_depth_in=cell_depth_m,
+                                             cell_size_in=cell_size_all_m)
+            """
+
+            # Check for the presence of depth sounder
+            if np.nansum(np.nansum(rowe_data.Sensor.echo_sounder_depth)) > 1e-5:
+                temp_depth_ds = rowe_data.Sensor.echo_sounder_dept
+
+                # Screen out invalid data
+                temp_depth_ds[temp_depth_ds < 0.01] = np.nan
+
+                # Use the last valid depth for each ensemble
+                last_depth_col_idx = np.sum(np.isnan(temp_depth_ds) == False, axis=1) - 1
+                last_depth_col_idx[last_depth_col_idx == -1] = 0
+                row_index = np.arange(len(temp_depth_ds))
+                last_depth = nans(row_index.size)
+                for row in row_index:
+                    last_depth[row] = temp_depth_ds[row, last_depth_col_idx[row]]
+
+                # Determine if mmt file has a scale factor and offset for the depth sounder
+                if rtt_config['DS_Cor_Spd_Sound'] == 0:
+                    scale_factor = rtt_config['DS_Scale_Factor']
+                else:
+                    scale_factor = rowe_data.Cfg.speed_of_sound / 1500.
+
+                # Apply scale factor, offset, and draft
+                # Note: Only the ADCP draft is stored.  The transducer
+                # draft or scaling for depth sounder data cannot be changed in QRev
+                ds_depth = np.tile(np.nan, (1, cell_depth_m.shape[1]))
+                ds_depth[0, :] = (last_depth * scale_factor) \
+                                 + rtt_config['DS_Transducer_Depth'] \
+                                 + rtt_config['DS_Transducer_Offset']
+
+                self.depths.add_depth_object(depth_in=ds_depth,
+                                             source_in='DS',
+                                             freq_in=rowe_data.Cfg.wp_system_freq_hz / 1000,
+                                             draft_in=rtt_config['Offsets_Transducer_Depth'],
+                                             cell_depth_in=cell_depth_m,
+                                             cell_size_in=cell_size_all_m)
+
+            # Set depth reference to value from mmt file
+            if 'Proc_River_Depth_Source' in rtt_config:
+                if rtt_config['Proc_River_Depth_Source'] == 0:
+                    self.depths.selected = 'bt_depths'
+                    self.depths.composite_depths(transect=self, setting='Off')
+
+                elif rtt_config['Proc_River_Depth_Source'] == 1:
+                    if self.depths.ds_depths is not None:
+                        self.depths.selected = 'ds_depths'
+                    else:
+                        self.depths.selected = 'bt_depths'
+                    self.depths.composite_depths(transect=self, setting='Off')
+
+                elif rtt_config['Proc_River_Depth_Source'] == 2:
+                    if self.depths.vb_depths is not None:
+                        self.depths.selected = 'vb_depths'
+                    else:
+                        self.depths.selected = 'bt_depths'
+                    self.depths.composite_depths(transect=self, setting='Off')
+
+                elif rtt_config['Proc_River_Depth_Source'] == 3:
+                    if self.depths.vb_depths is None:
+                        self.depths.selected = 'bt_depths'
+                        self.depths.composite_depths(transect=self, setting='Off')
+                    else:
+                        self.depths.selected = 'vb_depths'
+                        self.depths.composite_depths(transect=self, setting='On')
+
+                elif rtt_config['Proc_River_Depth_Source'] == 4:
+                    if self.depths.bt_depths is not None:
+                        self.depths.selected = 'bt_depths'
+                        if self.depths.vb_depths is not None or self.depths.ds_depths is not None:
+                            self.depths.composite_depths(transect=self, setting='On')
+                        else:
+                            self.depths.composite_depths(transect=self, setting='Off')
+                    elif self.depths.vb_depths is not None:
+                        self.depths.selected = 'vb_depths'
+                        self.depths.composite_depths(transect=self, setting='On')
+                    elif self.depths.ds_depths is not None:
+                        self.depths.selected = 'ds_depths'
+                        self.depths.composite_depths(transect=self, setting='On')
+                else:
+                    self.depths.selected = 'bt_depths'
+                    self.depths.composite_depths(transect=self, setting='Off')
+            else:
+                if rtt_config['DS_Use_Process'] > 0:
+                    if self.depths.ds_depths is not None:
+                        self.depths.selected = 'ds_depths'
+                    else:
+                        self.depths.selected = 'bt_depths'
+                else:
+                    self.depths.selected = 'bt_depths'
+                self.depths.composite_depths(transect=self, setting='Off')
+
+            # Create water_data object
+            # ------------------------
+
+            # Check for RiverRay and RiverPro data
+            firmware = str(pd0_data.Inst.firm_ver[0])
+            excluded_dist = 0
+            if (firmware[:2] == '56') and (np.nanmax(pd0_data.Sensor.vert_beam_status) < 0.9):
+                excluded_dist = 0.25
+
+            if (firmware[:2] == '44') or (firmware[:2] == '56'):
+                # Process water velocities for RiverRay and RiverPro
+                self.w_vel = WaterData()
+                self.w_vel.populate_data(vel_in=pd0_data.Wt.vel_mps,
+                                         freq_in=pd0_data.Inst.freq.T,
+                                         coord_sys_in=pd0_data.Cfg.coord_sys,
+                                         nav_ref_in='None',
+                                         rssi_in=pd0_data.Wt.rssi,
+                                         rssi_units_in='Counts',
+                                         excluded_dist_in=excluded_dist,
+                                         cells_above_sl_in=cells_above_sl,
+                                         sl_cutoff_per_in=sl_cutoff_per,
+                                         sl_cutoff_num_in=0,
+                                         sl_cutoff_type_in='Percent',
+                                         sl_lag_effect_in=sl_lag_effect_m,
+                                         sl_cutoff_m=sl_cutoff_m,
+                                         wm_in=pd0_data.Cfg.wm[0],
+                                         blank_in=pd0_data.Cfg.wf_cm[0] / 100,
+                                         corr_in=pd0_data.Wt.corr,
+                                         surface_vel_in=pd0_data.Surface.vel_mps,
+                                         surface_rssi_in=pd0_data.Surface.rssi,
+                                         surface_corr_in=pd0_data.Surface.corr,
+                                         surface_num_cells_in=pd0_data.Surface.no_cells)
+
+            else:
+                # Process water velocities for non-RiverRay ADCPs
+                self.w_vel = WaterData()
+                self.w_vel.populate_data(vel_in=pd0_data.Wt.vel_mps,
+                                         freq_in=pd0_data.Inst.freq.T,
+                                         coord_sys_in=pd0_data.Cfg.coord_sys[0],
+                                         nav_ref_in='None',
+                                         rssi_in=pd0_data.Wt.rssi,
+                                         rssi_units_in='Counts',
+                                         excluded_dist_in=excluded_dist,
+                                         cells_above_sl_in=cells_above_sl,
+                                         sl_cutoff_per_in=sl_cutoff_per,
+                                         sl_cutoff_num_in=0,
+                                         sl_cutoff_type_in='Percent',
+                                         sl_lag_effect_in=sl_lag_effect_m,
+                                         sl_cutoff_m=sl_cutoff_m,
+                                         wm_in=pd0_data.Cfg.wm[0],
+                                         blank_in=pd0_data.Cfg.wf_cm[0] / 100,
+                                         corr_in=pd0_data.Wt.corr)
+
+            # Initialize boat vel
+            self.boat_vel = BoatStructure()
+            # Apply 3-beam setting from mmt file
+            if rtt_config['Proc_Use_3_Beam_BT'] < 0.5:
+                min_beams = 4
+            else:
+                min_beams = 3
+            self.boat_vel.add_boat_object(source='TRDI',
+                                          vel_in=pd0_data.Bt.vel_mps,
+                                          freq_in=pd0_data.Inst.freq.T,
+                                          coord_sys_in=pd0_data.Cfg.coord_sys[0],
+                                          nav_ref_in='BT',
+                                          min_beams=min_beams,
+                                          bottom_mode=pd0_data.Cfg.bm[0])
+
+            self.boat_vel.set_nav_reference('BT')
+
+            # Compute velocities from GPS Data
+            # ------------------------------------
+            # Raw Data
+            raw_gga_utc = pd0_data.Gps2.utc
+            raw_gga_lat = pd0_data.Gps2.lat_deg
+            raw_gga_lon = pd0_data.Gps2.lon_deg
+
+            # Determine correct sign for latitude
+            for n, lat_ref in enumerate(pd0_data.Gps2.lat_ref):
+                idx = np.nonzero(np.array(lat_ref) == 'S')
+                raw_gga_lat[n, idx] = raw_gga_lat[n, idx] * -1
+
+            # Determine correct sign for longitude
+            for n, lon_ref in enumerate(pd0_data.Gps2.lon_ref):
+                idx = np.nonzero(np.array(lon_ref) == 'W')
+                raw_gga_lon[n, idx] = raw_gga_lon[n, idx] * -1
+
+            # Assign data to local variables
+            raw_gga_alt = pd0_data.Gps2.alt
+            raw_gga_diff = pd0_data.Gps2.corr_qual
+            raw_gga_hdop = pd0_data.Gps2.hdop
+            raw_gga_num_sats = pd0_data.Gps2.num_sats
+            raw_vtg_course = pd0_data.Gps2.course_true
+            raw_vtg_speed = pd0_data.Gps2.speed_kph * 0.2777778
+            raw_vtg_delta_time = pd0_data.Gps2.vtg_delta_time
+            raw_vtg_mode_indicator = pd0_data.Gps2.mode_indicator
+            raw_gga_delta_time = pd0_data.Gps2.gga_delta_time
+
+            # RSL provided ensemble values, not supported for TRDI data
+            ext_gga_utc = []
+            ext_gga_lat = []
+            ext_gga_lon = []
+            ext_gga_alt = []
+            ext_gga_diff = []
+            ext_gga_hdop = []
+            ext_gga_num_sats = []
+            ext_vtg_course = []
+            ext_vtg_speed = []
+
+            # QRev methods GPS processing methods
+            gga_p_method = 'Mindt'
+            gga_v_method = 'Mindt'
+            vtg_method = 'Mindt'
+
+            # If valid gps data exist, process the data
+            if (np.nansum(np.nansum(np.abs(raw_gga_lat))) > 0) \
+                    or (np.nansum(np.nansum(np.abs(raw_vtg_speed))) > 0):
+
+                # Process raw GPS data
+                self.gps = GPSData()
+                self.gps.populate_data(raw_gga_utc=raw_gga_utc,
+                                       raw_gga_lat=raw_gga_lat,
+                                       raw_gga_lon=raw_gga_lon,
+                                       raw_gga_alt=raw_gga_alt,
+                                       raw_gga_diff=raw_gga_diff,
+                                       raw_gga_hdop=raw_gga_hdop,
+                                       raw_gga_num_sats=raw_gga_num_sats,
+                                       raw_gga_delta_time=raw_gga_delta_time,
+                                       raw_vtg_course=raw_vtg_course,
+                                       raw_vtg_speed=raw_vtg_speed,
+                                       raw_vtg_delta_time=raw_vtg_delta_time,
+                                       raw_vtg_mode_indicator=raw_vtg_mode_indicator,
+                                       ext_gga_utc=ext_gga_utc,
+                                       ext_gga_lat=ext_gga_lat,
+                                       ext_gga_lon=ext_gga_lon,
+                                       ext_gga_alt=ext_gga_alt,
+                                       ext_gga_diff=ext_gga_diff,
+                                       ext_gga_hdop=ext_gga_hdop,
+                                       ext_gga_num_sats=ext_gga_num_sats,
+                                       ext_vtg_course=ext_vtg_course,
+                                       ext_vtg_speed=ext_vtg_speed,
+                                       gga_p_method=gga_p_method,
+                                       gga_v_method=gga_v_method,
+                                       vtg_method=vtg_method)
+
+                # If valid gga data exists create gga boat velocity object
+                if np.nansum(np.nansum(np.abs(raw_gga_lat))) > 0:
+                    self.boat_vel.add_boat_object(source='TRDI',
+                                                  vel_in=self.gps.gga_velocity_ens_mps,
+                                                  coord_sys_in='Earth',
+                                                  nav_ref_in='GGA')
+
+                # If valid vtg data exist create vtg boat velocity object
+                if np.nansum(np.nansum(np.abs(raw_vtg_speed))) > 0:
+                    self.boat_vel.add_boat_object(source='TRDI',
+                                                  vel_in=self.gps.vtg_velocity_ens_mps,
+                                                  coord_sys_in='Earth',
+                                                  nav_ref_in='VTG')
+
+            # Create Edges Object
+            self.edges = Edges()
+            self.edges.populate_data(rec_edge_method='Fixed', vel_method='MeasMag')
+
+            # Determine number of ensembles to average
+            n_ens_left = rtt_config['Q_Shore_Pings_Avg']
+            # TRDI uses same number on left and right edges
+            n_ens_right = n_ens_left
+
+            # Set indices for ensembles in the moving-boat portion of the transect
+            self.in_transect_idx = np.arange(0, pd0_data.Bt.vel_mps.shape[1])
+
+            # Determine left and right edge distances
+            if rtt_config['Edge_Begin_Left_Bank']:
+                dist_left = float(rtt_config['Edge_Begin_Shore_Distance'])
+                dist_right = float(rtt_config['Edge_End_Shore_Distance'])
+                if 'Edge_End_Manual_Discharge' in rtt_config:
+                    user_discharge_left = float(rtt_config['Edge_Begin_Manual_Discharge'])
+                    user_discharge_right = float(rtt_config['Edge_End_Manual_Discharge'])
+                    edge_method_left = rtt_config['Edge_Begin_Method_Distance']
+                    edge_method_right = rtt_config['Edge_End_Method_Distance']
+                else:
+                    user_discharge_left = None
+                    user_discharge_right = None
+                    edge_method_left = 'Yes'
+                    edge_method_right = 'Yes'
+                self.start_edge = 'Left'
+                self.orig_start_edge = 'Left'
+            else:
+                dist_left = float(rtt_config['Edge_End_Shore_Distance'])
+                dist_right = float(rtt_config['Edge_Begin_Shore_Distance'])
+                if 'Edge_End_Manual_Discharge' in rtt_config:
+                    user_discharge_left = float(rtt_config['Edge_End_Manual_Discharge'])
+                    user_discharge_right = float(rtt_config['Edge_Begin_Manual_Discharge'])
+                    edge_method_left = rtt_config['Edge_End_Method_Distance']
+                    edge_method_right = rtt_config['Edge_Begin_Method_Distance']
+                else:
+                    user_discharge_left = None
+                    user_discharge_right = None
+                    edge_method_left = 'Yes'
+                    edge_method_right = 'Yes'
+                self.start_edge = 'Right'
+                self.orig_start_edge = 'Right'
+
+            # Create left edge
+            if edge_method_left == 'NO':
+                self.edges.left.populate_data(edge_type='User Q',
+                                              distance=dist_left,
+                                              number_ensembles=n_ens_left,
+                                              user_discharge=user_discharge_left)
+
+            elif rtt_config['Q_Left_Edge_Type'] == 0:
+                self.edges.left.populate_data(edge_type='Triangular',
+                                              distance=dist_left,
+                                              number_ensembles=n_ens_left,
+                                              user_discharge=user_discharge_left)
+
+            elif rtt_config['Q_Left_Edge_Type'] == 1:
+                self.edges.left.populate_data(edge_type='Rectangular',
+                                              distance=dist_left,
+                                              number_ensembles=n_ens_left,
+                                              user_discharge=user_discharge_left)
+
+            elif rtt_config['Q_Left_Edge_Type'] == 2:
+                self.edges.left.populate_data(edge_type='Custom',
+                                              distance=dist_left,
+                                              number_ensembles=n_ens_left,
+                                              coefficient=rtt_config['Q_Left_Edge_Coeff'],
+                                              user_discharge=user_discharge_left)
+
+            # Create right edge
+            if edge_method_right == 'NO':
+                self.edges.right.populate_data(edge_type='User Q',
+                                               distance=dist_right,
+                                               number_ensembles=n_ens_right,
+                                               user_discharge=user_discharge_right)
+            elif rtt_config['Q_Right_Edge_Type'] == 0:
+                self.edges.right.populate_data(edge_type='Triangular',
+                                               distance=dist_right,
+                                               number_ensembles=n_ens_right,
+                                               user_discharge=user_discharge_right)
+
+            elif rtt_config['Q_Right_Edge_Type'] == 1:
+                self.edges.right.populate_data(edge_type='Rectangular',
+                                               distance=dist_right,
+                                               number_ensembles=n_ens_right,
+                                               user_discharge=user_discharge_right)
+
+            elif rtt_config['Q_Right_Edge_Type'] == 2:
+                self.edges.right.populate_data(edge_type='Custom',
+                                               distance=dist_right,
+                                               number_ensembles=n_ens_right,
+                                               coefficient=rtt_config['Q_Right_Edge_Coeff'],
+                                               user_discharge=user_discharge_right)
+
+            # Create extrap object
+            # --------------------
+            # Determine top method
+            top = 'Power'
+            if rtt_config['Q_Top_Method'] == 1:
+                top = 'Constant'
+            elif rtt_config['Q_Top_Method'] == 2:
+                top = '3-Point'
+
+            # Determine bottom method
+            bot = 'Power'
+            if rtt_config['Q_Bottom_Method'] == 2:
+                bot = 'No Slip'
+
+            self.extrap = ExtrapData()
+            self.extrap.populate_data(top=top, bot=bot, exp=rtt_config['Q_Power_Curve_Coeff'])
+
+            # Sensor Data
+            self.sensors = Sensors()
+
+            # Heading
+
+            # Internal Heading
+            self.sensors.heading_deg.internal = HeadingData()
+            self.sensors.heading_deg.internal.populate_data(data_in=pd0_data.Sensor.heading_deg.T,
+                                                            source_in='internal',
+                                                            magvar=rtt_config['Offsets_Magnetic_Variation'],
+                                                            align=rtt_config['Ext_Heading_Offset'])
+
+            # External Heading
+            ext_heading_check = np.where(np.isnan(pd0_data.Gps2.heading_deg) == False)
+            if len(ext_heading_check[0]) <= 0:
+                self.sensors.heading_deg.selected = 'internal'
+            else:
+                # Determine external heading for each ensemble
+                # Using the minimum time difference
+                d_time = np.abs(pd0_data.Gps2.hdt_delta_time)
+                d_time_min = np.nanmin(d_time.T, 0).T
+                use = np.tile([np.nan], d_time.shape)
+                for nd_time in range(len(d_time_min)):
+                    use[nd_time, :] = np.abs(d_time[nd_time, :]) == d_time_min[nd_time]
+
+                ext_heading_deg = np.tile([np.nan], (len(d_time_min)))
+                for nh in range(len(d_time_min)):
+                    idx = np.where(use[nh, :])[0]
+                    if len(idx) > 0:
+                        idx = idx[0]
+                        ext_heading_deg[nh] = pd0_data.Gps2.heading_deg[nh, idx]
+
+                # Create external heading sensor
+                self.sensors.heading_deg.external = HeadingData()
+                self.sensors.heading_deg.external.populate_data(data_in=ext_heading_deg,
+                                                                source_in='external',
+                                                                magvar=rtt_config['Offsets_Magnetic_Variation'],
+                                                                align=rtt_config['Ext_Heading_Offset'])
+
+                # Determine heading source to use from mmt setting
+                source_used = rtt_config['Ext_Heading_Use']
+                if source_used:
+                    self.sensors.heading_deg.selected = 'external'
+                else:
+                    self.sensors.heading_deg.selected = 'internal'
+
+            # Pitch
+            pitch = arctand(tand(pd0_data.Sensor.pitch_deg) * cosd(pd0_data.Sensor.roll_deg))
+            pitch_src = pd0_data.Cfg.pitch_src[0]
+
+            # Create pitch sensor
+            self.sensors.pitch_deg.internal = SensorData()
+            self.sensors.pitch_deg.internal.populate_data(data_in=pitch, source_in=pitch_src)
+            self.sensors.pitch_deg.selected = 'internal'
+
+            # Roll
+            roll = pd0_data.Sensor.roll_deg.T
+            roll_src = pd0_data.Cfg.roll_src[0]
+
+            # Create Roll sensor
+            self.sensors.roll_deg.internal = SensorData()
+            self.sensors.roll_deg.internal.populate_data(data_in=roll, source_in=roll_src)
+            self.sensors.roll_deg.selected = 'internal'
+
+            # Temperature
+            temperature = pd0_data.Sensor.temperature_deg_c.T
+            temperature_src = pd0_data.Cfg.temp_src[0]
+
+            # Create temperature sensor
+            self.sensors.temperature_deg_c.internal = SensorData()
+            self.sensors.temperature_deg_c.internal.populate_data(data_in=temperature, source_in=temperature_src)
+            self.sensors.temperature_deg_c.selected = 'internal'
+
+            # Salinity
+            pd0_salinity = pd0_data.Sensor.salinity_ppt.T
+            pd0_salinity_src = pd0_data.Cfg.sal_src[0]
+
+            # Create salinity sensor from pd0 data
+            self.sensors.salinity_ppt.internal = SensorData()
+            self.sensors.salinity_ppt.internal.populate_data(data_in=pd0_salinity, source_in=pd0_salinity_src)
+
+            # Create salinity sensor from mmt data
+            mmt_salinity = rtt_config['Proc_Salinity']
+            self.sensors.salinity_ppt.user = SensorData()
+            self.sensors.salinity_ppt.user.populate_data(data_in=mmt_salinity, source_in='mmt')
+
+            # Set selected salinity
+            self.sensors.salinity_ppt.selected = 'internal'
+
+            # Speed of Sound
+            speed_of_sound = pd0_data.Sensor.sos_mps.T
+            speed_of_sound_src = pd0_data.Cfg.sos_src[0]
+            self.sensors.speed_of_sound_mps.internal = SensorData()
+            self.sensors.speed_of_sound_mps.internal.populate_data(data_in=speed_of_sound, source_in=speed_of_sound_src)
+
+            # The raw data are referenced to the internal SOS
+            self.sensors.speed_of_sound_mps.selected = 'internal'
+
+            # Ensemble times
+            # Compute time for each ensemble in seconds
+            ens_time_sec = pd0_data.Sensor.time[:, 0] * 3600 \
+                           + pd0_data.Sensor.time[:, 1] * 60 \
+                           + pd0_data.Sensor.time[:, 2] \
+                           + pd0_data.Sensor.time[:, 3] / 100
+
+            # Compute the duration of each ensemble in seconds adjusting for lost data
+            ens_delta_time = np.tile([np.nan], ens_time_sec.shape)
+            idx_time = np.where(np.isnan(ens_time_sec) == False)[0]
+            ens_delta_time[idx_time[1:]] = nandiff(ens_time_sec[idx_time])
+
+            # Adjust for transects tha last past midnight
+            idx_24hr = np.where(np.less(ens_delta_time, 0))[0]
+            ens_delta_time[idx_24hr] = 24 * 3600 + ens_delta_time[idx_24hr]
+            ens_delta_time = ens_delta_time.T
+
+            # Start date and time
+            idx = np.where(np.isnan(pd0_data.Sensor.time[:, 0]) == False)[0][0]
+            start_year = int(pd0_data.Sensor.date[idx, 0])
+
+            # StreamPro doesn't include y2k dates
+            if start_year < 100:
+                start_year = 2000 + int(pd0_data.Sensor.date_not_y2k[idx, 0])
+
+            start_month = int(pd0_data.Sensor.date[idx, 1])
+            start_day = int(pd0_data.Sensor.date[idx, 2])
+            start_hour = int(pd0_data.Sensor.time[idx, 0])
+            start_min = int(pd0_data.Sensor.time[idx, 1])
+            start_sec = int(pd0_data.Sensor.time[idx, 2] + pd0_data.Sensor.time[idx, 3] / 100)
+            start_micro = int(
+                ((pd0_data.Sensor.time[idx, 2] + pd0_data.Sensor.time[idx, 3] / 100) - start_sec) * 10 ** 6)
+
+            start_dt = datetime(start_year, start_month, start_day, start_hour, start_min, start_sec, start_micro,
+                                tzinfo=timezone.utc)
+            start_serial_time = start_dt.timestamp()
+            start_date = datetime.strftime(datetime.utcfromtimestamp(start_serial_time), '%m/%d/%Y')
+
+            # End data and time
+            idx = np.where(np.isnan(pd0_data.Sensor.time[:, 0]) == False)[0][-1]
+            end_year = int(pd0_data.Sensor.date[idx, 0])
+            # StreamPro does not include Y@K dates
+            if end_year < 100:
+                end_year = 2000 + int(pd0_data.Sensor.date_not_y2k[idx, 0])
+
+            end_month = int(pd0_data.Sensor.date[idx, 1])
+            end_day = int(pd0_data.Sensor.date[idx, 2])
+            end_hour = int(pd0_data.Sensor.time[idx, 0])
+            end_min = int(pd0_data.Sensor.time[idx, 1])
+            end_sec = int(pd0_data.Sensor.time[idx, 2] + pd0_data.Sensor.time[idx, 3] / 100)
+            end_micro = int(((pd0_data.Sensor.time[idx, 2] + pd0_data.Sensor.time[idx, 3] / 100) - end_sec) * 10 ** 6)
+
+            end_dt = datetime(end_year, end_month, end_day, end_hour, end_min, end_sec, end_micro, tzinfo=timezone.utc)
+            end_serial_time = end_dt.timestamp()
+
+            # Create date/time object
+            self.date_time = DateTime()
+            self.date_time.populate_data(date_in=start_date,
+                                         start_in=start_serial_time,
+                                         end_in=end_serial_time,
+                                         ens_dur_in=ens_delta_time)
+
             # Transect checked for use in discharge computation
             self.checked = mmt_transect.Checked
 
@@ -2123,8 +2729,143 @@ def allocate_transects(mmt, transect_type='Q', checked=False):
         for x in transect_threads:
             x.join()
                 
-    return processed_transects   
+    return processed_transects
 
+
+def allocate_rti_transects(rtt: RTTrowe, transect_type: str = 'Q', checked: bool = False):
+    """Method to load transect data. Changed from Matlab approach by Greg to allow possibility
+    of multi-thread approach.
+
+    Parameters
+    ----------
+    rtt: RTT Rowe
+        Object of RTT Rowe
+    transect_type: str
+        Type of transect (Q: discharge or MB: moving-bed test)
+    checked: bool
+        Determines if all files are loaded (False) or only checked files (True)
+    """
+
+    # DEBUG, set threaded to false to get manual serial commands
+    multi_threaded = False
+
+    file_names = []
+    file_idx = []
+
+    # Setup processing for discharge or moving-bed transects
+    if transect_type == 'Q':
+        # Identify discharge transect files to load
+        if checked:
+            for idx, transect in enumerate(rtt.transects):
+                if transect.Checked == 1:
+                    file_names.append(transect.Files[0])
+                    file_idx.append(idx)
+            # file_names = [transect.Files[0] for transect in mmt.transects if transect.Checked == 1]
+        else:
+            file_names = [transect.Files[0] for transect in rtt.transects]
+            file_idx = list(range(0, len(file_names)))
+    elif transect_type == 'MB':
+        file_names = [transect.Files[0] for transect in rtt.mbt_transects]
+        file_idx = list(range(0, len(file_names)))
+
+    # Determine if any files are missing
+    valid_files = []
+    valid_indices = []
+    for index, name in enumerate(file_names):
+        fullname = os.path.join(rtt.path, name)
+        if os.path.exists(fullname):
+            valid_files.append(fullname)
+            valid_indices.append(file_idx[index])
+
+    # Multi-thread for RTB files
+    # -------------------------
+    # Seems like this section belongs in RtbRowe.py
+    # Initialize thread variables
+    rtb_data = []
+    rtb_threads = []
+    thread_id = 0
+
+    # DSM 1/24/2018 could this be moved to Pd0TRDI.py as a method
+    # Accumulate the ensemble transect files
+    # Cecode the data, then add it to the list
+    def add_rtb(file_name):
+        rtb_data.append(RtbRowe(file_name, use_pd0_format=True))
+
+    if multi_threaded:
+        # TODO this belongs in the RTB class
+        for file in valid_files:
+            rtb_thread = MultiThread(thread_id=thread_id, function=add_rtb, args={'file_name': file})
+            thread_id += 1
+            rtb_threads.start()
+            rtb_threads.append(rtb_thread)
+    else:
+        for file in valid_files:
+            rtb_data.append(RtbRowe(file, use_pd0_format=True))
+
+    # Wait for all the threads to complete
+    for thrd in rtb_threads:
+        thrd.join()
+
+    # Multi-thread for transect data
+
+    # Initialize thread variables
+    processed_transects = []
+    transect_threads = []
+    thread_id = 0
+
+    # DSM 1/24/2018 couldn't this be added to the TransectData class
+    def add_transect(transect_data, rtt_transect, mt_rtb_data, mt_rtt):
+        transect_data.rowe(rtt=mt_rtt,                          # RTT Project
+                           rtt_transect=rtt_transect,           # RTT Transect Configs
+                           rowe_data=mt_rtb_data)               # RTB Ensemble data
+        processed_transects.append(transect_data)
+
+    # Process each transect
+    for k in range(len(rtb_data)):
+        transect = TransectData()
+        if rtb_data[k].Wt is not None:
+            if transect_type == 'MB':
+                # Process moving-bed transect
+                if multi_threaded:
+                    t_thread = MultiThread(thread_id=thread_id,
+                                           function=add_transect,
+                                           args={'transect': transect,
+                                                 'rtt_transect': rtt.mbt_transects[valid_indices[k]],
+                                                 'mt_rtb_data': rtb_data[k],
+                                                 'mt_rtt': rtt})
+                    t_thread.start()
+                    transect_threads.append(t_thread)
+
+                else:
+                    transect = TransectData()
+                    add_transect(transect_data=transect,
+                                 rtt_transect=rtt.mbt_transects[valid_indices[k]],
+                                 mt_rtt_data=rtb_data[k],
+                                 mt_rtt=rtt)
+
+            else:
+                # Process discharge transects
+                if multi_threaded:
+                    t_thread = MultiThread(thread_id=thread_id,
+                                           function=add_transect,
+                                           args={'transect': transect,
+                                                 'rtt_transect': rtt.transects[valid_indices[k]],
+                                                 'mt_rtb_data': rtb_data[k],
+                                                 'mt_rtt': rtt})
+                    t_thread.start()
+                    transect_threads.append(t_thread)
+
+                else:
+                    add_transect(transect_data=transect,
+                                 rtt_transect=rtt.transects[valid_indices[k]],
+                                 mt_rtb_data=rtb_data[k],
+                                 mt_rtt=rtt)
+
+    if multi_threaded:
+        for x in transect_threads:
+            x.join()
+
+    return processed_transects
 
 def adjusted_ensemble_duration(transect, trans_type=None):
     """Applies the TRDI method of expanding the ensemble time when data are invalid.

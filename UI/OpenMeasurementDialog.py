@@ -52,7 +52,7 @@ class OpenMeasurementDialog(QtWidgets.QDialog):
         # Get the full names (path + file) of the selected files
         self.fullName = QtWidgets.QFileDialog.getOpenFileNames(
                     self, self.tr('Open File'), folder,
-                    self.tr('All (*.mat *.mmt *.rmmt);;SonTek Matlab File (*.mat);;TRDI mmt File (*.mmt);;Rowe rmmt File (*.rmmt);;'
+                    self.tr('All (*.mat *.mmt *.rtt);;SonTek Matlab File (*.mat);;TRDI mmt File (*.mmt);;Rowe rmmt File (*.rtt);;'
                             'QRev File (*_QRev.mat)'))[0]
 
         # Initialize parameters
@@ -98,7 +98,7 @@ class OpenMeasurementDialog(QtWidgets.QDialog):
 
                 if checked_transect_dialog == QtWidgets.QMessageBox.Yes:
                     self.checked = True
-            elif file_extension == '.rmmt':
+            elif file_extension == '.rtt':
                 self.type = 'Rowe'
                 checked_transect_dialog = QtWidgets.QMessageBox()
                 checked_transect_dialog.setIcon(QtWidgets.QMessageBox.Question)
