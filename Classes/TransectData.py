@@ -696,10 +696,10 @@ class TransectData(object):
         rtt_config = getattr(rtt_transect, 'active_config')
 
         # If the RTB file has water profile Beam data process all of the data
-        if len(rowe_data.Wt.vel_mps) > 0:
+        if rowe_data.Wt is not None:
 
             # Get and compute ensemble beam depths
-            temp_depth_bt = np.array(rowe_data.Bt.depth)
+            temp_depth_bt = np.array(rowe_data.Bt.depth_m)
 
             # Screen out invalid depths
             temp_depth_bt[temp_depth_bt < 0.01] = np.nan
@@ -717,7 +717,7 @@ class TransectData(object):
             self.depths = DepthStructure()
             self.depths.add_depth_object(depth_in=temp_depth_bt,
                                          source_in='BT',
-                                         freq_in=rowe_data.Cfg.wp_system_freq_hz / 1000.0,
+                                         freq_in=rowe_data.Inst.freq,
                                          draft_in=rtt_config['Offsets_Transducer_Depth'],
                                          cell_depth_in=cell_depth_m,
                                          cell_size_in=cell_size_all_m)
@@ -732,7 +732,6 @@ class TransectData(object):
                                               value=1 - sl_cutoff_per / 100)
 
             # Check for the presence of vertical beam data
-            """
             if np.nanmax(np.nanmax(pd0_data.Sensor.vert_beam_status)) > 0:
                 temp_depth_vb = np.tile(np.nan, (1, cell_depth_m.shape[1]))
                 temp_depth_vb[0, :] = pd0_data.Sensor.vert_beam_range_m
@@ -750,7 +749,6 @@ class TransectData(object):
                                              draft_in=rtt_config['Offsets_Transducer_Depth'],
                                              cell_depth_in=cell_depth_m,
                                              cell_size_in=cell_size_all_m)
-            """
 
             # Check for the presence of depth sounder
             if np.nansum(np.nansum(rowe_data.Sensor.echo_sounder_depth)) > 1e-5:
@@ -783,7 +781,7 @@ class TransectData(object):
 
                 self.depths.add_depth_object(depth_in=ds_depth,
                                              source_in='DS',
-                                             freq_in=rowe_data.Cfg.wp_system_freq_hz / 1000,
+                                             freq_in=rowe_data.Inst.freq,
                                              draft_in=rtt_config['Offsets_Transducer_Depth'],
                                              cell_depth_in=cell_depth_m,
                                              cell_size_in=cell_size_all_m)
@@ -846,7 +844,7 @@ class TransectData(object):
             # ------------------------
 
             # Check for RiverRay and RiverPro data
-            firmware = str(pd0_data.Inst.firm_ver[0])
+            firmware = str(rowe_data.Inst.firm_ver[0])
             excluded_dist = 0
             if (firmware[:2] == '56') and (np.nanmax(pd0_data.Sensor.vert_beam_status) < 0.9):
                 excluded_dist = 0.25
@@ -854,11 +852,11 @@ class TransectData(object):
             if (firmware[:2] == '44') or (firmware[:2] == '56'):
                 # Process water velocities for RiverRay and RiverPro
                 self.w_vel = WaterData()
-                self.w_vel.populate_data(vel_in=pd0_data.Wt.vel_mps,
-                                         freq_in=pd0_data.Inst.freq.T,
+                self.w_vel.populate_data(vel_in=rowe_data.Wt.vel_mps,
+                                         freq_in=rowe_data.Inst.freq.T,
                                          coord_sys_in=pd0_data.Cfg.coord_sys,
                                          nav_ref_in='None',
-                                         rssi_in=pd0_data.Wt.rssi,
+                                         rssi_in=rowe_data.Wt.rssi,
                                          rssi_units_in='Counts',
                                          excluded_dist_in=excluded_dist,
                                          cells_above_sl_in=cells_above_sl,
