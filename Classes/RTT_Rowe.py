@@ -663,5 +663,6 @@ class RTTrowe(object):
 
 """
 Offsets_Transducer_Depth
-
+Proc_River_Depth_Source 0 - 4  DEFAULT: 4
+Proc_Use_3_Beam_BT < 0.5
 """

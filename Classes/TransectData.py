@@ -732,9 +732,9 @@ class TransectData(object):
                                               value=1 - sl_cutoff_per / 100)
 
             # Check for the presence of vertical beam data
-            if np.nanmax(np.nanmax(pd0_data.Sensor.vert_beam_status)) > 0:
+            if np.nanmax(np.nanmax(rowe_data.Sensor.vert_beam_status)) > 0:
                 temp_depth_vb = np.tile(np.nan, (1, cell_depth_m.shape[1]))
-                temp_depth_vb[0, :] = pd0_data.Sensor.vert_beam_range_m
+                temp_depth_vb[0, :] = rowe_data.Sensor.vert_beam_range_m
 
                 # Screen out invalid depths
                 temp_depth_vb[temp_depth_vb < 0.01] = np.nan
@@ -846,7 +846,7 @@ class TransectData(object):
             # Check for RiverRay and RiverPro data
             firmware = str(rowe_data.Inst.firm_ver[0])
             excluded_dist = 0
-            if (firmware[:2] == '56') and (np.nanmax(pd0_data.Sensor.vert_beam_status) < 0.9):
+            if (firmware[:2] == '56') and (np.nanmax(rowe_data.Sensor.vert_beam_status) < 0.9):
                 excluded_dist = 0.25
 
             if (firmware[:2] == '44') or (firmware[:2] == '56'):
@@ -854,7 +854,7 @@ class TransectData(object):
                 self.w_vel = WaterData()
                 self.w_vel.populate_data(vel_in=rowe_data.Wt.vel_mps,
                                          freq_in=rowe_data.Inst.freq.T,
-                                         coord_sys_in=pd0_data.Cfg.coord_sys,
+                                         coord_sys_in=rowe_data.Cfg.coord_sys,
                                          nav_ref_in='None',
                                          rssi_in=rowe_data.Wt.rssi,
                                          rssi_units_in='Counts',
@@ -865,22 +865,22 @@ class TransectData(object):
                                          sl_cutoff_type_in='Percent',
                                          sl_lag_effect_in=sl_lag_effect_m,
                                          sl_cutoff_m=sl_cutoff_m,
-                                         wm_in=pd0_data.Cfg.wm[0],
-                                         blank_in=pd0_data.Cfg.wf_cm[0] / 100,
-                                         corr_in=pd0_data.Wt.corr,
-                                         surface_vel_in=pd0_data.Surface.vel_mps,
-                                         surface_rssi_in=pd0_data.Surface.rssi,
-                                         surface_corr_in=pd0_data.Surface.corr,
-                                         surface_num_cells_in=pd0_data.Surface.no_cells)
+                                         wm_in=rowe_data.Cfg.wm[0],
+                                         blank_in=rowe_data.Cfg.wf_cm[0] / 100,
+                                         corr_in=rowe_data.Wt.corr,
+                                         surface_vel_in=rowe_data.Surface.vel_mps,
+                                         surface_rssi_in=rowe_data.Surface.rssi,
+                                         surface_corr_in=rowe_data.Surface.corr,
+                                         surface_num_cells_in=rowe_data.Surface.no_cells)
 
             else:
                 # Process water velocities for non-RiverRay ADCPs
                 self.w_vel = WaterData()
-                self.w_vel.populate_data(vel_in=pd0_data.Wt.vel_mps,
-                                         freq_in=pd0_data.Inst.freq.T,
-                                         coord_sys_in=pd0_data.Cfg.coord_sys[0],
+                self.w_vel.populate_data(vel_in=rowe_data.Wt.vel_mps,
+                                         freq_in=rowe_data.Inst.freq.T,
+                                         coord_sys_in=rowe_data.Cfg.coord_sys[0],
                                          nav_ref_in='None',
-                                         rssi_in=pd0_data.Wt.rssi,
+                                         rssi_in=rowe_data.Wt.rssi,
                                          rssi_units_in='Counts',
                                          excluded_dist_in=excluded_dist,
                                          cells_above_sl_in=cells_above_sl,
@@ -889,9 +889,9 @@ class TransectData(object):
                                          sl_cutoff_type_in='Percent',
                                          sl_lag_effect_in=sl_lag_effect_m,
                                          sl_cutoff_m=sl_cutoff_m,
-                                         wm_in=pd0_data.Cfg.wm[0],
-                                         blank_in=pd0_data.Cfg.wf_cm[0] / 100,
-                                         corr_in=pd0_data.Wt.corr)
+                                         wm_in=rowe_data.Cfg.wm[0],
+                                         blank_in=rowe_data.Cfg.wf_cm[0] / 100,
+                                         corr_in=rowe_data.Wt.corr)
 
             # Initialize boat vel
             self.boat_vel = BoatStructure()
@@ -900,43 +900,43 @@ class TransectData(object):
                 min_beams = 4
             else:
                 min_beams = 3
-            self.boat_vel.add_boat_object(source='TRDI',
-                                          vel_in=pd0_data.Bt.vel_mps,
-                                          freq_in=pd0_data.Inst.freq.T,
-                                          coord_sys_in=pd0_data.Cfg.coord_sys[0],
+            self.boat_vel.add_boat_object(source='Rowe',
+                                          vel_in=rowe_data.Bt.vel_mps,
+                                          freq_in=rowe_data.Inst.freq.T,
+                                          coord_sys_in=rowe_data.Cfg.coord_sys[0],
                                           nav_ref_in='BT',
                                           min_beams=min_beams,
-                                          bottom_mode=pd0_data.Cfg.bm[0])
+                                          bottom_mode=rowe_data.Cfg.bm[0])
 
             self.boat_vel.set_nav_reference('BT')
 
             # Compute velocities from GPS Data
             # ------------------------------------
             # Raw Data
-            raw_gga_utc = pd0_data.Gps2.utc
-            raw_gga_lat = pd0_data.Gps2.lat_deg
-            raw_gga_lon = pd0_data.Gps2.lon_deg
+            raw_gga_utc = rowe_data.Gps2.utc
+            raw_gga_lat = rowe_data.Gps2.lat_deg
+            raw_gga_lon = rowe_data.Gps2.lon_deg
 
             # Determine correct sign for latitude
-            for n, lat_ref in enumerate(pd0_data.Gps2.lat_ref):
+            for n, lat_ref in enumerate(rowe_data.Gps2.lat_ref):
                 idx = np.nonzero(np.array(lat_ref) == 'S')
                 raw_gga_lat[n, idx] = raw_gga_lat[n, idx] * -1
 
             # Determine correct sign for longitude
-            for n, lon_ref in enumerate(pd0_data.Gps2.lon_ref):
+            for n, lon_ref in enumerate(rowe_data.Gps2.lon_ref):
                 idx = np.nonzero(np.array(lon_ref) == 'W')
                 raw_gga_lon[n, idx] = raw_gga_lon[n, idx] * -1
 
             # Assign data to local variables
-            raw_gga_alt = pd0_data.Gps2.alt
-            raw_gga_diff = pd0_data.Gps2.corr_qual
-            raw_gga_hdop = pd0_data.Gps2.hdop
-            raw_gga_num_sats = pd0_data.Gps2.num_sats
-            raw_vtg_course = pd0_data.Gps2.course_true
-            raw_vtg_speed = pd0_data.Gps2.speed_kph * 0.2777778
-            raw_vtg_delta_time = pd0_data.Gps2.vtg_delta_time
-            raw_vtg_mode_indicator = pd0_data.Gps2.mode_indicator
-            raw_gga_delta_time = pd0_data.Gps2.gga_delta_time
+            raw_gga_alt = rowe_data.Gps2.alt
+            raw_gga_diff = rowe_data.Gps2.corr_qual
+            raw_gga_hdop = rowe_data.Gps2.hdop
+            raw_gga_num_sats = rowe_data.Gps2.num_sats
+            raw_vtg_course = rowe_data.Gps2.course_true
+            raw_vtg_speed = rowe_data.Gps2.speed_kph * 0.2777778
+            raw_vtg_delta_time = rowe_data.Gps2.vtg_delta_time
+            raw_vtg_mode_indicator = rowe_data.Gps2.mode_indicator
+            raw_gga_delta_time = rowe_data.Gps2.gga_delta_time
 
             # RSL provided ensemble values, not supported for TRDI data
             ext_gga_utc = []
@@ -987,14 +987,14 @@ class TransectData(object):
 
                 # If valid gga data exists create gga boat velocity object
                 if np.nansum(np.nansum(np.abs(raw_gga_lat))) > 0:
-                    self.boat_vel.add_boat_object(source='TRDI',
+                    self.boat_vel.add_boat_object(source='Rowe',
                                                   vel_in=self.gps.gga_velocity_ens_mps,
                                                   coord_sys_in='Earth',
                                                   nav_ref_in='GGA')
 
                 # If valid vtg data exist create vtg boat velocity object
                 if np.nansum(np.nansum(np.abs(raw_vtg_speed))) > 0:
-                    self.boat_vel.add_boat_object(source='TRDI',
+                    self.boat_vel.add_boat_object(source='Rowe',
                                                   vel_in=self.gps.vtg_velocity_ens_mps,
                                                   coord_sys_in='Earth',
                                                   nav_ref_in='VTG')
@@ -1009,7 +1009,7 @@ class TransectData(object):
             n_ens_right = n_ens_left
 
             # Set indices for ensembles in the moving-boat portion of the transect
-            self.in_transect_idx = np.arange(0, pd0_data.Bt.vel_mps.shape[1])
+            self.in_transect_idx = np.arange(0, rowe_data.Bt.vel_mps.shape[1])
 
             # Determine left and right edge distances
             if rtt_config['Edge_Begin_Left_Bank']:
@@ -1118,19 +1118,19 @@ class TransectData(object):
 
             # Internal Heading
             self.sensors.heading_deg.internal = HeadingData()
-            self.sensors.heading_deg.internal.populate_data(data_in=pd0_data.Sensor.heading_deg.T,
+            self.sensors.heading_deg.internal.populate_data(data_in=rowe_data.Sensor.heading_deg.T,
                                                             source_in='internal',
                                                             magvar=rtt_config['Offsets_Magnetic_Variation'],
                                                             align=rtt_config['Ext_Heading_Offset'])
 
             # External Heading
-            ext_heading_check = np.where(np.isnan(pd0_data.Gps2.heading_deg) == False)
+            ext_heading_check = np.where(np.isnan(rowe_data.Gps2.heading_deg) == False)
             if len(ext_heading_check[0]) <= 0:
                 self.sensors.heading_deg.selected = 'internal'
             else:
                 # Determine external heading for each ensemble
                 # Using the minimum time difference
-                d_time = np.abs(pd0_data.Gps2.hdt_delta_time)
+                d_time = np.abs(rowe_data.Gps2.hdt_delta_time)
                 d_time_min = np.nanmin(d_time.T, 0).T
                 use = np.tile([np.nan], d_time.shape)
                 for nd_time in range(len(d_time_min)):
@@ -1141,7 +1141,7 @@ class TransectData(object):
                     idx = np.where(use[nh, :])[0]
                     if len(idx) > 0:
                         idx = idx[0]
-                        ext_heading_deg[nh] = pd0_data.Gps2.heading_deg[nh, idx]
+                        ext_heading_deg[nh] = rowe_data.Gps2.heading_deg[nh, idx]
 
                 # Create external heading sensor
                 self.sensors.heading_deg.external = HeadingData()
@@ -1158,8 +1158,8 @@ class TransectData(object):
                     self.sensors.heading_deg.selected = 'internal'
 
             # Pitch
-            pitch = arctand(tand(pd0_data.Sensor.pitch_deg) * cosd(pd0_data.Sensor.roll_deg))
-            pitch_src = pd0_data.Cfg.pitch_src[0]
+            pitch = arctand(tand(rowe_data.Sensor.pitch_deg) * cosd(rowe_data.Sensor.roll_deg))
+            pitch_src = rowe_data.Cfg.pitch_src[0]
 
             # Create pitch sensor
             self.sensors.pitch_deg.internal = SensorData()
@@ -1167,8 +1167,8 @@ class TransectData(object):
             self.sensors.pitch_deg.selected = 'internal'
 
             # Roll
-            roll = pd0_data.Sensor.roll_deg.T
-            roll_src = pd0_data.Cfg.roll_src[0]
+            roll = rowe_data.Sensor.roll_deg.T
+            roll_src = rowe_data.Cfg.roll_src[0]
 
             # Create Roll sensor
             self.sensors.roll_deg.internal = SensorData()
@@ -1176,8 +1176,8 @@ class TransectData(object):
             self.sensors.roll_deg.selected = 'internal'
 
             # Temperature
-            temperature = pd0_data.Sensor.temperature_deg_c.T
-            temperature_src = pd0_data.Cfg.temp_src[0]
+            temperature = rowe_data.Sensor.temperature_deg_c.T
+            temperature_src = rowe_data.Cfg.temp_src[0]
 
             # Create temperature sensor
             self.sensors.temperature_deg_c.internal = SensorData()
@@ -1185,8 +1185,8 @@ class TransectData(object):
             self.sensors.temperature_deg_c.selected = 'internal'
 
             # Salinity
-            pd0_salinity = pd0_data.Sensor.salinity_ppt.T
-            pd0_salinity_src = pd0_data.Cfg.sal_src[0]
+            pd0_salinity = rowe_data.Sensor.salinity_ppt.T
+            pd0_salinity_src = rowe_data.Cfg.sal_src[0]
 
             # Create salinity sensor from pd0 data
             self.sensors.salinity_ppt.internal = SensorData()
@@ -1201,8 +1201,8 @@ class TransectData(object):
             self.sensors.salinity_ppt.selected = 'internal'
 
             # Speed of Sound
-            speed_of_sound = pd0_data.Sensor.sos_mps.T
-            speed_of_sound_src = pd0_data.Cfg.sos_src[0]
+            speed_of_sound = rowe_data.Sensor.sos_mps.T
+            speed_of_sound_src = rowe_data.Cfg.sos_src[0]
             self.sensors.speed_of_sound_mps.internal = SensorData()
             self.sensors.speed_of_sound_mps.internal.populate_data(data_in=speed_of_sound, source_in=speed_of_sound_src)
 
@@ -1211,10 +1211,10 @@ class TransectData(object):
 
             # Ensemble times
             # Compute time for each ensemble in seconds
-            ens_time_sec = pd0_data.Sensor.time[:, 0] * 3600 \
-                           + pd0_data.Sensor.time[:, 1] * 60 \
-                           + pd0_data.Sensor.time[:, 2] \
-                           + pd0_data.Sensor.time[:, 3] / 100
+            ens_time_sec = rowe_data.Sensor.time[:, 0] * 3600 \
+                           + rowe_data.Sensor.time[:, 1] * 60 \
+                           + rowe_data.Sensor.time[:, 2] \
+                           + rowe_data.Sensor.time[:, 3] / 100
 
             # Compute the duration of each ensemble in seconds adjusting for lost data
             ens_delta_time = np.tile([np.nan], ens_time_sec.shape)
@@ -1227,20 +1227,20 @@ class TransectData(object):
             ens_delta_time = ens_delta_time.T
 
             # Start date and time
-            idx = np.where(np.isnan(pd0_data.Sensor.time[:, 0]) == False)[0][0]
-            start_year = int(pd0_data.Sensor.date[idx, 0])
+            idx = np.where(np.isnan(rowe_data.Sensor.time[:, 0]) == False)[0][0]
+            start_year = int(rowe_data.Sensor.date[idx, 0])
 
             # StreamPro doesn't include y2k dates
             if start_year < 100:
-                start_year = 2000 + int(pd0_data.Sensor.date_not_y2k[idx, 0])
+                start_year = 2000 + int(rowe_data.Sensor.date_not_y2k[idx, 0])
 
-            start_month = int(pd0_data.Sensor.date[idx, 1])
-            start_day = int(pd0_data.Sensor.date[idx, 2])
-            start_hour = int(pd0_data.Sensor.time[idx, 0])
-            start_min = int(pd0_data.Sensor.time[idx, 1])
-            start_sec = int(pd0_data.Sensor.time[idx, 2] + pd0_data.Sensor.time[idx, 3] / 100)
+            start_month = int(rowe_data.Sensor.date[idx, 1])
+            start_day = int(rowe_data.Sensor.date[idx, 2])
+            start_hour = int(rowe_data.Sensor.time[idx, 0])
+            start_min = int(rowe_data.Sensor.time[idx, 1])
+            start_sec = int(rowe_data.Sensor.time[idx, 2] + rowe_data.Sensor.time[idx, 3] / 100)
             start_micro = int(
-                ((pd0_data.Sensor.time[idx, 2] + pd0_data.Sensor.time[idx, 3] / 100) - start_sec) * 10 ** 6)
+                ((rowe_data.Sensor.time[idx, 2] + rowe_data.Sensor.time[idx, 3] / 100) - start_sec) * 10 ** 6)
 
             start_dt = datetime(start_year, start_month, start_day, start_hour, start_min, start_sec, start_micro,
                                 tzinfo=timezone.utc)
@@ -1248,18 +1248,18 @@ class TransectData(object):
             start_date = datetime.strftime(datetime.utcfromtimestamp(start_serial_time), '%m/%d/%Y')
 
             # End data and time
-            idx = np.where(np.isnan(pd0_data.Sensor.time[:, 0]) == False)[0][-1]
-            end_year = int(pd0_data.Sensor.date[idx, 0])
+            idx = np.where(np.isnan(rowe_data.Sensor.time[:, 0]) == False)[0][-1]
+            end_year = int(rowe_data.Sensor.date[idx, 0])
             # StreamPro does not include Y@K dates
             if end_year < 100:
-                end_year = 2000 + int(pd0_data.Sensor.date_not_y2k[idx, 0])
+                end_year = 2000 + int(rowe_data.Sensor.date_not_y2k[idx, 0])
 
-            end_month = int(pd0_data.Sensor.date[idx, 1])
-            end_day = int(pd0_data.Sensor.date[idx, 2])
-            end_hour = int(pd0_data.Sensor.time[idx, 0])
-            end_min = int(pd0_data.Sensor.time[idx, 1])
-            end_sec = int(pd0_data.Sensor.time[idx, 2] + pd0_data.Sensor.time[idx, 3] / 100)
-            end_micro = int(((pd0_data.Sensor.time[idx, 2] + pd0_data.Sensor.time[idx, 3] / 100) - end_sec) * 10 ** 6)
+            end_month = int(rowe_data.Sensor.date[idx, 1])
+            end_day = int(rowe_data.Sensor.date[idx, 2])
+            end_hour = int(rowe_data.Sensor.time[idx, 0])
+            end_min = int(rowe_data.Sensor.time[idx, 1])
+            end_sec = int(rowe_data.Sensor.time[idx, 2] + rowe_data.Sensor.time[idx, 3] / 100)
+            end_micro = int(((rowe_data.Sensor.time[idx, 2] + rowe_data.Sensor.time[idx, 3] / 100) - end_sec) * 10 ** 6)
 
             end_dt = datetime(end_year, end_month, end_day, end_hour, end_min, end_sec, end_micro, tzinfo=timezone.utc)
             end_serial_time = end_dt.timestamp()
@@ -1272,11 +1272,11 @@ class TransectData(object):
                                          ens_dur_in=ens_delta_time)
 
             # Transect checked for use in discharge computation
-            self.checked = mmt_transect.Checked
+            self.checked = rtt_transect.Checked
 
             # Create class for adcp information
             self.adcp = InstrumentData()
-            self.adcp.populate_data(manufacturer='TRDI', raw_data=pd0_data, mmt_transect=mmt_transect, mmt=mmt)
+            self.adcp.populate_data(manufacturer='Rowe', raw_data=rowe_data, mmt_transect=rtt_transect, mmt=rtt)
 
     def sontek(self, rsdata, file_name):
         """Reads Matlab file produced by RiverSurveyor Live and populates the transect instance variables.
