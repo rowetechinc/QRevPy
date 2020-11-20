@@ -1,6 +1,7 @@
 import os
 import re
 import xmltodict
+import numpy as np
 
 
 class MMTtrdi(object):
@@ -219,7 +220,10 @@ class MMTtrdi(object):
                     # If the key has not been specified use key from transect summary
                     if key2 not in sum_dict:
                         sum_dict[key2] = []
-                    sum_dict[key2].append(float(val2))
+                    try:
+                        sum_dict[key2].append(float(val2))
+                    except ValueError:
+                        sum_dict[key2].append(np.nan)
         return sum_dict
 
 

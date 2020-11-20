@@ -384,19 +384,6 @@ class QAData(object):
             return np.array([num_in])
 
     @staticmethod
-    def make_all_invalid_array(num_in):
-        """Ensures that num_in is an array and if not makes it an array.
-
-        num_in: any
-            Any value or array
-        """
-
-        if type(num_in) is np.ndarray:
-            return num_in
-        else:
-            return np.array([num_in])
-
-    @staticmethod
     def make_list(array_in):
         """Converts a string or array to a list.
 
@@ -1221,8 +1208,12 @@ class QAData(object):
                 self.depths['q_max_run'][n] = q_max_run
 
                 # Compute percentage compared to total
-                q_total_percent = np.abs((q_total / meas.discharge[n].total) * 100)
-                q_max_run_percent = np.abs((q_max_run / meas.discharge[n].total) * 100)
+                if meas.discharge[n].total == 0.0:
+                    q_total_percent = np.nan
+                    q_max_run_percent = np.nan
+                else:
+                    q_total_percent = np.abs((q_total / meas.discharge[n].total) * 100)
+                    q_max_run_percent = np.abs((q_max_run / meas.discharge[n].total) * 100)
 
                 # Apply total interpolated discharge threshold
                 if q_total_percent > self.q_total_threshold_warning:
@@ -1341,8 +1332,12 @@ class QAData(object):
                             boat['q_max_run'][n, dt_filter[1]] = q_max_run
 
                             # Compute percentage compared to total
-                            q_total_percent = np.abs((q_total / meas.discharge[n].total) * 100)
-                            q_max_run_percent = np.abs((q_max_run / meas.discharge[n].total) * 100)
+                            if meas.discharge[n].total == 0.0:
+                                q_total_percent = np.nan
+                                q_max_run_percent = np.nan
+                            else:
+                                q_total_percent = np.abs((q_total / meas.discharge[n].total) * 100)
+                                q_max_run_percent = np.abs((q_max_run / meas.discharge[n].total) * 100)
 
                             # Check if all invalid
                             if dt_filter[1] == 0 and not np.any(valid):
@@ -1528,8 +1523,12 @@ class QAData(object):
                         self.w_vel['q_max_run'][n, filter_idx] = q_max_run
 
                         # Compute percentage compared to total
-                        q_total_percent = np.abs((q_total / meas.discharge[n].total) * 100)
-                        q_max_run_percent = np.abs((q_max_run / meas.discharge[n].total) * 100)
+                        if meas.discharge[n].total == 0.0:
+                            q_total_percent = np.nan
+                            q_max_run_percent = np.nan
+                        else:
+                            q_total_percent = np.abs((q_total / meas.discharge[n].total) * 100)
+                            q_max_run_percent = np.abs((q_max_run / meas.discharge[n].total) * 100)
 
                         # Check total invalid discharge in ensembles for warning
                         if q_total_percent > self.q_total_threshold_warning:
@@ -1891,7 +1890,7 @@ class QAData(object):
             q_invalid_max_run = np.nanmax(np.abs(q_invalid_run))
 
         else:
-            q_invalid_max_run = 0
+            q_invalid_max_run = 0.0
 
         return q_invalid_total, q_invalid_max_run, ens_invalid
 

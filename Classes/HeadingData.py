@@ -209,3 +209,5 @@ class HeadingData(object):
                                                  (before_idx - idx_invalid[n])) + self.data[before_idx]
                     if self.data[idx_invalid[n]] > 360:
                         self.data[idx_invalid[n]] = self.data[idx_invalid[n]] - 360
+                    elif self.data[idx_invalid[n]] < 0:
+                        self.data[idx_invalid[n]] = self.data[idx_invalid[n]] + 360

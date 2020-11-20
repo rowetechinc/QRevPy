@@ -3,8 +3,8 @@ import numpy as np
 from datetime import datetime
 from datetime import timezone
 from scipy import signal, fftpack
-from Classes.Pd0TRDI import Pd0TRDI
-# from Classes.Pd0TRDI_2 import Pd0TRDI
+# from Classes.Pd0TRDI import Pd0TRDI
+from Classes.Pd0TRDI_2 import Pd0TRDI
 from Classes.DepthStructure import DepthStructure
 from Classes.WaterData import WaterData
 from Classes.BoatStructure import BoatStructure
