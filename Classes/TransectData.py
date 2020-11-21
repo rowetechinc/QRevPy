@@ -1276,7 +1276,7 @@ class TransectData(object):
 
             # Create class for adcp information
             self.adcp = InstrumentData()
-            self.adcp.populate_data(manufacturer='Rowe', raw_data=rowe_data, mmt_transect=rtt_transect, mmt=rtt)
+            self.adcp.populate_data(manufacturer='TRDI', raw_data=rowe_data, mmt_transect=rtt_transect, mmt=rtt)
 
     def sontek(self, rsdata, file_name):
         """Reads Matlab file produced by RiverSurveyor Live and populates the transect instance variables.

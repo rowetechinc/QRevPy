@@ -646,10 +646,12 @@ class RtbRowe(object):
 
                     self.Gps2.decode(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
                                      ens_index=self.ens_index,
+                                     num_ens=self.num_ens,
                                      name_len=name_len)
 
                     self.Gps.decode(ens_bytes=ens_bytes[packetPointer:packetPointer + data_set_size],
                                     ens_index=self.ens_index,
+                                    num_ens=self.num_ens,
                                     name_len=name_len)
 
             # System Setup
@@ -897,9 +899,9 @@ class Wt:
 
         # Initialize the array
         if not self.pd0_format:
-            vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
+            vel = np.empty(shape=[element_multiplier, num_elements])
         else:
-            vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+            vel = np.empty(shape=[element_multiplier, num_elements])
 
         # Create a 2D list of velocities
         # [beam][bin]
@@ -915,10 +917,14 @@ class Wt:
 
                     # Check for bad velocity and convert
                     if RtbRowe.is_bad_velocity(pd0_vel):
-                        pd0_vel = RtbRowe.PD0_BAD_VEL
+                        #pd0_vel = RtbRowe.PD0_BAD_VEL
+                        # QRev wants bad values set to NaN
+                        pd0_vel = np.nan
                     else:
                         # Convert from m/s to mm/s
-                        pd0_vel = round(pd0_vel * 1000.0)
+                        #pd0_vel = round(pd0_vel * 1000.0)
+                        # QRev expects m/s
+                        pd0_vel = round(pd0_vel)
 
                     # Set the velocity based on the beam reassignment
                     if element_multiplier == 1:             # Vertical Beam
@@ -1156,9 +1162,9 @@ class Wt:
 
         # Initialize the array
         if not self.pd0_format:
-            vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
+            vel = np.empty(shape=[element_multiplier, num_elements])
         else:
-            vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+            vel = np.empty(shape=[element_multiplier, num_elements])
 
         # Create a 2D list of velocities
         # [beam][bin]
@@ -1173,10 +1179,14 @@ class Wt:
 
                     # Check for bad velocity and convert
                     if RtbRowe.is_bad_velocity(pd0_vel):
-                        pd0_vel = RtbRowe.PD0_BAD_VEL
+                        #pd0_vel = RtbRowe.PD0_BAD_VEL
+                        # QRev wants bad values set to NaN
+                        pd0_vel = np.nan
                     else:
                         # Convert from m/s to mm/s
-                        pd0_vel = round(pd0_vel * 1000.0)
+                        #pd0_vel = round(pd0_vel * 1000.0)
+                        # QRev expects m/s
+                        pd0_vel = round(pd0_vel)
 
                     # Set the values
                     # No reassignment needed
@@ -1256,9 +1266,9 @@ class Wt:
 
         # Initialize the array
         if not self.pd0_format:
-            vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.float)
+            vel = np.empty(shape=[element_multiplier, num_elements])
         else:
-            vel = np.empty(shape=[element_multiplier, num_elements], dtype=np.int)
+            vel = np.empty(shape=[element_multiplier, num_elements])
 
         # Create a 2D list of velocities
         # [beam][bin]
@@ -1273,10 +1283,14 @@ class Wt:
 
                     # Check for bad velocity and convert
                     if RtbRowe.is_bad_velocity(pd0_vel):
-                        pd0_vel = RtbRowe.PD0_BAD_VEL
+                        #pd0_vel = RtbRowe.PD0_BAD_VEL
+                        # QRev wants bad values set to NaN
+                        pd0_vel = np.nan
                     else:
                         # Convert from m/s to mm/s
-                        pd0_vel = round(pd0_vel * 1000.0)
+                        #pd0_vel = round(pd0_vel * 1000.0)
+                        # QRev expects m/s
+                        pd0_vel = round(pd0_vel)
 
                     # Set the velocity based on the beam reassignment
                     if element_multiplier == 1:                     # Vertical Beam
@@ -1317,6 +1331,12 @@ class Inst:
         self.beam_ang = RtbRowe.nans(num_ens)                   # Beam Angle in degrees
         self.beams = RtbRowe.nans(num_ens)                      # Number of beams used in velocity measurement
         self.freq = RtbRowe.nans(num_ens)                       # System frequency in Khz
+        self.pat = [''] * num_ens                               # Beam Pattern: Concave, Convex or n/a
+        self.res_RDI = 0                                        # Reserved
+        self.sensor_CFG = RtbRowe.nans(num_ens)                 # Sensor Configuration
+        self.xducer = [''] * num_ens                            # Indicates if transducer is attached: 'Not Attached', Attached, n/a
+        self.t_matrix = np.tile([np.nan], [4, 4])               # Transformation matrix
+        self.demod = RtbRowe.nans(num_ens)                      # Demodulation code
 
     def decode_ensemble_data(self, ens_bytes: list, ens_index: int, name_len: int = 8):
         """
@@ -1379,6 +1399,18 @@ class Inst:
 
         # Set the value
         self.freq[ens_index] = freq_khz
+
+        # Options are Concave, Convex or n/a
+        self.pat[ens_index] = 'Concave'
+
+        # Options are 'Not Attached', Attached or n/a
+        self.xducer[ens_index] = 'Attached'
+
+        # Transformation matrix
+        self.t_matrix[0] = [-1.4619, 1.4619, 0, 0]
+        self.t_matrix[1] = [0, 0, -1.4619, 1.4619]
+        self.t_matrix[2] = [-0.2660, -0.2660, -0.2660, -0.2660]
+        self.t_matrix[3] = [0.25, 0.25, -0.25, -0.25]
 
 
 class Cfg:
@@ -2037,21 +2069,21 @@ class BT:
         bt_actual_ping_count = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
 
         # Initialize the array
-        snr = np.empty(shape=[self.num_beams], dtype=np.float)
-        depth = np.empty(shape=[self.num_beams], dtype=np.float)
-        amp = np.empty(shape=[self.num_beams], dtype=np.float)
-        corr = np.empty(shape=[self.num_beams], dtype=np.float)
-        beam_vel = np.empty(shape=[self.num_beams], dtype=np.float)
-        beam_good = np.empty(shape=[self.num_beams], dtype=np.int)
-        instr_vel = np.empty(shape=[self.num_beams], dtype=np.float)
-        instr_good = np.empty(shape=[self.num_beams], dtype=np.int)
-        earth_vel = np.empty(shape=[self.num_beams], dtype=np.float)
-        earth_good = np.empty(shape=[self.num_beams], dtype=np.int)
-        pulse_coh_snr = np.empty(shape=[self.num_beams], dtype=np.float)
-        pulse_coh_amp = np.empty(shape=[self.num_beams], dtype=np.float)
-        pulse_coh_vel = np.empty(shape=[self.num_beams], dtype=np.float)
-        pulse_coh_noise = np.empty(shape=[self.num_beams], dtype=np.float)
-        pulse_coh_corr = np.empty(shape=[self.num_beams], dtype=np.float)
+        snr = np.empty(shape=[self.num_beams])
+        depth = np.empty(shape=[self.num_beams])
+        amp = np.empty(shape=[self.num_beams])
+        corr = np.empty(shape=[self.num_beams])
+        beam_vel = np.empty(shape=[self.num_beams])
+        beam_good = np.empty(shape=[self.num_beams])
+        instr_vel = np.empty(shape=[self.num_beams])
+        instr_good = np.empty(shape=[self.num_beams])
+        earth_vel = np.empty(shape=[self.num_beams])
+        earth_good = np.empty(shape=[self.num_beams])
+        pulse_coh_snr = np.empty(shape=[self.num_beams])
+        pulse_coh_amp = np.empty(shape=[self.num_beams])
+        pulse_coh_vel = np.empty(shape=[self.num_beams])
+        pulse_coh_noise = np.empty(shape=[self.num_beams])
+        pulse_coh_corr = np.empty(shape=[self.num_beams])
 
         # Index to start at for the following data
         index = 14
@@ -2068,10 +2100,14 @@ class BT:
                 # PD0 data
                 # Check for bad velocity and convert
                 if RtbRowe.is_bad_velocity(value):
-                    value = RtbRowe.PD0_BAD_VEL
+                    #value = RtbRowe.PD0_BAD_VEL
+                    # QRev wants bad values set to NaN
+                    value = np.nan
                 else:
                     # Convert from m to cm
-                    value = round(value * 100.0)
+                    #value = round(value * 100.0)
+                    # QRev uses meters not cm
+                    value = round(value)
 
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 BEAM 3,2,0,1
@@ -2218,7 +2254,10 @@ class BT:
                 if not np.isnan(value):
                     # Convert from m/s to mm/s
                     # Also invert the direction
-                    value = round(value * 1000.0 * -1)
+                    #value = round(value * 1000.0 * -1)
+
+                    # QRev expects m/s
+                    value = round(value * -1.0)
 
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 BEAM 3,2,0,1
@@ -2293,7 +2332,9 @@ class BT:
                 if not np.isnan(value):
                     # Convert from m/s to mm/s
                     # Also invert the direction
-                    value = round(value * 1000.0 * -1)
+                    #value = round(value * 1000.0 * -1)
+                    # QRev expects m/s
+                    value = round(value * -1.0)
 
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 XYZ order 1,0,-2,3
@@ -2368,7 +2409,9 @@ class BT:
                 if not np.isnan(value):
                     # Convert from m/s to mm/s
                     # Also invert the direction
-                    value = round(value * 1000.0 * -1)
+                    #value = round(value * 1000.0 * -1)
+                    # QRev expects m/s
+                    value = round(value * -1.0)
 
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 BEAM 3,2,0,1
@@ -3090,9 +3133,9 @@ class Nmea:
         self.rel_true_north = RtbRowe.nans(num_ens)
 
         # Used to keep track of the last nmea message to process
-        self.last_gga = np.nan
-        self.last_vtg = np.nan
-        self.last_hdt = np.nan
+        self.last_gga = None
+        self.last_vtg = None
+        self.last_hdt = None
 
     def decode(self, ens_bytes: list, ens_index: int, name_len: int = 8):
         """
@@ -3103,9 +3146,9 @@ class Nmea:
         :param name_len: Name length to get the start location.
         """
         # Clear the previous NMEA messages
-        self.last_gga = np.nan
-        self.last_vtg = np.nan
-        self.last_hdt = np.nan
+        self.last_gga = None
+        self.last_vtg = None
+        self.last_hdt = None
 
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
@@ -3117,13 +3160,13 @@ class Nmea:
             self.decode_nmea(msg, ens_index)
 
         # Decode the last messages
-        if not np.isnan(self.last_gga):
+        if self.last_gga:
             self.decode_gga(self.last_gga, ens_index)
 
-        if not np.isnan(self.last_vtg):
+        if self.last_vtg:
             self.decode_vtg(self.last_vtg, ens_index)
 
-        if not np.isnan(self.last_hdt):
+        if self.last_hdt:
             self.decode_hdt(self.last_hdt, ens_index)
 
     def decode_nmea(self, nmea_str: str, ens_index: int):
@@ -3399,7 +3442,7 @@ class Gps(object):
                 lon_num = float(lon_str)
                 lon_deg = np.floor(lon_num / 100)
                 lon_deg = lon_deg + (((lon_num / 100.) - lon_deg) * 100.) / 60.
-                self.lon_deg[ens_index] = lon_deg
+                self.long_deg[ens_index] = lon_deg
                 #self.lon_ref.append(temp_array[5])
                 self.gga_diff[ens_index] = float(temp_array[6])
                 self.gga_n_stats[ens_index] = float(temp_array[7])
@@ -3619,7 +3662,7 @@ class Gps2(object):
             # Add each message to the list
             # Decode the data
             if 'gga' in nmea_str or 'GGA' in nmea_str:
-                self.gga[ens_index] += nmea_str
+                #self.gga[ens_index] += nmea_str
                 self.decode_gga(nmea_str, ens_index)
                 self.gga_index += 1
 
@@ -3627,18 +3670,18 @@ class Gps2(object):
                 if self.gga_index > self.gga_delta_time.shape[1] - 1:
                     self.Gps2.gga_expand(num_ens)
 
-            if 'gsa' in nmea_str or 'GSA' in nmea_str:
-                self.gsa[ens_index] += nmea_str
+            #if 'gsa' in nmea_str or 'GSA' in nmea_str:
+                #self.gsa[ens_index] += nmea_str
             if 'vtg' in nmea_str or 'VTG' in nmea_str:
-                self.vtg[ens_index] += nmea_str
+                #self.vtg[ens_index] += nmea_str
                 self.decode_vtg(nmea_str, ens_index)
                 self.vtg_index += 1
             if 'dbt' in nmea_str or 'DBT' in nmea_str:
-                self.dbt[ens_index] += nmea_str
+                #self.dbt[ens_index] += nmea_str
                 self.decode_dbt(nmea_str, ens_index)
                 self.dbt_index += 1
             if 'hdt' in nmea_str or 'HDT' in nmea_str:
-                self.hdt[ens_index] += nmea_str
+                #self.hdt[ens_index] += nmea_str
                 self.decode_hdt(nmea_str, ens_index)
                 self.hdt_index += 1
 
@@ -3702,14 +3745,14 @@ class Gps2(object):
                 temp_array[temp_array == '999.9'] = ''
 
                 #self.vtg_delta_time = delta_time
-                self.vtg_header[ens_index, self.vtg_index] = temp_array[0]
+                self.vtg_header[ens_index][self.vtg_index] = temp_array[0]
                 self.course_true[ens_index][self.vtg_index] = Nmea.valid_number(temp_array[1])
-                self.true_indicator[ens_index, self.vtg_index] = temp_array[2]
-                self.course_mag[ens_index, self.vtg_index] = Nmea.valid_number(temp_array[3])
-                self.mag_indicator[ens_index, self.vtg_index] = temp_array[4]
-                self.speed_knots[ens_index, self.vtg_index] = Nmea.valid_number(temp_array[5])
+                self.true_indicator[ens_index][self.vtg_index] = temp_array[2]
+                self.course_mag[ens_index][self.vtg_index] = Nmea.valid_number(temp_array[3])
+                self.mag_indicator[ens_index][self.vtg_index] = temp_array[4]
+                self.speed_knots[ens_index][self.vtg_index] = Nmea.valid_number(temp_array[5])
                 self.knots_indicator[ens_index][self.vtg_index] = temp_array[6]
-                self.speed_kph[ens_index, self.vtg_index] = Nmea.valid_number(temp_array[7])
+                self.speed_kph[ens_index][self.vtg_index] = Nmea.valid_number(temp_array[7])
                 self.kph_indicator[ens_index][self.vtg_index] = temp_array[8]
                 idx_star = temp_array[9].find('*')
                 self.mode_indicator[ens_index][self.vtg_index] = temp_array[9][:idx_star]

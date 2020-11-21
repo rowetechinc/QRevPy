@@ -665,4 +665,30 @@ class RTTrowe(object):
 Offsets_Transducer_Depth
 Proc_River_Depth_Source 0 - 4  DEFAULT: 4
 Proc_Use_3_Beam_BT < 0.5
+
+Edge_Begin_Left_Bank
+Edge_Begin_Shore_Distance
+Edge_End_Shore_Distance
+Edge_Begin_Manual_Discharge
+Edge_End_Manual_Discharge
+Edge_Begin_Method_Distance = No or YES
+Edge_End_Method_Distance = NO or YES
+Q_Left_Edge_Type - 0 = Triangular, 1 = Rectangular, 2 = Custom
+Q_Right_Edge_Type - 0 = Triangular, 1 = Rectangular, 2 = Custom
+Q_Top_Method - 1 = Constant, 2 = 3-Point
+Q_Bottom_Method - 2 = No Slip
+Q_Power_Curve_Coeff
+
+Offsets_Magnetic_Variation
+Ext_Heading_Offset
+Ext_Heading_Use
+
+ADCPSerialNmb
+
+Fixed_Commands 
+or
+Wizard_Commands
+or
+User_Commands
+
 """

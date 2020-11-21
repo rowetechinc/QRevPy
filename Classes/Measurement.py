@@ -453,6 +453,8 @@ class Measurement(object):
                                                 transect_type=transect_type,
                                                 checked=checked)
 
+        self.checked_transect_idx = self.checked_transects(self)
+
         # Create object for pre-measurement tests
         if isinstance(rtt.qaqc, dict) or isinstance(rtt.mbt_transects, list):
             self.qaqc_trdi(rtt)
