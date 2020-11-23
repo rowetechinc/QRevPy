@@ -66,47 +66,55 @@ def non_uniform_savgol(x, y, window, polynom):
                 A[j, k] = r
                 tA[k, j] = r
                 r *= t[j]
+        try:
+            # Multiply the two matrices
+            tAA = np.matmul(tA, A)
 
-        # Multiply the two matrices
-        tAA = np.matmul(tA, A)
+            # Invert the product of the matrices
+            tAA = np.linalg.inv(tAA)
 
-        # Invert the product of the matrices
-        tAA = np.linalg.inv(tAA)
+            # Calculate the pseudoinverse of the design matrix
+            coeffs = np.matmul(tAA, tA)
 
-        # Calculate the pseudoinverse of the design matrix
-        coeffs = np.matmul(tAA, tA)
-
-        # Calculate c0 which is also the y value for y[i]
-        y_smoothed[i] = 0
-        for j in range(0, window, 1):
-            y_smoothed[i] += coeffs[0, j] * y[i + j - half_window]
-
-        # If at the end or beginning, store all coefficients for the polynom
-        if i == half_window:
-            first_coeffs = np.zeros(polynom)
+            # Calculate c0 which is also the y value for y[i]
+            y_smoothed[i] = 0
             for j in range(0, window, 1):
-                for k in range(polynom):
-                    first_coeffs[k] += coeffs[k, j] * y[j]
-        elif i == len(x) - half_window - 1:
-            last_coeffs = np.zeros(polynom)
-            for j in range(0, window, 1):
-                for k in range(polynom):
-                    last_coeffs[k] += coeffs[k, j] * y[len(y) - window + j]
+                y_smoothed[i] += coeffs[0, j] * y[i + j - half_window]
+
+            # If at the end or beginning, store all coefficients for the polynom
+            if i == half_window:
+                first_coeffs = np.zeros(polynom)
+                for j in range(0, window, 1):
+                    for k in range(polynom):
+                        first_coeffs[k] += coeffs[k, j] * y[j]
+            elif i == len(x) - half_window - 1:
+                last_coeffs = np.zeros(polynom)
+                for j in range(0, window, 1):
+                    for k in range(polynom):
+                        last_coeffs[k] += coeffs[k, j] * y[len(y) - window + j]
+        except BaseException:
+            pass
 
     # Interpolate the result at the left border
     for i in range(0, half_window, 1):
         y_smoothed[i] = 0
         x_i = 1
-        for j in range(0, polynom, 1):
-            y_smoothed[i] += first_coeffs[j] * x_i
-            x_i *= x[i] - x[half_window]
+        try:
+            for j in range(0, polynom, 1):
+                y_smoothed[i] += first_coeffs[j] * x_i
+                x_i *= x[i] - x[half_window]
+        except BaseException:
+            y_smoothed[i] = y[i]
 
     # Interpolate the result at the right border
     for i in range(len(x) - half_window, len(x), 1):
         y_smoothed[i] = 0
         x_i = 1
-        for j in range(0, polynom, 1):
-            y_smoothed[i] += last_coeffs[j] * x_i
-            x_i *= x[i] - x[-half_window - 1]
+        try:
+            for j in range(0, polynom, 1):
+                y_smoothed[i] += last_coeffs[j] * x_i
+                x_i *= x[i] - x[-half_window - 1]
+        except BaseException:
+            y_smoothed[i] = y[i]
 
     return y_smoothed

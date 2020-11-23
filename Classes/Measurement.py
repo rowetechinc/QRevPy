@@ -18,7 +18,6 @@ from Classes.Oursin import Oursin
 # from Classes.Oursin_orig import Oursin_orig
 from MiscLibs.common_functions import cart2pol, pol2cart, rad2azdeg, nans, azdeg2rad
 # from profilehooks import profile
-import time
 
 class Measurement(object):
     """Class to hold all measurement details.
@@ -114,9 +113,7 @@ class Measurement(object):
 
         else:
             if source == 'TRDI':
-                start = time.process_time()
                 self.load_trdi(in_file, checked=checked)
-                self.load_time = time.process_time() - start
 
             elif source == 'SonTek':
                 self.load_sontek(in_file)
@@ -621,24 +618,19 @@ class Measurement(object):
         self.initial_settings = vars(meas_struct.initialSettings)
 
         # Update initial settings to agree with Python definitions
-        if self.initial_settings['NavRef'] == 'btVel':
-            self.initial_settings['NavRef'] = 'bt_vel'
-        elif self.initial_settings['NavRef'] == 'ggaVel':
-            self.initial_settings['NavRef'] = 'gga_vel'
-        elif self.initial_settings['NavRef'] == 'vtgVel':
-            self.initial_settings['NavRef'] = 'vtg_vel'
-        if self.initial_settings['WTwtDepthFilter'] == 'Off':
-            self.initial_settings['WTwtDepthFilter'] = False
-        elif self.initial_settings['WTwtDepthFilter'] == 'On':
-            self.initial_settings['WTwtDepthFilter'] = True
+        nav_dict = {'btVel': 'bt_vel', 'ggaVel': 'gga_vel', 'vtgVel': 'vtg_vel',
+                    'bt_vel': 'bt_vel', 'gga_vel': 'gga_vel', 'vtg_vel': 'vtg_vel'}
+        self.initial_settings['NavRef'] = nav_dict[self.initial_settings['NavRef']]
+
+        on_off_dict = {'Off': False, 'On': True, 0: False, 1: True}
+        self.initial_settings['WTwtDepthFilter'] = on_off_dict[self.initial_settings['WTwtDepthFilter']]
+
         if type(self.initial_settings['WTsnrFilter']) is np.ndarray:
             self.initial_settings['WTsnrFilter'] = 'Off'
-        if self.initial_settings['depthReference'] == 'btDepths':
-            self.initial_settings['depthReference'] = 'bt_depths'
-        elif self.initial_settings['depthReference'] == 'vbDepths':
-            self.initial_settings['depthReference'] = 'vb_depths'
-        elif self.initial_settings['depthReference'] == 'ds_Depths':
-            self.initial_settings['depthReference'] = 'ds_depths'
+
+        nav_dict = {'btDepths': 'bt_depths', 'vbDepths': 'vb_depths', 'dsDepths': 'ds_depths',
+                    'bt_depths': 'bt_depths', 'vb_depths': 'vb_depths', 'ds_depths': 'ds_depths'}
+        self.initial_settings['depthReference'] = nav_dict[self.initial_settings['depthReference']]
 
         self.ext_temp_chk = {'user': meas_struct.extTempChk.user,
                              'units': meas_struct.extTempChk.units,
