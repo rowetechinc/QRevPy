@@ -322,6 +322,9 @@ class RtbRowe(object):
             # Process whatever is remaining in the buffer
             self.decode_ens(DELIMITER + buff, use_pd0_format=use_pd0_format)
 
+        #self.Gps2.corr_qual = np.array(self.Gps2.corr_qual)
+        #self.Gps2.lat_deg = np.array(self.Gps2.lat_deg)
+
     def decode_ens(self, ens_bytes: list, use_pd0_format: bool = False):
         """
         Attempt to decode the ensemble.  This will verify the checksum passes.
@@ -833,13 +836,14 @@ class RtbRowe(object):
             return 0.0
 
     @staticmethod
-    def nans(num_ens: int):
+    def nans(num_ens: int, dtype=float):
         """
         Create a numpy array filled with NaN based on the number of
         ensembles given.
         @param num_ens: Number of ensembles
+        @param dtype: Data Type
         """
-        empty_arr = np.empty(num_ens, dtype=float)
+        empty_arr = np.empty(num_ens, dtype=dtype)
         empty_arr.fill(np.nan)
         return empty_arr
 
@@ -920,11 +924,11 @@ class Wt:
                         #pd0_vel = RtbRowe.PD0_BAD_VEL
                         # QRev wants bad values set to NaN
                         pd0_vel = np.nan
-                    else:
+                    #else:
                         # Convert from m/s to mm/s
                         #pd0_vel = round(pd0_vel * 1000.0)
                         # QRev expects m/s
-                        pd0_vel = round(pd0_vel)
+                        #pd0_vel = round(pd0_vel)
 
                     # Set the velocity based on the beam reassignment
                     if element_multiplier == 1:             # Vertical Beam
@@ -1327,6 +1331,7 @@ class Inst:
         self.firm_major = RtbRowe.nans(num_ens)                 # Firmware Major Number
         self.firm_minor = RtbRowe.nans(num_ens)                 # Firmware Minor Number
         self.firm_rev = RtbRowe.nans(num_ens)                   # Firmware Revision
+        self.data_type = [''] * num_ens                         # Data type "Real" or "Simu"
         self.firm_ver = RtbRowe.nans(num_ens)                   # Firmware version as a string
         self.beam_ang = RtbRowe.nans(num_ens)                   # Beam Angle in degrees
         self.beams = RtbRowe.nans(num_ens)                      # Number of beams used in velocity measurement
@@ -1381,21 +1386,21 @@ class Inst:
         # Get the frequency and convert from Hz to kHz
         freq = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 6, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
 
-        freq_khz = np.nan
-        if 60 > freq / 1000 > 80:
+        freq_khz = freq / 1000
+        if 60 < freq_khz < 80:
             freq_khz = 75
-        elif 130 > freq / 1000 > 160:
+        elif 130 < freq_khz < 160:
             freq_khz = 150
-        elif 200 > freq / 100 > 400:
+        elif 200 < freq_khz < 400:
             freq_khz = 300
-        elif 400 > freq / 100 > 800:
+        elif 400 < freq_khz < 800:
             freq_khz = 600
-        elif 1000 > freq / 100 > 1300:
+        elif 1000 < freq_khz < 1300:
             freq_khz = 1200
-        elif 1800 > freq / 100 > 2500:
+        elif 1800 < freq_khz < 2500:
             freq_khz = 2400
-        else:
-            freq_khz = np.nan
+        #else:
+        #    freq_khz = np.nan
 
         # Set the value
         self.freq[ens_index] = freq_khz
@@ -1405,6 +1410,9 @@ class Inst:
 
         # Options are 'Not Attached', Attached or n/a
         self.xducer[ens_index] = 'Attached'
+
+        # Options are 'Simu' or 'Real'
+        self.data_type = 'Real'
 
         # Transformation matrix
         self.t_matrix[0] = [-1.4619, 1.4619, 0, 0]
@@ -1474,11 +1482,11 @@ class Cfg:
         self.wp_nce = RtbRowe.nans(num_ens)                   # Water Profile Number of Code Elements contained in a lag
         self.wp_repeat_n = RtbRowe.nans(num_ens)              # Water Profile Number of times the NCE is repeated in the transmit signal
         self.wp_lag_samples = RtbRowe.nans(num_ens)           # Water Profile Lag Samples
-        self.bt_broadband = RtbRowe.nans(num_ens)             # Bottom Track Broadband
+        #self.bt_broadband = RtbRowe.nans(num_ens)             # Bottom Track Broadband
         self.bt_lag_length = RtbRowe.nans(num_ens)            # Bottom Track Pulse to Pulse Lag (m)
         self.bt_narrowband = RtbRowe.nans(num_ens)            # Bottom Track Long Range Switch Depth (m)
         self.bt_beam_mux = RtbRowe.nans(num_ens)              # Bottom Track Beam Multiplex
-        self.wp_broadband = RtbRowe.nans(num_ens)             # Water Profile Mode
+        #self.wp_broadband = RtbRowe.nans(num_ens)             # Water Profile Mode
         self.lag_cm = RtbRowe.nans(num_ens)                   # Water Profile Lag Length
         self.lag_near_bottom = RtbRowe.nans(num_ens)          # Water Profile Lag Near Bottom
         self.wp_transmit_bandwidth = RtbRowe.nans(num_ens)    # Water Profile Transmit Bandwidth
@@ -1489,7 +1497,7 @@ class Cfg:
         self.bc = RtbRowe.nans(num_ens)                         # Bottom Track Correlation Threshold
         self.be_mmps = RtbRowe.nans(num_ens)                    # Bottom Track Error Velocity Threshold
         self.bg = RtbRowe.nans(num_ens)                         # Bottom Track Percent Good Threshold
-        self.bm = RtbRowe.nans(num_ens)                         # Bottom Track Mode
+        self.bm = RtbRowe.nans(num_ens)                         # * Bottom Track Mode
         self.bp = RtbRowe.nans(num_ens)                         # Bottom Track Number of Pings
         self.bx_dm = RtbRowe.nans(num_ens)                      # Maximum Tracking depth in decimeters
         self.code_reps = RtbRowe.nans(num_ens)                  # Number of code repetitions
@@ -1505,14 +1513,14 @@ class Cfg:
         self.ez = [''] * num_ens                                # Sensor codes
         self.head_src = [''] * num_ens                          # Heading sources
         self.lag_cm = RtbRowe.nans(num_ens)                     # * Lag Length in centimeter
-        self.map_bins = [''] * num_ens                          # Bin Mapping
+        self.map_bins = [''] * num_ens                          # * Bin Mapping
         self.n_beams = RtbRowe.nans(num_ens)                    # * Number of velocity beams
         self.pitch_src = [''] * num_ens                         # Source of pitch data
         self.ref_lay_end_cell = RtbRowe.nans(num_ens)           # Reference Layer end cell
         self.ref_lay_str_cell = RtbRowe.nans(num_ens)           # Reference Layer start cell
         self.roll_src = [''] * num_ens                          # Source of roll data
         self.sal_src = [''] * num_ens                           # Salinity Source
-        self.wm = RtbRowe.nans(num_ens)                         # Water Mode
+        self.wm = RtbRowe.nans(num_ens)                         # * Water Mode
         self.sos_src = [''] * num_ens                           # Speed of Sound source
         self.temp_src = [''] * num_ens                          # Temperature Source
         self.tp_sec = RtbRowe.nans(num_ens)                     # * Time between Pings
@@ -1522,7 +1530,7 @@ class Cfg:
         self.wb = RtbRowe.nans(num_ens)                         # Water Track bandwidth threshold
         self.wc = RtbRowe.nans(num_ens)                         # Water Track correlation threshold
         self.we_mmps = RtbRowe.nans(num_ens)                    # Water Track error velocity threshold
-        self.wf_cm = RtbRowe.nans(num_ens)                      # Blank after Transmit in cm
+        self.wf_cm = RtbRowe.nans(num_ens)                      # * Blank after Transmit in cm
         self.wg_per = RtbRowe.nans(num_ens)                     # Water Track percent good threshold
         self.wj = RtbRowe.nans(num_ens)                         # Receiver Gain setting
         self.wn = RtbRowe.nans(num_ens)                         # * Number of depth cells (bins)
@@ -1577,7 +1585,7 @@ class Cfg:
         # Determine where to start in the ensemble data
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
-        self.dist_bin1_cm[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 0, RtbRowe.BYTES_IN_FLOAT, ens_bytes) * 100.0
+        self.wf_cm[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 0, RtbRowe.BYTES_IN_FLOAT, ens_bytes) * 100.0
         self.ws_cm[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 1, RtbRowe.BYTES_IN_FLOAT, ens_bytes) * 100.0
         first_ping_time = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 2, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
         last_ping_time = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 3, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
@@ -1597,18 +1605,24 @@ class Cfg:
         # Our system will always perform bin mapping
         self.map_bins = 'Yes'
 
+        # Calculate the Bin 1 Distance for now
+        # TODO Speed of Sound not used in this calculation like documentation states
+        self.dist_bin1_cm[ens_index] = self.wf_cm[ens_index] = (self.ws_cm[ens_index] / 2.0)
+
         # TODO Not sure the correct answer here
         self.use_3beam = 'N/a'
 
         # Based on the data, unable to determine
         # which source was used for the Speed of Sound source
         # Could be calculated or a fixed value.
-        self.sos_src = 'N/a'
+        # Options: 'Manual EC', 'Calculated', 'SVSS Sensor', N/a'
+        self.sos_src = 'Calculated'
 
         # Based on the data, unable to determine
         # which source was used for the heading source
         # Could be compass, fixed value or GPS
-        self.head_src = 'N/a'
+        # Options: "Manual EH", 'Int. Sensor', 'N/a'
+        self.head_src = 'Int. Sensor'
 
         # Pitch source currently only internal sensor
         self.pitch_src = "Int. Sensor"
@@ -1617,12 +1631,14 @@ class Cfg:
         # Based on the data, unable to determine
         # which source was used for depth source.
         # Could be RT or pressure
-        self.xdcr_dep_srs = "N/a"
+        # Options: "Manual ES", 'Int. Sensor', 'N/a'
+        self.xdcr_dep_srs = "Manual ES"
 
         # Based on the data, unable to determine
         # which source was used for temperature
         # Could be internal sensor or fixed value
-        self.temp_src = 'N/a'
+        # Options: 'Manual ET', 'Int. Sensor', 'N/a'
+        self.temp_src = 'Int. Sensor'
 
         if self.pd0_format:
             salinity = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
@@ -1670,11 +1686,11 @@ class Cfg:
         self.wp_nce[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
         self.wp_repeat_n[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
         self.wp_lag_samples[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.bt_broadband[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+        self.bm[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
         self.bt_lag_length[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 14, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
         self.bt_narrowband[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 15, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
         self.bt_beam_mux[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 16, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.wp_broadband[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 17, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+        self.wm[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 17, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
         self.lag_cm[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 18, RtbRowe.BYTES_IN_FLOAT, ens_bytes) * 100.0
         self.wp_transmit_bandwidth[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 19, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
         self.wp_receive_bandwidth[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 20, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
@@ -1693,6 +1709,8 @@ class Cfg:
         elif ens_index-1 >= 0 and not np.isnan(self.speed_of_sound[ens_index-1]):
             speed_of_sound = self.speed_of_sound[ens_index-1]
 
+        # Calculate lag length
+        # and Xmit Pulse Length
         sample_rate = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 5, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
         lag_samples = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 10, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
         cpce = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
@@ -1885,7 +1903,7 @@ class Sensor:
         self.temperature_deg_c[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 7, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
         self.ambient_temp[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 8, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
         self.salinity_ppt[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 9, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
-        self.sos_mps[ens_index] = self.SpeedOfSound = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+        self.sos_mps[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 12, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
 
         self.raw_mag_field_strength[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 13, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
         self.raw_mag_field_strength2[ens_index] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * 14, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
@@ -2103,11 +2121,11 @@ class BT:
                     #value = RtbRowe.PD0_BAD_VEL
                     # QRev wants bad values set to NaN
                     value = np.nan
-                else:
+                #else:
                     # Convert from m to cm
                     #value = round(value * 100.0)
                     # QRev uses meters not cm
-                    value = round(value)
+                    #value = round(value)
 
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 BEAM 3,2,0,1
@@ -2257,7 +2275,8 @@ class BT:
                     #value = round(value * 1000.0 * -1)
 
                     # QRev expects m/s
-                    value = round(value * -1.0)
+                    #value = round(value * -1.0)
+                    value = value * -1.0
 
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 BEAM 3,2,0,1
@@ -2334,7 +2353,7 @@ class BT:
                     # Also invert the direction
                     #value = round(value * 1000.0 * -1)
                     # QRev expects m/s
-                    value = round(value * -1.0)
+                    value = value * -1.0
 
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 XYZ order 1,0,-2,3
@@ -2411,7 +2430,7 @@ class BT:
                     # Also invert the direction
                     #value = round(value * 1000.0 * -1)
                     # QRev expects m/s
-                    value = round(value * -1.0)
+                    value = value * -1.0
 
                 # Reorganize beams
                 # RTB BEAM 0,1,2,3 = PD0 BEAM 3,2,0,1
@@ -3571,10 +3590,12 @@ class Gps2(object):
         self.gga_sentence = [x[:] for x in [[''] * 20] * num_ens]
         self.utc = np.full([num_ens, 20], np.nan)
         self.lat_deg = np.zeros([num_ens, 20])
+        #self.lat_deg = [[np.nan]] * num_ens
         self.lat_ref = [x[:] for x in [[''] * 20] * num_ens]
         self.lon_deg = np.zeros([num_ens, 20])
         self.lon_ref = [x[:] for x in [[''] * 20] * num_ens]
         self.corr_qual = np.full([num_ens, 20], np.nan)
+        #self.corr_qual = [[np.nan]] * num_ens
         self.num_sats = np.full([num_ens, 20], np.nan)
         self.hdop = np.full([num_ens, 20], np.nan)
         self.alt = np.full([num_ens, 20], np.nan)
@@ -3622,7 +3643,10 @@ class Gps2(object):
 
         # Used to calculate delta time
         self.last_gga_time = np.nan
-        #self.last_vtg_time = np.nan
+        self.last_vtg_time = np.nan
+        self.last_dbt_time = np.nan
+        self.last_hdt_time = np.nan
+        self.last_gga_delta_time = None
 
     def decode(self, ens_bytes: list, ens_index: int, num_ens: int, name_len: int = 8):
         """
@@ -3642,11 +3666,39 @@ class Gps2(object):
         packet_pointer = RtbRowe.get_base_data_size(name_len)
 
         # Convert all the messages to a string
-        nmea_str = str(ens_bytes[packet_pointer:], "UTF-8")
+        nmea_str_list = str(ens_bytes[packet_pointer:], "UTF-8")
 
         # Decode each NMEA message
-        for msg in nmea_str.split():
-            self.decode_nmea(msg, ens_index, num_ens)
+        for nmea_str in nmea_str_list.split():
+            #self.decode_nmea(msg, ens_index, num_ens)
+
+            # Verify the NMEA string is good
+            if Nmea.check_nmea_checksum(nmea_str):
+                # Add each message to the list
+                # Decode the data
+                if 'gga' in nmea_str or 'GGA' in nmea_str:
+                    #gga_list.append(nmea_str)
+                    self.decode_gga(nmea_str, ens_index)
+                    self.gga_index += 1
+                if 'vtg' in nmea_str or 'VTG' in nmea_str:
+                    #vtg_list.append(nmea_str)
+                    self.decode_vtg(nmea_str, ens_index)
+                    self.vtg_index += 1
+                if 'dbt' in nmea_str or 'DBT' in nmea_str:
+                    #dbt_list.append(nmea_str)
+                    self.decode_dbt(nmea_str, ens_index)
+                    self.dbt_index += 1
+                if 'hdt' in nmea_str or 'HDT' in nmea_str:
+                    #hdt_list.append(nmea_str)
+                    self.decode_hdt(nmea_str, ens_index)
+                    self.hdt_index += 1
+
+        # Initialize the array based on the number of messages found
+        #if len(gga_list) > 0:
+        #    empty_arr = RtbRowe.nans(len(gga_list))
+        #    self.corr_qual[ens_index] = empty_arr
+
+
 
     def decode_nmea(self, nmea_str: str, ens_index: int, num_ens: int):
         """
@@ -3657,33 +3709,35 @@ class Gps2(object):
         :param num_ens: Number of ensembles in the file.
         """
 
+        gga_list = []
+        vtg_list = []
+        dbt_list = []
+        hdt_list = []
+
         # Verify the NMEA string is good
         if Nmea.check_nmea_checksum(nmea_str):
             # Add each message to the list
             # Decode the data
             if 'gga' in nmea_str or 'GGA' in nmea_str:
-                #self.gga[ens_index] += nmea_str
-                self.decode_gga(nmea_str, ens_index)
-                self.gga_index += 1
-
-                # Check if we have to expand the array
-                if self.gga_index > self.gga_delta_time.shape[1] - 1:
-                    self.Gps2.gga_expand(num_ens)
-
-            #if 'gsa' in nmea_str or 'GSA' in nmea_str:
-                #self.gsa[ens_index] += nmea_str
+                gga_list.append(nmea_str)
+                #self.decode_gga(nmea_str, ens_index)
+                #self.gga_index += 1
             if 'vtg' in nmea_str or 'VTG' in nmea_str:
-                #self.vtg[ens_index] += nmea_str
-                self.decode_vtg(nmea_str, ens_index)
-                self.vtg_index += 1
+                vtg_list.append(nmea_str)
+                #self.decode_vtg(nmea_str, ens_index)
+                #self.vtg_index += 1
             if 'dbt' in nmea_str or 'DBT' in nmea_str:
-                #self.dbt[ens_index] += nmea_str
-                self.decode_dbt(nmea_str, ens_index)
-                self.dbt_index += 1
+                dbt_list.append(nmea_str)
+                #self.decode_dbt(nmea_str, ens_index)
+                #self.dbt_index += 1
             if 'hdt' in nmea_str or 'HDT' in nmea_str:
-                #self.hdt[ens_index] += nmea_str
-                self.decode_hdt(nmea_str, ens_index)
-                self.hdt_index += 1
+                hdt_list.append(nmea_str)
+                #self.decode_hdt(nmea_str, ens_index)
+                #self.hdt_index += 1
+
+        # Initialize the array based on the number of messages found
+        empty_arr = RtbRowe.nans(len(gga_list))
+        self.corr_qual[ens_index] = empty_arr
 
     def decode_gga(self, nmea_str: str, ens_index: int):
         """
@@ -3697,7 +3751,7 @@ class Gps2(object):
                 temp_array = np.array(nmea_str.split(','))
                 temp_array[temp_array == '999.9'] = ''
 
-                self.gga_header[ens_index][self.gga_index] = temp_array[0]
+                self.gga_header[ens_index][self.gga_index] = temp_array[0]       # Set the Initial value
                 utc_time = float(temp_array[1])
                 self.utc[ens_index, self.gga_index] = utc_time
                 lat_str = temp_array[2]
@@ -3718,16 +3772,24 @@ class Gps2(object):
                 self.alt_unit[ens_index][self.gga_index] = temp_array[10]
                 self.geoid[ens_index, self.gga_index] = temp_array[11]
                 self.geoid_unit[ens_index][self.gga_index] = temp_array[12]
-                self.d_gps_age[ens_index, self.gga_index] = float(temp_array[13])
+                if temp_array[13] != "":
+                    self.d_gps_age[ens_index, self.gga_index] = float(temp_array[13])
                 idx_star = temp_array[14].find('*')
-                self.ref_stat_id[ens_index, self.gga_index] = float(temp_array[15][:idx_star])
+                self.ref_stat_id[ens_index, self.gga_index] = float(temp_array[14][:idx_star])
 
                 if not np.isnan(self.last_gga_time):
                     # Calculate the delta time and set the new last time
                     self.gga_delta_time[ens_index, self.gga_index] = utc_time - self.last_gga_time
                     self.last_gga_time = utc_time
+
+                    # Since VTG, HDT and HBT do not have a timestamp
+                    # I will use the GGA delta time for all the messages
+                    # TODO Get a delta time for those NMEA messages
+                    self.last_gga_delta_time = self.gga_delta_time[ens_index, self.gga_index]
                 else:
                     self.gga_delta_time[ens_index, self.gga_index] = 0
+                    self.last_gga_delta_time = 0
+                    self.last_gga_time = utc_time
 
         except (ValueError, EOFError, IndexError):
             pass
@@ -3757,12 +3819,11 @@ class Gps2(object):
                 idx_star = temp_array[9].find('*')
                 self.mode_indicator[ens_index][self.vtg_index] = temp_array[9][:idx_star]
 
-                #if not np.isnan(self.last_gga_time):
-                #    # Calculate the delta time and set the new last time
-                #    self.vtg_delta_time[ens_index, self.gga_index] = utc_time - self.last_vtg_time
-                #    self.last_vtg_time = utc_time
-                #else:
-                #    self.vtg_delta_time[ens_index, self.gga_index] = 0
+                # TODO Find a way to calculate this value
+                if self.last_gga_delta_time:
+                    self.vtg_delta_time[ens_index, self.vtg_index] = self.last_gga_delta_time
+                else:
+                    self.vtg_delta_time[ens_index, self.vtg_index] = 0.0
 
         except (ValueError, EOFError, IndexError):
             pass
@@ -3784,6 +3845,12 @@ class Gps2(object):
                 self.heading_deg[ens_index, self.hdt_index] = Nmea.valid_number(temp_array[1])
                 idx_star = temp_array[2].find('*')
                 self.h_true_indicator[ens_index][self.hdt_index] = temp_array[2][:idx_star]
+
+                # TODO Find a way to calculate this value
+                if self.last_gga_delta_time:
+                    self.hdt_delta_time[ens_index, self.vtg_index] = self.last_gga_delta_time
+                else:
+                    self.hdt_delta_time[ens_index, self.vtg_index] = 0.0
 
         except (ValueError, EOFError, IndexError):
             pass
@@ -3809,6 +3876,12 @@ class Gps2(object):
                 self.depth_fath[ens_index, self.dbt_index] = Nmea.valid_number(temp_array[5])
                 idx_star = temp_array[6].find('*')
                 self.fath_indicator[ens_index][self.dbt_index] = temp_array[6][:idx_star]
+
+                # TODO Find a way to calculate this value
+                if self.last_gga_delta_time:
+                    self.dbt_delta_time[ens_index, self.vtg_index] = self.last_gga_delta_time
+                else:
+                    self.dbt_delta_time[ens_index, self.vtg_index] = 0.0
 
         except (ValueError, EOFError, IndexError):
             pass

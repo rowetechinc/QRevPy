@@ -662,9 +662,12 @@ class RTTrowe(object):
 
 
 """
+## TransectData ##
 Offsets_Transducer_Depth
 Proc_River_Depth_Source 0 - 4  DEFAULT: 4
 Proc_Use_3_Beam_BT < 0.5
+
+Proc_Salinity
 
 Edge_Begin_Left_Bank
 Edge_Begin_Shore_Distance
@@ -689,6 +692,18 @@ Fixed_Commands
 or
 Wizard_Commands
 or
+User_Commands
+
+## InstrumentData ##
+site_info
+active_config
+
+ADCPSerialNmb
+Fixed
+Fixed_Commands
+Wizard
+Wizard_Commands
+User
 User_Commands
 
 """

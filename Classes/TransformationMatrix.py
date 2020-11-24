@@ -32,6 +32,8 @@ class TransformationMatrix(object):
         
         if manufacturer == 'TRDI':
             self.trdi(model, data_in)
+        elif manufacturer == 'Rowe':
+            self.rowe()
         elif manufacturer == 'SonTek':
             self.sontek(data_in)
 
@@ -181,6 +183,31 @@ class TransformationMatrix(object):
                     if idx4 != -1:
                         self.matrix = float(data_in[idx3:idx5])
                         self.source = 'ADCP'
+
+    def rowe(self):
+        """Processes the data to store the transformation matrix for Rowe ADCPs.
+        If no transformation matrix information is available a nominal transformation
+        matrix for that model is assumed.
+
+        Parameters
+        ----------
+        model: str
+            Model of ADCP
+        data_in:
+            System test data or 'Nominal'
+        """
+
+        # Set nominal matrix based on model
+        self.matrix = [[-1.4619, 1.4619, 0, 0],
+                       [0, 0, -1.4619, 1.4619],
+                       [-0.2660, -0.2660, -0.2660, -0.2660],
+                       [0.25, 0.25, -0.25, -0.25]]
+
+        # Overwrite nominal transformation matrix with custom matrix from test data, if available
+        self.source = 'Nominal'
+
+        # Save matrix as np array
+        self.matrix = np.array(self.matrix)[0:4, 0:4]
 
     def sontek(self, data_in):
         """Store SonTek transformation matrix data.

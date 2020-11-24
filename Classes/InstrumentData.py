@@ -60,6 +60,9 @@ class InstrumentData(object):
         if manufacturer == 'TRDI':
             self.manufacturer = manufacturer
             self.trdi(pd0=raw_data, mmt_transect=mmt_transect, mmt=mmt)
+        if manufacturer == 'Rowe':
+            self.manufacturer = manufacturer
+            self.rowe(rtb=raw_data, mmt_transect=mmt_transect, mmt=mmt)
         elif manufacturer == 'SonTek':
             self.manufacturer = manufacturer
             self.sontek(rs=raw_data)
@@ -189,6 +192,96 @@ class InstrumentData(object):
             else:
                 self.t_matrix = TransformationMatrix()
                 self.t_matrix.populate_data(manufacturer='TRDI',
+                                            model=self.model,
+                                            data_in='Nominal')
+
+    def rowe(self, rtb, mmt_transect, mmt):
+        """Populates the variables with data from TRDI ADCPs.
+
+        Parameters
+        ----------
+        rtb: RtbRowe
+            Object of RtbRowe.  Raw ensemble data
+        mmt_transect: RTT_Transect
+            Object of RTT_Transect.  Transect data in project
+        mmt: rttRowe
+            Object of RTT_Rowe.  Project file
+        """
+
+        # Instrument frequency
+        self.frequency_khz = rtb.Inst.freq[0]
+
+        # Firmware
+        self.firmware = rtb.Inst.firm_ver[0]
+
+        # Instrument beam angle and pattern
+        self.beam_angle_deg = rtb.Inst.beam_ang[0]
+        self.beam_pattern = rtb.Inst.pat[0]
+
+        # Instrument characteristics
+        mmt_site = getattr(mmt, 'site_info')
+        mmt_config = getattr(mmt_transect, 'active_config')
+
+        self.serial_num = mmt_site['ADCPSerialNmb']
+
+        # Determine Rowe model
+        firmware = float(self.firmware)
+
+        if firmware > 1.0:
+            self.model = 'RiverSurveyor'
+            if 'Fixed_Commands' in mmt_config.keys():
+                self.configuration_commands = np.array(['Fixed'], dtype=object)
+                self.configuration_commands = np.append(self.configuration_commands, mmt_config['Fixed_Commands'])
+
+        else:
+            self.model = 'Unknown'
+            if 'Fixed_Commands' in mmt_config.keys():
+                self.configuration_commands = np.array(['Fixed'], dtype=object)
+                self.configuration_commands = np.append(self.configuration_commands, mmt_config['Fixed_Commands'])
+
+        if 'Wizard_Commands' in mmt_config.keys():
+            self.configuration_commands = np.append(self.configuration_commands, ['Wizard'])
+            self.configuration_commands = np.append(self.configuration_commands,
+                                                    mmt_config['Wizard_Commands'])
+
+        if 'User_Commands' in mmt_config.keys():
+            self.configuration_commands = np.append(self.configuration_commands, ['User'])
+            self.configuration_commands = np.append(self.configuration_commands,
+                                                    mmt_config['User_Commands'])
+
+        # Obtain transformation matrix from one of the available sources
+        if not np.isnan(rtb.Inst.t_matrix[0, 0]):
+            self.t_matrix = TransformationMatrix()
+            self.t_matrix.populate_data(manufacturer='Rowe', model='pd0', data_in=rtb)
+        else:
+            if isinstance(mmt.qaqc, dict) and len(mmt.qaqc) > 0:
+                if 'RG_Test' in mmt.qaqc.keys():
+
+                    self.t_matrix = TransformationMatrix()
+                    self.t_matrix.populate_data(manufacturer='Rowe', model=self.model, data_in=mmt.qaqc['RG_Test'][0])
+
+                elif 'Compass_Calibration' in mmt.qaqc.keys():
+
+                    self.t_matrix = TransformationMatrix()
+                    self.t_matrix.populate_data(manufacturer='Rowe',
+                                                model=self.model,
+                                                data_in=mmt.qaqc['Compass_Calibration'][0])
+
+                elif 'Compass_Eval_Timestamp' in mmt.qaqc.keys():
+
+                    self.t_matrix = TransformationMatrix()
+                    self.t_matrix.populate_data(manufacturer='Rowe',
+                                                model=self.model,
+                                                data_in=mmt.qaqc['Compass_Evaluation'][0])
+
+                else:
+                    self.t_matrix = TransformationMatrix()
+                    self.t_matrix.populate_data(manufacturer='Rowe',
+                                                model=self.model,
+                                                data_in='Nominal')
+            else:
+                self.t_matrix = TransformationMatrix()
+                self.t_matrix.populate_data(manufacturer='Rowe',
                                             model=self.model,
                                             data_in='Nominal')
 
