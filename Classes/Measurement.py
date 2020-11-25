@@ -327,7 +327,7 @@ class Measurement(object):
                                     selected='user',
                                     speed=speed)
 
-    def qaqc_trdi(self, mmt):
+    def qaq5c_trdi(self, mmt):
         """Processes qaqc test, calibrations, and evaluations
         
         Parameters
@@ -422,13 +422,13 @@ class Measurement(object):
         # from TransectData
         transect.depths.composite_depths(transect)
 
-    def load_rowe(self, rmmt_file, transect_type='Q', checked=False):
+    def load_rowe(self, rtt_file: str, transect_type: str = 'Q', checked: bool = False):
         """Method to load Rowe data.
 
         Parameters
         ----------
-        rmmt_file: str
-            Full pathname to rmmt file.
+        rtt_file: str
+            Full pathname to rtt file.
         transect_type: str
             Type of data (Q: discharge, MB: moving-bed test
         checked: bool
@@ -438,7 +438,7 @@ class Measurement(object):
         # Read mmt file
         #mmt = MMTtrdi(rmmt_file)
         rtt = RTTrowe()
-        rtt.parse_project(rmmt_file)
+        rtt.parse_project(rtt_file)
 
         # Get properties if they exist, otherwise set them as blank strings
         self.station_name = str(rtt.site_info['Name'])

@@ -1441,9 +1441,9 @@ class Cfg:
         #self.num_bins = RtbRowe.nans(num_ens)                  # Replaced with wn Number of bins
         self.desired_ping_count = RtbRowe.nans(num_ens)         # Avg Ping Count configured in seconds
         #self.actual_ping_count = RtbRowe.nans(num_ens)         # Replaced with wp. Avg Ping Count actually output in seconds
-        self.serial_num = RtbRowe.nans(num_ens)                 # Serial Number
+        self.serial_num = RtbRowe.nans(num_ens, dtype=str)                 # Serial Number
 
-        self.subsystem_code = RtbRowe.nans(num_ens)             # Subsystem Code (Identifier of frequency and orientation)
+        self.subsystem_code = RtbRowe.nans(num_ens, dtype=str)             # Subsystem Code (Identifier of frequency and orientation)
         self.subsystem_config = RtbRowe.nans(num_ens)           # Subsystem Config.  System allows multiple configures of the same frequency.  This identifies each configuration
         self.status = RtbRowe.nans(num_ens)                     # Status code
         #self.year = RtbRowe.nans(num_ens)                       # Year
@@ -2851,221 +2851,221 @@ class RiverBT:
         # Create a temp list to hold all the values for each subsystem
         # Accumulate the list then add it to the data type
         # Index will keep track of where we are located in the data
-        pint_count = np.empty(shape=[num_subsystems], dtype=np.float)
+        ping_count = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
-            pint_count[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
+            ping_count[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.depth_m[:num_subsystems, ens_index] = pint_count.T
+        self.ping_count[ens_index, :num_subsystems] = ping_count.T
 
         status = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             status[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.status[:num_subsystems, ens_index] = status.T
+        self.status[ens_index, :num_subsystems] = status.T
 
         beams = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             beams[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.beams[:num_subsystems, ens_index] = beams.T
+        self.beams[ens_index, :num_subsystems] = beams.T
 
         nce = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             nce[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.nce[:num_subsystems, ens_index] = nce.T
+        self.nce[ens_index, :num_subsystems] = nce.T
 
         repeats_n = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             repeats_n[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.repeats_n[:num_subsystems, ens_index] = repeats_n.T
+        self.repeats_n[ens_index, :num_subsystems] = repeats_n.T
 
         cpce = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             cpce[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.cpce[:num_subsystems, ens_index] = cpce.T
+        self.cpce[ens_index, :num_subsystems] = cpce.T
 
         bb = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             bb[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.bb[:num_subsystems, ens_index] = bb.T
+        self.bb[ens_index, :num_subsystems] = bb.T
 
         ll = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             ll[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.ll[:num_subsystems, ens_index] = ll.T
+        self.ll[ens_index, :num_subsystems] = ll.T
 
         beam_mux = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             beam_mux[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.beam_mux[:num_subsystems, ens_index] = beam_mux.T
+        self.beam_mux[ens_index, :num_subsystems] = beam_mux.T
 
         nb = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             nb[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.nb[:num_subsystems, ens_index] = nb.T
+        self.nb[ens_index, :num_subsystems] = nb.T
 
         ps = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             ps[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.ping_sec[:num_subsystems, ens_index] = ps.T
+        self.ping_sec[ens_index, :num_subsystems] = ps.T
 
         hdg = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             hdg[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.heading[:num_subsystems, ens_index] = hdg.T
+        self.heading[ens_index, :num_subsystems] = hdg.T
 
         ptch = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             ptch[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.pitch[:num_subsystems, ens_index] = ptch.T
+        self.pitch[ens_index, :num_subsystems] = ptch.T
 
         roll = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             roll[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.roll[:num_subsystems, ens_index] = roll.T
+        self.roll[ens_index, :num_subsystems] = roll.T
 
         wt = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             wt[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.water_temp[:num_subsystems, ens_index] = wt.T
+        self.water_temp[ens_index, :num_subsystems] = wt.T
 
         sys_temp = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             sys_temp[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.backplane_temp[:num_subsystems, ens_index] = sys_temp.T
+        self.backplane_temp[ens_index, :num_subsystems] = sys_temp.T
 
         sal = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             sal[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.salinity[:num_subsystems, ens_index] = sal.T
+        self.salinity[ens_index, :num_subsystems] = sal.T
 
         pres = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             pres[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.pressure[:num_subsystems, ens_index] = pres.T
+        self.pressure[ens_index, :num_subsystems] = pres.T
 
         depth = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             depth[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.depth[:num_subsystems, ens_index] = depth.T
+        self.depth[ens_index, :num_subsystems] = depth.T
 
         sos = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             sos[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.speed_of_sound[:num_subsystems, ens_index] = sos.T
+        self.speed_of_sound[ens_index, :num_subsystems] = sos.T
 
         mx = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             mx[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.mx.append[:num_subsystems, ens_index] = mx.T
+        self.mx[ens_index, :num_subsystems] = mx.T
 
         my = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             my[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.my[:num_subsystems, ens_index] = my.T
+        self.my[ens_index, :num_subsystems] = my.T
 
         mz = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             mz[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.mz[:num_subsystems, ens_index] = mz.T
+        self.mz[ens_index, :num_subsystems] = mz.T
 
         gp = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             gp[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.gp.append(gp)
+        self.gp[ens_index, :num_subsystems] = gp.T
 
         gr = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             gr[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.gr[:num_subsystems, ens_index] = gr.T
+        self.gr[ens_index, :num_subsystems] = gr.T
 
         gz = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             gz[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.gz[:num_subsystems, ens_index] = gz.T
+        self.gz[ens_index, :num_subsystems] = gz.T
 
         sps = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             sps[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.samples_per_sec[:num_subsystems, ens_index] = sps.T
+        self.samples_per_sec[ens_index, :num_subsystems] = sps.T
 
         freq = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             freq[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.system_freq_hz[:num_subsystems, ens_index] = freq.T
+        self.system_freq_hz[ens_index, :num_subsystems] = freq.T
 
         bt_range = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             bt_range[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.bt_range[:num_subsystems, ens_index] = bt_range.T
+        self.bt_range[ens_index, :num_subsystems] = bt_range.T
 
         snr = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             snr[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.bt_snr[:num_subsystems, ens_index] = snr.T
+        self.bt_snr[ens_index, :num_subsystems] = snr.T
 
         amp = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             amp[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.bt_amp[:num_subsystems, ens_index] = amp.T
+        self.bt_amp[ens_index, :num_subsystems] = amp.T
 
         noise_bp = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             noise_bp[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.bt_noise_amp_bp[:num_subsystems, ens_index] = noise_bp.T
+        self.bt_noise_amp_bp[ens_index, :num_subsystems] = noise_bp.T
 
         noise_fp = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             noise_fp[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.bt_noise_amp_fp[:num_subsystems, ens_index] = noise_fp.T
+        self.bt_noise_amp_fp[ens_index, :num_subsystems] = noise_fp.T
 
         corr = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             corr[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.bt_corr[:num_subsystems, ens_index] = corr.T
+        self.bt_corr[ens_index, :num_subsystems] = corr.T
 
         vel = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             vel[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.vel[:num_subsystems, ens_index] = vel.T
+        self.vel[ens_index, :num_subsystems] = vel.T
 
         beam_n = np.empty(shape=[num_subsystems], dtype=np.float)
         for sb in range(num_subsystems):
             beam_n[sb] = RtbRowe.get_float(packet_pointer + RtbRowe.BYTES_IN_FLOAT * index, RtbRowe.BYTES_IN_FLOAT, ens_bytes)
             index += 1
-        self.beam_n[:num_subsystems, ens_index] = beam_n.T
+        self.beam_n[ens_index, :num_subsystems] = beam_n.T
 
 
 class Surface:
@@ -3677,28 +3677,17 @@ class Gps2(object):
                 # Add each message to the list
                 # Decode the data
                 if 'gga' in nmea_str or 'GGA' in nmea_str:
-                    #gga_list.append(nmea_str)
                     self.decode_gga(nmea_str, ens_index)
                     self.gga_index += 1
                 if 'vtg' in nmea_str or 'VTG' in nmea_str:
-                    #vtg_list.append(nmea_str)
                     self.decode_vtg(nmea_str, ens_index)
                     self.vtg_index += 1
                 if 'dbt' in nmea_str or 'DBT' in nmea_str:
-                    #dbt_list.append(nmea_str)
                     self.decode_dbt(nmea_str, ens_index)
                     self.dbt_index += 1
                 if 'hdt' in nmea_str or 'HDT' in nmea_str:
-                    #hdt_list.append(nmea_str)
                     self.decode_hdt(nmea_str, ens_index)
                     self.hdt_index += 1
-
-        # Initialize the array based on the number of messages found
-        #if len(gga_list) > 0:
-        #    empty_arr = RtbRowe.nans(len(gga_list))
-        #    self.corr_qual[ens_index] = empty_arr
-
-
 
     def decode_nmea(self, nmea_str: str, ens_index: int, num_ens: int):
         """

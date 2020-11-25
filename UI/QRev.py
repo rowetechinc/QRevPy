@@ -7112,13 +7112,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
                 if self.meas.qa.w_vel['all_invalid'][transect_id] or \
-                        self.meas.qa.w_vel['q_total_warning'][transect_id] or \
-                        self.meas.qa.w_vel['q_max_run_warning'][transect_id]:
+                        np.any(self.meas.qa.w_vel['q_total_warning'][transect_id]) or \
+                        np.any(self.meas.qa.w_vel['q_max_run_warning'][transect_id]):
 
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 77, 77))
 
-                elif self.meas.qa.w_vel['q_total_caution'][transect_id] or \
-                        self.meas.qa.w_vel['q_max_run_caution'][transect_id]:
+                elif np.any(self.meas.qa.w_vel['q_total_caution'][transect_id]) or \
+                        np.any(self.meas.qa.w_vel['q_max_run_caution'][transect_id]):
 
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
                 else:
@@ -7129,13 +7129,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 item = '{:3.2f}'.format((num_orig_invalid / num_useable_cells) * 100.)
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
-                if self.meas.qa.w_vel['q_total_warning'][transect_id] or \
-                        self.meas.qa.w_vel['q_max_run_warning'][transect_id]:
+                if np.any(self.meas.qa.w_vel['q_total_warning'][transect_id]) or \
+                        np.any(self.meas.qa.w_vel['q_max_run_warning'][transect_id]):
 
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 77, 77))
 
-                elif self.meas.qa.w_vel['q_total_caution'][transect_id] or \
-                        self.meas.qa.w_vel['q_max_run_caution'][transect_id]:
+                elif np.any(self.meas.qa.w_vel['q_total_caution'][transect_id]) or \
+                        np.any(self.meas.qa.w_vel['q_max_run_caution'][transect_id]):
 
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
 
@@ -7147,13 +7147,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 item = '{:3.2f}'.format((num_beam_invalid / num_useable_cells) * 100.)
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
-                if self.meas.qa.w_vel['q_total_warning'][transect_id] or \
-                        self.meas.qa.w_vel['q_max_run_warning'][transect_id]:
+                if np.any(self.meas.qa.w_vel['q_total_warning'][transect_id]) or \
+                        np.any(self.meas.qa.w_vel['q_max_run_warning'][transect_id]):
 
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 77, 77))
 
-                elif self.meas.qa.w_vel['q_total_caution'][transect_id] or \
-                        self.meas.qa.w_vel['q_max_run_caution'][transect_id]:
+                elif np.any(self.meas.qa.w_vel['q_total_caution'][transect_id]) or \
+                        np.any(self.meas.qa.w_vel['q_max_run_caution'][transect_id]):
 
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
 
@@ -7165,13 +7165,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 item = '{:3.2f}'.format((num_error_invalid / num_useable_cells) * 100.)
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
-                if self.meas.qa.w_vel['q_total_warning'][transect_id] or \
-                        self.meas.qa.w_vel['q_max_run_warning'][transect_id]:
+                if np.any(self.meas.qa.w_vel['q_total_warning'][transect_id]) or \
+                        np.any(self.meas.qa.w_vel['q_max_run_warning'][transect_id]):
 
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 77, 77))
 
-                elif self.meas.qa.w_vel['q_total_caution'][transect_id] or \
-                        self.meas.qa.w_vel['q_max_run_caution'][transect_id]:
+                elif np.any(self.meas.qa.w_vel['q_total_caution'][transect_id]) or \
+                        np.any(self.meas.qa.w_vel['q_max_run_caution'][transect_id]):
 
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
 
@@ -7183,13 +7183,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 item = '{:3.2f}'.format((num_vert_invalid / num_useable_cells) * 100.)
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
-                if self.meas.qa.w_vel['q_total_warning'][transect_id] or \
-                        self.meas.qa.w_vel['q_max_run_warning'][transect_id]:
+                if np.any(self.meas.qa.w_vel['q_total_warning'][transect_id]) or \
+                        np.any(self.meas.qa.w_vel['q_max_run_warning'][transect_id]):
 
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 77, 77))
 
-                elif self.meas.qa.w_vel['q_total_caution'][transect_id] or \
-                        self.meas.qa.w_vel['q_max_run_caution'][transect_id]:
+                elif np.any(self.meas.qa.w_vel['q_total_caution'][transect_id]) or \
+                        np.any(self.meas.qa.w_vel['q_max_run_caution'][transect_id]):
 
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
 
@@ -7201,13 +7201,13 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
                 item = '{:3.2f}'.format((num_other_invalid / num_useable_cells) * 100.)
                 tbl.setItem(row, col, QtWidgets.QTableWidgetItem(item))
                 tbl.item(row, col).setFlags(QtCore.Qt.ItemIsEnabled)
-                if self.meas.qa.w_vel['q_total_warning'][transect_id] or \
-                        self.meas.qa.w_vel['q_max_run_warning'][transect_id]:
+                if np.any(self.meas.qa.w_vel['q_total_warning'][transect_id]) or \
+                        np.any(self.meas.qa.w_vel['q_max_run_warning'][transect_id]):
 
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 77, 77))
 
-                elif self.meas.qa.w_vel['q_total_caution'][transect_id] or \
-                        self.meas.qa.w_vel['q_max_run_caution'][transect_id]:
+                elif np.any(self.meas.qa.w_vel['q_total_caution'][transect_id]) or \
+                        np.any(self.meas.qa.w_vel['q_max_run_caution'][transect_id]):
 
                     tbl.item(row, col).setBackground(QtGui.QColor(255, 204, 0))
 

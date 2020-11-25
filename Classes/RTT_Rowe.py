@@ -272,7 +272,7 @@ class RTTtransect(object):
         self.Checked = json_dict['Checked']
         self.Files = json_dict['Files']
         self.Notes = json_dict['Notes']
-        self.field_config = json_dict['field_config']
+        #self.field_config = json_dict['field_config']
         self.active_config = json_dict['active_config']
         self.moving_bed_type = json_dict['moving_bed_type']
 
@@ -354,6 +354,7 @@ class RTTrowe(object):
         self.mbt_transects = []
 
         # Discharge Summary
+        """
         self.summary = {
             'NONE': {
                 'Use': [],
@@ -576,7 +577,7 @@ class RTTrowe(object):
                 'MaxHDOP': [],
             }
         }
-
+        """
         # QA_QC
         self.qaqc = {}
 
@@ -615,7 +616,7 @@ class RTTrowe(object):
                 'project': self.project,
                 'site_info': self.site_info,
                 'transects': self.transect_to_json(),
-                'summary': self.summary,
+                #'summary': self.summary,
                 'qaqc': self.qaqc,
             }
         }
@@ -651,7 +652,7 @@ class RTTrowe(object):
                 # Store the JSON data
                 self.project = project_json['RTI']['project']
                 self.site_info = project_json['RTI']['site_info']
-                self.summary = project_json['RTI']['summary']
+                #self.summary = project_json['RTI']['summary']
                 self.qaqc = project_json['RTI']['qaqc']
 
                 # Add all the transects
@@ -662,10 +663,14 @@ class RTTrowe(object):
 
 
 """
+USE ACTIVE CONFIG
+
 ## TransectData ##
 Offsets_Transducer_Depth
 Proc_River_Depth_Source 0 - 4  DEFAULT: 4
 Proc_Use_3_Beam_BT < 0.5
+
+Q_Shore_Pings_Avg       Number of ensembles for left and right bank Q mesaurement
 
 Proc_Salinity
 
@@ -681,6 +686,9 @@ Q_Right_Edge_Type - 0 = Triangular, 1 = Rectangular, 2 = Custom
 Q_Top_Method - 1 = Constant, 2 = 3-Point
 Q_Bottom_Method - 2 = No Slip
 Q_Power_Curve_Coeff
+
+Q_Shore_Left_Ens_Count              Meausre Q for edges
+Q_Shore_Right_Ens_Count
 
 Offsets_Magnetic_Variation
 Ext_Heading_Offset
@@ -705,5 +713,20 @@ Wizard
 Wizard_Commands
 User
 User_Commands
+
+
+## Transect ##
+Notes
+NoteFileNo
+NoteText
+NoteDate
+
+## QAQC ##
+RG_Test
+RG_Test_TimeStamp
+Compass_Calibration
+Compass_Calibration_TimeStamp
+Compass_Evaluation
+Compass_Evaluation_TimeStamp
 
 """

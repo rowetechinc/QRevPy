@@ -1004,9 +1004,12 @@ class TransectData(object):
             self.edges.populate_data(rec_edge_method='Fixed', vel_method='MeasMag')
 
             # Determine number of ensembles to average
-            n_ens_left = rtt_config['Q_Shore_Pings_Avg']
+            #n_ens_left = rtt_config['Q_Shore_Pings_Avg']
             # TRDI uses same number on left and right edges
-            n_ens_right = n_ens_left
+            #n_ens_right = n_ens_left
+            n_ens_left = rtt_config['Q_Shore_Left_Ens_Count']
+            n_ens_right= rtt_config['Q_Shore_Right_Ens_Count']
+
 
             # Set indices for ensembles in the moving-boat portion of the transect
             self.in_transect_idx = np.arange(0, rowe_data.Bt.vel_mps.shape[1])
