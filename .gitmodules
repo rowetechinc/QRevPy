@@ -1,3 +1,0 @@
-[submodule "rti_python"]
-	path = rti_python
-	url = https://github.com/rowetechinc/rti_python
