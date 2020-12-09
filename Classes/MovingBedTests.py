@@ -766,7 +766,7 @@ class MovingBedTests(object):
             gps_bt = TransectData.compute_gps_bt(self.transect, gps_ref='gga_vel')
         elif self.transect.boat_vel.vtg_vel is not None:
             gps_bt = TransectData.compute_gps_bt(self.transect, gps_ref='vtg_vel')
-        if gps_bt is not None:
+        if gps_bt is not None and len(gps_bt) > 0:
             self.gps_dist_us_m = gps_bt['mag']
             self.gps_mb_dir = gps_bt['dir']
             self.gps_mb_spd_mps = self.gps_dist_us_m / self.duration_sec

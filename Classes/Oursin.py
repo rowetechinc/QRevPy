@@ -621,15 +621,14 @@ class Oursin(object):
 
                 # Store 95 percent bounds on power fit exponent for each transect if power selected
                 if meas.extrap_fit.sel_fit[n].bot_method_auto == "Power":
-                    if np.isnan(meas.extrap_fit.sel_fit[0].exponent_95_ci[0]):
-                        self.exp_95ic_min.append(np.nan)
-                    else:
+                    try:
                         self.exp_95ic_min.append(meas.extrap_fit.sel_fit[n].exponent_95_ci[0][0])
-
-                    if np.isnan(meas.extrap_fit.sel_fit[0].exponent_95_ci[1]):
-                        self.exp_95ic_max.append(np.nan)
-                    else:
+                    except TypeError:
+                        self.exp_95ic_min.append(np.nan)
+                    try:
                         self.exp_95ic_max.append(meas.extrap_fit.sel_fit[n].exponent_95_ci[1][0])
+                    except TypeError:
+                        self.exp_95ic_max.append(np.nan)
 
                     self.pp_exp.append(meas.extrap_fit.sel_fit[n].pp_exponent)
 

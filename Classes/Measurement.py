@@ -19,7 +19,6 @@ from Classes.Oursin import Oursin
 from MiscLibs.common_functions import cart2pol, pol2cart, rad2azdeg, nans, azdeg2rad
 # from profilehooks import profile
 
-
 class Measurement(object):
     """Class to hold all measurement details.
 
@@ -232,32 +231,38 @@ class Measurement(object):
         threshold_settings['bt_settings'] = {}
         threshold_settings['depth_settings'] = {}
 
+		# Select reference transect use first checked or if none then first transect
+        if len(self.checked_transect_idx) > 0:
+            ref_transect = self.checked_transect_idx[0]
+        else:
+            ref_transect = 0
+
         # Water track filter threshold settings
         threshold_settings['wt_settings']['beam'] = \
-            self.set_num_beam_wt_threshold_trdi(mmt.transects[self.checked_transect_idx[0]])
+            self.set_num_beam_wt_threshold_trdi(mmt.transects[ref_transect])
         threshold_settings['wt_settings']['difference'] = 'Manual'
         threshold_settings['wt_settings']['difference_threshold'] = \
-            mmt.transects[self.checked_transect_idx[0]].active_config['Proc_WT_Error_Velocity_Threshold']
+            mmt.transects[ref_transect].active_config['Proc_WT_Error_Velocity_Threshold']
         threshold_settings['wt_settings']['vertical'] = 'Manual'
         threshold_settings['wt_settings']['vertical_threshold'] = \
-            mmt.transects[self.checked_transect_idx[0]].active_config['Proc_WT_Up_Vel_Threshold']
+            mmt.transects[ref_transect].active_config['Proc_WT_Up_Vel_Threshold']
 
         # Bottom track filter threshold settings
         threshold_settings['bt_settings']['beam'] = \
-            self.set_num_beam_bt_threshold_trdi(mmt.transects[self.checked_transect_idx[0]])
+            self.set_num_beam_bt_threshold_trdi(mmt.transects[ref_transect])
         threshold_settings['bt_settings']['difference'] = 'Manual'
         threshold_settings['bt_settings']['difference_threshold'] = \
-            mmt.transects[self.checked_transect_idx[0]].active_config['Proc_BT_Error_Vel_Threshold']
+            mmt.transects[ref_transect].active_config['Proc_BT_Error_Vel_Threshold']
         threshold_settings['bt_settings']['vertical'] = 'Manual'
         threshold_settings['bt_settings']['vertical_threshold'] = \
-            mmt.transects[self.checked_transect_idx[0]].active_config['Proc_BT_Up_Vel_Threshold']
+            mmt.transects[ref_transect].active_config['Proc_BT_Up_Vel_Threshold']
 
         # Depth filter and averaging settings
         threshold_settings['depth_settings']['depth_weighting'] = \
-            self.set_depth_weighting_trdi(mmt.transects[self.checked_transect_idx[0]])
+            self.set_depth_weighting_trdi(mmt.transects[ref_transect])
         threshold_settings['depth_settings']['depth_valid_method'] = 'TRDI'
         threshold_settings['depth_settings']['depth_screening'] = \
-            self.set_depth_screening_trdi(mmt.transects[self.checked_transect_idx[0]])
+            self.set_depth_screening_trdi(mmt.transects[ref_transect])
 
         # Determine reference used in WR2 if available
         reference = 'BT'
@@ -613,24 +618,19 @@ class Measurement(object):
         self.initial_settings = vars(meas_struct.initialSettings)
 
         # Update initial settings to agree with Python definitions
-        if self.initial_settings['NavRef'] == 'btVel':
-            self.initial_settings['NavRef'] = 'bt_vel'
-        elif self.initial_settings['NavRef'] == 'ggaVel':
-            self.initial_settings['NavRef'] = 'gga_vel'
-        elif self.initial_settings['NavRef'] == 'vtgVel':
-            self.initial_settings['NavRef'] = 'vtg_vel'
-        if self.initial_settings['WTwtDepthFilter'] == 'Off':
-            self.initial_settings['WTwtDepthFilter'] = False
-        elif self.initial_settings['WTwtDepthFilter'] == 'On':
-            self.initial_settings['WTwtDepthFilter'] = True
+        nav_dict = {'btVel': 'bt_vel', 'ggaVel': 'gga_vel', 'vtgVel': 'vtg_vel',
+                    'bt_vel': 'bt_vel', 'gga_vel': 'gga_vel', 'vtg_vel': 'vtg_vel'}
+        self.initial_settings['NavRef'] = nav_dict[self.initial_settings['NavRef']]
+
+        on_off_dict = {'Off': False, 'On': True, 0: False, 1: True}
+        self.initial_settings['WTwtDepthFilter'] = on_off_dict[self.initial_settings['WTwtDepthFilter']]
+
         if type(self.initial_settings['WTsnrFilter']) is np.ndarray:
             self.initial_settings['WTsnrFilter'] = 'Off'
-        if self.initial_settings['depthReference'] == 'btDepths':
-            self.initial_settings['depthReference'] = 'bt_depths'
-        elif self.initial_settings['depthReference'] == 'vbDepths':
-            self.initial_settings['depthReference'] = 'vb_depths'
-        elif self.initial_settings['depthReference'] == 'ds_Depths':
-            self.initial_settings['depthReference'] = 'ds_depths'
+
+        nav_dict = {'btDepths': 'bt_depths', 'vbDepths': 'vb_depths', 'dsDepths': 'ds_depths',
+                    'bt_depths': 'bt_depths', 'vb_depths': 'vb_depths', 'ds_depths': 'ds_depths'}
+        self.initial_settings['depthReference'] = nav_dict[self.initial_settings['depthReference']]
 
         self.ext_temp_chk = {'user': meas_struct.extTempChk.user,
                              'units': meas_struct.extTempChk.units,
@@ -1160,29 +1160,34 @@ class Measurement(object):
             transect.edges.rec_edge_method = settings['edgeRecEdgeMethod']
             transect.edges.vel_method = settings['edgeVelMethod']
 
-            # Recompute extrapolations
-            # NOTE: Extrapolations should be determined prior to WT
-            # interpolations because the TRDI approach for power/power
-            # using the power curve and exponent to estimate invalid cells.
+        # Recompute extrapolations
+        # NOTE: Extrapolations should be determined prior to WT
+        # interpolations because the TRDI approach for power/power
+        # using the power curve and exponent to estimate invalid cells.
 
-            if self.transects[self.checked_transect_idx[0]].w_vel.interpolate_cells == 'TRDI':
-                if self.extrap_fit is None:
-                    self.extrap_fit = ComputeExtrap()
-                    self.extrap_fit.populate_data(transects=self.transects, compute_sensitivity=False)
-                    self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
-                elif self.extrap_fit.fit_method == 'Automatic':
-                    self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
-                else:
-                    if 'extrapTop' not in settings.keys():
-                        settings['extrapTop'] = self.extrap_fit.sel_fit[-1].top_method
-                        settings['extrapBot'] = self.extrap_fit.sel_fit[-1].bot_method
-                        settings['extrapExp'] = self.extrap_fit.sel_fit[-1].exponent
+        if len(self.checked_transect_idx) > 0:
+            ref_transect = self.checked_transect_idx[0]
+        else:
+            ref_transect = 0
 
-                self.change_extrapolation(self.extrap_fit.fit_method,
-                                          top=settings['extrapTop'],
-                                          bot=settings['extrapBot'],
-                                          exp=settings['extrapExp'],
-                                          compute_q=False)
+        if self.transects[ref_transect].w_vel.interpolate_cells == 'TRDI':
+            if self.extrap_fit is None:
+                self.extrap_fit = ComputeExtrap()
+                self.extrap_fit.populate_data(transects=self.transects, compute_sensitivity=False)
+                self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
+            elif self.extrap_fit.fit_method == 'Automatic':
+                self.change_extrapolation(self.extrap_fit.fit_method, compute_q=False)
+            else:
+                if 'extrapTop' not in settings.keys():
+                    settings['extrapTop'] = self.extrap_fit.sel_fit[-1].top_method
+                    settings['extrapBot'] = self.extrap_fit.sel_fit[-1].bot_method
+                    settings['extrapExp'] = self.extrap_fit.sel_fit[-1].exponent
+
+            self.change_extrapolation(self.extrap_fit.fit_method,
+                                      top=settings['extrapTop'],
+                                      bot=settings['extrapBot'],
+                                      exp=settings['extrapExp'],
+                                      compute_q=False)
 
         for transect in self.transects:
 
@@ -1230,7 +1235,11 @@ class Measurement(object):
 
         settings = {}
 
-        transect = self.transects[self.checked_transect_idx[0]]
+        if len(self.checked_transect_idx) > 0:
+            ref_transect = self.checked_transect_idx[0]
+        else:
+            ref_transect = 0
+        transect = self.transects[ref_transect]
         
         # Navigation reference
         settings['NavRef'] = transect.boat_vel.selected
@@ -1345,8 +1354,13 @@ class Measurement(object):
 
         settings = dict()
 
+        if len(self.checked_transect_idx) > 0:
+            ref_transect = self.checked_transect_idx[0]
+        else:
+            ref_transect = 0
+
         # Navigation reference
-        settings['NavRef'] = self.transects[self.checked_transect_idx[0]].boat_vel.selected
+        settings['NavRef'] = self.transects[ref_transect].boat_vel.selected
 
         # Composite tracks
         settings['CompTracks'] = 'Off'
@@ -1359,7 +1373,7 @@ class Measurement(object):
         settings['WTwFilterThreshold'] = np.nan
         settings['WTsmoothFilter'] = 'Off'
 
-        if self.transects[self.checked_transect_idx[0]].adcp.manufacturer == 'TRDI':
+        if self.transects[ref_transect].adcp.manufacturer == 'TRDI':
             settings['WTsnrFilter'] = 'Off'
         else:
             settings['WTsnrFilter'] = 'Auto'
@@ -1369,9 +1383,9 @@ class Measurement(object):
             excluded_dist = np.nanmin([x.excluded_dist_m for x in temp])
         else:
             excluded_dist = 0
-        if excluded_dist < 0.158 and self.transects[self.checked_transect_idx[0]].adcp.model == 'M9':
+        if excluded_dist < 0.158 and self.transects[ref_transect].adcp.model == 'M9':
             settings['WTExcludedDistance'] = 0.16
-        elif excluded_dist < 0.248 and self.transects[self.checked_transect_idx[0]].adcp.model == 'RioPro':
+        elif excluded_dist < 0.248 and self.transects[ref_transect].adcp.model == 'RioPro':
             settings['WTExcludedDistance'] = 0.25
         else:
             settings['WTExcludedDistance'] = excluded_dist
@@ -1408,6 +1422,7 @@ class Measurement(object):
         settings['depthReference'] = 'bt_depths'
         # Depth settings
         settings['depthFilterType'] = 'Smooth'
+        settings['depthComposite'] = 'Off'
         for transect in self.transects:
             if transect.checked:
 
@@ -1446,8 +1461,12 @@ class Measurement(object):
         """
 
         settings = dict()
+        if len(self.checked_transect_idx) > 0:
+            ref_transect = self.checked_transect_idx[0]
+        else:
+            ref_transect = 0
 
-        settings['NavRef'] = self.transects[self.checked_transect_idx[0]].boatVel.selected
+        settings['NavRef'] = self.transects[ref_transect].boatVel.selected
 
         # Composite tracks
         settings['CompTracks'] = 'Off'
@@ -2649,27 +2668,27 @@ class Measurement(object):
 
                 # (4) Top Node
                 temp = self.discharge[n].top
-                ETree.SubElement(t_q, 'Top', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+                ETree.SubElement(t_q, 'Top', type='double', unitsCode='cms').text = '{:.5f}'.format(temp)
 
                 # (4) Middle Node
                 temp = self.discharge[n].middle
-                ETree.SubElement(t_q, 'Middle', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+                ETree.SubElement(t_q, 'Middle', type='double', unitsCode='cms').text = '{:.5f}'.format(temp)
 
                 # (4) Bottom Node
                 temp = self.discharge[n].bottom
-                ETree.SubElement(t_q, 'Bottom', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+                ETree.SubElement(t_q, 'Bottom', type='double', unitsCode='cms').text = '{:.5f}'.format(temp)
 
                 # (4) Left Node
                 temp = self.discharge[n].left
-                ETree.SubElement(t_q, 'Left', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+                ETree.SubElement(t_q, 'Left', type='double', unitsCode='cms').text = '{:.5f}'.format(temp)
 
                 # (4) Right Node
                 temp = self.discharge[n].right
-                ETree.SubElement(t_q, 'Right', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+                ETree.SubElement(t_q, 'Right', type='double', unitsCode='cms').text = '{:.5f}'.format(temp)
 
                 # (4) Total Node
                 temp = self.discharge[n].total
-                ETree.SubElement(t_q, 'Total', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+                ETree.SubElement(t_q, 'Total', type='double', unitsCode='cms').text = '{:.5f}'.format(temp)
 
                 # (4) MovingBedPercentCorrection Node
                 temp = ((self.discharge[n].total / self.discharge[n].total_uncorrected) - 1) * 100
@@ -2842,27 +2861,27 @@ class Measurement(object):
 
         # (4) Top
         temp = discharge['top_mean']
-        ETree.SubElement(s_q, 'Top', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+        ETree.SubElement(s_q, 'Top', type='double', unitsCode='cms').text = '{:.5f}'.format(temp)
 
         # (4) Middle
         temp = discharge['mid_mean']
-        ETree.SubElement(s_q, 'Middle', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+        ETree.SubElement(s_q, 'Middle', type='double', unitsCode='cms').text = '{:.5f}'.format(temp)
 
         # (4) Bottom
         temp = discharge['bot_mean']
-        ETree.SubElement(s_q, 'Bottom', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+        ETree.SubElement(s_q, 'Bottom', type='double', unitsCode='cms').text = '{:.5f}'.format(temp)
 
         # (4) Left
         temp = discharge['left_mean']
-        ETree.SubElement(s_q, 'Left', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+        ETree.SubElement(s_q, 'Left', type='double', unitsCode='cms').text = '{:.5f}'.format(temp)
 
         # (4) Right
         temp = discharge['right_mean']
-        ETree.SubElement(s_q, 'Right', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+        ETree.SubElement(s_q, 'Right', type='double', unitsCode='cms').text = '{:.5f}'.format(temp)
 
         # (4) Total
         temp = discharge['total_mean']
-        ETree.SubElement(s_q, 'Total', type='double', unitsCode='cms').text = '{:.3f}'.format(temp)
+        ETree.SubElement(s_q, 'Total', type='double', unitsCode='cms').text = '{:.5f}'.format(temp)
 
         # (4) MovingBedPercentCorrection
         temp = ((discharge['total_mean'] / discharge['uncorrected_mean']) - 1) * 100

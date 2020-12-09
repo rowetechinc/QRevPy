@@ -146,7 +146,8 @@ class BoatSpeed(object):
 
             # Plot invalid data points using a symbol to represent what caused the data to be invalid
             invalid_gps = np.logical_not(transect.boat_vel.vtg_vel.valid_data)
-            if invalid_gps is not None:
+            # if invalid_gps is not None:
+            if 0 < np.sum(invalid_gps[0, :]) < invalid_gps.shape[1]:
                 speed = np.sqrt(
                     transect.boat_vel.vtg_vel.u_mps ** 2 + transect.boat_vel.vtg_vel.v_mps ** 2)
                 speed[np.isnan(speed)] = 0
@@ -173,7 +174,7 @@ class BoatSpeed(object):
 
             # Plot invalid data points using a symbol to represent what caused the data to be invalid
             invalid_gps = np.logical_not(transect.boat_vel.gga_vel.valid_data)
-            if invalid_gps is not None:
+            if 0 < np.sum(invalid_gps[0, :]) < invalid_gps.shape[1]:
                 speed = np.sqrt(
                     transect.boat_vel.gga_vel.u_mps ** 2 + transect.boat_vel.gga_vel.v_mps ** 2)
                 speed[np.isnan(speed)] = 0

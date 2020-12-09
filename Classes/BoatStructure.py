@@ -429,10 +429,8 @@ class BoatStructure(object):
                 if hasattr(transect.boatVel.vtgVel, 'u_mps'):
                     self.vtg_vel = BoatData()
                     self.vtg_vel.populate_from_qrev_mat(transect.boatVel.vtgVel)
+            nav_dict = {'btVel':'bt_vel', 'bt_vel':'bt_vel',
+                        'ggaVel':'gga_vel', 'gga_vel':'gga_vel',
+                        'vtgVel':'vtg_vel', 'vtg_vel':'vtg_vel'}
+            self.selected = nav_dict[transect.boatVel.selected]
 
-            if transect.boatVel.selected == 'btVel':
-                self.selected = 'bt_vel'
-            elif transect.boatVel.selected == 'ggaVel':
-                self.selected = 'gga_vel'
-            elif transect.boatVel.selected == 'vtgVel':
-                self.selected = 'vtg_vel'

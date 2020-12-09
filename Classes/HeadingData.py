@@ -179,7 +179,7 @@ class HeadingData(object):
         
             # Process each invalid self.data
             for n in range(len(idx_invalid)):
-                before_idx = np.where(np.isnan(self.data[1:idx_invalid[n]]) == False)[0]
+                before_idx = np.where(np.isnan(self.data[0:idx_invalid[n] + 1]) == False)[0]
                 after_idx = np.where(np.isnan(self.data[idx_invalid[n]:]) == False)[0]
                 
                 # If invalid self.data is beginning back fill
@@ -193,7 +193,7 @@ class HeadingData(object):
                 # If invalid self.data is in middle interpolate
                 else:
                     before_idx = before_idx[-1]
-                    after_idx = after_idx[0] + idx_invalid[n] - 1
+                    after_idx = after_idx[0] + idx_invalid[n]
                     
                     test1 = self.data[before_idx] > 180
                     test2 = self.data[after_idx] > 180
@@ -209,3 +209,5 @@ class HeadingData(object):
                                                  (before_idx - idx_invalid[n])) + self.data[before_idx]
                     if self.data[idx_invalid[n]] > 360:
                         self.data[idx_invalid[n]] = self.data[idx_invalid[n]] - 360
+                    elif self.data[idx_invalid[n]] < 0:
+                        self.data[idx_invalid[n]] = self.data[idx_invalid[n]] + 360

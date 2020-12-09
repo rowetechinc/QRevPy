@@ -77,6 +77,10 @@ class TransformationMatrix(object):
             self.riopro(data_in)
         elif adcp_model == 'pd0':
             self.matrix = data_in.Inst.t_matrix
+
+        if np.array(self.matrix).size < 16:
+            self.trdi(model=model, data_in=None)
+
         # Save matrix as np array
         self.matrix = np.array(self.matrix)[0:4, 0:4]
 
