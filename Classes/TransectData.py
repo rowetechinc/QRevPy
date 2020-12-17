@@ -765,7 +765,7 @@ class TransectData(object):
                 for row in row_index:
                     last_depth[row] = temp_depth_ds[row, last_depth_col_idx[row]]
 
-                # Determine if mmt file has a scale factor and offset for the depth sounder
+                # Determine if rtt file has a scale factor and offset for the depth sounder
                 if rtt_config['DS_Cor_Spd_Sound'] == 0:
                     scale_factor = rtt_config['DS_Scale_Factor']
                 else:
@@ -786,7 +786,7 @@ class TransectData(object):
                                              cell_depth_in=cell_depth_m,
                                              cell_size_in=cell_size_all_m)
 
-            # Set depth reference to value from mmt file
+            # Set depth reference to value from rtt file
             if 'Proc_River_Depth_Source' in rtt_config:
                 if rtt_config['Proc_River_Depth_Source'] == 0:
                     self.depths.selected = 'bt_depths'
@@ -895,7 +895,7 @@ class TransectData(object):
 
             # Initialize boat vel
             self.boat_vel = BoatStructure()
-            # Apply 3-beam setting from mmt file
+            # Apply 3-beam setting from rtt file
             if rtt_config['Proc_Use_3_Beam_BT'] < 0.5:
                 min_beams = 4
             else:
@@ -1008,7 +1008,7 @@ class TransectData(object):
             # TRDI uses same number on left and right edges
             #n_ens_right = n_ens_left
             n_ens_left = rtt_config['Q_Shore_Left_Ens_Count']
-            n_ens_right= rtt_config['Q_Shore_Right_Ens_Count']
+            n_ens_right = rtt_config['Q_Shore_Right_Ens_Count']
 
 
             # Set indices for ensembles in the moving-boat portion of the transect
@@ -1153,7 +1153,7 @@ class TransectData(object):
                                                                 magvar=rtt_config['Offsets_Magnetic_Variation'],
                                                                 align=rtt_config['Ext_Heading_Offset'])
 
-                # Determine heading source to use from mmt setting
+                # Determine heading source to use from rtt setting
                 source_used = rtt_config['Ext_Heading_Use']
                 if source_used:
                     self.sensors.heading_deg.selected = 'external'
@@ -1195,7 +1195,7 @@ class TransectData(object):
             self.sensors.salinity_ppt.internal = SensorData()
             self.sensors.salinity_ppt.internal.populate_data(data_in=pd0_salinity, source_in=pd0_salinity_src)
 
-            # Create salinity sensor from mmt data
+            # Create salinity sensor from rtt data
             mmt_salinity = rtt_config['Proc_Salinity']
             self.sensors.salinity_ppt.user = SensorData()
             self.sensors.salinity_ppt.user.populate_data(data_in=mmt_salinity, source_in='mmt')

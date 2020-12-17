@@ -327,7 +327,7 @@ class Measurement(object):
                                     selected='user',
                                     speed=speed)
 
-    def qaq5c_trdi(self, mmt):
+    def qaqc_trdi(self, mmt):
         """Processes qaqc test, calibrations, and evaluations
         
         Parameters
@@ -459,8 +459,8 @@ class Measurement(object):
         if isinstance(rtt.qaqc, dict) or isinstance(rtt.mbt_transects, list):
             self.qaqc_trdi(rtt)
 
-        # Save comments from mmt file in comments
-        self.comments.append('MMT Remarks: ' + rtt.site_info['Remarks'])
+        # Save comments from rtt file in comments
+        self.comments.append('RTT Remarks: ' + rtt.site_info['Remarks'])
 
         for t in range(len(self.transects)):
             notes = getattr(rtt.transects[t], 'Notes')
