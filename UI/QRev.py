@@ -354,7 +354,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
         self.setupUi(self)
 
         # Set version of QRev
-        self.QRev_version = 'QRev 4.21'
+        self.QRev_version = 'QRev 4.23'
         self.setWindowTitle(self.QRev_version)
         self.setWindowIcon(QtGui.QIcon('QRev.ico'))
 
@@ -6367,6 +6367,7 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             self.cb_depth_ds.blockSignals(True)
             self.cb_depth_ds.setCheckState(QtCore.Qt.Checked)
             self.cb_depth_ds.blockSignals(False)
+            depth_ref_options.append('Comp 4-Beam Preferred')
             depth_ref_options.append('Depth Sounder')
             depth_ref_options.append('Comp DS Preferred')
             self.cb_depth_ds.setEnabled(True)
@@ -10733,10 +10734,15 @@ class QRev(QtWidgets.QMainWindow, QRev_gui.Ui_MainWindow):
             if self.meas.transects[idx].boat_vel.gga_vel is not None:
                 self.tab_all.setTabEnabled(6, True)
                 self.actionGGA.setEnabled(True)
-                self.actionVTG.setEnabled(True)
                 self.actionON.setEnabled(True)
                 self.actionOFF.setEnabled(True)
                 self.actionGoogle_Earth.setEnabled(True)
+            if self.meas.transects[idx].boat_vel.vtg_vel is not None:
+                self.tab_all.setTabEnabled(6, True)
+                self.actionVTG.setEnabled(True)
+                self.actionON.setEnabled(True)
+                self.actionOFF.setEnabled(True)
+            if self.actionVTG.isEnabled() and self.actionGGA.isEnabled():
                 break
 
         # Configure tabs for the presence or absence of a compass

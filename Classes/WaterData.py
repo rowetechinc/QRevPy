@@ -423,6 +423,12 @@ class WaterData(object):
             self.sl_lag_effect_m = transect.wVel.slLagEffect_m
 
         self.valid_data = self.valid_data.astype(bool)
+        # Fix for moving-bed transects that did not have 3D array indices adjusted properly when saved
+        if self.valid_data.shape[0] == self.u_processed_mps.shape[1]:
+            self.valid_data = np.moveaxis(self.valid_data, 0, 2)
+            self.raw_vel_mps = np.moveaxis(self.raw_vel_mps, 0, 2)
+            self.corr = np.moveaxis(self.corr, 0, 2)
+            self.rssi = np.moveaxis(self.rssi, 0, 2)
         self.frequency = transect.wVel.frequency
         self.orig_coord_sys = transect.wVel.origCoordSys
         self.orig_nav_ref = transect.wVel.origNavRef

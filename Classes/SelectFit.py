@@ -86,7 +86,7 @@ class SelectFit(object):
         self.top_r2 = 0
         self.rsqr = 0
         self.exponent_95_ci = 0
-        self.data_type = None
+        self.data_type = 'q'
 
     def populate_data(self, normalized, fit_method, top=None, bot=None, exponent=None):
         """Determine selected fit.

@@ -48,7 +48,7 @@ class NormData(object):
         self.unit_normalized_z = None  # Relative depth for each median (5% increments)
         self.unit_normalized_25 = None  # Value for which 25% of normalized values are smaller
         self.unit_normalized_75 = None  # Value for which 75% or normalized values are larger
-        self.data_type = None  # Type of data (v, q, V, or Q)
+        self.data_type = 'q'  # Type of data (v, q, V, or Q)
         self.data_extent = None  # Defines percent of data from start of transect to use, default [0, 100]
         self.valid_data = np.array([])  # Index of median values with point count greater than threshold cutoff
         

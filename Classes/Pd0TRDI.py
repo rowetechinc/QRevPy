@@ -377,7 +377,7 @@ class Pd0TRDI(object):
                                 self.Cfg.map_bins = 'N/a'
 
                             self.Cfg.ea_deg[i_ens] = np.fromfile(f, np.int16, count=1)[0] * 0.01
-                            self.Cfg.ea_deg[i_ens] = np.fromfile(f, np.uint16, count=1)[0] * 0.01
+                            self.Cfg.eb_deg[i_ens] = np.fromfile(f, np.uint16, count=1)[0] * 0.01
                             self.Cfg.ez[i_ens] = "{0:08b}".format(np.fromfile(f, np.uint8, count=1)[0])
 
                             val = int(self.Cfg.ez[i_ens][:2], 2)
@@ -561,7 +561,10 @@ class Pd0TRDI(object):
                             i_data_types += 1
 
                             if self.Cfg.wn[i_ens] > self.Wt.pergd.shape[1]:
-                                self.Cfg.wn[i_ens] = self.Wt.pergd.shape[1]
+                                append = np.zeros([self.Wt.pergd.shape[0],
+                                                   int(self.Cfg.wn[i_ens] - self.Wt.pergd.shape[1]),
+                                                   self.Wt.pergd.shape[2]])
+                                self.Wt.pergd = np.hstack([self.Wt.pergd, append])
                             dummy = np.fromfile(f, np.uint8, count=int(self.Cfg.wn[i_ens]*4))
                             dummy = np.reshape(dummy, [int(self.Cfg.wn[i_ens]), n_velocities])
                             self.Wt.pergd[:n_velocities, :int(self.Cfg.wn[i_ens]), i_ens] = dummy.T
@@ -712,8 +715,7 @@ class Pd0TRDI(object):
 
                                 try:
                                     temp = ''.join([chr(x) for x in f.read(10)])
-                                    self.Gps2.utc[i_ens, j100] = float(re.match('[0-9]+\.[0-9]',
-                                                                                temp).string.rstrip('\x00'))
+                                    self.Gps2.utc[i_ens, j100] = float(re.findall('^\d+\.\d+|\d+', temp)[0])
                                 except ValueError:
                                     self.Gps2.utc[i_ens, j100] = np.nan
 
@@ -745,6 +747,8 @@ class Pd0TRDI(object):
                                 self.Gps2.course_mag[i_ens, j101] = np.fromfile(f, np.float32, count=1)[0]
                                 self.Gps2.mag_indicator[i_ens][j101] = chr(f.read(1)[0])
                                 self.Gps2.speed_knots[i_ens, j101] = np.fromfile(f, np.float32, count=1)[0]
+                                self.Gps2.knots_indicator[i_ens][j101] = chr(f.read(1)[0])
+                                self.Gps2.speed_kph[i_ens, j101] = np.fromfile(f, np.float32, count=1)[0]
                                 self.Gps2.kph_indicator[i_ens][j101] = chr(f.read(1)[0])
                                 self.Gps2.mode_indicator[i_ens][j101] = chr(f.read(1)[0])
 
@@ -792,7 +796,7 @@ class Pd0TRDI(object):
                                 try:
                                     temp = ''.join([chr(x) for x in f.read(10)])
                                     self.Gps2.utc[i_ens, j100] = \
-                                        float(re.match('[0-9]+\.[0-9]', temp).string.rstrip('\x00'))
+                                        float(re.findall('^\d+\.\d+|\d+', temp)[0])
                                 except (ValueError, AttributeError):
                                     self.Gps2.utc[i_ens, j100] = np.nan
 

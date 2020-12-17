@@ -226,27 +226,27 @@ class BeamDepths(object):
 
                 max_vert = np.nanmax(beam_depths)
 
-                # Plot depth sounder
-                if transect.depths.ds_depths is not None:
-                    invalid_beams = np.logical_not(transect.depths.ds_depths.valid_beams[0, :])
-                    beam_depths = transect.depths.ds_depths.depth_beams_m[0, :]
-                    self.ds = self.fig.ax.plot(x * units['L'],
-                                               beam_depths * units['L'],
-                                               color='#00aaff')
-                    self.ds.append(self.fig.ax.plot(x[invalid_beams] * units['L'],
-                                                    beam_depths[invalid_beams] * units['L'],
-                                                    color='#00aaff',
-                                                    linestyle='',
-                                                    marker='$O$')[0])
+            # Plot depth sounder
+            if transect.depths.ds_depths is not None:
+                invalid_beams = np.logical_not(transect.depths.ds_depths.valid_beams[0, :])
+                beam_depths = transect.depths.ds_depths.depth_beams_m[0, :]
+                self.ds = self.fig.ax.plot(x * units['L'],
+                                           beam_depths * units['L'],
+                                           color='#00aaff')
+                self.ds.append(self.fig.ax.plot(x[invalid_beams] * units['L'],
+                                                beam_depths[invalid_beams] * units['L'],
+                                                color='#00aaff',
+                                                linestyle='',
+                                                marker='$O$')[0])
 
-                    if cb_ds.checkState() == QtCore.Qt.Checked:
-                        for item in self.ds:
-                            item.set_visible(True)
-                    else:
-                        for item in self.ds:
-                            item.set_visible(False)
+                if cb_ds.checkState() == QtCore.Qt.Checked:
+                    for item in self.ds:
+                        item.set_visible(True)
+                else:
+                    for item in self.ds:
+                        item.set_visible(False)
 
-                    max_ds = np.nanmax(beam_depths)
+                max_ds = np.nanmax(beam_depths)
 
             # Set axis limits
             max_y = np.nanmax([max_beams, max_vert, max_ds]) * 1.1
