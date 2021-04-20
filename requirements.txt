@@ -20,7 +20,7 @@ patsy==0.5.1
 pefile==2019.4.18
 pip
 pluggy==0.13.0
-py==1.8.0
+py==1.10.0
 pyparsing==2.4.2
 pyqt5-tools
 pytest==5.1.3

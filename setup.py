@@ -43,7 +43,7 @@ setup(
 						"pefile==2019.4.18",
 						"pip==19.2.3",
 						"pluggy==0.13.0",
-						"py==1.8.0",
+						"py==1.10.0",
 						"pyparsing==2.4.2",
 						"pyqt5-tools==5.12.1.1.5rc4",
 						"pytest==5.1.3",
