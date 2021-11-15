@@ -41,7 +41,7 @@ setup(
 						"pandas==0.25.1",
 						"patsy==0.5.1",
 						"pefile==2019.4.18",
-						"pip==19.2.3",
+						"pip==21.1",
 						"pluggy==0.13.0",
 						"py==1.8.0",
 						"pyparsing==2.4.2",
