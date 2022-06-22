@@ -36,7 +36,7 @@ setup(
 						"macholib==1.11",
 						"matplotlib==3.1.1",
 						"more-itertools==7.2.0",
-						"numpy==1.17.2",
+						"numpy==1.22.0",
 						"packaging==19.2",
 						"pandas==0.25.1",
 						"patsy==0.5.1",
