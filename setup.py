@@ -52,7 +52,7 @@ setup(
 						"pytz==2019.2",
 						"pywin32-ctypes==0.2.0",
 						"scipy==1.3.1",
-						"setuptools==41.2.0",
+						"setuptools==65.5.1",
 						"sip==4.19.8",
 						"six==1.12.0",
 						"statsmodels==0.10.1",
